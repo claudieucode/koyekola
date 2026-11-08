@@ -60,6 +60,22 @@ describe("Personnaliser › Entête : comportement de l'en-tête", { skip: SKIP 
     await context.close();
   });
 
+  test("Pied de page : le pied actuel du site et le lien vers son éditeur ; un site sans pied n'affiche pas celui d'un autre", async () => {
+    const used = await env.boss.request(env.U("/api/bibliotheque/utiliser"), { method: "POST", json: { type: "footer", key: "logo-et-copyright.marque" }, headers: env.origin });
+    assert.equal(used.status, 200, used.text.slice(0, 200));
+    const t = JSON.parse(used.text).template, cid = Number(t.editUrl.match(/composants\/(\d+)/)[1]);
+    assert.equal((await env.boss.request(env.U(`/api/modeles/${t.id}/publier`), { method: "POST", json: { replace: true }, headers: env.origin })).status, 200);
+    const context = await env.browser.newContext({ viewport: { width: 1500, height: 900 } });
+    await context.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
+    const open = async (siteId) => { const page = await context.newPage(); await page.goto(`${env.srv.base}/marketing/site-web/personnaliser?site=${siteId}`, { waitUntil: "load" }); await page.waitForSelector("#pz-cats button, #pz-cats a"); await page.locator("#pz-cats button, #pz-cats a", { hasText: /^Pied de page/ }).first().click(); await page.waitForSelector("#pz-detail-body .kwc-note"); return page; };
+    const a = await open(env.site);
+    assert.equal(await a.getAttribute("#pz-detail-body a.kwc-btn-primary", "href"), `/marketing/site-web/composants/${cid}/editeur`);
+    assert.match(await a.textContent("#pz-detail-body"), /Pied de page actuel/);
+    const b = await open(siteB);
+    assert.equal(await b.locator("#pz-detail-body a.kwc-btn-primary").count(), 0, "le site B n'a pas de pied : aucun lien vers celui du site A");
+    assert.match(await b.textContent("#pz-detail-body"), /pas encore de pied de page/);
+    await context.close();
+  });
   test("l'API refuse un en-tête partagé entre sites et un en-tête avec brouillon non publié ; rien n'est modifié", async () => {
     const post = (siteId, settings) => env.boss.request(`/marketing/site-web/personnaliser/entete?site=${siteId}`, { method: "POST", json: { site: String(siteId), settings }, headers: env.origin });
     // brouillon non publié dans le Theme Builder

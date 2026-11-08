@@ -497,6 +497,7 @@
     if (!hd) { body.appendChild(tb); body.appendChild(h("p", { class: "kwc-empty-note", text: "Ce site n'a pas encore d'en-tête créé dans le Theme Builder : le comportement se règle ici dès qu'il en a un." })); return; }
     var st = JSON.parse(JSON.stringify(hd.settings)), can = hd.editable && boot.can.edit;
     body.appendChild(h("p", { class: "kwc-help", text: "En-tête actuel : " + hd.name }));
+    if (hd.editUrl) body.appendChild(h("a", { class: "kwc-btn", href: hd.editUrl, target: "_top", text: "Modifier cet en-tête (éditeur complet)" }));
     if (!hd.editable) body.appendChild(h("div", { class: "kwc-warn", role: "status" }, [h("p", { text: hd.reason })]));
     var out = h("div", { class: "kwc-fields" });
     function field(label, control, help) { return h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: label })]), control, help ? h("small", { class: "kwc-help", text: help }) : null]); }
@@ -528,10 +529,19 @@
     });
     draw(); body.appendChild(out); body.appendChild(tb);
   }
+  // Pied de page : le pied actuel du site et le lien direct vers son éditeur (le Theme Builder reste l'unique gestionnaire : création, affectation, publication)
+  function footerView(body) {
+    var tb = note("L'en-tête et le pied de page se composent dans le Theme Builder (leur unique gestionnaire : création, affectation, publication).", boot.links.themeBuilder, "Ouvrir le Theme Builder");
+    var ft = boot.footer;
+    if (!ft) { body.appendChild(tb); body.appendChild(h("p", { class: "kwc-empty-note", text: "Ce site n'a pas encore de pied de page créé dans le Theme Builder." })); return; }
+    body.appendChild(h("p", { class: "kwc-help", text: "Pied de page actuel : " + ft.name }));
+    body.appendChild(h("a", { class: "kwc-btn kwc-btn-primary", href: ft.editUrl, target: "_top", text: "Modifier ce pied de page" }));
+    body.appendChild(tb);
+  }
   var VIEWS = {
     menus: menusView, widgets: widgetsView, accueil: homeView,
     "themebuilder-header": headerView,
-    "themebuilder-footer": function (body) { body.appendChild(note("L'en-tête et le pied de page se composent dans le Theme Builder (leur unique gestionnaire : création, affectation, publication).", boot.links.themeBuilder, "Ouvrir le Theme Builder")); }
+    "themebuilder-footer": footerView,
   };
   boot.categories.forEach(function (cat) {
     K.registerPanel(cat.id, { render: function (container) {
