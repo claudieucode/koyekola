@@ -531,12 +531,12 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 .pb-acc-count::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .pb-acc-body { padding: 2px 12px 10px; }
 /* Une propriété = une ligne : libellé | valeur | effacer */
-.pb-prop { display: grid; grid-template-columns: minmax(70px, 31%) minmax(0, 1fr) 20px; align-items: center; gap: 0 6px; margin: 0 0 4px; }
+.pb-prop { display: grid; grid-template-columns: minmax(78px, 31%) minmax(0, 1fr) 20px; align-items: start; gap: 0 6px; margin: 0 0 4px; }
 .pb-prop > .pb-link-btn { grid-column: 2; justify-self: end; }
-.pb-prop:has(> .pb-link-btn) { grid-template-columns: minmax(70px, 31%) minmax(0, 1fr) auto 20px; }
+.pb-prop:has(> .pb-link-btn) { grid-template-columns: minmax(78px, 31%) minmax(0, 1fr) auto 20px; }
 .pb-prop:has(> .pb-link-btn) > .pb-link-btn { grid-column: 3; }
-.pb-prop-head { display: flex; align-items: center; gap: 3px; min-width: 0; }
-.pb-prop-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: #3b5163; }
+.pb-prop-head { display: flex; align-items: center; gap: 3px; min-width: 0; min-height: 28px; }
+.pb-prop-label { min-width: 0; overflow: visible; white-space: normal; overflow-wrap: anywhere; line-height: 1.25; font-size: 12px; font-weight: 500; color: #3b5163; }
 .pb-prop.is-set .pb-prop-label { color: var(--accent-dark); font-weight: 600; }
 .pb-prop.is-set .pb-prop-label::before { content: ""; display: inline-block; width: 5px; height: 5px; margin-right: 4px; border-radius: 50%; background: var(--accent); vertical-align: 2px; }
 .pb-prop-bps { display: inline-flex; gap: 1px; flex: none; }
@@ -547,6 +547,9 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 .pb-reset { display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; border-radius: var(--pb-radius-sm); font-size: 13px; }
 .pb-reset:hover { background: #fdecec; }
 .pb-reset-slot { width: 20px; }
+/* Libellé sur 2 lignes possible : réinitialisation et bouton lien restent alignés sur la première ligne du champ (28 px) */
+.pb-prop > .pb-reset, .pb-prop > .pb-reset-slot { align-self: start; margin-top: 4px; }
+.pb-prop > .pb-link-btn { align-self: start; margin-top: 2px; }
 .pb-prop-select { width: 100%; min-width: 0; height: 28px; min-height: 28px !important; padding: 0 24px 0 8px !important; font-size: 12.5px !important; }
 /* Valeur numérique + unité */
 .pb-len { display: flex; align-items: stretch; min-width: 0; height: 28px; border: 1px solid var(--border); border-radius: var(--pb-radius-md); background: var(--card, #fff); }
@@ -599,9 +602,9 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 .pb-box-input[aria-invalid="true"] { color: #b42318; }
 /* Panneau étroit : le libellé passe au-dessus de la valeur */
 @container pbinsp (max-width: 250px) { .pb-prop { grid-template-columns: minmax(0, 1fr) 20px; } .pb-prop > .pb-prop-head { grid-column: 1 / -1; } }
-.pb-inspector { container: pbinsp / inline-size; }
-.pb-inspector .pb-len > input, .pb-inspector .pb-len > input[type="text"] { width: auto; flex: 1 1 auto; min-width: 0; height: 100%; min-height: 0; padding: 0 6px; border: 0; border-radius: 6px 0 0 6px; background: none; box-shadow: none; font-size: 13px; }
-.pb-inspector .pb-len > select.pb-len-unit { width: auto; flex: none; min-height: 0; height: 100%; font-size: 11.5px; }
+.pb-inspector, [data-pb-page-settings] { container: pbinsp / inline-size; }
+.pb-inspector .pb-len > input, .pb-inspector .pb-len > input[type="text"], [data-pb-page-settings] .pb-len > input, [data-pb-page-settings] .pb-len > input[type="text"] { width: auto; flex: 1 1 auto; min-width: 0; height: 100%; min-height: 0; padding: 0 6px; border: 0; border-radius: 6px 0 0 6px; background: none; box-shadow: none; font-size: 13px; }
+.pb-inspector .pb-len > select.pb-len-unit, [data-pb-page-settings] .pb-len > select.pb-len-unit { width: auto; flex: none; min-height: 0; height: 100%; font-size: 11.5px; }
 .pb-cpop-actions .btn { white-space: nowrap; padding-left: 8px; padding-right: 8px; font-size: 12px; }
 .pb-cpop { width: 272px; }
 .pb-cpop-none { margin: -4px 0 8px; font-size: 11.5px; color: var(--muted); }
@@ -872,7 +875,7 @@ button.pb-kind:hover, button.pb-kind:focus-visible { border-color: var(--accent)
 .pb-iseg-btn[data-value="underline"] .pb-iseg-text { text-decoration: underline; }
 .pb-iseg-btn[data-value="line-through"] .pb-iseg-text { text-decoration: line-through; }
 .pb-pair { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 8px; margin: 0 0 4px; }
-.pb-pair > .pb-prop { grid-template-columns: minmax(0, 1fr) 16px; margin: 0; }
+.pb-pair > .pb-prop { grid-template-columns: minmax(0, 1fr) 16px; align-content: start; margin: 0; }
 .pb-pair > .pb-prop > .pb-prop-head { grid-column: 1 / -1; margin-bottom: 2px; }
 .pb-acc-sub { margin: 10px 0 6px; padding-top: 8px; border-top: 1px dashed var(--pb-border); font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .pb-prop-group { margin: 0 0 4px; }
@@ -961,7 +964,7 @@ body.pb-scrubbing, body.pb-scrubbing * { cursor: ew-resize !important; user-sele
 .pb-col-row { grid-template-columns: minmax(0, 1fr) 78px auto auto auto auto; }
 .pb-col-row .pb-len { height: 30px; }
 .pb-col-row .pb-len input { text-align: right; }
-.pb-inspector .pb-len > .pb-nstep { width: 14px; }
+.pb-inspector .pb-len > .pb-nstep, [data-pb-page-settings] .pb-len > .pb-nstep { width: 14px; }
 /* ---------- Thème de l'éditeur : jetons --editor-* (clair / sombre), source UNIQUE de toutes les couleurs d'interface ----------
    Posés sur <body class="pb-body"> ; le mode sombre les redéfinit (body[data-palette="dark"], attribut mis par page-builder.js, aussi
    sur <main>). La palette (--pp-*, gauche) et le panneau de droite (calques, inspecteur) ne font que LIRE ces jetons : aucun composant ne
@@ -1466,7 +1469,7 @@ label.pb-check.pb-has-restore > .pb-restore { position: absolute; top: 50%; righ
 .pb-items-tools { display: inline-flex; gap: 2px; }
 
 /* Valeur du site pour une longueur (espacement, rayon, taille de texte) : bouton « lien » à côté du nombre, pastille quand la valeur est liée */
-.pb-lenwrap { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.pb-lenwrap { display: flex; align-items: flex-start; gap: 4px; min-width: 0; }
 .pb-lenwrap > :first-child { flex: 1 1 auto; min-width: 0; }
 .pb-tokbtn { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--editor-border, var(--border)); border-radius: var(--pb-radius-sm, 6px); background: transparent; color: var(--editor-muted, var(--muted)); cursor: pointer; }
 .pb-tokbtn:hover:not(:disabled) { background: var(--editor-hover, var(--accent-light)); color: var(--editor-text, var(--text)); }
