@@ -75,6 +75,13 @@ const PATTERNS = [
   // ---- Programme 20.4 x boutique (Programme 20.5) : elements branches sur le VRAI moteur de boutique du site ; ils n'affichent rien au public tant que le module "Commerce" n'est pas active et la boutique ouverte ----
   { key: "shop-featured", category: "Boutique", label: "Produits à la une (grille)", build: () => [section([H("[Nos produits à la une]", "2", { textAlign: "center" }), { type: "shopgrid", props: { source: "featured", count: 6, columns: "3", orderby: "featured" } }])] },
   { key: "shop-sale", category: "Boutique", label: "Produits en promotion (grille)", build: () => [section([H("[Promotions en cours]", "2", { textAlign: "center" }), { type: "shopgrid", props: { source: "sale", count: 4, columns: "4", orderby: "newest" } }])] },
+  // Barre du bas d'un pied de page (copyright, mentions légales, retour en haut) : séparée du reste par un trait ; « activable » = on la masque d'un clic (œil de l'arborescence)
+  // sans la supprimer. Sur mobile les trois éléments passent en colonne, centrés. Aucune adresse ni texte inventé : le copyright est automatique, les mentions viennent des données de l'entreprise.
+  { key: "footer-bar", category: "Pied de page", label: "Barre du bas (copyright, mentions, retour en haut)", build: () => [{ type: "layout", children: [{ type: "container", name: "Barre du bas", children: [
+    { type: "copyright", props: { owner: "", text: "Tous droits réservés." } },
+    { type: "bizlegal", props: {} },
+    { type: "backtotop", props: { mode: "inline", side: "right", label: "Retour en haut", showLabel: true, threshold: 300 } },
+  ], styles: { desktop: { display: "flex", flexDirection: "row", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px", paddingTop: "16px", paddingBottom: "16px", paddingLeft: "24px", paddingRight: "24px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "token:muted", fontSize: "14px" }, mobile: { flexDirection: "column", justifyContent: "center", textAlign: "center" } } }] }] },
   { key: "shop-search", category: "Boutique", label: "Recherche et filtres de produits", build: () => [section([{ type: "shopsearch", props: {} }, { type: "shopfilters", props: {} }], { maxWidth: "820px" })] },
   { key: "shop-archive", category: "Boutique", label: "Catalogue (suit la catégorie et la recherche)", build: () => [section([{ type: "shopgrid", props: { source: "archive", count: 12, columns: "3", orderby: "newest" } }])] },
 ];

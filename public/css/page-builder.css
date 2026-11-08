@@ -510,6 +510,12 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 .pb-bp-seg button.has-values::after { content: ""; position: absolute; top: 3px; right: 4px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
 .pb-state-seg { flex: 1 1 auto; }
 .pb-state-seg button { flex: 1 1 auto; }
+.pb-state-seg button { position: relative; }
+/* Réglages propres à un état : pastille discrète (aucun décalage : positionnée dans le coin) ; le nombre pour cet écran est lu par les lecteurs d'écran (aria-label) */
+.pb-state-seg button.has-values::after { content: ""; position: absolute; top: 3px; right: 3px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.pb-state-seg button .pb-state-n { position: absolute; top: -1px; right: 2px; font-size: 9px; line-height: 1; font-weight: 700; color: var(--accent-dark, var(--accent)); pointer-events: none; }
+.pb-state-seg button:has(.pb-state-n)::after { display: none; }
+.pb-state-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* Groupes : sections à plat séparées par un filet (pas de cartes) */
 .pb-acc { margin: 0 -12px; border-top: 1px solid var(--border); }
 .pb-acc:last-of-type { border-bottom: 1px solid var(--border); }

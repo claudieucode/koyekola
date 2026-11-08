@@ -29,6 +29,11 @@ const BREAKPOINTS = [
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
 const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }];
+// États PAR ÉCRAN : `states` reste un objet plat { clé: réglages }. La clé « hover » (sans écran) est l'état de l'ordinateur, inchangé et lu tel quel ; les autres écrans
+// s'écrivent « hover@tablet », « hover@mobile », « hover@wide ». Un écran sans réglage propre hérite de l'ordinateur (puis de la tablette pour le mobile) par simple cascade CSS.
+const stateScope = (state, bp) => (bp === "desktop" ? state : `${state}@${bp}`);
+const STATE_SCOPES = STATES.flatMap((state) => BREAKPOINTS.map((bp) => ({ key: stateScope(state.key, bp.key), state, bp, label: `${state.label.toLowerCase()}${bp.key === "desktop" ? "" : ` (${bp.label.toLowerCase()})`}` })));
+const stateBase = (key) => String(key).split("@")[0];
 
 const newNodeId = () => crypto.randomBytes(6).toString("hex");
 const clean = (v, max) => (typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "").trim().slice(0, max) : "");
@@ -1884,7 +1889,7 @@ function normalizeParts(type, raw, at, h, nodeId) {
     const drop = (set, scope) => { for (const k of Object.keys(set)) if (!partsLib.allows(def, k, groupOf)) { delete set[k]; ignored(h, { kind: "part_prop", nodeId, part: key, partLabel: def.label, prop: k, scope, message: `Le réglage « ${(STYLE_UI[k] || [k])[0]} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué (le reste est enregistré).` }); } };
     for (const [bp, set] of Object.entries(st.styles || {})) drop(set, bp);
     for (const [state, set] of Object.entries(st.states || {})) {
-      if (!def.states.includes(state)) { delete st.states[state]; ignored(h, { kind: "part_state", nodeId, part: key, partLabel: def.label, state, message: `L'état « ${state} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué.` }); continue; }
+      if (!def.states.includes(stateBase(state))) { delete st.states[state]; ignored(h, { kind: "part_state", nodeId, part: key, partLabel: def.label, state, message: `L'état « ${stateBase(state)} » n'existe pas pour la partie « ${def.label} » : il n'a pas été appliqué.` }); continue; }
       drop(set, state);
     }
     for (const bag of [st.styles, st.states]) if (bag) for (const [k, set] of Object.entries(bag)) if (!Object.keys(set).length) delete bag[k];
@@ -1903,9 +1908,9 @@ function normalizeStyles(styles, states, at, h) {
   }
   if (Object.keys(s).length) out.styles = s;
   const st = {};
-  for (const state of STATES) {
-    const set = normalizeStyleSet(states && states[state.key], `${at} (${state.label.toLowerCase()})`, h);
-    if (Object.keys(set).length) st[state.key] = set;
+  for (const sc of STATE_SCOPES) {
+    const set = normalizeStyleSet(states && states[sc.key], `${at} (${sc.label})`, h);
+    if (Object.keys(set).length) st[sc.key] = set;
   }
   if (Object.keys(st).length) out.states = st;
   return out;
@@ -1991,6 +1996,40 @@ function normalizeClassDefs(raw, h, { strict = false } = {}) {
   }
   return out;
 }
+// Mouvement réduit : une TRANSFORMATION posée sur un état (survol, focus, clic) est un mouvement ; elle n'est écrite que pour les visiteurs sans préférence de
+// mouvement réduit. Les autres réglages de l'état (couleur, ombre, contour…) restent écrits tels quels : ils changent instantanément, sans mouvement.
+// Contour de focus conservé : un état « focus » qui supprime le contour (style « aucun » ou épaisseur 0) sans le remplacer par un autre repère visible (ombre, bordure,
+// fond, dégradé, soulignement) rendrait la navigation au clavier invisible. Le contour est alors conservé (la suppression seule est écartée, le reste s'applique).
+const FOCUS_SUBSTITUTES = ["boxShadow", "shadow", "borderColor", "borderWidth", "backgroundColor", "gradient", "textDecoration"];
+function keepFocusRing(set) {
+  if (!set) return set;
+  const noRing = set.outlineStyle === "none" || /^0(px|rem|em)?$/.test(String(set.outlineWidth === undefined ? "" : set.outlineWidth));
+  if (!noRing || FOCUS_SUBSTITUTES.some((k) => set[k] !== undefined && set[k] !== "none")) return set;
+  const { outlineStyle, outlineWidth, ...rest } = set;
+  return rest;
+}
+function splitMotion(set) {
+  if (!set || set.transform === undefined) return { still: set, moving: null };
+  const { transform, ...still } = set;
+  return { still, moving: { transform } };
+}
+// Règles des états d'un élément, pour chaque écran : ordinateur dans le corps de la feuille, autres écrans dans leur requête de média (ils arrivent après et
+// l'emportent, donc héritage ordinateur → tablette → mobile). `calm` = l'auteur a choisi de garder le mouvement malgré la préférence système.
+function stateRules(sel, states, band, rules, calm) {
+  if (!states) return;
+  for (const sc of STATE_SCOPES) {
+    const set = states[sc.key];
+    if (!set) continue;
+    const guarded = sc.state.key === "focus" ? keepFocusRing(set) : set;
+    const { still, moving } = calm ? { still: guarded, moving: null } : splitMotion(guarded);
+    const out = sc.bp.media ? rules.media[sc.bp.key] : rules.base;
+    const d = declarations(still, band), m = moving ? declarations(moving) : "";
+    // Un contour réglé par l'auteur sur l'état focus doit l'emporter sur le contour par défaut du site (landing.css : .kw-button:focus-visible…) : classe doublée, valeurs inchangées
+    const at = sc.state.key === "focus" && /(^|;)outline-/.test(d) && /^\.kw-n-[a-z0-9]+$/.test(sel) ? `${sel}${sel}` : sel;
+    if (d) out.push(`${at}${sc.state.sel}{${d}}`);
+    if (m) out.push(`@media (prefers-reduced-motion:no-preference){${sel}${sc.state.sel}{${m}}}`);
+  }
+}
 function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
   const base = [], media = { wide: [], tablet: [], mobile: [] };
   const mediaOf = (key) => (key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : `(max-width: ${breakpoints.mobile}px)`);
@@ -1998,7 +2037,14 @@ function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
     if (!/^[a-z][a-z0-9-]{0,29}$/.test(c.name)) continue;
     const sel = `.lp-site :where(.${c.name})`;
     for (const bp of BREAKPOINTS) { const d = c.styles && c.styles[bp.key] ? declarations(c.styles[bp.key]) : ""; if (d) (bp.media ? media[bp.key] : base).push(`${sel}{${d}}`); }
-    for (const state of STATES) { const d = c.states && c.states[state.key] ? declarations(c.states[state.key]) : ""; if (d) base.push(`${sel}${state.sel}{${d}}`); }
+    for (const sc of STATE_SCOPES) {
+      const set = c.states && c.states[sc.key];
+      if (!set) continue;
+      const { still, moving } = splitMotion(sc.state.key === "focus" ? keepFocusRing(set) : set), d = declarations(still), m = moving ? declarations(moving) : "";
+      if (d) (sc.bp.media ? media[sc.bp.key] : base).push(`${sel}${sc.state.sel}{${d}}`);
+      if (m) (sc.bp.media ? media[sc.bp.key] : base).push(`@media (prefers-reduced-motion:no-preference){${sel}${sc.state.sel}{${m}}}`);
+    }
+    if (c.styles && Object.values(c.styles).some((x) => x && (x.transitionDuration !== undefined || x.transitionEasing !== undefined))) base.push(`@media (prefers-reduced-motion:reduce){${sel}{transition:none!important}}`);
   }
   return [...base, ...["wide", "tablet", "mobile"].filter((k) => media[k].length).map((k) => `@media ${mediaOf(k)}{${media[k].join("")}}`)].join("\n");
 }
@@ -2041,13 +2087,10 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
         const d = st ? declarations(st) : "";
         if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
       }
-      for (const state of STATES) {
-        const d = set.states && set.states[state.key] ? declarations(set.states[state.key]) : "";
-        if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
-      }
+      stateRules(sel, set.states, false, rules, false);
     }
   };
-  const add = (id, styles, states, band = false) => {
+  const add = (id, styles, states, band = false, calm = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     for (const bp of BREAKPOINTS) {
@@ -2055,10 +2098,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (!d) continue;
       (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
     }
-    for (const state of STATES) {
-      const d = states && states[state.key] ? declarations(states[state.key], band) : "";
-      if (d) rules.base.push(`${sel}${state.sel}{${d}}`);
-    }
+    stateRules(sel, states, band, rules, calm);
   };
   // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
   // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
@@ -2086,7 +2126,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full));
+      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), Boolean(n.motion && n.motion.alwaysMotion));
     addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
@@ -2159,6 +2199,10 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   }
   // Le CSS personnalisé vient en dernier (il précise les réglages de l'inspecteur), avec une spécificité plus forte
   if (rules.custom.length) css += `\n${rules.custom.join("\n")}`;
+  // Mouvement réduit GÉNÉRAL : UNE seule règle pour toute la page (pas une par widget). Dès qu'un réglage de la page écrit une transition, tout élément (et ses
+  // parties) la perd sous « prefers-reduced-motion: reduce » ; les changements d'état sans durée (couleur au survol) restent instantanés. Exception voulue par
+  // l'auteur : data-kw-motion-always (option « Respecter les préférences système de mouvement réduit » décochée).
+  if (/(^|[;{])transition(?:-duration)?:/.test(css)) css += `\n@media (prefers-reduced-motion:reduce){.kw-node:not([data-kw-motion-always],[data-kw-motion-always] *),.kw-node:not([data-kw-motion-always]) *:not([data-kw-motion-always],[data-kw-motion-always] *){transition:none!important}}`;
   return css.replace(/</g, "");
 }
 
@@ -2174,6 +2218,6 @@ function isDemoMenu(props) {
 
 module.exports = {
   isDemoMenu, dynamic, registerCondition, normalizeClassDefs, classCss, GLOBAL_CLASS_MAX,
-  NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
+  NODE_TYPES, CATEGORIES, WIDGET_GROUPS, WIDGETS, CUSTOM_WIDGETS, registerWidget, lockedWidgetChanges, PALETTE, STYLE_UI, editorSpec, STYLE_PROPS, COMPOSED, BREAKPOINTS, STATES, STATE_SCOPES, stateScope, stateBase, SHADOWS, FONT_STACKS, COLOR_TOKENS, MAX_NODES, MAX_DEPTH,
   capsOf, MOTION, STUDIO, motionAttrs, MASK_SHAPES, SCROLL_FX, SCROLL_RANGE, MOUSE_RANGE, MOUSE_MODES, AUDIENCES, normalizeAudience, audienceMatches, audienceLabel, normalizePageCss, cssDeclarations, scheduleMatches, embedOf, sanitizeHtmlBlock, normalizeNode, normalizeStyles, sanitizeRich, walk, visibleTree, pageCss, newNodeId, iconNames,
 };

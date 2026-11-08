@@ -59,6 +59,8 @@ async function launch() {
         await cmd("Input.dispatchMouseEvent", { type: "mousePressed", x, y, button: "left", clickCount: 1 });
         await cmd("Input.dispatchMouseEvent", { type: "mouseReleased", x, y, button: "left", clickCount: 1 });
       },
+      // Émulation d'une préférence du visiteur, ex. [{ name: "prefers-reduced-motion", value: "reduce" }]
+      async emulateMedia(features) { await cmd("Emulation.setEmulatedMedia", { features }); },
       async mouseMove(x, y) { await cmd("Input.dispatchMouseEvent", { type: "mouseMoved", x, y }); },
       async key(key, mods = 0) {
         const code = key.length === 1 ? "Key" + key.toUpperCase() : key;

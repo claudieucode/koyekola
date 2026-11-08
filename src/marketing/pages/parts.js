@@ -547,7 +547,7 @@ function scan(sections, groupOf) {
           const def = defs[key];
           if (!def) { out.push({ id: n.id, type: n.type, part: key, problem: "partie inconnue" }); continue; }
           for (const [scope, set] of [...Object.entries((val && val.styles) || {}), ...Object.entries((val && val.states) || {})]) {
-            if ((val.states || {})[scope] && !def.states.includes(scope)) out.push({ id: n.id, type: n.type, part: key, problem: `état « ${scope} » non proposé` });
+            if ((val.states || {})[scope] && !def.states.includes(String(scope).split("@")[0])) out.push({ id: n.id, type: n.type, part: key, problem: `état « ${scope} » non proposé` });
             for (const k of Object.keys(set || {})) if (!allows(def, k, groupOf)) out.push({ id: n.id, type: n.type, part: key, prop: k, scope, problem: "réglage non proposé pour cette partie" });
           }
         }
