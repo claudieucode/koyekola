@@ -800,3 +800,24 @@
     apply();
   });
 })();
+
+// Rangée d'en-tête collée seule (data-kw-stick-row = distance au bord en px) : quand la rangée atteint le haut de l'écran elle se fixe, une place de même hauteur garde la page stable ;
+// elle reprend sa place quand on remonte. Désactivé dans l'éditeur et avec « réduire les animations » n'y change rien (aucun mouvement).
+(function () {
+  "use strict";
+  var rows = document.querySelectorAll("[data-kw-stick-row]");
+  if (!rows.length || document.body.hasAttribute("data-kw-builder")) return;
+  Array.prototype.forEach.call(rows, function (row) {
+    var off = Number(row.getAttribute("data-kw-stick-row")) || 0;
+    var ph = document.createElement("div"); ph.className = "kw-row-holder"; row.parentNode.insertBefore(ph, row);
+    var stuck = false, tick = false;
+    var update = function () {
+      tick = false;
+      var top = (stuck ? ph : row).getBoundingClientRect().top;
+      if (!stuck && top <= off) { ph.style.height = row.offsetHeight + "px"; ph.style.display = "block"; row.style.top = off + "px"; row.classList.add("kw-row-stuck"); stuck = true; }
+      else if (stuck && top > off) { row.classList.remove("kw-row-stuck"); row.style.top = ""; ph.style.display = "none"; stuck = false; }
+    };
+    var onScroll = function () { if (!tick) { tick = true; requestAnimationFrame(update); } };
+    window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll); update();
+  });
+})();

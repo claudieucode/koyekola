@@ -7885,7 +7885,13 @@ function selectField(label, value, options, onChange, opts) {
     box.appendChild(h("p", { class: "pb-hint", text: "Mise en page, fond, bordure, ombre, espacements, ancre, visibilité par écran… s'ouvrent dans le panneau de droite, avec le choix de l'écran (ordinateur, tablette, mobile) et de l'état." }));
     var row = function (items) { return h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, items.map(function (b) { return h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { open(root.id, b[1], b[2]); } }, b[0]); })); };
     box.appendChild(row([["Mise en page et contenu", "content"], ["Style (état normal)", "style"], ["Style après défilement", "style", "scrolled"], ["Style menu ouvert", "style", "menuOpen"], ["Avancé (ancre, écrans, CSS)", "advanced"]]));
+    headerRows(box, sec);
     headerRootPanel(box, root);
+    if (PAGE.siteId) {
+      box.appendChild(h("p", { class: "pb-sub", text: "Écrans du site (points de rupture)" }));
+      box.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
+      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
+    }
     var els = []; (function walk(list) { (list || []).forEach(function (n) { if (n !== root) els.push(n); if (n.children) walk(n.children); }); })(sec.children[0].children);
     if (els.length) {
       box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête (cliquez pour tout régler)" }));
@@ -7895,6 +7901,23 @@ function selectField(label, value, options, onChange, opts) {
     }
   }
   // Réglages du conteneur de l'en-tête rendus ICI (mêmes contrôles que le panneau de droite : mêmes valeurs, mêmes écrans et états), regroupés comme dans Elementor
+  // Rangées de l'en-tête (les conteneurs de premier niveau) : chacune peut se coller seule en haut de l'écran pendant que les autres défilent
+  function headerRows(box, sec) {
+    var rows = (sec.children || []).filter(function (n) { return n.type === "container"; });
+    // Un seul conteneur racine (cas courant) : ses rangées sont les conteneurs qu'il contient
+    if (rows.length === 1) { var inner = (rows[0].children || []).filter(function (n) { return n.type === "container"; }); if (inner.length) rows = inner; }
+    if (!rows.length) return;
+    box.appendChild(h("p", { class: "pb-sub", text: "Rangées de l'en-tête" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Cochez une rangée pour qu'elle reste collée en haut de l'écran quand on dépasse sa place, pendant que les autres rangées défilent (par exemple la barre de navigation, sans la barre d'annonce)." }));
+    rows.forEach(function (r, i) {
+      var name = r.name || "Rangée " + (i + 1);
+      box.appendChild(checkField("Coller la rangée « " + name + " »", Boolean(r.props && r.props.stickRow), function (on) {
+        change(function () { var x = byId(r.id); if (!x) return false; x.props = x.props || {}; if (on) x.props.stickRow = true; else { delete x.props.stickRow; delete x.props.stickOffset; } }, { label: "Coller une rangée de l'en-tête" });
+        var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b);
+      }, { disabled: !canWrite }));
+      if (r.props && r.props.stickRow) box.appendChild(numberField("Distance du bord haut (px) : " + name, r.props.stickOffset || 0, { min: 0, max: 200, step: 1, integer: true, disabled: !canWrite }, function (n) { if (n === null) return false; change(function () { var x = byId(r.id); if (!x) return false; if (n) x.props.stickOffset = n; else delete x.props.stickOffset; }, { label: "Distance de la rangée collée", key: "stick:" + r.id, light: true }); }));
+    });
+  }
   var HDR_GROUPS = [
     ["Mise en page", [["flexDirection", "Direction"], ["flexWrap", "Retour à la ligne"], ["justifyContent", "Justification"], ["alignItems", "Alignement"], ["gap", "Espacement entre éléments"]]],
     ["Taille", [["width", "Largeur"], ["maxWidth", "Largeur maximale"], ["minHeight", "Hauteur minimale"], ["overflow", "Débordement"]]],

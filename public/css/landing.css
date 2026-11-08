@@ -859,6 +859,9 @@ body[data-kw-lb-captions="0"] .kw-lightbox-cap { display: none; }
 /* Header Builder : en-tête « fixé » (hors flux : un espaceur de sa hauteur garde la page en place, voir landing.js), coller sur certains appareils seulement, masquage au défilement */
 /* « Fixé » : reste en haut de l'écran. Réalisé avec la position collée, qui garde l'en-tête DANS le flux : aucun espaceur à ajouter après coup, donc aucun saut de contenu (mesuré : un en-tête vraiment hors flux faisait sauter la page, CLS 0,16) */
 .lp-block.lp-site-header.kw-theme-fixed { position: sticky; top: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }
+/* Rangée d'en-tête collée seule (réglage « Coller cette rangée ») : fixée en haut de l'écran pendant que le reste de l'en-tête défile ; une place du même gabarit garde la page stable */
+.kw-row-stuck { position: fixed !important; left: 0; right: 0; z-index: var(--kw-hdr-z, 60); box-sizing: border-box; }
+.kw-row-holder { display: none; }
 /* Barre collée en BAS de l'écran : la place (hauteur réservée) reste dans la page, la barre elle-même est fixée au bas ; les sous-menus s'ouvrent vers le haut */
 .lp-block.lp-site-header.kw-theme-bottom { position: relative; top: auto; height: var(--kw-hdr-h, 72px); }
 .lp-block.lp-site-header.kw-theme-bottom > .kw-layout { display: block; position: fixed; left: 0; right: 0; bottom: var(--kw-hdr-top, 0); z-index: var(--kw-hdr-z, 60); }

@@ -427,7 +427,9 @@ const dynamicHelpers = (h) => ({
 });
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
-  return { ...boxTag(p), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
+  // stickRow : cette rangée d'en-tête se fixe en haut de l'écran quand on la dépasse en défilant (les autres rangées défilent) ; stickOffset = distance au bord (px)
+  const stickOffset = Number(p.stickOffset);
+  return { ...boxTag(p), ...(p.stickRow === true ? { stickRow: true, ...(Number.isInteger(stickOffset) && stickOffset > 0 && stickOffset <= 200 ? { stickOffset } : {}) } : {}), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);

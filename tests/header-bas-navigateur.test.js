@@ -31,5 +31,21 @@ describe("Header Builder : barre en bas (navigateur)", { skip: SKIP }, () => {
     await context.close();
   });
 
+  test("rangée collée seule : la rangée choisie se fixe en haut quand on la dépasse, une place garde la page stable, elle revient en remontant", async () => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (sec) => { const rows = sec.children[0].children.filter((c) => c.type === "container"); rows[rows.length - 1].props = { ...rows[rows.length - 1].props, stickRow: true }; });
+    const { context, page } = await env.visit();
+    const row = page.locator("[data-kw-stick-row]").first();
+    assert.equal(await row.count(), 1, "la rangée porte le réglage");
+    const before = await row.boundingBox();
+    const docH = await page.evaluate(() => document.documentElement.scrollHeight);
+    await page.evaluate((y) => window.scrollTo(0, y), Math.round(before.y) + 400); await page.waitForTimeout(250);
+    assert.match(await row.getAttribute("class"), /kw-row-stuck/, "fixée");
+    assert.ok(Math.abs((await row.boundingBox()).y) < 2, "collée en haut de l'écran");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollHeight), docH, "aucun saut : la place est gardée");
+    await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(250);
+    assert.doesNotMatch(await row.getAttribute("class"), /kw-row-stuck/, "reprend sa place en remontant");
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(env.errors, []); });
 });
