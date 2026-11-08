@@ -7898,6 +7898,7 @@ function selectField(label, value, options, onChange, opts) {
     });
     hdrAcc(box, "rangees", "Rangées collées", function (b) { headerRows(b, sec); });
     hdrAcc(box, "style", "Style du conteneur", function (b) { headerRootPanel(b, root); });
+    hdrAcc(box, "mobile", "Menu mobile (hamburger)", function (b) { headerMobile(b); });
     if (PAGE.siteId) hdrAcc(box, "ecrans", "Écrans du site", function (b) {
       b.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
       b.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
@@ -7909,6 +7910,65 @@ function selectField(label, value, options, onChange, opts) {
         return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? typeLabel(n) : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
       })));
     });
+  }
+  // ---- Menu mobile (hamburger) : un modèle de design, appliqué à tous les menus de l'en-tête, pour les écrans plus petits qu'un ordinateur ----
+  var HDR_BURGERS = [
+    { key: "none", label: "Menu étalé", hint: "Pas de bouton : le menu reste visible", props: null, mock: "none" },
+    { key: "classic", label: "Classique", hint: "Bouton « Menu », liste dépliée dessous", props: {}, mock: "inline" },
+    { key: "drawer-right", label: "Tiroir à droite", hint: "Panneau qui glisse de la droite", props: { mobileMode: "drawer", drawerSide: "right", burgerText: "", burgerShape: "round" }, mock: "right" },
+    { key: "drawer-left", label: "Tiroir à gauche", hint: "Panneau qui glisse de la gauche", props: { mobileMode: "drawer", drawerSide: "left", burgerText: "", burgerShape: "plain" }, mock: "left" },
+    { key: "full", label: "Plein écran", hint: "Le menu couvre tout l'écran", props: { mobileMode: "full", burger: "lines2", burgerText: "", burgerShape: "round" }, mock: "full" },
+    { key: "sheet", label: "Panneau du bas", hint: "Le menu monte depuis le bas", props: { mobileMode: "sheet", burgerText: "Menu", burgerShape: "box" }, mock: "sheet" },
+    { key: "minimal", label: "Minimal", hint: "Deux traits, sans cadre, tiroir à droite", props: { mobileMode: "drawer", drawerSide: "right", burger: "lines2", burgerText: "", burgerShape: "plain" }, mock: "right" },
+    { key: "dots", label: "Points", hint: "Trois points, bouton rond", props: { mobileMode: "drawer", drawerSide: "right", burger: "dots", burgerText: "", burgerShape: "round" }, mock: "right" },
+    { key: "text", label: "Texte seul", hint: "MENU en lettres, sans icône", props: { mobileMode: "full", burger: "text", burgerText: "Menu", burgerShape: "plain" }, mock: "full" }
+  ];
+  var HDR_BURGER_KEYS = ["mobileMode", "drawerSide", "burger", "burgerText", "burgerShape"];
+  function hdrMenus() { var out = []; (function walk(list) { (list || []).forEach(function (n) { if (n.type === "menu") out.push(n); if (n.children) walk(n.children); }); })((headerSection() || {}).children); return out; }
+  function hdrBurgerOf(props) {
+    if (!props || !props.mobileToggle) return "none";
+    var sig = function (q) { return [q.mobileMode === "drawer" || q.mobileMode === "full" || q.mobileMode === "sheet" ? q.mobileMode : "inline", q.mobileMode === "drawer" ? (q.drawerSide === "left" ? "left" : "right") : "", q.burger || "lines", typeof q.burgerText === "string" ? q.burgerText : "Menu", q.burgerShape || "box"].join("|"); };
+    var cur = sig(props), found = "";
+    HDR_BURGERS.forEach(function (m) { if (m.props && sig(m.props) === cur) found = m.key; });
+    return found || "custom";
+  }
+  function headerMobile(b) {
+    var menus = hdrMenus(), dis = !canWrite;
+    var redraw = function () { hdrOpen = "mobile"; var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); };
+    if (!menus.length) { b.appendChild(h("p", { class: "pb-hint", text: "Cet en-tête n'a pas encore de menu. Ajoutez un élément « Menu de navigation » : le modèle de menu hamburger s'appliquera ensuite à tous les menus de l'en-tête." })); return; }
+    b.appendChild(h("p", { class: "pb-hint", text: "Sur les écrans plus petits qu'un ordinateur, le menu se replie derrière un bouton hamburger. Choisissez un modèle : il s'applique à tous les menus de l'en-tête." }));
+    var active = hdrBurgerOf(menus[0].props);
+    var tiles = h("div", { class: "pb-hdr-tiles", role: "radiogroup", "aria-label": "Modèle de menu hamburger" });
+    HDR_BURGERS.forEach(function (m) {
+      var mock = h("span", { class: "pb-mm is-" + m.mock, "aria-hidden": "true" }, h("span", { class: "pb-mm-bar" }, h("i", { class: "pb-mm-logo" }), h("i", { class: "pb-mm-btn" })), h("i", { class: "pb-mm-panel" }));
+      tiles.appendChild(h("button", { type: "button", role: "radio", class: "pb-hdr-tile", "aria-checked": String(active === m.key), disabled: dis, onclick: function () {
+        hdrOpen = "mobile";
+        change(function () {
+          hdrMenus().forEach(function (n) {
+            var x = byId(n.id); if (!x) return; x.props = x.props || {};
+            HDR_BURGER_KEYS.forEach(function (k) { delete x.props[k]; });
+            if (!m.props) { delete x.props.mobileToggle; delete x.props.menuBreakpoint; return; }
+            x.props.mobileToggle = true; Object.keys(m.props).forEach(function (k) { x.props[k] = m.props[k]; });
+          });
+        }, { label: "Modèle de menu hamburger : " + m.label });
+        redraw();
+      } }, mock, h("span", { class: "pb-hdr-tile-title", text: m.label }), h("span", { class: "pb-hdr-tile-hint", text: m.hint })));
+    });
+    b.appendChild(tiles);
+    if (active === "custom") b.appendChild(h("p", { class: "pb-hint", text: "Réglage personnalisé : ce menu a des réglages de bouton différents des modèles. Choisir un modèle les remplace." }));
+    if (active !== "none") {
+      var bp = menus[0].props.menuBreakpoint || 767, mode = bp === 1023 ? "tab" : bp === 767 ? "mob" : "cus";
+      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "Quand l'utiliser" }));
+      var seg = h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Tailles d'écran concernées" });
+      [["tab", "Tablette et mobile", "Écrans de 1023 px et moins", 1023], ["mob", "Mobile seulement", "Écrans de 767 px et moins", 767], ["cus", "Personnalisé", "Choisir la largeur", bp !== 767 && bp !== 1023 ? bp : 900]].forEach(function (o) {
+        seg.appendChild(h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(mode === o[0]), disabled: dis, onclick: function () {
+          change(function () { hdrMenus().forEach(function (n) { var x = byId(n.id); if (!x) return; if (o[3] === 767) delete x.props.menuBreakpoint; else x.props.menuBreakpoint = o[3]; }); }, { label: "Taille d'écran du menu hamburger" });
+          redraw();
+        } }, h("span", { class: "pb-hdr-tile-title", text: o[1] }), h("span", { class: "pb-hdr-tile-hint", text: o[2] })));
+      });
+      b.appendChild(seg);
+      if (mode === "cus") b.appendChild(numberField("Largeur d'écran (px)", bp, { min: 320, max: 1920, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; change(function () { hdrMenus().forEach(function (q) { var x = byId(q.id); if (x) { if (n === 767) delete x.props.menuBreakpoint; else x.props.menuBreakpoint = n; } }); }, { label: "Largeur du menu hamburger", key: "burger-bp", light: true }); }, "Au-dessous de cette largeur, le menu devient un bouton."));
+    }
   }
   // Accordéon de l'onglet « En-tête » : une seule section ouverte à la fois ; la section ouverte est retenue quand le panneau se redessine
   var hdrOpen = "comportement";

@@ -122,3 +122,25 @@ describe("Header Builder : barre en bas et point de rupture du menu", () => {
     assert.equal(find({ menuBreakpoint: 1024, mobileToggle: false }).menuBreakpoint, undefined);
   });
 });
+
+describe("Header Builder : modèles du menu hamburger (validation)", () => {
+  const sections = require("../src/marketing/pages/sections");
+  const CTX = { organizationId: 1, db: { prepare: () => ({ get: () => null, all: () => [] }) } };
+  const norm = (props) => sections.normalizeSections(CTX, [{ id: sections.newSectionId(), type: "layout", children: [{ id: "mnu0002aa", type: "menu", props: { source: "manual", items: [{ label: "A", url: "/a" }], mobileToggle: true, ...props } }] }])[0].children[0].props;
+  test("modes de panneau : tiroir, plein écran, panneau du bas ; valeur inconnue ignorée ; côté seulement pour le tiroir", () => {
+    assert.equal(norm({ mobileMode: "full" }).mobileMode, "full");
+    assert.equal(norm({ mobileMode: "sheet" }).mobileMode, "sheet");
+    assert.equal(norm({ mobileMode: "drawer", drawerSide: "left" }).drawerSide, "left");
+    assert.equal(norm({ mobileMode: "full", drawerSide: "left" }).drawerSide, undefined);
+    assert.equal(norm({ mobileMode: "<script>" }).mobileMode, undefined);
+  });
+  test("bouton : icône, texte et forme bornés ; texte vide = icône seule ; rien sans bouton « Menu »", () => {
+    const p = norm({ burger: "dots", burgerText: "", burgerShape: "round" });
+    assert.deepEqual([p.burger, p.burgerText, p.burgerShape], ["dots", "", "round"]);
+    assert.equal(norm({ burger: "evil" }).burger, undefined);
+    assert.equal(norm({ burgerShape: "x" }).burgerShape, undefined);
+    assert.equal(norm({ burgerText: "x".repeat(80) }).burgerText.length, 20);
+    assert.equal(norm({ mobileToggle: false, burger: "dots", mobileMode: "full" }).burger, undefined);
+    assert.equal(norm({ mobileToggle: false, mobileMode: "full" }).mobileMode, undefined);
+  });
+});

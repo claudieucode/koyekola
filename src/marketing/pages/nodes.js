@@ -614,7 +614,14 @@ const NODE_TYPES = {
     if (source === "manual" && !items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
     // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
-    if (out.mobileToggle && p.mobileMode === "drawer") { out.mobileMode = "drawer"; out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Panneau : « drawer » (tiroir à droite ou à gauche), « full » (plein écran) ou « sheet » (panneau qui monte du bas) ; sinon la liste se déplie sous le bouton
+    if (out.mobileToggle && ["drawer", "full", "sheet"].includes(p.mobileMode)) { out.mobileMode = p.mobileMode; if (p.mobileMode === "drawer") out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Bouton hamburger (modèles de design) : icône (lignes, deux lignes, points, texte seul), texte du bouton (« Menu » par défaut, vide = icône seule), forme (cadre, rond, sans cadre)
+    if (out.mobileToggle) {
+      if (["lines2", "dots", "text"].includes(p.burger)) out.burger = p.burger;
+      if (typeof p.burgerText === "string") out.burgerText = line(p.burgerText, 20);
+      if (["round", "plain"].includes(p.burgerShape)) out.burgerShape = p.burgerShape;
+    }
     // Pointeur des liens du menu (survol / page courante) : trait dessous, dessus, double trait, cadre ou fond ; animation et couleur facultatives
     if (["underline", "overline", "double", "framed", "background"].includes(p.pointer)) {
       out.pointer = p.pointer; out.pointerAnim = ["fade", "slide", "grow", "drop"].includes(p.pointerAnim) ? p.pointerAnim : "fade";

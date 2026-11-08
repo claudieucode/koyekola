@@ -2440,3 +2440,29 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 [data-pb-page-settings] .pb-insp-bar .pb-seg button[aria-checked="true"] { background: var(--editor-accent); border-color: var(--editor-accent); color: #fff; font-weight: 700; }
 [data-pb-page-settings] .pb-insp-bar .pb-seg button:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: 2px; }
 [data-pb-page-settings] .pb-insp-bar .pb-bp-seg button { display: block; width: auto; padding: 0 6px; }
+
+/* Menu mobile (hamburger) : galerie de modèles, chaque tuile montre le bouton et le panneau */
+.pb-hdr-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 12px; }
+.pb-hdr-tiles.is-two { padding-top: 4px; }
+.pb-hdr-tile { display: flex; flex-direction: column; align-items: stretch; gap: 2px; padding: 8px; border: 1px solid var(--editor-border-strong); border-radius: var(--pb-radius-md, 8px); background: var(--editor-card); color: var(--editor-text); font: inherit; text-align: left; cursor: pointer; }
+.pb-hdr-tile:hover { background: var(--editor-hover); }
+.pb-hdr-tile[aria-checked="true"] { border-color: var(--editor-accent); box-shadow: 0 0 0 1px var(--editor-accent); background: var(--editor-active); }
+.pb-hdr-tile:focus-visible { outline: 2px solid var(--editor-accent); outline-offset: 2px; }
+.pb-hdr-tile.is-flat { padding: 8px 10px; }
+.pb-hdr-tile-title { font-size: 12.5px; font-weight: 700; line-height: 1.25; }
+.pb-hdr-tile-hint { font-size: 11px; color: var(--editor-muted); line-height: 1.3; }
+.pb-hdr-sublabel { margin: 0; padding: 4px 12px 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--editor-muted); }
+.pb-hdr-acc-body > .pb-hdr-sublabel { margin: 6px 12px 0; padding: 0; }
+.pb-mm { position: relative; display: block; height: 54px; margin-bottom: 6px; border: 1px solid var(--editor-border-strong); border-radius: 6px; background: var(--editor-panel-secondary); overflow: hidden; }
+.pb-mm-bar { position: absolute; top: 0; left: 0; right: 0; height: 14px; display: flex; align-items: center; justify-content: space-between; padding: 0 5px; background: var(--editor-card); border-bottom: 1px solid var(--editor-border); }
+.pb-mm-logo { display: block; width: 14px; height: 4px; border-radius: 2px; background: var(--editor-muted); opacity: .6; }
+.pb-mm-btn { display: block; width: 9px; height: 6px; border-top: 2px solid var(--editor-accent); border-bottom: 2px solid var(--editor-accent); position: relative; }
+.pb-mm-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 0; border-top: 2px solid var(--editor-accent); }
+.pb-mm-panel { position: absolute; display: none; background: var(--editor-accent); opacity: .22; }
+.pb-mm.is-right .pb-mm-panel { display: block; top: 14px; right: 0; bottom: 0; width: 55%; }
+.pb-mm.is-left .pb-mm-panel { display: block; top: 14px; left: 0; bottom: 0; width: 55%; }
+.pb-mm.is-full .pb-mm-panel { display: block; top: 14px; left: 0; right: 0; bottom: 0; }
+.pb-mm.is-sheet .pb-mm-panel { display: block; left: 0; right: 0; bottom: 0; height: 55%; border-radius: 6px 6px 0 0; }
+.pb-mm.is-inline .pb-mm-panel { display: block; top: 14px; left: 0; right: 0; height: 12px; }
+.pb-mm.is-none .pb-mm-btn { display: none; }
+.pb-mm.is-none .pb-mm-bar::after { content: ""; width: 26px; height: 4px; border-radius: 2px; background: var(--editor-muted); opacity: .6; }

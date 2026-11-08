@@ -1603,6 +1603,25 @@ html.kw-noscroll { overflow: hidden; }
 .kw-menu-close { position: absolute; top: 12px; right: 12px; min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: none; color: inherit; font-size: 28px; line-height: 1; cursor: pointer; }
 .kw-menu-close:hover { background: rgba(15, 23, 42, .08); }
 .kw-menu-panel.is-left .kw-menu-close { right: 12px; }
+/* Modèles du panneau du menu mobile : plein écran et panneau qui monte du bas */
+.kw-menu-panel.is-full { inset: 0; width: auto; padding: 88px 28px 32px; box-shadow: none; animation-name: kw-fade; }
+.kw-menu-panel.is-full .kw-menu-link { font-size: 1.35rem; font-weight: 700; padding: 14px 0; }
+.kw-menu-panel.is-sheet { top: auto; left: 0; right: 0; width: auto; max-height: 82vh; padding: 64px 20px 24px; border-radius: 18px 18px 0 0; animation-name: kw-slide-u; }
+@keyframes kw-slide-u { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .kw-menu-panel.is-full, .kw-menu-panel.is-sheet { animation: none; } }
+/* Modèles du bouton hamburger (forme, icône) ; l'icône « lignes » d'origine reste celle par défaut */
+.kw-menu-burger.is-round { border-radius: 999px; min-width: 44px; justify-content: center; padding: 0 14px; }
+.kw-menu-burger.is-plain { border-color: transparent; background: none; padding: 0 8px; }
+.kw-menu-burger.is-lines2 > span[aria-hidden]::after { display: none; }
+.kw-menu-burger.is-lines2 > span[aria-hidden] { height: 8px; }
+.kw-menu-burger.is-dots > span[aria-hidden] { width: 4px; height: 4px; border: 0; border-radius: 50%; background: currentColor; box-shadow: 0 -7px 0 currentColor, 0 7px 0 currentColor; }
+.kw-menu-burger.is-dots > span[aria-hidden]::after { display: none; }
+.kw-menu-burger.is-text { letter-spacing: .12em; text-transform: uppercase; font-size: .85em; }
+/* Ouvert : les lignes se croisent en « × » (sauf mouvement réduit) */
+.kw-menu-burger.is-lines[aria-expanded="true"] > span[aria-hidden], .kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden] { border-top-color: transparent; border-bottom-color: transparent; }
+.kw-menu-burger.is-lines[aria-expanded="true"] > span[aria-hidden]::before, .kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::before { content: ""; position: absolute; left: 0; right: 0; top: 3px; border-top: 2px solid currentColor; transform: rotate(45deg); }
+.kw-menu-burger.is-lines[aria-expanded="true"] > span[aria-hidden]::after, .kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::after { display: block; content: ""; position: absolute; left: 0; right: 0; top: 3px; border-top: 2px solid currentColor; transform: rotate(-45deg); }
+
 @keyframes kw-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes kw-slide-r { from { transform: translateX(100%); } to { transform: none; } }
 @keyframes kw-slide-l { from { transform: translateX(-100%); } to { transform: none; } }
@@ -1696,3 +1715,4 @@ html.kw-noscroll { overflow: hidden; }
 .kw-marquee-item:has(.kw-marquee-img) { display: inline-flex; align-items: center; }
 
 .kw-st-vis { display: inline; }
+.kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::before, .kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::after { top: 1px; }

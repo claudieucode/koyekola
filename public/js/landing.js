@@ -266,7 +266,13 @@
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-menu-toggle]"), function (nav) {
     var list = nav.querySelector(".kw-menu-list");
     var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
-    b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
+    // Modèle du bouton (réglé dans l'en-tête) : icône (lignes / deux lignes / points / texte seul), texte, forme
+    var kind = nav.getAttribute("data-kw-burger") || "lines", shape = nav.getAttribute("data-kw-burger-shape") || "box";
+    var txt = nav.hasAttribute("data-kw-burger-text") ? nav.getAttribute("data-kw-burger-text") : "Menu";
+    b.classList.add("is-" + kind, "is-" + shape);
+    if (kind !== "text") { var ico = document.createElement("span"); ico.setAttribute("aria-hidden", "true"); b.appendChild(ico); }
+    if (txt || kind === "text") { var lab = document.createElement("span"); lab.className = "kw-menu-burger-label"; lab.textContent = txt || "Menu"; b.appendChild(lab); }
+    if (!txt) b.setAttribute("aria-label", "Menu");
     var side = nav.getAttribute("data-kw-menu-drawer"), head = nav.closest(".lp-site-header"), small = window.matchMedia ? window.matchMedia("(max-width: " + (Number(nav.getAttribute("data-kw-menu-bp")) || 767) + "px)") : null;
     var panel = null, backdrop = null, locked = null;
     var focusables = function () { return Array.prototype.filter.call(panel.querySelectorAll("a[href], button:not([disabled])"), function (e) { return e.offsetParent !== null; }); };

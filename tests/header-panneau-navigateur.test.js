@@ -69,6 +69,23 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     assert.doesNotMatch(await cls(), /is-scrolled|is-menu-open/, "retour à l'aperçu normal");
   });
 
+  test("menu hamburger : le choix d'un modèle s'applique aux menus de l'en-tête et se retrouve dans le document ; la taille d'écran aussi", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Menu mobile");
+    const tile = (name) => pane.locator(".pb-hdr-tile", { hasText: name }).first();
+    await tile("Tiroir à gauche").click(); await page.waitForTimeout(300);
+    assert.equal(await tile("Tiroir à gauche").getAttribute("aria-checked"), "true", "tuile active");
+    await pane.locator(".pb-hdr-tile", { hasText: "Tablette et mobile" }).click(); await page.waitForTimeout(300);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const draft = JSON.parse(env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft);
+    const menus = []; (function walk(l) { (l || []).forEach((n) => { if (n.type === "menu") menus.push(n); if (n.children) walk(n.children); }); })((Array.isArray(draft.sections) ? draft.sections[0] : draft).children);
+    assert.ok(menus.length >= 1, "l'en-tête a un menu");
+    for (const m of menus) { assert.equal(m.props.mobileToggle, true); assert.equal(m.props.mobileMode, "drawer"); assert.equal(m.props.drawerSide, "left"); assert.equal(m.props.menuBreakpoint, 1023); assert.equal(m.props.burgerShape, "plain"); }
+    await tile("Menu étalé").click(); await page.waitForTimeout(300);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const d2 = JSON.parse(env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft); const m2 = []; (function walk(l) { (l || []).forEach((n) => { if (n.type === "menu") m2.push(n); if (n.children) walk(n.children); }); })((Array.isArray(d2.sections) ? d2.sections[0] : d2).children);
+    for (const m of m2) { assert.ok(!m.props.mobileToggle, "menu étalé : plus de bouton"); assert.equal(m.props.mobileMode, undefined); assert.equal(m.props.menuBreakpoint, undefined); }
+  });
+
   test("les boutons d'éléments listent les éléments de l'en-tête et ouvrent leurs réglages à droite", async () => {
     const pane = page.locator("[data-pb-page-settings]");
     await openSec("Réglages du conteneur"); const btns = pane.locator(".pb-hdr-row");
