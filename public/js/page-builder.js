@@ -7923,7 +7923,7 @@ function selectField(label, value, options, onChange, opts) {
     ["Taille", [["width", "Largeur"], ["maxWidth", "Largeur maximale"], ["minHeight", "Hauteur minimale"], ["overflow", "Débordement"]]],
     ["Espacements", [["paddingTop", "Marge interne haut"], ["paddingBottom", "Marge interne bas"], ["paddingLeft", "Marge interne gauche"], ["paddingRight", "Marge interne droite"], ["marginTop", "Marge externe haut"], ["marginBottom", "Marge externe bas"]]],
     ["Fond, bordure et ombre", [["backgroundColor", "Couleur de fond"], ["borderStyle", "Type de bordure"], ["borderBottomWidth", "Bordure du bas (épaisseur)"], ["borderColor", "Couleur de bordure"], ["borderRadius", "Arrondi"], ["boxShadow", "Ombre"], ["opacity", "Opacité"], ["backdropBlur", "Flou de l'arrière-plan"]]],
-    ["Avancé", [["position", "Position"], ["zIndex", "Niveau d'empilement"], ["visibility", "Visibilité (garde sa place)"], ["transitionDuration", "Durée des transitions"]]]
+    ["Avancé", [["visibility", "Visibilité (garde sa place)"], ["transitionDuration", "Durée des transitions"]]]
   ];
   var hdrRootOpen = {};
   function headerRootPanel(box, root) {
