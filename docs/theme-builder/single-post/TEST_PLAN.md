@@ -20,3 +20,13 @@
 * Accessibilité : clavier, focus visible, contraste, `prefers-reduced-motion`.
 * Non-régression : blog, pages, archives, recherche, header, footer, sidebars, routage.
 * Multi-site : isolation des modèles, conditions, données, permissions.
+
+## Résultats du 8 novembre 2026 (après remplacement par la v2)
+| Contrôle | Résultat |
+|---|---|
+| `node scripts/audit-article-individuel.js --all` | 100 / 100, 0 défaut (aucune paire au-dessus de 80 %) |
+| `tests/theme-builder-article-individuel.test.js` (serveur réel, 100 modèles utilisés puis publiés, bon article, isolation) | 9 / 9 réussis |
+| `tests/theme-builder-article-individuel-navigateur.test.js` (Chrome, 100 modèles × 3 largeurs) | réussi |
+| `single-post-moteur`, `single-post-serveur`, `theme-builder-apercu-contenu`, `…contexte-rendu`, `…apercu-vignette`, `blog-comments` | réussis |
+| `theme-builder-catalogue`, `…catalogue-public`, `…catalogue-direct-navigateur` | 3 échecs qui concernent la catégorie **En-tête** (« recherche ÉDITORIAL », logo du site, filtre d'identité d'en-tête), pas l'Article individuel ; non liés à ce changement |
+Non fait : relecture humaine des 300 rendus ; tests avec 1920 px et 1280 px (le test Chrome existant couvre 1440 / 820 / 390 px).

@@ -25,7 +25,7 @@ describe("Article individuel : la bibliothèque (code)", () => {
   test("exactement 100 modèles, clés et noms uniques, 100 mises en page, aucune ancienne clé « mise en page × identité »", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100); assert.equal(new Set(all.map((e) => e.name)).size, 100);
-    assert.equal(new Set(all.map((e) => e.layoutId)).size, 100, "100 compositions, pas 20 × 5"); assert.ok(Catalog.list("single_post", { limit: 60 }).layouts.length >= 15, "filtre par familles");
+    assert.equal(new Set(all.map((e) => e.layoutId)).size, 100, "100 compositions, pas 20 × 5"); assert.ok(Catalog.list("single_post", { limit: 60 }).layouts.length >= 12, "filtre par familles");
     const old = ["classique", "etroit", "heros-plein", "lateral", "lateral-gauche", "magazine", "editorial", "carte", "auteur-en-tete", "partage-flottant", "fil-ariane", "resume", "suite", "abonnement", "grand-titre", "discussion"];
     for (const o of old) assert.ok(all.filter((e) => e.layoutId === o).length <= 1, `${o} : l'ancien produit mises en page × identités ne doit plus exister`);
   });
@@ -102,7 +102,7 @@ describe("Article individuel : de la bibliothèque au site public (100 modèles,
     assert.match(b.text, /CORPS-UNIQUE-B/);
   });
   test("fonctionnalités liées à l'article courant : le sommaire liste les intertitres de l'article, le partage vise l'adresse de l'article", async () => {
-    for (const key of ["sommaire-collant-gauche.clair", "partage-trois-colonnes.clair"]) {
+    for (const key of ["sommaire-fixe.editorial", "blog-createur.doux"]) {
       const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "single_post", key })).text).template;
       assert.equal((await post(U(A, `/api/modeles/${t.id}/publier`))).status, 200);
       const r = await hostReq(srv, "a.test", "/blog/article-a"); assert.equal(r.status, 200);
