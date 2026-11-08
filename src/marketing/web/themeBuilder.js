@@ -207,7 +207,7 @@ module.exports = () => {
   const libPreview = (thumb) => (req, res, next) => {
     try {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
-      const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)) });
+      const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)), identity: String(req.query.identite || "") });
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
       require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb, sampleMenu: true }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
@@ -219,7 +219,7 @@ module.exports = () => {
   router.get(`${LIB}/${keyOf}/vignette`, need("forms.read"), libPreview(true));
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
-    const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
+    const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined, identity: String(b.identite || "") });
     // En-tête : la clé du modèle d'origine est gardée dans le document (sert à « Revenir au modèle initial ») ; échec = installation sans cette fonction, jamais une erreur
     if (String(b.type) === "header" && t.sourceKind === "component") { try { const c = P().getComponent(ctx, t.sourceId); if (c) P().updateComponent(ctx, t.sourceId, { section: stampKey(c.section, String(b.key)) }); } catch { /* origine non mémorisée */ } }
     return { template: card(ctx, t, new Set()) };

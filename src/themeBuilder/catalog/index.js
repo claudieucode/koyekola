@@ -69,16 +69,32 @@ function legibleLinks(nodes, bg) {
   }
 }
 
+// Mode d'identité « site » : les valeurs FIXES de l'identité du modèle (couleurs, polices) sont remplacées par les jetons du site ; le modèle suit alors la charte du site.
+// Priorité du remplacement (la plus forte en dernier) : texte d'accent, filet, texte discret, fond alterné, fond, accent, texte. Les autres valeurs (blanc sur image, ombres) restent fixes.
+const MODES = ["own", "site", "hybrid"];
+function followSite(nodes, S) {
+  const M = new Map([[S.font, "body"], [S.head, "heading"], [S.onAccent, "token:on-primary"], [S.line, "token:surface"], [S.mute, "token:muted"], [S.alt, "token:surface"], [S.bg, "token:background"], [S.accent, "token:primary"], [S.fg, "token:text"]]);
+  const swap = (v) => (typeof v === "string" && M.has(v) ? M.get(v) : v);
+  const deep = (o) => { if (Array.isArray(o)) return o.map(deep); if (o && typeof o === "object") return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, deep(v)])); return swap(o); };
+  for (const n of nodes) {
+    if (n.styles) n.styles = deep(n.styles);
+    if (n.parts) n.parts = deep(n.parts);
+    if (n.children) followSite(n.children, S);
+  }
+}
+
 const CACHE = new Map();
 // Document d'un modèle : { name, kind: "component" | "page", section | sections }. env : { formId } (formulaire d'inscription réel du site, s'il en existe un).
 function build(type, key, env = {}) {
   const meta = find(type, key);
   if (!meta) return null;
-  const ck = `${type}:${key}:${env.formId || 0}`;
+  const mode = MODES.includes(env.identity) ? env.identity : "own";
+  const ck = `${type}:${key}:${env.formId || 0}:${mode}`;
   if (CACHE.has(ck)) return CACHE.get(ck);
   const d = def(type), S = identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
-  const children = withIds(buildFn(kit(S), env));
+  const children = withIds(buildFn(kit(S), { ...env, identity: mode }));
+  if (mode === "site" && d.ownSkins) followSite(children, S);
   if (type === "single_post") { legibleLinks(children, null); require("./single_post/apply").apply(children, S); } // identité propre : voir single_post/apply.js
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
@@ -88,4 +104,4 @@ function build(type, key, env = {}) {
 }
 const thumbDoc = (type, key, env = {}) => { const b = build(type, key, env); return b ? (b.section || b.sections[0]) : null; };
 const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length, ...(def(t).flat ? { flat: true } : {}) }));
-module.exports = { types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };
+module.exports = { MODES, types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };

@@ -13,12 +13,12 @@ const bad = (m, code = "invalid_field") => new MarketingError(code, m);
 function siteFormId(ctx, siteId) {
   try { const r = ctx.db.prepare("SELECT id FROM mk_forms WHERE organization_id = ? AND (site_id = ? OR site_id IS NULL) ORDER BY (site_id = ?) DESC, id LIMIT 1").get(ctx.organizationId, siteId, siteId); return r ? r.id : null; } catch { return null; }
 }
-function useTemplate(ctx, siteId, type, key, { name, conditions } = {}) {
+function useTemplate(ctx, siteId, type, key, { name, conditions, identity } = {}) {
   store.site(ctx, siteId);
   if (!Types.has(type) || !Catalog.types().includes(type)) throw bad("Ce type de modèle n'a pas de catalogue.");
   const meta = Catalog.find(type, String(key || ""));
   if (!meta) throw bad("Modèle du catalogue introuvable.", "not_found");
-  const doc = Catalog.build(type, meta.key, { formId: siteFormId(ctx, siteId) });
+  const doc = Catalog.build(type, meta.key, { formId: siteFormId(ctx, siteId), identity });
   const label = String(name || meta.name).slice(0, 100);
   return transaction(ctx.db, () => {
     let created;

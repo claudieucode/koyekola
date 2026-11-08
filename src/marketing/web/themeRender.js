@@ -204,13 +204,14 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     // En-tête : rendu comme une partie du site (sitePart) pour que le défilement, le logo alternatif et l'identité du site agissent comme sur la page publiée
     if (type === "header" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "parthead", sitePart: "header" } : x));
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" ? { demoShop: true } : {}) } : {}) });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" ? { demoShop: true } : {}), ...(type === "archive" ? { demoPosts: true } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
       // En-tête : contexte de page NEUTRE sous l'en-tête (dégradé CSS sans image ni texte qui paraisse réel) pour juger un en-tête superposé, transparent ou en verre ; mêmes éléments dans la vignette (plus court)
       const demoNote = type === "product_archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des produits d\'exemple : votre boutique affichera ses vrais produits.</p>' : "";
-      const body = demoNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
+      const demoPostsNote = type === "archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des articles d\'exemple : votre site affichera ses vrais articles.</p>' : "";
+      const body = demoNote + demoPostsNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
       done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb || type === "footer" ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
     });
   } catch { done(null); }
