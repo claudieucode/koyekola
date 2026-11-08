@@ -44,6 +44,17 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     assert.equal(root.states.scrolled.paddingTop, "11px", "état « après défilement » écrit à part : " + JSON.stringify(root.states || {}).slice(0, 200));
   });
 
+  test("aperçu sur le canevas : l'état choisi (après défilement, menu ouvert) est montré sur l'en-tête, puis retiré en revenant à « Normal »", async () => {
+    const pane = page.locator("[data-pb-page-settings]");
+    const cls = () => page.frameLocator("iframe[data-pb-frame]").locator(".lp-main > .lp-block").first().evaluate((e) => e.className);
+    await pane.getByRole("radio", { name: "Après défilement" }).click(); await page.waitForTimeout(300);
+    assert.match(await cls(), /is-scrolled/, "aperçu défilé");
+    await pane.getByRole("radio", { name: "Menu ouvert" }).click(); await page.waitForTimeout(300);
+    const c2 = await cls(); assert.match(c2, /is-menu-open/); assert.doesNotMatch(c2, /is-scrolled/);
+    await pane.getByRole("radio", { name: "Normal" }).click(); await page.waitForTimeout(300);
+    assert.doesNotMatch(await cls(), /is-scrolled|is-menu-open/, "retour à l'aperçu normal");
+  });
+
   test("les boutons d'éléments listent les éléments de l'en-tête et ouvrent leurs réglages à droite", async () => {
     const pane = page.locator("[data-pb-page-settings]");
     const btns = pane.locator(".pb-hdr-access button");

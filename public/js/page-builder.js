@@ -4121,6 +4121,7 @@ function selectField(label, value, options, onChange, opts) {
     toast("Accordéons : « " + K.LABELS[m][0] + " »." + (closed ? " " + closed + " section" + (closed > 1 ? "s" : "") + " refermée" + (closed > 1 ? "s" : "") + " (la dernière ouverte reste ouverte)." : ""));
   }
   function renderInspector() {
+    applyPreviewState(); // l'aperçu de l'état (en-tête) suit l'état choisi, même quand rien n'est sélectionné
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
     axisReal = {};
@@ -5545,7 +5546,25 @@ function selectField(label, value, options, onChange, opts) {
   document.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
+  // Aperçu de l'état choisi (« Après défilement », « Menu ouvert ») sur le canevas : l'en-tête est montré tel qu'il sera dans cet état, pour régler son style à l'œil
+  function applyPreviewState() {
+    try {
+      var doc = frame && frame.contentDocument; if (!doc || !doc.body) return;
+      var on = isHeaderDoc();
+      // Sur le canevas d'un modèle d'en-tête, le document édité est le premier bloc de la page (pas d'enveloppe « lp-site-header » comme sur le site publié) :
+      // on pose la classe sur lui, et sur l'enveloppe quand elle existe ; les règles de style par état (.lp-site-header.is-scrolled …) s'appliquent donc aussi ici
+      var main = doc.querySelector(".lp-main"), first = main && main.querySelector(":scope > .lp-block");
+      var previewing = on && (styleState === "scrolled" || styleState === "menuOpen");
+      if (first && previewing) { if (!first.classList.contains("lp-site-header")) { first.classList.add("lp-site-header"); first.setAttribute("data-pb-preview-hdr", ""); } }
+      else if (first && first.hasAttribute("data-pb-preview-hdr")) { first.classList.remove("lp-site-header"); first.removeAttribute("data-pb-preview-hdr"); }
+      [].concat(first ? [first] : [], [].slice.call(doc.querySelectorAll(".lp-site-header, .lp-site-part"))).forEach(function (el) {
+        el.classList.toggle("is-scrolled", on && styleState === "scrolled");
+        el.classList.toggle("is-menu-open", on && styleState === "menuOpen");
+      });
+    } catch (e) { /* canevas pas encore prêt */ }
+  }
   function setupCanvas(y) {
+    applyPreviewState();
     previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
