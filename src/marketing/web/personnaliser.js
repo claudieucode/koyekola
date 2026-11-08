@@ -90,7 +90,7 @@ module.exports = () => {
       preview: { url: previews.length ? previews[0].url : "/", targets: previews },
       panels: panels.map((p) => ({ id: p.id, label: p.label, icon: p.icon, hint: p.hint, tabs: p.tabs, controls: p.controls })),
       values: st.values, live: st.live, changes: st.changes, draft: st.draft, revision: st.revision, stale: st.stale, pendingEngineDraft: st.pendingEngineDraft, perControl: st.can,
-      can: { edit: can("appearance.styles") && !t.readOnly, publish: can("appearance.publish") && !t.readOnly, css: can("pages.code"), seo: can("seo.edit"), home: can("forms.write") && !t.readOnly },
+      can: { edit: can("appearance.styles") && !t.readOnly, publish: can("appearance.publish") && !t.readOnly, css: can("pages.code"), seo: can("seo.edit"), home: can("forms.write") && !t.readOnly, menus: can("navigation.write") && !t.readOnly, menusPublish: can("navigation.publish") && !t.readOnly },
       global: { ...gs.uiSpec(t.siteId), base: siteStyles.liveBase(req.mk.ctx, t.siteId) },
       menus, zones, home: { id: homeId, pages: homePages },
       header: (() => { const h = headerOf(req, t); return h ? h.info : null; })(),
@@ -123,6 +123,59 @@ module.exports = () => {
       if (e instanceof UserError || (e && e.status === 422)) return res.status(422).json({ error: { code: "invalid_field", message: e.message } });
       return res.status(422).json({ error: { code: "invalid_field", message: e && e.message ? e.message : "Page refusée." } });
     }
+  });
+  // ---------- Menus : modification directe dans le panneau (mêmes fonctions de service que l'écran Navigation) ----------
+  // Le site vient de l'adresse vérifiée par le serveur ; un menu ou un élément d'un AUTRE site est toujours « introuvable » (404), jamais modifié.
+  const menuOfSite = (t, id) => { const m = navigation.menuRow(Number(id)); return m && (m.site_id ?? null) === t.siteId ? m : null; };
+  const noMenu = (res) => res.status(404).json({ error: { code: "not_found", message: "Menu introuvable pour ce site." } });
+  const menuError = (res, e) => { const status = e && e.status && e.status >= 400 && e.status < 500 ? e.status : 422; return res.status(status).json({ error: { code: status === 409 ? "conflict" : "invalid_field", message: e && e.message ? e.message : "Modification refusée." } }); };
+  const menuState = (t, m) => {
+    const assigned = navigation.assignments({ siteId: t.siteId });
+    return {
+      menu: { id: m.id, name: m.name, revision: navigation.menuRow(m.id).revision },
+      items: navigation.flatten(navigation.tree(m.id)).map((n) => ({ id: n.id, parent: n.parent_id, depth: n.depth, type: n.type, label: n.label || "", shown: n.displayLabel, url: n.type === "custom" ? n.url : "", hidden: n.status === "hidden" })),
+      locations: Object.values(navigation.LOCATIONS).map((l) => ({ key: l.key, label: l.label, on: assigned[l.key] === m.id })),
+      limits: { items: navigation.MAX_ITEMS },
+    };
+  };
+  router.get("/site-web/personnaliser/menus/:id(\\d+)", need("navigation.read"), (req, res) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    res.set("Cache-Control", "no-store");
+    const m = menuOfSite(t, req.params.id); if (!m) return noMenu(res);
+    res.json(menuState(t, m));
+  });
+  router.post("/site-web/personnaliser/menus/:id(\\d+)/element", need("navigation.write"), (req, res) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    res.set("Cache-Control", "no-store");
+    if (t.readOnly) return res.status(409).json({ error: { code: "invalid_state", message: "Ce site est archivé ou supprimé : restaurez-le avant de le modifier." } });
+    const m = menuOfSite(t, req.params.id); if (!m) return noMenu(res);
+    const b = req.body || {}, action = String(b.action || "");
+    try {
+      if (action === "add") navigation.add(m.id, { type: "custom", url: b.url, label: b.label });
+      else {
+        const it = navigation.itemRow(Number(b.id));
+        if (!it || it.menu_id !== m.id) return res.status(404).json({ error: { code: "not_found", message: "Élément introuvable dans ce menu." } });
+        if (action === "update") navigation.updateItem(it.id, it.type === "custom" ? { label: b.label, url: b.url } : { label: b.label });
+        else if (action === "remove") navigation.removeItem(it.id);
+        else if (action === "up" || action === "down" || action === "in" || action === "out") navigation.shift(it.id, action);
+        else return res.status(422).json({ error: { code: "invalid_field", message: "Action inconnue." } });
+      }
+      try { recordAudit(req.mk.ctx.db, { organizationId: req.mk.ctx.organizationId, userId: req.session.user.id, action: "menu.item_" + action, resourceType: "menu", resourceId: String(m.id), siteId: t.siteId }); } catch { /* l'audit ne bloque jamais */ }
+      res.json(menuState(t, m));
+    } catch (e) { return menuError(res, e); }
+  });
+  router.post("/site-web/personnaliser/menus/:id(\\d+)/emplacement", need("navigation.publish"), (req, res) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    res.set("Cache-Control", "no-store");
+    if (t.readOnly) return res.status(409).json({ error: { code: "invalid_state", message: "Ce site est archivé ou supprimé : restaurez-le avant de le modifier." } });
+    const m = menuOfSite(t, req.params.id); if (!m) return noMenu(res);
+    const key = String((req.body || {}).key || "");
+    if (!Object.hasOwn(navigation.LOCATIONS, key)) return res.status(422).json({ error: { code: "invalid_field", message: "Emplacement inconnu." } });
+    try {
+      const current = navigation.assignments({ siteId: t.siteId });
+      navigation.assign(key, (req.body || {}).on ? m.id : (current[key] === m.id ? null : current[key] || null), { siteId: t.siteId });
+      res.json(menuState(t, m));
+    } catch (e) { return menuError(res, e); }
   });
   // Comportement de l'en-tête du site (mode, effets, décalage, empilement, masquage au défilement, appareils) : mêmes règles de validation que le Theme Builder (headerSettings.normalize),
   // même chemin d'enregistrement (brouillon du composant puis mise à jour), site vérifié par le serveur, jamais un composant partagé.
