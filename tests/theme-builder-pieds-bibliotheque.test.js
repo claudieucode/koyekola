@@ -14,6 +14,9 @@ const { startServer, loginInstructor } = require("./helpers");
 
 const walk = (nodes, fn, depth = 0) => { for (const n of nodes || []) { fn(n, depth); if (n && n.children) walk(n.children, fn, depth + 1); } };
 const all = Catalog.entries("footer");
+// REFONTE par familles métier : tant que les 15 familles ne sont pas construites, la liste contient les 100 anciens modèles, rattachés à leur NOUVELLE famille. Pour les tests de contenu qui parlent des
+// anciennes familles (newsletter, contact, réseaux, boutique…), on retrouve la famille d'origine du modèle (voir tests/footer-reconstruction.test.js et footer-aliases.test.js pour la nouvelle logique).
+const ancienneFamille = (e) => (Footer.layouts.find((l) => l.fullKey === e.key) || {}).legacyFamily || e.layoutKey;
 const doc = (key) => Catalog.build("footer", key).section;
 const nodesOf = (key) => { const out = []; walk(doc(key).children, (n) => out.push(n)); return out; };
 // Signature de COMPOSITION : arbre des types d'éléments, rôle (libellé / adresse / emplacement), direction, poids des colonnes, nombre de rangées — sans couleurs ni typographie.
@@ -27,14 +30,15 @@ const OLD_LAYOUTS = ["une-ligne", "copyright-seul", "trois-colonnes", "quatre-co
 const OLD_KEYS = OLD_LAYOUTS.flatMap((l) => SKINS.map((s) => `${l}.${s.key}`));
 
 describe("Pieds de page : le catalogue", () => {
-  test("exactement 100 modèles : 10 familles de 10, identités propres, clés et noms uniques", () => {
+  test("exactement 100 modèles listés (anciens, tant que les familles ne sont pas toutes construites), identités propres, clés et noms uniques ; familles = celles de la refonte (15 au final)", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100, "clés uniques");
     assert.equal(new Set(all.map((e) => e.name)).size, 100, "noms uniques");
     const byFamily = {}, bySkin = {};
     for (const e of all) { byFamily[e.layoutKey] = (byFamily[e.layoutKey] || 0) + 1; bySkin[e.skinKey] = (bySkin[e.skinKey] || 0) + 1; }
     assert.deepEqual(Object.keys(byFamily).sort(), Footer.families.map((f) => f.key).sort());
-    for (const [f, n] of Object.entries(byFamily)) assert.equal(n, 10, `famille ${f}`);
+    const anciennes = {}; for (const e of all) anciennes[ancienneFamille(e)] = (anciennes[ancienneFamille(e)] || 0) + 1;
+    for (const [f, n] of Object.entries(anciennes)) assert.equal(n, 10, `famille d'origine ${f}`); // les 10 familles d'origine comptent toujours 10 modèles chacune
     for (const [s, n] of Object.entries(bySkin)) assert.ok(n >= 1 && n <= 8, `identité ${s} : ${n}`);
   });
   test("clés sûres pour une adresse (ASCII minuscule, chiffres, tiret) : aucune clé ne casse la route de la bibliothèque", () => {
@@ -63,8 +67,8 @@ describe("Pieds de page : le catalogue", () => {
     }
     assert.ok(noMenu <= 40, `trop de modèles sans menu : ${noMenu}`);
     // une famille entière est consacrée à chaque besoin annoncé : newsletter, coordonnées, réseaux, boutique
-    const has = (family, type) => all.filter((e) => e.layoutKey === family).filter((e) => nodesOf(e.key).some((n) => n.type === type)).length;
-    assert.ok(has("newsletter", "signupform") + all.filter((e) => e.layoutKey === "newsletter").filter((e) => nodesOf(e.key).some((n) => n.type === "button" && n.props.label === "Nous contacter")).length >= 10, "newsletter : abonnement ou repli");
+    const has = (family, type) => all.filter((e) => ancienneFamille(e) === family).filter((e) => nodesOf(e.key).some((n) => n.type === type)).length;
+    assert.ok(has("newsletter", "signupform") + all.filter((e) => ancienneFamille(e) === "newsletter").filter((e) => nodesOf(e.key).some((n) => n.type === "button" && n.props.label === "Nous contacter")).length >= 10, "newsletter : abonnement ou repli");
     // chantier F : les coordonnées ne sont plus une liste d'icônes au texte figé mais le widget « Coordonnées » (bizcontact), lu dans les Données de l'entreprise
     assert.ok(has("contact", "bizcontact") >= 8 && has("contact", "map") >= 4, "contact : coordonnées et carte");
     assert.ok(has("reseaux", "social") >= 9, "réseaux");
@@ -95,11 +99,11 @@ describe("Pieds de page : le catalogue", () => {
   });
   test("liste : recherche sans accents, filtre par famille et par identité, pagination ; la liste ne contient jamais les documents", () => {
     const p = Catalog.list("footer", { limit: 24 });
-    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 34);
+    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, new Set(all.map((e) => e.layoutKey)).size); assert.equal(p.skins.length, Footer.skins.length);
     assert.ok(!("section" in p.items[0]) && !("build" in p.items[0]));
-    assert.equal(Catalog.list("footer", { layout: "newsletter" }).total, 10);
+    const premiere = all[0].layoutKey; assert.equal(Catalog.list("footer", { layout: premiere }).total, all.filter((e) => e.layoutKey === premiere).length);
     assert.equal(Catalog.list("footer", { skin: "nuit" }).total, 0, "plus d'identité du site"); assert.ok(Catalog.list("footer", { skin: "graphite" }).total >= 1);
-    const sk = Catalog.entries("footer").find((e) => e.layoutKey === "colonnes").skinKey; assert.equal(Catalog.list("footer", { layout: "colonnes", skin: sk }).total, Catalog.entries("footer").filter((e) => e.layoutKey === "colonnes" && e.skinKey === sk).length);
+    const sk = Catalog.entries("footer").find((e) => e.layoutKey === "corporate").skinKey; assert.equal(Catalog.list("footer", { layout: "corporate", skin: sk }).total, Catalog.entries("footer").filter((e) => e.layoutKey === "corporate" && e.skinKey === sk).length);
     assert.ok(Catalog.list("footer", { q: "NEWSLETTER" }).total >= 10);
     assert.ok(Catalog.list("footer", { q: "carte" }).total >= 4);
     assert.equal(Catalog.list("footer", { q: "zzzz-inconnu" }).total, 0);
@@ -220,7 +224,7 @@ describe("Pieds de page : rendu par le vrai moteur (aperçu, vignette, site publ
       for (const kind of ["apercu", "vignette", "miniature"]) assert.equal((await boss.get(U(`/api/bibliotheque/footer/${old}/${kind}`))).status, 404, `${old} ${kind}`);
     }
     const l = JSON.parse((await boss.get(U("/api/bibliotheque?type=footer&limite=60"))).text);
-    assert.equal(l.total, 100); assert.equal(l.layouts.length, 10);
+    assert.equal(l.total, 100); assert.equal(l.layouts.length, new Set(all.map((e) => e.layoutKey)).size);
     assert.ok(l.items.every((m) => !OLD_KEYS.includes(m.key)), "aucune ancienne clé dans la liste");
   });
   test("site publié : le pied de la bibliothèque s'affiche UNE seule fois par page (accueil, blog, article, 404), jamais l'ancien pied, et rien sur un autre site", async () => {

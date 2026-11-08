@@ -20,6 +20,14 @@ const PER_TYPE = () => (SKINS.length * 20);
 // Identités d'un catalogue : les cinq du site, plus celles qu'un catalogue « plat » déclare lui-même (d.skins : palette et polices propres à ses modèles)
 const identities = (d) => (d && d.skins ? (d.ownSkins ? d.skins : [...SKINS, ...d.skins]) : SKINS);
 
+// Entrées d'un catalogue « plat » à partir d'une liste de compositions. l.fullKey : identifiant complet imposé (modèles de la refonte : « ft-<famille>-<nn>-<nom> ») ; sinon « composition.identité ».
+function flatEntries(type, d, layouts) {
+  const fam = new Map(d.families.concat(d.hiddenFamilies || []).map((f) => [f.key, f]));
+  return layouts.map((l) => {
+    const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family);
+    return { key: l.fullKey || `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key], build: l.build, ...(l.legacy ? { legacy: true } : {}) };
+  });
+}
 const META = new Map();
 function entries(type) {
   const d = def(type);
@@ -29,8 +37,7 @@ function entries(type) {
   if (typeof d.entries === "function") { const own = d.entries().map((e) => ({ type, skinLabel: (SKINS.find((s) => s.key === e.skinKey) || {}).label || e.skinKey, ...e })); META.set(type, own); return own; }
   const out = [];
   if (d.flat) {
-    const fam = new Map(d.families.map((f) => [f.key, f]));
-    for (const l of d.layouts) { const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family); out.push({ key: `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] }); }
+    out.push(...flatEntries(type, d, d.layouts));
   } else for (const l of d.layouts) for (const s of SKINS) out.push({ key: `${l.key}.${s.key}`, type, layoutKey: l.key, layoutId: l.key, skinKey: s.key, name: `${l.label} · ${s.label}`, layoutLabel: l.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key] });
   META.set(type, out);
   return out;
@@ -47,7 +54,24 @@ function list(type, { q = "", tag = "", skin = "", layout: lay = "", page = 1, l
   return { items: rows.slice((p - 1) * lim, p * lim).map(({ build: _b, ...m }) => m), total: rows.length, page: p, pages, limit: lim,
     layouts: (d.flat ? d.families : d.layouts).map((l) => ({ key: l.key, label: l.label })), skins: identities(d).map((s) => ({ key: s.key, label: s.label })), tags: [...new Set(all.flatMap((e) => e.tags))].sort() };
 }
-const find = (type, key) => entries(type).find((e) => e.key === key) || null;
+// Compositions que le catalogue ne LISTE plus (anciens modèles d'une famille reconstruite) mais qui restent ouvrables : « Revenir au modèle d'origine », vignette, aperçu d'un pied déjà installé.
+const HIDDEN = new Map();
+function hiddenEntries(type) {
+  const d = def(type);
+  if (!d || !Array.isArray(d.hiddenLayouts)) return [];
+  if (!HIDDEN.has(type)) HIDDEN.set(type, flatEntries(type, d, d.hiddenLayouts));
+  return HIDDEN.get(type);
+}
+// Ouvre un modèle par son identifiant. Un identifiant ANCIEN (alias, voir footer-aliases.js) est suivi jusqu'au modèle qui le remplace ; un modèle retiré de la liste reste ouvrable mais n'est jamais listé.
+function find(type, key) {
+  const hit = entries(type).find((e) => e.key === key);
+  if (hit) return hit;
+  const d = def(type);
+  if (!d || typeof d.resolveAlias !== "function") return null;
+  const target = d.resolveAlias(String(key || ""));
+  if (!target) return null;
+  return entries(type).find((e) => e.key === target) || hiddenEntries(type).find((e) => e.key === target) || null;
+}
 
 // Lisibilité des liens du texte d'article : la couleur par défaut des liens (couleur d'accent) peut disparaître sur un fond sombre (identités Nuit et Marque). On suit le fond EFFECTIF de chaque élément
 // et, quand le contenu de l'article est posé sur un fond sombre, la partie « liens » du contenu reçoit une couleur claire soulignée (réglage natif « parties », modifiable dans l'éditeur).

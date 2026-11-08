@@ -86,10 +86,11 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
     business.save(m.db, 1, SITE_FULL, PROFILE);
   });
 
-  test("le total réel est 100 modèles (10 familles × 10), clés inchangées et uniques ; aucune clé de mise en page n'a disparu", () => {
+  test("le total réel est 100 modèles listés (anciens : 10 familles d'origine × 10, rattachées aux familles de la refonte), clés inchangées et uniques ; aucune clé de mise en page n'a disparu", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100);
-    assert.equal(Footer.families.length, 10);
+    assert.equal(Footer.families.length, new Set(all.map((e) => e.layoutKey)).size); // familles de la refonte ayant au moins un modèle listé (15 au final)
+    assert.equal(new Set(Footer.layouts.map((l) => l.legacyFamily)).size, 10);
     assert.equal(Footer.layouts.length, 100);
     // les clés `<mise en page>.<identité>` : la mise en page ne change pas (les sites ont des copies), l'identité d'origine est conservée dans le suffixe
     for (const l of Footer.layouts) assert.ok(all.some((e) => e.layoutId === l.key && e.key === `${l.key}.${l.keySkin}`), l.key);
@@ -110,7 +111,8 @@ describe("Catalogue des pieds : widgets de données d'entreprise (sans serveur)"
   });
 
   test("les modèles pertinents utilisent les nouveaux widgets (coordonnées, téléphone, e-mail, horaires, légal, paiements, livraison, retour en haut, copyright automatique)", () => {
-    const count = (fam, type) => all.filter((e) => e.layoutKey === fam && typesOf(e.key).includes(type)).length;
+    const origine = (e) => (Footer.layouts.find((l) => l.fullKey === e.key) || {}).legacyFamily; // famille d'ORIGINE (les 10 anciennes), la liste étant désormais rangée par familles métier
+    const count = (fam, type) => all.filter((e) => origine(e) === fam && typesOf(e.key).includes(type)).length;
     const total = (type) => all.filter((e) => typesOf(e.key).includes(type)).length;
     assert.ok(count("contact", "bizcontact") >= 9, `contact : bizcontact ${count("contact", "bizcontact")}`);
     assert.ok(count("contact", "bizhours") >= 3, "horaires dans la famille contact");

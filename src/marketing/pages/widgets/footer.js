@@ -13,6 +13,17 @@ const dataOf = (ctx, env) => {
   return { b, now: (env && env.scope && env.scope.now) || new Date() };
 };
 
+// Boutique active pour la page affichée ? (module Commerce du site activé ET boutique ouverte) — même règle que la source de requête « products ». Lecture seule.
+function shopOf(ctx, env) {
+  const page = env && env.page, siteId = page && Number.isInteger(page.site_id) && page.site_id > 0 ? page.site_id : null;
+  try {
+    if (!require("../../siteModules").isEnabled(ctx.db, ctx.organizationId, siteId, "commerce")) return { on: false, reason: "module" };
+    const cfg = ctx.db.prepare(`SELECT enabled FROM mk_shop_settings WHERE organization_id = ? AND ${siteId == null ? "site_id IS NULL" : "site_id = ?"}`).get(ctx.organizationId, ...(siteId == null ? [] : [siteId]));
+    if (!cfg || !cfg.enabled) return { on: false, reason: "closed" };
+    return { on: true, st: { db: ctx.db, organizationId: ctx.organizationId, siteId } };
+  } catch { return { on: false, reason: "module" }; }
+}
+
 module.exports = [
   {
     type: "bizcontact", label: "Coordonnées", group: "footer", icon: "mapPin", version: 1, style: "text", status: "operational",
@@ -95,6 +106,7 @@ module.exports = [
       title(), bool("showName", "Raison sociale", true), bool("showForm", "Forme juridique et capital", true), bool("showRegistrations", "Numéros d'immatriculation (SIRET, RCS, TVA…)", true),
       bool("showPublisher", "Directeur de la publication", false), bool("showHost", "Hébergeur", false), bool("showPages", "Liens vers les pages légales (mentions, confidentialité, CGV)", true),
       { key: "layout", kind: "select", label: "Disposition", options: [["stack", "Les unes sous les autres"], ["inline", "Sur une ligne"]], default: "stack" },
+      bool("hintMissing", "Dans l'éditeur, signaler les pages légales non renseignées (jamais de lien mort pour les visiteurs)", false),
     ],
     data(ctx, p, env) {
       const { b } = dataOf(ctx, env);
@@ -107,7 +119,8 @@ module.exports = [
       if (p.showPublisher && l.publisher) lines.push({ label: "Directeur de la publication", text: l.publisher });
       if (p.showHost && (l.hostName || l.hostAddress)) lines.push({ label: "Hébergeur", text: [l.hostName, l.hostAddress].filter(Boolean).join(", ") });
       const links = p.showPages ? [["Mentions légales", pg.notice], ["Politique de confidentialité", pg.privacy], ["Conditions générales de vente", pg.terms]].filter((x) => x[1]).map(([label, url]) => ({ label, url })) : [];
-      return { lines, links, empty: !lines.length && !links.length };
+      const missing = p.showPages && p.hintMissing ? [["Mentions légales", pg.notice], ["Politique de confidentialité", pg.privacy], ["Conditions générales de vente", pg.terms]].filter((x) => !x[1]).map((x) => x[0]) : [];
+      return { lines, links, missing, empty: !lines.length && !links.length };
     },
   },
   {
@@ -149,6 +162,50 @@ module.exports = [
     },
   },
   {
+    type: "shopcategories", label: "Catégories de produits", group: "footer", icon: "list", version: 1, style: "text", status: "dependency",
+    dependencies: ["Le module Commerce activé et la boutique ouverte, avec au moins une catégorie contenant un produit publié"],
+    description: "La liste réelle des catégories de la boutique (jamais d'exemple) ; message clair quand il n'y en a pas",
+    keywords: "categories produits boutique rayons e-commerce liste pied de page catalogue",
+    schema: [
+      title(), { key: "count", kind: "number", label: "Nombre maximum de catégories", min: 1, max: 20, integer: true, default: 6 },
+      bool("showCount", "Afficher le nombre de produits", false), bool("onlyFilled", "Ignorer les catégories sans produit publié", true),
+      { key: "empty", kind: "text", label: "Message quand il n'y a rien à lister", max: 120, default: "Aucune catégorie de produits pour le moment." },
+    ],
+    data(ctx, p, env) {
+      const sh = shopOf(ctx, env);
+      if (!sh.on) return { state: "off", reason: sh.reason, items: [] };
+      let rows = [];
+      try { rows = require("../../shop/catalog").listCategories(sh.st); } catch { rows = []; }
+      const items = rows.filter((c) => !p.onlyFilled || Number(c.product_count) > 0).slice(0, Number(p.count) || 6).map((c) => ({ label: c.name, url: `/boutique/categorie/${c.slug}`, count: Number(c.product_count) || 0 }));
+      return { state: items.length ? "ok" : "empty", items };
+    },
+  },
+  {
+    type: "shoplinks", label: "Liens de la boutique", group: "footer", icon: "cart", version: 1, style: "text", status: "dependency",
+    dependencies: ["Le module Commerce activé et la boutique ouverte"],
+    description: "Suivi de commande, panier, liste de souhaits, livraison et retours : de vrais liens de la boutique",
+    keywords: "suivi commande compte panier souhaits livraison retours service client boutique liens pied de page",
+    schema: [
+      title("Service client"), bool("showTracking", "Suivre ma commande (espace client)", true), bool("showCart", "Panier", true), bool("showWishlist", "Liste de souhaits", false),
+      bool("showDelivery", "Livraison et retours (vers vos conditions de vente, si la page est renseignée)", true),
+      { key: "empty", kind: "text", label: "Message quand la boutique n'est pas ouverte", max: 120, default: "La boutique n'est pas encore ouverte." },
+    ],
+    data(ctx, p, env) {
+      const sh = shopOf(ctx, env);
+      if (!sh.on) return { state: "off", reason: sh.reason, items: [] };
+      const items = [];
+      if (p.showTracking) items.push({ label: "Suivre ma commande", url: "/boutique/compte" });
+      if (p.showCart) items.push({ label: "Panier", url: "/boutique/panier" });
+      if (p.showWishlist) items.push({ label: "Liste de souhaits", url: "/boutique/souhaits" });
+      let missingTerms = false;
+      if (p.showDelivery) {
+        const b = dataOf(ctx, env).b, terms = b && b.profile.legalPages && b.profile.legalPages.terms;
+        if (terms) items.push({ label: "Livraison et retours", url: terms }); else missingTerms = true;
+      }
+      return { state: items.length ? "ok" : "empty", items, missingTerms };
+    },
+  },
+  {
     type: "backtotop", label: "Retour en haut", group: "footer", icon: "arrowUp", version: 1, style: "box", status: "operational",
     description: "Un bouton qui remonte en haut de la page, fixe ou en ligne, visible après un défilement",
     keywords: "retour en haut remonter haut de page scroll top fleche bouton defilement",
@@ -169,9 +226,13 @@ module.exports = [
       title("Restez informé"), { key: "intro", kind: "text", label: "Phrase d'introduction (facultative)", max: 200, default: "" },
       { key: "button", kind: "text", label: "Texte du bouton", max: 40, required: true, default: "S'abonner" },
       { key: "formId", kind: "number", label: "Numéro du formulaire (0 = choisir automatiquement un formulaire publié de ce site)", min: 0, max: 999999999, integer: true, default: 0 },
+      { key: "fields", kind: "select", label: "Champs affichés", options: [["email", "Adresse e-mail seulement (abonnement)"], ["all", "Tous les champs du formulaire (formulaire de contact)"]], default: "email" },
+      bool("showWhenMissing", "Sans formulaire publié : afficher un message « non configuré » (au lieu de ne rien afficher) et ne pas bloquer la publication", false),
+      { key: "missingText", kind: "text", label: "Message affiché quand aucun formulaire n'est publié (facultatif)", max: 120, default: "" },
     ],
     data(ctx, p, env) {
       const form = require("../emailSubscribe").formFor(ctx, env && env.page, p);
+      if (form && p.fields === "all") { const F = require("../../forms"); return { form, all: true, fieldCatalog: F.FIELD_CATALOG, propertyDefs: F.propertyFieldDefs(ctx.db, ctx.organizationId, form) }; }
       return { form: form ? { id: form.id, name: form.name, consentText: form.consentText, thankYouText: form.thankYouText, fields: [], fieldSettings: {}, fileField: null, smsConsentText: "" } : null };
     },
   },

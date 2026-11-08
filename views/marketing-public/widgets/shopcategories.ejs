@@ -1,0 +1,10 @@
+<%# Catégories de produits (src/marketing/pages/widgets/footer.js). Variables : p, d (state ok|empty|off, items[{label,url,count}], reason), cls, attrs, isBuilder. Liste RÉELLE de la boutique ; état vide explicite (jamais de catégorie inventée). %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (d && d.state === "ok") { %>
+  <ul class="kw-biz-list kw-shopcats-list"><% d.items.forEach((it) => { %><li class="kw-biz-item"><a class="kw-biz-link" href="<%= it.url %>"><%= it.label %></a><% if (p.showCount) { %> <span class="kw-shopcats-count">(<%= it.count %>)</span><% } %></li><% }) %></ul>
+  <% } else { %>
+  <p class="kw-shopcats-empty" role="status" data-kw-state="<%= d && d.state === "off" ? "shop-off" : "empty" %>"><%= p.empty || "Aucune catégorie de produits pour le moment." %></p>
+  <% if (isBuilder) { %><p class="kw-biz-hint"><%= d && d.state === "off" ? (d.reason === "closed" ? "La boutique n’est pas ouverte pour ce site : ouvrez-la dans Boutique → Réglages." : "Le module Commerce n’est pas activé pour ce site : activez-le dans les modules du site.") : "Aucune catégorie ne contient de produit publié. Ajoutez des catégories et des produits dans Boutique." %></p><% } %>
+  <% } %>
+</div>

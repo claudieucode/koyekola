@@ -443,7 +443,7 @@ const nestedProps = (p) => {
   const mode = oneOf("tabs", "carousel", "accordion")(p.mode);
   if (!mode) return {};
   // Accordéon : chaque conteneur enfant est un volet (titre = son nom) qui peut contenir n'importe quel élément ; ouvert au départ : le premier, aucun ou tous ; un seul volet ouvert à la fois ou plusieurs
-  if (mode === "accordion") return { mode, accStart: oneOf("none", "all")(p.accStart) || "first", accSingle: p.accSingle === true };
+  if (mode === "accordion") return { mode, accStart: oneOf("none", "all")(p.accStart) || "first", accSingle: p.accSingle === true, ...(p.accMobile === true ? { accMobile: true } : {}) }; // accMobile : volets seulement sur mobile (≤ 767 px), disposition normale ailleurs (pieds de page denses)
   if (mode === "tabs") return { mode, tabsLook: oneOf("line", "pills")(p.tabsLook) || "line", tabsStart: numberIn(1, 12, { integer: true })(p.tabsStart) || 1 };
   return { mode, dots: p.dots !== false, loop: p.loop === true, autoplay: p.autoplay === true, interval: numberIn(2, 20, { integer: true })(p.interval) || 5 };
 };
@@ -699,7 +699,7 @@ const NODE_TYPES = {
     return { items, separator: oneOf("chevron", "slash", "dot")(p.separator) || "chevron" };
   } },
   social: { label: "Réseaux sociaux", category: "interaction", props: (p, at, h) => {
-    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 12).map((x, i) => {
+    const items = (Array.isArray(p.items) ? p.items : []).slice(0, 13).map((x, i) => {
       if (!x || !Object.hasOwn(SOCIAL_NETWORKS, x.network)) return null;
       const url = x.network === "email" ? (/^mailto:[^\s<>"'`\\@]+@[^\s<>"'`\\@]+$/.test(String(x.url || "").trim()) ? String(x.url).trim() : "") : h.linkUrl(x.url, `${at} (réseau ${i + 1})`);
       if (!url) throw new Error(`${at} (réseaux sociaux) : adresse manquante pour ${SOCIAL_NETWORKS[x.network]}${x.network === "email" ? " (mailto:adresse@exemple.fr)" : ""}.`);

@@ -153,7 +153,7 @@ function preflight(ctx, page) {
   });
   // Widget « Abonnement par e-mail » : il a besoin d'un formulaire d'inscription publié DU MÊME SITE (dont seul l'e-mail est obligatoire)
   for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
-    if (n.type === "emailsubscribe" && !n.hidden && !require("../pages/emailSubscribe").formFor(ctx, page, n.props)) errors.push("Un widget « Abonnement par e-mail » ne trouve aucun formulaire d'inscription publié pour ce site (dont seul l'e-mail est obligatoire) : publiez-en un dans Audience → Formulaires d'inscription.");
+    if (n.type === "emailsubscribe" && !n.hidden && !(n.props && n.props.showWhenMissing === true) && !require("../pages/emailSubscribe").formFor(ctx, page, n.props)) errors.push("Un widget « Abonnement par e-mail » ne trouve aucun formulaire d'inscription publié pour ce site (dont seul l'e-mail est obligatoire) : publiez-en un dans Audience → Formulaires d'inscription.");
   });
   // Widgets personnalisés incomplets (ex. un média sans image) : le brouillon s'enregistre, mais la page ne peut pas être publiée ainsi
   for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {

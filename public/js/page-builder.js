@@ -4235,7 +4235,7 @@ function selectField(label, value, options, onChange, opts) {
       if (it.type === "container") {
         // Mode d'affichage des enfants : ordinaire, onglets (titre = nom de l'enfant) ou carrousel
         box.appendChild(checkField("Carte insérée dans la boucle de la grille parente (non répétée)", p.loopInsert === true, function (v) { setProp(it.id, "loopInsert", v); }, { disabled: dis, hint: "Seulement utile dans une grille qui répète des résultats : réglez « Intercaler une carte après N résultats » sur la grille." }));
-        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["accordion", "Accordéon (un conteneur enfant par volet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "accStart", "accSingle", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
+        box.appendChild(selectField("Affichage des éléments à l'intérieur", p.mode || "", [["", "Normal (les uns sous les autres)"], ["tabs", "Onglets (un conteneur enfant par onglet)"], ["accordion", "Accordéon (un conteneur enfant par volet)"], ["carousel", "Carrousel (un conteneur enfant par diapositive)"]], function (v) { change(function () { var x = byId(it.id); if (v) { x.props.mode = v; } else { ["mode", "tabsLook", "tabsStart", "accStart", "accSingle", "accMobile", "dots", "loop", "autoplay", "interval"].forEach(function (k) { delete x.props[k]; }); } }); }, { disabled: dis }));
         var setNested = function (k) { return function (v) { setProp(it.id, k, v); }; };
         if (p.mode === "tabs") {
           box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son onglet ; sans nom : « Onglet 1 », « Onglet 2 »…" }));
@@ -4245,6 +4245,7 @@ function selectField(label, value, options, onChange, opts) {
           box.appendChild(h("p", { class: "pb-hint", text: "Le nom de chaque conteneur enfant (menu ⋮ → Renommer, ou panneau Structure) devient le titre de son volet ; il peut contenir n'importe quels éléments. Sans nom : « Volet 1 », « Volet 2 »…" }));
           box.appendChild(selectField("Ouvert au départ", p.accStart || "first", [["first", "Le premier volet"], ["none", "Aucun"], ["all", "Tous"]], setNested("accStart"), { disabled: dis }));
           box.appendChild(checkField("Un seul volet ouvert à la fois", p.accSingle === true, setNested("accSingle"), { disabled: dis }));
+          box.appendChild(checkField("Volets seulement sur mobile (écran de 767 px ou moins) ; ordinateur et tablette : affichage normal", p.accMobile === true, setNested("accMobile"), { disabled: dis }));
         } else if (p.mode === "carousel") {
           box.appendChild(h("p", { class: "pb-hint", text: "Chaque conteneur enfant est une diapositive (images, textes, boutons… à l'intérieur). Boutons précédent / suivant et défilement au doigt inclus." }));
           box.appendChild(checkField("Points de navigation", p.dots !== false, setNested("dots"), { disabled: dis }));

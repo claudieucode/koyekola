@@ -747,9 +747,11 @@
   });
 })();
 
-// Accordéon à volets libres (conteneur en mode « accordéon ») : chaque volet = un conteneur enfant ; bouton-titre, aria-expanded, clavier (Entrée / Espace natifs, Début / Fin / flèches)
+// Accordéon à volets libres (conteneur en mode « accordéon ») : chaque volet = un conteneur enfant ; bouton-titre, aria-expanded, clavier (Entrée / Espace natifs, Début / Fin / flèches).
+// data-kw-acc-mobile : les volets n'existent que sur mobile (≤ 767 px) ; sur ordinateur et tablette le contenu s'affiche normalement (titre de colonne), et sans JavaScript il reste entièrement lisible.
 (function () {
-  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-nacc]"), function (box, k) {
+  var mq = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+  function enhance(box, k) {
     var panels = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains("kw-nacc-panel"); });
     if (!panels.length || box.classList.contains("is-enhanced")) return;
     var single = box.hasAttribute("data-kw-acc-single"), start = box.getAttribute("data-kw-acc-start") || "first", heads = [];
@@ -770,6 +772,21 @@
     });
     if (single && start === "all") heads.forEach(function (_, j) { set(j, j === 0); });
     box.classList.add("is-enhanced");
+  }
+  // Retire les boutons et rend tous les volets visibles (passage de mobile à ordinateur)
+  function restore(box) {
+    if (!box.classList.contains("is-enhanced")) return;
+    Array.prototype.slice.call(box.children).forEach(function (c) {
+      if (c.classList.contains("kw-nacc-head")) box.removeChild(c);
+      else if (c.classList.contains("kw-nacc-panel")) { c.hidden = false; c.removeAttribute("role"); c.removeAttribute("aria-labelledby"); c.removeAttribute("id"); }
+    });
+    box.classList.remove("is-enhanced");
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-nacc]"), function (box, k) {
+    if (!box.hasAttribute("data-kw-acc-mobile")) { enhance(box, k); return; }
+    var apply = function () { if (!mq || mq.matches) enhance(box, k); else restore(box); };
+    apply();
+    if (mq) { if (mq.addEventListener) mq.addEventListener("change", apply); else if (mq.addListener) mq.addListener(apply); }
   });
 })();
 
