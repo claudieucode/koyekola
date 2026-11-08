@@ -55,3 +55,8 @@ Kolakisa possède par ailleurs une **bibliothèque de pages complètes** du Page
 
 ## 6. Composants réutilisables
 Kit d'éléments (`kit.js`), grammaire fermée `nodes.js` (limites `MAX_NODES`, `MAX_DEPTH`), registre de widgets, `signupform`, conditions d'affichage, aperçu/vignette (source unique `build()`), audit statique modèle des articles (`scripts/audit-article-individuel.js`, à dupliquer pour les pages : `scripts/audit-page-individuelle.js` n'existe pas).
+
+## 7. Complément du 8 novembre 2026 — système de styles
+Voir `STYLE_INHERITANCE_AND_OVERRIDES.md`. En bref : 99 modèles de page sur 100 sont écrits en jetons du site (1 814 couleurs `token:*`, 486 polices « site », 0 police de bibliothèque), alors que les 200 modèles d'en-tête et de pied de page sont en valeurs fixes (0 jeton). La cause est le choix des identités de `catalog/kit.js` (alias des jetons du site), aggravé par le fait qu'un site neuf porte la charte Kolakisa (`DEFAULT_TOKENS` : bleu `#0277b6`, marine `#0b2a40`). Aucune contamination par le CSS de l'administration n'a été observée dans le rendu public ; en revanche la feuille d'un thème (pack) actif peut passer devant les styles d'un modèle. Il n'existe aucun mode « hériter / indépendant ».
+
+Note : les sections 1 à 6 ont été rédigées avant ce second cahier des charges et restent valables ; la partie « 100 concepts » est complétée par des directions artistiques (`100_TEMPLATES_DIVERSITY_PLAN.md` § 5).

@@ -18,3 +18,16 @@
 * SEO / accessibilité : H1 unique, alt, clavier, focus, contraste, `prefers-reduced-motion`.
 * Non-régression : articles, archives, recherche, header, footer, widgets, routage ; pages à sections historiques et tunnels inchangés.
 * Multi-site : isolation, permissions, copies, affectations.
+
+## Tests d'identité graphique (ajout du 8 novembre 2026)
+Scénario fondamental à automatiser (Chrome + serveur réel) :
+1. Site A avec charte bleu marine (jetons du site).
+2. Insérer un modèle à identité beige et noir ; vérifier **styles calculés** : fond, texte, boutons, polices du modèle (pas ceux du site).
+3. Changer la couleur principale du site ; le modèle indépendant ne bouge pas (comparaison avant/après de tous les styles calculés).
+4. Passer le modèle en mode « suit le site » ; les styles calculés prennent ceux du site.
+5. Changer encore la couleur du site ; le modèle suit.
+6. Revenir au mode indépendant ; les valeurs d'origine (beige et noir) reviennent exactement.
+7. Modifier une valeur à la main sur un élément ; elle survit aux deux bascules.
+8. Enregistrer, recharger, aperçu, publier, exporter puis importer : identité intacte.
+9. Autre site B : aucune influence.
+Contrôles statiques : 0 jeton du site dans un modèle en mode indépendant ; polices uniquement `font.<id>` existantes ; 2 polices au plus par modèle ; aucun `!important`. Test de conflit avec un thème (pack) actif et avec le CSS personnalisé du site. Captures de contrôle visuel pour les 100 modèles à 1920 / 1440 / 1280 / 1024 / 820 / 390 / 360 px.

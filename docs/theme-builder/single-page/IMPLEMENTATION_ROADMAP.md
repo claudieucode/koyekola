@@ -19,3 +19,15 @@ Après **chaque** étape : changements, fichiers, ce qui fonctionne, tests, déf
 | 13 | Audit final, documentation, bascule du catalogue (annulable) | rapport final |
 
 Chaque étape est un commit indépendant et annulable. Aucune page, aucun média ni aucun modèle de site n'est modifié.
+
+## Mise à jour après le second cahier des charges (8 novembre 2026)
+Ordre révisé (l'indépendance graphique passe avant la production en série) :
+1. Documentation Elementor (faite : sources partielles, voir `ELEMENTOR_STYLE_SYSTEM.md`).
+2. Audit Single Page et audit du système de styles (**faits** : `KOLAKISA_EXISTING_ARCHITECTURE.md`, `STYLE_INHERITANCE_AND_OVERRIDES.md`).
+3. **Validation de l'architecture d'indépendance** (option A / B / C, `TARGET_ARCHITECTURE.md`) — **décision attendue**.
+4. Outils de contrôle (`audit-page-individuelle.js`, test du scénario bleu marine / beige et noir, couches CSS).
+5. Premier modèle complet avec identité propre ; insertion, sauvegarde, rechargement, publication.
+6. Bascule hériter / indépendant (si option B ou C retenue).
+7. Widgets, 8. responsive, 9. aperçus et vignettes.
+10. Production par groupes de 10 avec contrôle de diversité et de contraste à chaque groupe.
+11. Tests globaux, 12. audit final et bascule du catalogue (annulable).

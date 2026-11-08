@@ -30,3 +30,15 @@
 | Multi-site | Multisite WP | Copie indépendante par site | OK (testé) |
 | SEO : un seul H1 | Dépend du thème | H1 du modèle (risque de doublon avec le contenu) | Partiel |
 | Répétiteurs, boucles de page | Pro | `loop` (grilles de liste dynamiques) | À vérifier pour les pages |
+
+## Styles et identité (ajout du 8 novembre 2026)
+| Fonction | Elementor | Kolakisa | État |
+|---|---|---|---|
+| Couleurs et polices globales du site | Oui (Site Settings) | Jetons `--kw-…` | OK |
+| Valeur locale qui se détache du global | Oui (D) | Valeur propre du nœud (hex / `font.<id>`) | OK |
+| Identité portée par un modèle (palette + polices) | Non connu | En-têtes/pieds : oui (valeurs fixes) ; **pages : non** | **Absent pour les pages** |
+| Bascule « suivre le site » / « identité propre » | Non connu | Absent | **Absent** |
+| Réinitialiser une valeur locale pour retrouver l'héritage | Oui (D) | Oui par appareil (retirer la valeur) | OK |
+| Isolation des feuilles de thème vis-à-vis d'un modèle | — | Pas de `@layer` ; un pack peut passer devant | **Partiel** |
+| Polices : chargement uniquement des polices utilisées | — | `fontFacesFor` | OK |
+| Bibliothèque de polices locale (licences libres, hors service tiers) | Google Fonts / personnalisées | 1 775 polices locales | OK |
