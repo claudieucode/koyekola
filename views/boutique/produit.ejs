@@ -1,5 +1,6 @@
 <%- include("_top", { metaDescription: product.seo_description || product.short_description || "" }) %>
 <nav class="sh-crumbs" aria-label="Fil d'Ariane"><ol><% breadcrumb.forEach((c, i) => { %><li><% if (i < breadcrumb.length - 1) { %><a href="<%= c.url %>"><%= c.name %></a><% } else { %><span aria-current="page"><%= c.name %></span><% } %></li><% }) %></ol></nav>
+<% const tpl = themeTemplate || ""; const tplBuy = tpl.includes("data-kw-shopbuy"), tplReviews = tpl.includes("data-kw-shopreviews"), tplRelated = tpl.includes("data-kw-shoprelated"); %>
 <% if (themeTemplate) { %><%- themeTemplate %><% } %>
 <article class="sh-product">
   <% if (!themeTemplate) { %>
@@ -17,13 +18,16 @@
     <% if (product.tags.length) { %><p class="sh-meta">Étiquettes : <%= product.tags.join(", ") %></p><% } %>
     <% if (product.requires_shipping) { %><p class="sh-meta">Livraison : les frais sont calculés à la commande selon votre pays.</p><% } else { %><p class="sh-meta">Produit numérique : aucune livraison.</p><% } %>
   </div>
-  <% } else { %>
+  <% } else if (!tplBuy) { %>
   <%- include("_buy", { product }) %>
+  <% } else { %>
+  <%- include("_abonnement", { product }) %>
   <% } %>
   <%- include("_wish", { product }) %>
   <%- include("_compare", { product }) %>
 </article>
 <% if (!themeTemplate && product.description) { %><section class="sh-desc"><h2>Description</h2><div class="sh-prose"><%= product.description %></div></section><% } %>
+<% if (!tplReviews) { %>
 <section class="sh-reviews" id="avis" aria-labelledby="avis-t">
   <h2 id="avis-t">Avis clients</h2>
   <% if (!reviews.count) { %><p class="sh-empty">Aucun avis pour le moment. Seuls les clients ayant acheté ce produit peuvent en laisser un.</p>
@@ -36,5 +40,6 @@
   </ul>
   <% } %>
 </section>
-<% if (related.length) { %><section><h2>Produits associés</h2><%- include("_grid", { items: related }) %></section><% } %>
+<% } %>
+<% if (related.length && !tplRelated) { %><section><h2>Produits associés</h2><%- include("_grid", { items: related }) %></section><% } %>
 <%- include("_bottom") %>

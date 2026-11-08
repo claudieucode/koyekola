@@ -1813,3 +1813,72 @@ html.kw-noscroll { overflow: hidden; }
   .kw-menu.kw-sa-fade .kw-submenu, .kw-menu.kw-sa-fade .kw-mega { animation: kw-fade .16s ease-out; }
   .kw-menu.kw-sa-slide .kw-submenu, .kw-menu.kw-sa-slide .kw-mega { animation: kw-fade-in .18s ease-out; }
 }
+
+/* ── Fiche produit : galerie, choix des variantes, avis, caractéristiques (widgets shopgallery / shopbuy / shopreviews / shopspecs) ───────────────────────────────
+   Valeurs de repli neutres (couleurs héritées du texte) : l'identité d'un modèle passe par les « parties » du widget, jamais par ces défauts. Aucune règle ne dépend de la charte du site. */
+.kw-pb-demo { margin: 0 0 8px; font-size: .78rem; opacity: .75; }
+.kw-pb-hint { opacity: .75; font-size: .8rem; }
+.kw-pb-btn--now { background: transparent; color: inherit; border-color: currentColor; }
+.kw-pb-btn--alt { background: transparent; color: inherit; border-color: currentColor; }
+.kw-pb-btn[aria-disabled="true"] { opacity: .55; }
+.kw-pb-opts { display: flex; flex-direction: column; gap: 12px; flex-basis: 100%; }
+.kw-pb-fs { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.kw-pb-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.kw-pb-choice { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding: 6px 14px; border: 1px solid currentColor; border-radius: 8px; cursor: pointer; font-size: .95rem; }
+.kw-pb-choice input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.kw-pb-choice:focus-within { outline: 2px solid currentColor; outline-offset: 2px; }
+.kw-pb-choice.is-on { box-shadow: inset 0 0 0 2px currentColor; font-weight: 700; }
+.kw-pb-choice.is-out { opacity: .45; text-decoration: line-through; cursor: not-allowed; }
+.kw-pb-fs--swatches .kw-pb-choice { border-radius: 999px; padding-left: 36px; position: relative; }
+.kw-pb-fs--swatches .kw-pb-choice::before { content: ""; position: absolute; left: 10px; width: 18px; height: 18px; border-radius: 50%; background: var(--kw-sw, transparent); border: 1px solid currentColor; }
+.kw-pgal { position: relative; display: grid; gap: 12px; min-width: 0; }
+.kw-pgal--thumbs-left { grid-template-columns: 96px minmax(0, 1fr); }
+.kw-pgal--thumbs-left .kw-pgal-thumbs { grid-column: 1; grid-row: 1; flex-direction: column; }
+.kw-pgal--thumbs-left .kw-pgal-main { grid-column: 2; grid-row: 1; }
+.kw-pgal-main, .kw-pgal-item, .kw-pgal-slide { position: relative; min-width: 0; }
+.kw-pgal-zoom { display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; color: inherit; }
+.kw-pgal-img { display: block; width: 100%; height: auto; aspect-ratio: var(--kw-pgal-ratio, 1/1); object-fit: cover; }
+.kw-pgal-noimg { background: color-mix(in srgb, currentColor 10%, transparent); min-height: 160px; }
+.kw-pgal-thumbs, .kw-pgal-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.kw-pgal-thumbs { flex-wrap: wrap; }
+.kw-pgal-thumb { width: 72px; height: 72px; padding: 0; border: 1px solid transparent; background: none; cursor: pointer; opacity: .75; }
+.kw-pgal-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kw-pgal-thumb[aria-pressed="true"] { opacity: 1; border-color: currentColor; }
+.kw-pgal-thumb:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.kw-pgal--stack .kw-pgal-list { flex-direction: column; }
+.kw-pgal--grid .kw-pgal-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kw-pgal--mosaic .kw-pgal-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.kw-pgal--mosaic .kw-pgal-item:first-child { grid-column: span 2; grid-row: span 2; }
+.kw-pgal--hero .kw-pgal-img { aspect-ratio: var(--kw-pgal-ratio, 16/9); max-height: 80vh; }
+.kw-pgal-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; scrollbar-width: thin; }
+.kw-pgal-slide { flex: 0 0 100%; scroll-snap-align: start; }
+.kw-pgal-nav { position: absolute; inset: 50% 8px auto; display: flex; justify-content: space-between; pointer-events: none; transform: translateY(-50%); }
+.kw-pgal-nav button { pointer-events: auto; width: 44px; height: 44px; border-radius: 50%; border: 1px solid currentColor; background: color-mix(in srgb, Canvas 85%, transparent); color: inherit; font-size: 1.4rem; cursor: pointer; }
+.kw-pgal-badge { position: absolute; top: 10px; left: 10px; z-index: 2; padding: 4px 10px; font-size: .8rem; font-weight: 700; background: CanvasText; color: Canvas; }
+.kw-pgal-box { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, .88); padding: 24px; }
+.kw-pgal-box[hidden] { display: none; }
+.kw-pgal-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.kw-pgal-box button { position: absolute; width: 48px; height: 48px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .18); color: #fff; font-size: 1.6rem; cursor: pointer; }
+.kw-pgal-box button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.kw-pgal-x { top: 16px; right: 16px; }
+.kw-pgal-bp { left: 16px; top: 50%; transform: translateY(-50%); }
+.kw-pgal-bn { right: 16px; top: 50%; transform: translateY(-50%); }
+html.kw-pgal-lock { overflow: hidden; }
+@media (max-width: 720px) {
+  .kw-pgal--thumbs-left { grid-template-columns: minmax(0, 1fr); }
+  .kw-pgal--thumbs-left .kw-pgal-thumbs { grid-column: 1; grid-row: 2; flex-direction: row; }
+  .kw-pgal--thumbs-left .kw-pgal-main { grid-column: 1; grid-row: 1; }
+  .kw-pgal--mosaic .kw-pgal-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kw-pgal-thumb { width: 56px; height: 56px; }
+}
+.kw-prv-title, .kw-psp-title { margin: 0 0 10px; }
+.kw-prv-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.kw-prv-item p { margin: 0 0 4px; }
+.kw-prv-stars { letter-spacing: 2px; }
+.kw-prv-meta { font-size: .85rem; opacity: .75; }
+.kw-prv-empty { margin: 0; opacity: .85; }
+.kw-psp-list { margin: 0; display: flex; flex-direction: column; }
+.kw-psp-row { display: grid; grid-template-columns: minmax(110px, 38%) minmax(0, 1fr); gap: 12px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.kw-psp-row dt { font-weight: 600; }
+.kw-psp-row dd { margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .kw-pgal-thumb, .kw-pb-choice { transition: opacity .12s, box-shadow .12s; } }

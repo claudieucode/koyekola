@@ -1,0 +1,14 @@
+// Famille A · Galeries et classiques : réglages propres à chaque modèle (voir compose.js pour la signification des champs).
+// sec = section de contenu propre au modèle [titre, consigne] · note = bloc de signature [titre, consigne] · info = ordre des informations · sig = briques sous la fiche · gx = ajouts sous la galerie
+module.exports = {
+  A01: { sec: ["Détails du produit", "Indiquez ici les matières, dimensions et conseils d'entretien."], note: ["Bon à savoir", "Indiquez ici l'information utile avant l'achat."], info: "c t p q b m", sig: ["rev", "rel:4"] },
+  A02: { sec: ["Coupe et matières", "Indiquez ici la coupe, la composition et l'entretien."], note: ["Guide de coupe", "Indiquez ici comment choisir sa taille."], info: "e t p b q d r", sig: ["table"], var: "buttons", gx: "n" },
+  A03: { sec: ["Matières et dimensions", "Indiquez ici les matériaux et les dimensions de la pièce."], note: ["Dans votre intérieur", "Indiquez ici des idées d'association et de mise en place."], info: "g t q p m b", sig: ["benefits", "rel:3"], tpl: "3fr 2fr", relHead: "Pour compléter la pièce" },
+  A04: { sec: ["Savoir-faire", "Indiquez ici l'histoire de la pièce et de son atelier."], note: ["L'atelier", "Indiquez ici la manière dont la pièce est fabriquée."], info: "e T q p b", sig: ["story", "ship"], label: "Réserver cette pièce" },
+  A05: { sec: ["Pour le tirage", "Indiquez ici formats, papiers et finitions disponibles."], note: ["Formats", "Indiquez ici les formats et les supports proposés."], info: "t p q d m", sig: ["steps", "faq"], ttl: "40px" },
+  A06: { sec: ["Matières et usage", "Indiquez ici ce qui compose la pièce et comment l'utiliser."], note: ["Mise en scène", "Indiquez ici où et comment présenter la pièce."], info: "c e t p b R", sig: ["quote", "rev"], zoom: false },
+  A07: { sec: ["Pierres et métaux", "Indiquez ici les pierres, les métaux et leurs certificats."], note: ["Détail du bijou", "Indiquez ici le poids, le titre du métal et le calibre."], info: "e t u p q b n", sig: ["care", "cta"], label: "Ajouter à l'écrin" },
+  A08: { sec: ["Informations pratiques", "Indiquez ici les informations pratiques du produit."], note: ["Catégories", "Indiquez ici les rubriques liées à ce produit."], info: "c t p q b d M", sig: ["list", "rel:2"], relHead: "Dans la même rubrique", gx: "g" },
+  A09: { sec: ["Coupe et tailles", "Indiquez ici la coupe et la taille portée par le modèle."], note: ["Livraison express", "Indiquez ici vos délais et vos conditions de retour."], info: "g T p b m", sig: ["ship", "rel:3"], var: "buttons", label: "Je le veux" },
+  A10: { sec: ["Technologie", "Indiquez ici les technologies et matériaux de la paire."], note: ["Pointures", "Indiquez ici le guide des pointures."], info: "e t p q b r", sig: ["table", "iconrow"], var: "buttons", ttl: "56px" },
+};
