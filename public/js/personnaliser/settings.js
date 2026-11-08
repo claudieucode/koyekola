@@ -455,14 +455,70 @@
   // ---------- Panneaux de catégories ----------
   function note(text, href, label) { var n = h("div", { class: "kwc-note" }, [h("p", { text: text })]); if (href) n.appendChild(h("a", { class: "kwc-btn", href: href, target: "_blank", rel: "noopener" }, [label])); return n; }
   function panelFields(p, body) { if (p.tabs) singleBody(p, body); else p.controls.filter(function (c) { return !/^parts\./.test(c.id); }).forEach(function (c) { body.appendChild(field(c)); }); }
+  // Menus : modification directe dans le panneau. Chaque action est envoyée au serveur (mêmes fonctions que l'écran Navigation), qui répond avec l'état réel du menu ; l'aperçu est actualisé après chaque succès.
+  function getJson(path) {
+    return fetch(path + boot.siteQuery, { credentials: "same-origin", headers: { Accept: "application/json" } }).then(function (res) {
+      return res.json().catch(function () { return null; }).then(function (data) { if (!res.ok) throw new Error((data && data.error && data.error.message) || "Chargement impossible."); return data; });
+    });
+  }
   function menusView(body) {
-    body.appendChild(h("p", { class: "kwc-hint", text: "Les menus se modifient dans l'écran Navigation (ils ne passent pas par le brouillon). Revenez ici et actualisez l'aperçu pour les voir." }));
-    if (!boot.menus.length) body.appendChild(h("p", { class: "kwc-empty-note", text: "Ce site n'a encore aucun menu." }));
-    var ul = h("ul", { class: "kwc-menulist" });
-    boot.menus.forEach(function (m) { ul.appendChild(h("li", null, [h("strong", { text: m.name }), h("small", { text: m.items + " élément" + (m.items > 1 ? "s" : "") + (m.locations.length ? " · " + m.locations.join(", ") : " · non affecté") + (m.broken ? " · " + m.broken + " lien(s) à vérifier" : "") })])); });
-    body.appendChild(ul);
-    body.appendChild(h("a", { class: "kwc-btn kwc-btn-primary", href: boot.links.menus, target: "_blank", rel: "noopener", text: "Modifier les menus" }));
-    body.appendChild(h("button", { type: "button", class: "kwc-btn", text: "Actualiser l'aperçu", onclick: function () { K.preview.softReload(); } }));
+    var canWrite = !!boot.can.menus, canLoc = !!boot.can.menusPublish;
+    var holder = h("div", { class: "kwc-fields" }); body.appendChild(holder);
+    function list() {
+      holder.textContent = "";
+      holder.appendChild(h("p", { class: "kwc-hint", text: "Choisissez un menu pour le modifier ici ; les changements sont enregistrés tout de suite et l'aperçu se met à jour." }));
+      if (!boot.menus.length) holder.appendChild(h("p", { class: "kwc-empty-note", text: "Ce site n'a encore aucun menu." }));
+      var ul = h("ul", { class: "kwc-menulist" });
+      boot.menus.forEach(function (m) {
+        var btn = h("button", { type: "button", class: "kwc-btn", text: "Modifier", onclick: function () { open(m.id); } });
+        ul.appendChild(h("li", null, [h("strong", { text: m.name }), h("small", { text: m.items + " élément" + (m.items > 1 ? "s" : "") + (m.locations.length ? " · " + m.locations.join(", ") : "") }), btn]));
+      });
+      holder.appendChild(ul);
+      holder.appendChild(h("a", { class: "kwc-btn", href: boot.links.menus, target: "_blank", rel: "noopener", text: "Créer ou gérer les menus (écran Navigation)" }));
+    }
+    function open(id) {
+      holder.textContent = ""; holder.appendChild(h("p", { class: "kwc-hint", text: "Chargement du menu…" }));
+      getJson(boot.base + "/menus/" + id).then(function (st) { draw(id, st); }, function (e) { toast(e.message, "error"); list(); });
+    }
+    function act(id, payload) {
+      return post(boot.base + "/menus/" + id + "/element", payload).then(function (st) { draw(id, st); K.preview.softReload(); return st; }, function (e) { toast(e.message, "error"); throw e; });
+    }
+    function draw(id, st) {
+      holder.textContent = "";
+      holder.appendChild(h("button", { type: "button", class: "kwc-btn", text: "← Tous les menus", onclick: list }));
+      holder.appendChild(h("p", { class: "kwc-help", text: "Menu : " + st.menu.name }));
+      var ul = h("ul", { class: "kwc-menuitems" });
+      st.items.forEach(function (it) {
+        var label = h("input", { class: "kwc-input", type: "text", value: it.label || it.shown, maxlength: 120, "aria-label": "Texte du lien", disabled: !canWrite });
+        var line = [label];
+        var url = null;
+        if (it.type === "custom") { url = h("input", { class: "kwc-input", type: "text", value: it.url, "aria-label": "Adresse du lien", disabled: !canWrite }); line.push(url); }
+        function save() { var p = { action: "update", id: it.id, label: label.value }; if (url) p.url = url.value; act(id, p).catch(function () {}); }
+        label.addEventListener("change", save); if (url) url.addEventListener("change", save);
+        var tools = h("span", { class: "kwc-menutools" }, [
+          h("button", { type: "button", class: "kwc-btn", "aria-label": "Monter « " + (it.shown) + " »", title: "Monter", text: "↑", disabled: !canWrite, onclick: function () { act(id, { action: "up", id: it.id }).catch(function () {}); } }),
+          h("button", { type: "button", class: "kwc-btn", "aria-label": "Descendre « " + (it.shown) + " »", title: "Descendre", text: "↓", disabled: !canWrite, onclick: function () { act(id, { action: "down", id: it.id }).catch(function () {}); } }),
+          h("button", { type: "button", class: "kwc-btn", "aria-label": "Retirer « " + (it.shown) + " » du menu", title: "Retirer du menu", text: "✕", disabled: !canWrite, onclick: function () { act(id, { action: "remove", id: it.id }).catch(function () {}); } }),
+        ]);
+        ul.appendChild(h("li", { class: "kwc-menuitem", style: "margin-left:" + ((it.depth - 1) * 14) + "px" }, [].concat(line, [tools, it.hidden ? h("small", { text: "masqué" }) : null])));
+      });
+      if (!st.items.length) ul.appendChild(h("li", null, [h("small", { text: "Ce menu est vide." })]));
+      holder.appendChild(ul);
+      if (canWrite) {
+        var nl = h("input", { class: "kwc-input", type: "text", placeholder: "Texte du lien", maxlength: 120, "aria-label": "Texte du nouveau lien" }), nu = h("input", { class: "kwc-input", type: "text", placeholder: "Adresse (ex. /contact ou https://…)", "aria-label": "Adresse du nouveau lien" });
+        holder.appendChild(h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: "Ajouter un lien personnalisé" })]), nl, nu,
+          h("button", { type: "button", class: "kwc-btn kwc-btn-primary", text: "Ajouter au menu", onclick: function () { act(id, { action: "add", label: nl.value, url: nu.value }).catch(function () {}); } })]));
+      }
+      var loc = h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: "Emplacements d'affichage" })])]);
+      st.locations.forEach(function (l) {
+        var cb = h("input", { type: "checkbox", checked: l.on, disabled: !canLoc });
+        cb.addEventListener("change", function () { post(boot.base + "/menus/" + id + "/emplacement", { key: l.key, on: cb.checked }).then(function (s2) { draw(id, s2); K.preview.softReload(); toast("Emplacement enregistré.", "ok"); }, function (e) { toast(e.message, "error"); cb.checked = !cb.checked; }); });
+        loc.appendChild(h("label", { class: "kwc-check" }, [cb, h("span", { text: " " + l.label })]));
+      });
+      holder.appendChild(loc);
+      holder.appendChild(h("a", { class: "kwc-btn", href: boot.links.menus.replace(/\?.*$/, "") + "/menus/" + id + boot.siteQuery, target: "_blank", rel: "noopener", text: "Ouvrir l'éditeur complet de ce menu" }));
+    }
+    list();
   }
   function widgetsView(body) {
     body.appendChild(h("p", { class: "kwc-hint", text: "Les widgets se composent dans l'écran Widgets. Voici l'état des zones de ce site." }));

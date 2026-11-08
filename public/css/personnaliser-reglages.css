@@ -155,3 +155,12 @@ html[data-kola-theme="dark"] .kwc-btn-primary { color: #04121d; }
 .kwc-segbtn.is-on { background: var(--pz-action); }
 .kwc-devbadge { background: var(--pz-action-soft); color: var(--pz-action); }
 .kwc-box-link.is-on { background: var(--pz-action-soft); border-color: var(--pz-action); }
+
+/* Menus modifiés directement dans le panneau : une carte par élément (texte, adresse, outils), retrait selon le niveau */
+.kwc-menuitems { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.kwc-menuitem { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid var(--kwc-line); border-radius: var(--kwc-r); background: var(--kwc-surface-2); }
+.kwc-menuitem .kwc-input { width: 100%; box-sizing: border-box; min-height: 36px; padding: 6px 10px; border: 1px solid var(--kwc-line); border-radius: var(--kwc-r); background: var(--kwc-surface); color: inherit; font: inherit; }
+.kwc-menuitem .kwc-input:focus-visible { outline: 2px solid var(--kwc-accent); outline-offset: 1px; }
+.kwc-menutools { display: flex; gap: 6px; }
+.kwc-menutools .kwc-btn { min-width: 36px; min-height: 32px; padding: 0 8px; }
+.kwc-menuitem small { color: var(--kwc-muted); }
