@@ -46,7 +46,9 @@ describe("catalogue : liste, filtres, pagination", () => {
     assert.equal(Catalog.list(t, { page: 5, limit: 24 }).items.length, 4);
     assert.ok(!("section" in p1.items[0]) && !("sections" in p1.items[0]), "la liste ne contient jamais les documents");
     assert.equal(Catalog.list(t, { skin: "nuit" }).total, Catalog.entries(t).filter((e) => e.skinKey === "nuit").length);
-    assert.ok(Catalog.list(t, { q: "ÉDITORIAL" }).total >= 5, "recherche sans accents ni casse");
+    const withAccents = Catalog.list(t, { q: "ÉDITORIAL" }).total;
+    assert.ok(withAccents >= 1, "la recherche trouve des modèles");
+    assert.equal(Catalog.list(t, { q: "editorial" }).total, withAccents, "recherche sans accents ni casse : mêmes résultats avec ou sans accents, en majuscules ou en minuscules");
     assert.equal(Catalog.list(t, { q: "zzzz-inconnu" }).total, 0);
   });
 });

@@ -2512,3 +2512,8 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-hdr-resetrow { padding: 0 12px 6px; }
 .pb-hdr-go.is-open svg { transform: rotate(90deg); }
 .pb-hdr-acc-body > .pb-hdr-list { margin: 0 12px 10px; border: 1px solid var(--editor-border); border-radius: var(--pb-radius-md, 8px); }
+
+/* Pied de page : pictogrammes du nombre de colonnes */
+.pb-hdr-tiles.is-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pb-fm { display: flex; gap: 2px; height: 30px; margin-bottom: 6px; padding: 4px; border: 1px solid var(--editor-border-strong); border-radius: 6px; background: var(--editor-panel-secondary); box-sizing: border-box; }
+.pb-fm i { flex: 1; display: block; border-radius: 2px; background: var(--editor-accent); opacity: .55; }

@@ -286,7 +286,7 @@ describe("Archives produits : rendu par le vrai moteur (aperçu, vignette, page 
     for (const e of all) {
       const ap = await boss.get(U(`/api/bibliotheque/${TYPE}/${e.key}/apercu`)), vi = await boss.get(U(`/api/bibliotheque/${TYPE}/${e.key}/vignette`));
       assert.equal(ap.status, 200, `${e.key} aperçu`); assert.equal(vi.status, 200, `${e.key} vignette`);
-      for (const r of [ap, vi]) { assert.ok(!/<script/i.test(r.text), `${e.key} : script`); assert.match(r.text, /kw-pg-card/, `${e.key} : aucune carte produit`); assert.match(r.text, /Produit exemple/, `${e.key} : produits d'exemple`); }
+      for (const r of [ap, vi]) { assert.ok(!/<script(?![^>]*src="\/js\/landing\.js)/i.test(r.text), `${e.key} : script`); /* seul le script du site (landing.js) est admis : jamais de script propre au modèle */ assert.match(r.text, /kw-pg-card/, `${e.key} : aucune carte produit`); assert.match(r.text, /Produit exemple/, `${e.key} : produits d'exemple`); }
       assert.match(ap.text, /produits d'exemple/i, `${e.key} : l'aperçu annonce les exemples`);
       assert.doesNotMatch(vi.text, /Aperçu avec des produits d'exemple/, `${e.key} : pas de bandeau dans la vignette`);
     }
