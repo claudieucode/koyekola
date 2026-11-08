@@ -121,13 +121,13 @@ module.exports = {
       key: "luxe-06", name: "Maison Pérenne", art: "Haut de gamme intemporel", desc: "Trois cases pleine largeur dont un bloc de marque doré, liseré en dégradé au-dessus : la sobriété qui ne se démode pas.",
       S: ID("luxe-06", "Maison Pérenne", { bg: "#101a2c", fg: "#f3eee3", mute: "#b9b3a4", alt: "#17233a", accent: "#c9a86a", onAccent: "#101a2c", line: "#8a7447", font: "font.raleway", head: "font.libre-caslon-display", weight: "400", btn: "outline" }),
       build: (k, P) => {
-        const cell = (kids, o = {}) => g(kids, { alignItems: "center", justifyContent: "center", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "34px", paddingRight: o.padEnd || "34px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: o.first ? "0px" : "1px", borderColor: k.S.line, flexWrap: "nowrap", ...(o.bg ? { backgroundColor: o.bg } : {}) }, { borderLeftWidth: "0px", paddingLeft: "12px", paddingRight: "12px" }, { paddingTop: "12px", paddingBottom: "12px" });
+        const cell = (kids, o = {}) => g(kids, { alignItems: "center", justifyContent: "center", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "34px", paddingRight: "34px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: o.first ? "0px" : "1px", borderColor: k.S.line, flexWrap: "nowrap", ...(o.bg ? { backgroundColor: o.bg } : {}) }, { borderLeftWidth: "0px", paddingLeft: "12px", paddingRight: "12px" }, { paddingTop: "12px", paddingBottom: "12px" });
         return [
           X.stripe(k, { h: 3, gradient: { from: "#c9a86a", to: "#101a2c", angle: 90 } }),
           band(k.S, [grid("auto 1fr auto", [
             cell([mark(k, { size: "27px", weight: "400", track: "0.04em", color: k.S.onAccent })], { first: true, bg: k.S.accent }),
             cell([nav(k, "thin", { caps: "uppercase", track: "2.2px", size: "11.5px", weight: "500", gap: "28px", hover: k.S.accent })]),
-            cell([account(k, { size: "12px" }), btn(k, P.cta[0], P.cta[1], "outline", { caps: "uppercase", track: "1.8px", size: "11px", fg: k.S.accent, border: k.S.accent, radius: "0px", padV: "10px" })], { padEnd: "120px" }),
+            cell([account(k, { size: "12px" }), btn(k, P.cta[0], P.cta[1], "outline", { caps: "uppercase", track: "1.8px", size: "11px", fg: k.S.accent, border: k.S.accent, radius: "0px", padV: "10px" })]),
           ], { width: "100%", alignItems: "stretch", gap: "0px" }, { gridTemplate: "1fr 1fr" }, { gridTemplate: "1fr" })], { paddingLeft: "0px", paddingRight: "0px", paddingTop: "0px", paddingBottom: "0px" }, { paddingLeft: "0px", paddingRight: "0px" }, { paddingLeft: "0px", paddingRight: "0px" }),
         ];
       },
