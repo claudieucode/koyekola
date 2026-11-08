@@ -430,7 +430,9 @@ const dynamicHelpers = (h) => ({
 });
 const boxProps = (p, at, h) => {
   const link = h.linkUrl(p.link, `${at} (lien du conteneur)`);
-  return { ...boxTag(p), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
+  // stickRow : cette rangée d'en-tête se fixe en haut de l'écran quand on la dépasse en défilant (les autres rangées défilent) ; stickOffset = distance au bord (px)
+  const stickOffset = Number(p.stickOffset);
+  return { ...boxTag(p), ...(p.stickRow === true ? { stickRow: true, ...(Number.isInteger(stickOffset) && stickOffset > 0 && stickOffset <= 200 ? { stickOffset } : {}) } : {}), ...(p.loopInsert === true ? { loopInsert: true } : {}), ...(link ? { link, ...(p.newTab === true && link.startsWith("https://") ? { newTab: true } : {}) } : {}) };
 };
 // Éléments qui sont eux-mêmes un lien, un bouton ou un champ (ou qui peuvent en contenir) : interdits dans un conteneur cliquable
 const INTERACTIVE_INSIDE_LINK = new Set(["button", "link", "menu", "search", "account", "toggle", "tabs", "accordion", "modal", "carousel", "tooltip", "hotspot", "html", "embed", "social", "breadcrumb", "course", "courselist", "posts", "pricing", "iconlist", "gallery", "table", "postcontent"]);
@@ -614,6 +616,30 @@ const NODE_TYPES = {
     const source = ["manual", "location", "name"].includes(p.source) ? p.source : "manual";
     if (source === "manual" && !items.length) throw new Error(`${at} (menu) : au moins un lien avec un texte et une adresse.`);
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
+    // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
+    // Panneau : « drawer » (tiroir à droite ou à gauche), « full » (plein écran) ou « sheet » (panneau qui monte du bas) ; sinon la liste se déplie sous le bouton
+    if (out.mobileToggle && ["drawer", "full", "sheet"].includes(p.mobileMode)) { out.mobileMode = p.mobileMode; if (p.mobileMode === "drawer") out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Bouton hamburger (modèles de design) : icône (lignes, deux lignes, points, texte seul), texte du bouton (« Menu » par défaut, vide = icône seule), forme (cadre, rond, sans cadre)
+    if (out.mobileToggle) {
+      if (["lines2", "dots", "text"].includes(p.burger)) out.burger = p.burger;
+      if (typeof p.burgerText === "string") out.burgerText = line(p.burgerText, 20);
+      if (["round", "plain"].includes(p.burgerShape)) out.burgerShape = p.burgerShape;
+    }
+    // Pointeur des liens du menu (survol / page courante) : trait dessous, dessus, double trait, cadre ou fond ; animation et couleur facultatives
+    if (["underline", "overline", "double", "framed", "background"].includes(p.pointer)) {
+      out.pointer = p.pointer; out.pointerAnim = ["fade", "slide", "grow", "drop"].includes(p.pointerAnim) ? p.pointerAnim : "fade";
+      const pc = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(p.pointerColor || "").trim()) ? String(p.pointerColor).trim().toLowerCase() : "";
+      if (pc) out.pointerColor = pc;
+    }
+    // Largeur d'écran (px) en dessous de laquelle le menu se replie derrière le bouton : 767 par défaut (non enregistré), de 320 à 1920
+    if (out.mobileToggle) { const bp = Number(p.menuBreakpoint); if (Number.isInteger(bp) && bp >= 320 && bp <= 1920 && bp !== 767) out.menuBreakpoint = bp; }
+    // Méga-menu : « identifiant de l'élément du menu → identifiant du composant (panneau) », pour les rubriques de premier niveau d'un menu du CMS. Seuls des entiers positifs ;
+    // le composant doit appartenir au MÊME site (vérifié à l'affichage et à l'enregistrement du panneau).
+    if (source !== "manual" && p.mega && typeof p.mega === "object" && !Array.isArray(p.mega)) {
+      const mega = {};
+      for (const [k, v] of Object.entries(p.mega).slice(0, 12)) { const id = Number(k), cid = Number(v); if (Number.isInteger(id) && id > 0 && Number.isInteger(cid) && cid > 0) mega[String(id)] = cid; }
+      if (Object.keys(mega).length) { out.mega = mega; out.megaTrigger = p.megaTrigger === "click" ? "click" : "hover"; out.megaWidth = p.megaWidth === "full" ? "full" : "item"; }
+    }
     if (source === "location") { out.source = source; out.location = ["header", "footer", "mobile"].includes(p.location) ? p.location : "header"; }
     else if (source === "name") { out.source = source; out.menuName = line(p.menuName, 80); }
     return out;
@@ -745,11 +771,14 @@ const NODE_TYPES = {
     count: numberIn(1, 12, { integer: true })(p.count) || 3, category: line(p.category, 80), sort: oneOf("recent", "title", "price")(p.sort) || "recent",
     showPrice: p.showPrice !== false, cta: line(p.cta, 40) || "Découvrir", empty: line(p.empty, 160) || "Aucune formation publiée pour le moment.",
   }) },
-  search: { label: "Recherche", category: "dynamic", props: (p) => ({
-    target: oneOf("blog", "catalogue")(p.target) || "catalogue", placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher",
-  }) },
+  // skin « overlay » (Header Builder) : une loupe qui ouvre la recherche en plein écran ; suggest : suggestions pendant la frappe (cible « site » : articles et pages publiés du site, mêmes règles que /recherche)
+  search: { label: "Recherche", category: "dynamic", props: (p) => {
+    const target = oneOf("blog", "catalogue", "site")(p.target) || "catalogue";
+    return { target, placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher", ...(p.skin === "overlay" ? { skin: "overlay" } : {}), ...(p.suggest === true && target === "site" ? { suggest: true } : {}) };
+  } },
+  // skin « menu » (Header Builder) : un visiteur connecté voit un menu déroulant (Mon compte, Panier, Se déconnecter) ; un visiteur non connecté garde les liens habituels
   account: { label: "Compte du visiteur", category: "dynamic", props: (p) => ({
-    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier",
+    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier", ...(p.skin === "menu" ? { skin: "menu" } : {}),
   }) },
   dyntext: { label: "Texte dynamique", category: "dynamic", props: (p, at) => {
     const source = oneOf("firstName", "today", "year", "pageTitle", "courseCount", "postCount")(p.source);
@@ -794,7 +823,12 @@ const NODE_TYPES = {
   } },
   // Logo, titre du site, copyright : contenu lu à l'affichage (logo et nom des réglages SEO, nom du site de la page,
   // année en cours) ; seuls les réglages d'affichage sont enregistrés
-  sitelogo: { label: "Logo du site", category: "dynamic", props: (p) => ({ height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(numberIn(16, 160, { integer: true })(p.scrollHeight) ? { scrollHeight: numberIn(16, 160, { integer: true })(p.scrollHeight) } : {}), ...(line(p.scrollText, 40) ? { scrollText: line(p.scrollText, 40) } : {}) }) },
+  // logoTop : logo affiché tant que la page n'a pas défilé ; logoMobile : logo des petits écrans (Header Builder, images du site) ; scrollHeight / scrollText : taille et texte alternatifs au défilement (réglages existants).
+  sitelogo: { label: "Logo du site", category: "dynamic", props: (p, at, h) => {
+    const top = p.logoTop ? h.imageUrl(p.logoTop, `${at} (logo en haut de page)`) : "", mobile = p.logoMobile ? h.imageUrl(p.logoMobile, `${at} (logo mobile)`) : "";
+    const sh = numberIn(16, 160, { integer: true })(p.scrollHeight), st = line(p.scrollText, 40);
+    return { height: numberIn(20, 160, { integer: true })(p.height) || 48, link: p.link !== false, ...(sh ? { scrollHeight: sh } : {}), ...(st ? { scrollText: st } : {}), ...(top ? { logoTop: top } : {}), ...(mobile ? { logoMobile: mobile } : {}) };
+  } },
   // Corps de l'article du blog affiché par un modèle « Article du blog » (HTML déjà produit et nettoyé par le blog)
   postcontent: { label: "Contenu de l'article", category: "dynamic", props: () => ({}) },
   // Filtre par catégorie : liens « ?categorie=… » vers la même page (à associer à une grille en boucle « filtrer avec l'adresse »)
@@ -2066,6 +2100,37 @@ function guardContrast(styles) {
   return out || styles;
 }
 
+
+// ---------- Isolation des filtres d'un conteneur ----------
+// En CSS, « filter » sur une boîte s'applique à la boîte ENTIÈRE rendue avec ses enfants : un flou posé sur une section ou un conteneur flouterait aussi son titre,
+// son texte, ses boutons. Règle voulue : un filtre posé sur un conteneur n'agit QUE sur son fond propre (couleur, image, dégradé, voile). Pour tout conteneur qui
+// définit un filtre non neutre (sur un écran ou un état quelconque), le fond ET le filtre passent sur un pseudo-élément ::before placé derrière les contenus ;
+// le conteneur lui-même n'a plus ni fond ni filtre. Un conteneur sans filtre, et tout élément qui n'est pas un conteneur (image, titre, bouton…), sont rendus comme avant.
+// Voir docs/page-builder/ISOLATION_CONTENEUR_FILTRES.md.
+const FILTER_NEUTRAL = { blur: 0, brightness: 100, contrast: 100, grayscale: 0, saturate: 100, sepia: 0, hueRotate: 0, invert: 0 };
+const realFilter = (f) => Boolean(f) && Object.entries(f).some(([k, v]) => v !== FILTER_NEUTRAL[k]);
+const BG_KEYS = new Set(["backgroundColor", "backgroundSize", "backgroundPosition", "backgroundRepeat", "backgroundAttachment", "backgroundClip", "backgroundImage", "gradient", "overlay", "filter"]);
+const onlyKeys = (set, keep) => Object.fromEntries(Object.entries(set || {}).filter(([k]) => keep(k)));
+// Renvoie { bleed } si le nœud doit répartir fond + filtre sur ::before, sinon null (rendu inchangé)
+function filteredBackground(type, styles, states) {
+  const def = Object.hasOwn(NODE_TYPES, type) ? NODE_TYPES[type] : null;
+  if (type !== "layout" && (!def || def.container !== true)) return null; // « layout » : la section libre (hors registre des éléments)
+  const sets = [...Object.values(styles || {}), ...Object.values(states || {})].filter((x) => x && typeof x === "object");
+  if (!sets.some((x) => realFilter(x.filter))) return null;
+  if (sets.some((x) => x.backgroundClip === "text")) return null; // fond « dans les lettres » : le fond épouse le texte, il ne peut pas être déplacé → comportement d'origine
+  const blur = Math.max(0, ...sets.map((x) => (x.filter && x.filter.blur) || 0));
+  return { bleed: Math.ceil(blur * 2) };
+}
+// Rayon des coins effectif sur un écran (héritage ordinateur → tablette → mobile ; le grand écran hérite de l'ordinateur seulement)
+function radiusAt(styles, bpKey) {
+  const chain = bpKey === "mobile" ? ["mobile", "tablet", "desktop"] : bpKey === "tablet" ? ["tablet", "desktop"] : bpKey === "wide" ? ["wide", "desktop"] : ["desktop"];
+  const eff = (k) => { for (const c of chain) if (styles && styles[c] && styles[c][k] !== undefined) return styles[c][k]; return undefined; };
+  const out = (k) => { const v = eff(k); return v === undefined ? undefined : STYLE_PROPS[k].out ? STYLE_PROPS[k].out(v) : v; };
+  const all = out("borderRadius"), corners = ["borderTopLeftRadius", "borderTopRightRadius", "borderBottomRightRadius", "borderBottomLeftRadius"].map(out);
+  if (corners.some((c) => c !== undefined)) return corners.map((c) => (c === undefined ? all || "0" : c)).join(" ");
+  return all || "";
+}
+
 function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const mediaOf = (bp) => (bp.key === "wide" ? `(min-width: ${breakpoints.wide || 1920}px)` : bp.key === "tablet" ? `(max-width: ${breakpoints.tablet}px)` : bp.key === "mobile" ? `(max-width: ${breakpoints.mobile}px)` : bp.media);
   const rules = { base: [], custom: [], media: Object.fromEntries(BREAKPOINTS.filter((b) => b.media).map((b) => [b.key, []])) };
@@ -2093,10 +2158,37 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   const add = (id, styles, states, band = false, calm = false) => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
+    const split = filteredBackground(type, styles, states);
+    if (!split) {
+      for (const bp of BREAKPOINTS) {
+        const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
+        if (!d) continue;
+        (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      }
+      for (const state of STATES) {
+        const d = states && states[state.key] ? declarations(states[state.key], band) : "";
+        if (d) rules.base.push(stateRule(state, sel, d));
+      }
+      return;
+    }
+    // Fond filtré : le conteneur garde tout SAUF fond et filtre ; ::before (derrière les contenus) porte le fond et le filtre, sur chaque écran et chaque état
+    const { bleed } = split, own = (k) => !BG_KEYS.has(k), bgOnly = (k) => BG_KEYS.has(k);
+    const pseudoStatic = `content:"";position:absolute;inset:${bleed ? `-${bleed}px` : "0"};z-index:-1;pointer-events:none;border-radius:inherit`;
+    rules.base.push(`:where(${sel}){position:relative;isolation:isolate}`, `${sel}::before{${pseudoStatic}}`);
+    const extra = (set) => (set.transitionDuration !== undefined ? [`transition:background-color ${set.transitionDuration}ms ease, filter ${set.transitionDuration}ms ease`, ...(set.transitionEasing ? [`transition-timing-function:${set.transitionEasing}`] : [])] : []);
+    const clip = (bp) => { // recadrage du débord du flou, avec les coins arrondis du conteneur (écrit seulement quand il change)
+      if (!bleed) return "";
+      const r = radiusAt(styles, bp.key), prev = bp.key === "desktop" ? null : bp.key === "mobile" ? radiusAt(styles, "tablet") : radiusAt(styles, "desktop");
+      if (prev !== null && r === prev) return "";
+      return `clip-path:inset(${bleed}px${r ? ` round ${r}` : ""})`;
+    };
     for (const bp of BREAKPOINTS) {
-      const d = styles && styles[bp.key] ? declarations(styles[bp.key], band) : "";
-      if (!d) continue;
-      (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
+      const set = styles && styles[bp.key];
+      const dn = set ? declarations(onlyKeys(set, own), band) : "";
+      const dp = [set ? declarations(onlyKeys(set, bgOnly)) : "", ...(set ? extra(set) : []), clip(bp)].filter(Boolean).join(";");
+      const bucket = bp.media ? rules.media[bp.key] : rules.base;
+      if (dn) bucket.push(`${sel}{${dn}}`);
+      if (dp) bucket.push(`${sel}::before{${dp}}`);
     }
     stateRules(sel, states, band, rules, calm);
   };
@@ -2121,7 +2213,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
-    add(s.id, s.styles, s.states);
+    add(s.id, s.styles, s.states, false, s.type);
     if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;

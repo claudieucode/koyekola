@@ -212,6 +212,12 @@
     body.appendChild(h("fieldset", { class: "pb-nav-add" }, h("legend", { text: "Affichage" }),
       check("Liens les uns sous les autres", "vertical", "Menu vertical au lieu d'horizontal"),
       check("Sur mobile, replier derrière un bouton « Menu »", "mobileToggle", "Sur téléphone, le menu s'ouvre depuis un bouton"),
+      node.props.mobileToggle ? h("label", { class: "pb-field" }, h("span", { text: "Ouverture du menu sur mobile" }), h("select", { disabled: ro || null, "data-nav-opt": "mobileMode", onchange: function () {
+        var v = this.value; mine = false; nav.change(function () { var x = nav.byId(curId).props; if (v === "drawer") x.mobileMode = "drawer"; else { delete x.mobileMode; delete x.drawerSide; } }, { label: "Menu : ouverture sur mobile" }); render();
+      } }, h("option", { value: "inline", text: "Déplié sous le bouton", selected: node.props.mobileMode !== "drawer" || null }), h("option", { value: "drawer", text: "Tiroir latéral", selected: node.props.mobileMode === "drawer" || null }))) : null,
+      node.props.mobileToggle && node.props.mobileMode === "drawer" ? h("label", { class: "pb-field" }, h("span", { text: "Côté du tiroir" }), h("select", { disabled: ro || null, "data-nav-opt": "drawerSide", onchange: function () {
+        var v = this.value; mine = false; nav.change(function () { nav.byId(curId).props.drawerSide = v; }, { label: "Menu : côté du tiroir" }); render();
+      } }, h("option", { value: "right", text: "À droite", selected: node.props.drawerSide !== "left" || null }), h("option", { value: "left", text: "À gauche", selected: node.props.drawerSide === "left" || null }))) : null,
       h("div", { class: "pb-nav-screens" }, h("span", { text: "Afficher sur :" }), [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]].map(function (b) {
         return h("label", { class: "pb-check" }, h("input", { type: "checkbox", checked: (node.hideOn || []).indexOf(b[0]) < 0 || null, disabled: ro || null, "data-nav-screen": b[0], onchange: function () {
           var hidden = ["desktop", "tablet", "mobile"].filter(function (x) { return x === b[0] ? !this.checked : (nav.byId(curId).hideOn || []).indexOf(x) >= 0; }, this);

@@ -2307,7 +2307,18 @@ function selectField(label, value, options, onChange, opts) {
         } }, "Ajouter les pages publiées"));
         }
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Pointeur des liens", p.pointer || "", [["", "Aucun (soulignement au survol)"], ["underline", "Trait dessous"], ["overline", "Trait dessus"], ["double", "Double trait"], ["framed", "Cadre"], ["background", "Fond"]], function (v) { change(function () { var x = byId(it.id).props; if (v) { x.pointer = v; } else { delete x.pointer; delete x.pointerAnim; delete x.pointerColor; } }); }, { disabled: disabled }));
+        if (p.pointer) {
+          box.appendChild(selectField("Animation du pointeur", p.pointerAnim || "fade", [["fade", "Fondu"], ["slide", "Glissement"], ["grow", "Étirement"], ["drop", "Chute"]], function (v) { setProp(it.id, "pointerAnim", v); }, { disabled: disabled }));
+          box.appendChild(textField("Couleur du pointeur (#rrggbb, vide = couleur d'accent)", p.pointerColor || "", function (v) { change(function () { var x = byId(it.id).props; if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim())) x.pointerColor = String(v).trim(); else delete x.pointerColor; }); }, { max: 7, disabled: disabled, placeholder: "#1e3a5f" }));
+        }
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
+        if (p.mobileToggle) {
+          box.appendChild(numberField("Replier le menu sous cette largeur d'écran (px)", p.menuBreakpoint || 767, { min: 320, max: 1920, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id).props; if (n === 767) delete x.menuBreakpoint; else x.menuBreakpoint = n; }); }, "767 par défaut. Montez à 1024 pour que le bouton « Menu » apparaisse aussi sur tablette ; 1920 pour l'avoir partout."));
+          box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
+          if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
+        }
+        if (isHeaderDoc() && p.source && p.source !== "manual") megaSection(box, it, p, disabled);
         break;
       case "carousel":
         box.appendChild(textField("Nom du carrousel (lecteurs d'écran)", p.label, set("label"), { max: 80, disabled: disabled }));
@@ -2366,6 +2377,15 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(selectField("Taille du logo une fois la page défilée", p.scrollHeight ? String(p.scrollHeight) : "", [["", "Identique"], ["24", "24 px"], ["32", "32 px"], ["40", "40 px"], ["48", "48 px"], ["64", "64 px"]].concat([24, 32, 40, 48, 64].indexOf(Number(p.scrollHeight)) < 0 && p.scrollHeight ? [[String(p.scrollHeight), p.scrollHeight + " px"]] : []), function (v) { setProp(it.id, "scrollHeight", v ? Number(v) : ""); }, { disabled: disabled }));
         box.appendChild(textField("Texte alternatif au défilement (logo sans image)", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
+        if (isHeaderDoc()) {
+          // Variantes de logo (en-tête) : l'état « en haut de page » (ex. logo clair sur fond transparent) et les petits écrans ; elles remplacent le logo principal quand elles s'appliquent
+          [["logoTop", "Logo en haut de page", "Affiché tant que la page n'a pas défilé (par exemple un logo clair sur un en-tête transparent). Le logo principal revient après le défilement. Sans effet si l'en-tête est ordinaire."], ["logoMobile", "Logo mobile", "Remplace le logo sur les écrans de 767 px et moins."]].forEach(function (v) {
+            box.appendChild(h("p", { class: "pb-sub", text: v[1] }));
+            box.appendChild(mediaPreview(p[v[0]], function (m) { change(function () { byId(it.id).props[v[0]] = m.path; }); }, disabled));
+            if (p[v[0]]) box.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-clear-logo": v[0], onclick: function () { change(function () { delete byId(it.id).props[v[0]]; }); } }, "Retirer"));
+            box.appendChild(h("p", { class: "pb-hint", text: v[2] }));
+          });
+        }
         break;
       case "catfilter":
         box.appendChild(selectField("Catégories de…", p.source, [["posts", "Articles du blog"], ["courses", "Formations du catalogue"]], function (v) { setProp(it.id, "source", v); }, { disabled: disabled }));
@@ -2519,13 +2539,16 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(textField("Texte s'il n'y a aucune formation", p.empty, set("empty"), { max: 160, disabled: disabled }));
         break;
       case "search":
-        box.appendChild(selectField("Rechercher dans", p.target, [["catalogue", "Le catalogue des formations"], ["blog", "Le blog"]], function (v) { setProp(it.id, "target", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Rechercher dans", p.target, [["catalogue", "Le catalogue des formations"], ["blog", "Le blog"], ["site", "Le site (articles et pages)"]], function (v) { change(function () { var x = byId(it.id).props; x.target = v; if (v !== "site") delete x.suggest; }); }, { disabled: disabled }));
+        box.appendChild(selectField("Affichage", p.skin === "overlay" ? "overlay" : "classic", [["classic", "Champ de recherche dans la page"], ["overlay", "Loupe qui ouvre la recherche en plein écran"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "overlay") x.skin = "overlay"; else delete x.skin; }); }, { disabled: disabled }));
+        if (p.target === "site") box.appendChild(checkField("Suggestions pendant la frappe", p.suggest === true, function (v) { change(function () { var x = byId(it.id).props; if (v) x.suggest = true; else delete x.suggest; }); }, { disabled: disabled, hint: "Jusqu'à 6 articles ou pages du site, dès 2 caractères saisis." }));
         box.appendChild(textField("Texte d'exemple dans le champ", p.placeholder, set("placeholder"), { max: 80, disabled: disabled }));
         box.appendChild(textField("Texte du bouton", p.button, set("button"), { max: 30, disabled: disabled }));
         break;
       case "account":
         box.appendChild(textField("Lien pour un visiteur non connecté", p.login, set("login"), { max: 40, disabled: disabled }));
         box.appendChild(textField("Lien pour un visiteur connecté", p.account, set("account"), { max: 40, disabled: disabled }));
+        box.appendChild(selectField("Affichage pour un visiteur connecté", p.skin === "menu" ? "menu" : "links", [["links", "Lien « Mon compte »"], ["menu", "Menu déroulant (compte, panier, déconnexion)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "menu") x.skin = "menu"; else delete x.skin; }); }, { disabled: disabled }));
         box.appendChild(checkField("Lien vers le panier (avec le nombre de formations)", p.showCart !== false, function (v) { setProp(it.id, "showCart", v); }, { disabled: disabled }));
         box.appendChild(textField("Texte du lien panier", p.cart, set("cart"), { max: 30, disabled: disabled }));
         box.appendChild(h("p", { class: "pb-hint", text: "Lu à chaque affichage : la personne connectée voit « " + (p.account || "Mon compte") + " » et son panier. Dans l'éditeur et l'aperçu, la page est montrée comme à un visiteur non connecté." }));
@@ -3161,7 +3184,7 @@ function selectField(label, value, options, onChange, opts) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
     var reset = own !== undefined ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur héritée", "aria-label": "Effacer « " + (label || SP[key].label) + " » pour cet écran", disabled: dis, onclick: function () { setStyle(idsOf(items), key, ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
-    var lab = h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
+    var lab = h("label", { for: id, class: "pb-prop-label", title: label && label !== SP[key].label ? label + " (" + SP[key].label + ")" : SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
     if (control && control.scrub) control.scrub(lab);
     return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
       h("div", { class: "pb-prop-head" }, lab, marks, items.length === 1 ? styleRestore(it, key) : null),
@@ -3936,9 +3959,11 @@ function selectField(label, value, options, onChange, opts) {
     partsRow(items, box);
     var bar = breakpointSwitch(items);
     if (pdef && styleState !== "normal" && pdef.states.indexOf(styleState) < 0) styleState = "normal";
-    if (schema.states && (pdef || items.every(function (x) { return inspectorFor(x).states; }))) {
+    // « Après défilement » : état propre aux éléments d'un EN-TÊTE (la page a défilé au-delà du seuil) ; jamais pour une partie interne d'un widget ni pour les éléments sans apparence propre
+    var hdrState = function (x) { return !pdef && isHeaderDoc() && NO_STATES.indexOf(x.type) < 0; };
+    if ((schema.states || hdrState(it)) && (pdef || items.every(function (x) { return inspectorFor(x).states || hdrState(x); }))) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
-      var stateList = Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : SPEC.states;
+      var stateList = (Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : []).filter(function (st) { return st.key !== "scrolled" && st.key !== "menuOpen"; }).concat(hdrState(it) ? SPEC.states.filter(function (st) { return st.key === "scrolled" || st.key === "menuOpen"; }) : []);
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
         var sn = st.key === "normal" ? 0 : stateCount(it, st.key, device), sa = st.key === "normal" ? 0 : stateCount(it, st.key, null);
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), "data-state": st.key, class: sa ? "has-values" : null, "aria-label": st.label + (sn ? " : " + sn + " réglage(s) pour cet écran" : sa ? " : réglages sur un autre écran" : ""), "data-tip": sa ? st.label + " · " + sn + " réglage(s) propre(s) à cet écran, " + sa + " au total" : st.label, onclick: function () { styleState = st.key; renderInspector(); renderContext(); forceStatePreview(); } }, st.label, sn ? h("span", { class: "pb-state-n", "aria-hidden": "true" }, String(sn)) : null);
@@ -4112,6 +4137,7 @@ function selectField(label, value, options, onChange, opts) {
     toast("Accordéons : « " + K.LABELS[m][0] + " »." + (closed ? " " + closed + " section" + (closed > 1 ? "s" : "") + " refermée" + (closed > 1 ? "s" : "") + " (la dernière ouverte reste ouverte)." : ""));
   }
   function renderInspector() {
+    applyPreviewState(); // l'aperçu de l'état (en-tête) suit l'état choisi, même quand rien n'est sélectionné
     if (typeof cpop !== "undefined" && cpop && !cpop.hidden) { cpop.hidden = true; cpopFor = null; }
     var box = $("[data-pb-inspector]");
     axisReal = {};
@@ -4242,8 +4268,10 @@ function selectField(label, value, options, onChange, opts) {
         }
       }
       if (p.full) {
+        if (!isHeaderDoc()) { /* dans un en-tête, l'onglet « En-tête » règle l'effet (un seul endroit) */
         box.appendChild(selectField("Effet de l'en-tête au défilement", p.headerFx || "", [["", "Aucun"], ["shrink", "Se réduit"], ["solid", "Devient plein (en-tête superposé)"], ["both", "Se réduit et devient plein"], ["hide", "Se cache en descendant, revient en remontant"]], function (v) { change(function () { var n = byId(it.id); if (!n) return false; n.props = n.props || {}; if (v) n.props.headerFx = v; else delete n.props.headerFx; }, { label: "Effet de l'en-tête au défilement" }); }, { disabled: dis }));
         box.appendChild(h("p", { class: "pb-hint", text: "Sans effet hors d'un en-tête du Theme Builder (premier conteneur de l'en-tête, collant ou superposé). Coupé si le visiteur demande moins de mouvement." }));
+        }
         box.appendChild(selectField("Couleurs et polices de l'en-tête", p.headerIdentity === "site" ? "site" : "", [["", "Identité du modèle (couleurs et polices du modèle)"], ["site", "Couleurs et polices du site"]], function (v) { setProp(it.id, "headerIdentity", v); }, { disabled: dis }));
         box.appendChild(h("p", { class: "pb-hint", text: "À régler sur le premier conteneur d'un en-tête. « Couleurs et polices du site » masque, à l'affichage, les couleurs et polices propres au modèle ; rien n'est effacé : revenir sur « Identité du modèle » les rétablit. Jamais appliqué sans votre choix." }));
       }
@@ -5534,7 +5562,25 @@ function selectField(label, value, options, onChange, opts) {
   document.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
   var targetOf = function (e) { return e.target && e.target.closest ? e.target.closest("[data-node-id],[data-section-id]") : null; };
   var idOfEl = function (el) { return el ? el.getAttribute("data-node-id") || el.getAttribute("data-section-id") : null; };
+  // Aperçu de l'état choisi (« Après défilement », « Menu ouvert ») sur le canevas : l'en-tête est montré tel qu'il sera dans cet état, pour régler son style à l'œil
+  function applyPreviewState() {
+    try {
+      var doc = frame && frame.contentDocument; if (!doc || !doc.body) return;
+      var on = isHeaderDoc();
+      // Sur le canevas d'un modèle d'en-tête, le document édité est le premier bloc de la page (pas d'enveloppe « lp-site-header » comme sur le site publié) :
+      // on pose la classe sur lui, et sur l'enveloppe quand elle existe ; les règles de style par état (.lp-site-header.is-scrolled …) s'appliquent donc aussi ici
+      var main = doc.querySelector(".lp-main"), first = main && main.querySelector(":scope > .lp-block");
+      var previewing = on && (styleState === "scrolled" || styleState === "menuOpen");
+      if (first && previewing) { if (!first.classList.contains("lp-site-header")) { first.classList.add("lp-site-header"); first.setAttribute("data-pb-preview-hdr", ""); } }
+      else if (first && first.hasAttribute("data-pb-preview-hdr")) { first.classList.remove("lp-site-header"); first.removeAttribute("data-pb-preview-hdr"); }
+      [].concat(first ? [first] : [], [].slice.call(doc.querySelectorAll(".lp-site-header, .lp-site-part"))).forEach(function (el) {
+        el.classList.toggle("is-scrolled", on && styleState === "scrolled");
+        el.classList.toggle("is-menu-open", on && styleState === "menuOpen");
+      });
+    } catch (e) { /* canevas pas encore prêt */ }
+  }
   function setupCanvas(y) {
+    applyPreviewState();
     previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
@@ -7800,11 +7846,288 @@ function selectField(label, value, options, onChange, opts) {
       } }, d.gabarit ? "Appliquer le gabarit" : "Continuer")));
     box.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.stopPropagation(); startStep = PC ? "catalog" : "choice"; paintStart(); } });
   }
+  // ---------- Méga-menu (en-tête) : un panneau composé librement par rubrique du menu ----------
+  // Le panneau est un COMPOSANT du site (éditeur existant) ; le menu ne garde que « identifiant de la rubrique → identifiant du composant » (props.mega).
+  function megaStarter() {
+    var col = function (title) { return { type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "column", gap: "8px", flexGrow: "1" } }, children: [{ type: "heading", props: { text: title, level: "3" } }, { type: "text", props: { html: "<p>Décrivez cette rubrique en une phrase.</p>" } }, { type: "button", props: { label: "En savoir plus", url: "/" } }] }; };
+    return { type: "layout", children: [{ type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "row", gap: "32px" }, mobile: { flexDirection: "column" } }, children: [col("Première colonne"), col("Deuxième colonne"), col("Troisième colonne")] }] };
+  }
+  function megaSection(box, it, p, disabled) {
+    box.appendChild(h("p", { class: "pb-sub", text: "Méga-menus" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Une rubrique du menu peut ouvrir un panneau composé librement : colonnes, images, textes, boutons. Le panneau est un composant de ce site : « Modifier le panneau » l'ouvre dans l'éditeur, « Mettre à jour » le publie." }));
+    var host = h("div", { "data-pb-mega": "" }, h("p", { class: "pb-hint", text: "Chargement des rubriques du menu…" }));
+    box.appendChild(host);
+    var mega = p.mega || {}, ids = Object.keys(mega).map(function (k) { return mega[k]; });
+    var q = "source=" + encodeURIComponent(p.source) + "&location=" + encodeURIComponent(p.location || "") + "&menuName=" + encodeURIComponent(p.menuName || "") + "&ids=" + ids.join(",");
+    api("GET", "/marketing/site-web/composants/" + PAGE.component.id + "/menu.json?" + q).then(function (r) {
+      host.textContent = "";
+      if (!r.items.length) { host.appendChild(h("p", { class: "pb-hint", text: "Aucun menu publié pour cette source : affectez un menu dans Apparence → Menus pour créer des panneaux." })); return; }
+      r.items.forEach(function (item) {
+        var cid = mega[String(item.id)], comp = cid ? r.components[cid] : null;
+        var row = h("div", { class: "pb-mega-row", "data-pb-mega-item": String(item.id) }, h("strong", { text: item.label }));
+        if (comp) {
+          row.appendChild(h("span", { class: "pb-hint", text: "Panneau : " + comp.name + (comp.hasDraft ? " (modifications non publiées)" : "") }));
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", "data-pb-mega-edit": String(item.id), onclick: function () { window.open("/marketing/site-web/composants/" + comp.id + "/editeur", "_blank", "noopener"); } }, "Modifier le panneau"));
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-mega-remove": String(item.id), onclick: function () { change(function () { var x = byId(it.id).props; var m = Object.assign({}, x.mega || {}); delete m[String(item.id)]; if (Object.keys(m).length) x.mega = m; else { delete x.mega; delete x.megaTrigger; delete x.megaWidth; } }); toast("Panneau retiré de la rubrique (le composant est conservé)."); renderInspector(); } }, "Retirer"));
+        } else {
+          row.appendChild(h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: disabled, "data-pb-mega-create": String(item.id), onclick: function () { createPanel(item); } }, "Créer un panneau"));
+        }
+        host.appendChild(row);
+      });
+      if (ids.length) {
+        host.appendChild(selectField("Ouverture du panneau", p.megaTrigger === "click" ? "click" : "hover", [["hover", "Au survol (et au clavier)"], ["click", "Au clic"]], function (v) { setProp(it.id, "megaTrigger", v); }, { disabled: disabled }));
+        host.appendChild(selectField("Largeur du panneau", p.megaWidth === "full" ? "full" : "item", [["item", "Sous la rubrique"], ["full", "Pleine largeur de l'en-tête"]], function (v) { setProp(it.id, "megaWidth", v); }, { disabled: disabled }));
+      }
+    }, function () { host.textContent = ""; host.appendChild(h("p", { class: "pb-note is-warn", text: "Impossible de lire les rubriques du menu." })); });
+    function createPanel(item) {
+      var tryName = function (n) {
+        return api("POST", "/marketing/site-web/composants", { name: "Méga-menu · " + item.label + (n > 1 ? " (" + n + ")" : ""), section: megaStarter(), kind: "standard", global: !PAGE.siteId, siteId: PAGE.siteId }).catch(function (err) { if (n < 6 && /porte déjà ce nom/.test(err.message || "")) return tryName(n + 1); throw err; });
+      };
+      tryName(1).then(function (r) {
+        change(function () { var x = byId(it.id).props; var m = Object.assign({}, x.mega || {}); m[String(item.id)] = r.component.id; x.mega = m; if (!x.megaTrigger) x.megaTrigger = "hover"; if (!x.megaWidth) x.megaWidth = "item"; });
+        toast("Panneau créé. Modifiez-le dans l'onglet qui s'ouvre, puis cliquez « Mettre à jour ».");
+        window.open("/marketing/site-web/composants/" + r.component.id + "/editeur", "_blank", "noopener");
+        renderInspector();
+      }, apiFail);
+    }
+  }
+  // ---------- Réglages de l'EN-TÊTE (Header Builder) : bloc `header` de la section, validé par le serveur (headerSettings.js) ----------
+  // Lecture : le bloc s'il existe, sinon l'ancien format (position de la première bande + headerFx) : le panneau affiche donc l'état réel d'un en-tête ancien.
+  // Document d'en-tête : modèle « En-tête » du Theme Builder (identité du modèle) ou composant affecté comme en-tête du site (ancien réglage)
+  function isHeaderDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "header" || Boolean(t && t.type === "header"); }
+  function headerSection() { var s = content.sections && content.sections[0]; return s && s.type === "layout" ? s : null; }
+  function headerNow() {
+    var dflt = { mode: "static", fx: "", threshold: 8, offset: 0, zIndex: 60, stickOn: ["desktop", "tablet", "mobile"], shrink: { height: 32 }, hideOnScroll: { enabled: false, tolerance: 8 }, edge: "top", reserve: 72 };
+    var s = headerSection(); if (!s) return dflt;
+    if (s.header && typeof s.header === "object") {
+      var hd = s.header;
+      return { mode: hd.mode || "static", fx: hd.fx || "", threshold: hd.threshold === undefined ? 8 : hd.threshold, offset: hd.offset || 0, zIndex: hd.zIndex || 60,
+        stickOn: Array.isArray(hd.stickOn) && hd.stickOn.length ? hd.stickOn : dflt.stickOn, shrink: { height: hd.shrink && hd.shrink.height ? hd.shrink.height : 32 }, hideOnScroll: { enabled: Boolean(hd.hideOnScroll && hd.hideOnScroll.enabled), tolerance: hd.hideOnScroll && hd.hideOnScroll.tolerance !== undefined ? hd.hideOnScroll.tolerance : 8 }, edge: hd.edge === "bottom" ? "bottom" : "top", reserve: hd.reserve || 72 };
+    }
+    var first = s.children && s.children[0], pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
+    var fx = first && first.props && /^(shrink|solid|both|hide)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
+    var mode = pos === "sticky" ? "sticky" : pos === "absolute" ? "overlay" : "static";
+    // Ancien réglage « Se cache en descendant » (headerFx = hide) : affiché comme le masquage réglable de l'onglet
+    if (fx === "hide") return Object.assign(dflt, { mode: mode, fx: "", hideOnScroll: { enabled: mode !== "static", tolerance: 6 } });
+    return Object.assign(dflt, { mode: mode, fx: mode === "static" ? "" : fx });
+  }
+  function setHeader(patch, key) {
+    change(function () {
+      var s = headerSection(); if (!s) return false;
+      var next = Object.assign({ v: 1 }, s.header || {}, headerNow(), patch);
+      if (next.mode === "static") { next.fx = ""; next.hideOnScroll = { enabled: false, tolerance: next.hideOnScroll.tolerance }; }
+      s.header = next;
+    }, { key: "header:" + (key || "all"), label: "Réglages de l'en-tête", light: true });
+    // Le panneau se redessine (champs désactivés, résumé) en gardant le focus clavier sur le même champ
+    var box = $("[data-pb-page-settings]"), fields = [].slice.call(box.querySelectorAll("select, input")), at = fields.indexOf(document.activeElement);
+    box.textContent = ""; renderHeaderSettings(box);
+    if (at >= 0) { var again = box.querySelectorAll("select, input")[at]; if (again && !again.disabled) again.focus(); }
+  }
+  // Accès direct aux réglages complets (Contenu / Style / Avancé, écrans, états) du conteneur de l'en-tête et de chacun de ses éléments : le panneau de droite s'ouvre dessus
+  function headerAccess(box) {
+    var sec = headerSection(), root = sec && sec.children && sec.children[0]; if (!root) return;
+    var open = function (id, tab, state) { styleState = state || "normal"; inspTab = tab; store.set("insp-tab", tab); select(id); renderInspector(); };
+    // Une seule carte, une ligne par réglage (titre, courte explication, flèche) : plus de boutons en vrac
+    var row = function (iconName, title, hint, onclick, depth) {
+      return h("button", { type: "button", class: "pb-hdr-row", style: depth ? "padding-left:" + (14 + depth * 14) + "px" : null, onclick: onclick },
+        h("span", { class: "pb-hdr-ico", "aria-hidden": "true" }, icon(iconName)),
+        h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: title }), hint ? h("span", { class: "pb-hdr-hint", text: hint }) : null),
+        h("span", { class: "pb-hdr-go", "aria-hidden": "true" }, icon("chevronRight")));
+    };
+    hdrAcc(box, "reglages", "Réglages du conteneur", function (b) {
+      b.appendChild(h("div", { class: "pb-hdr-list" }, [
+        row("layout", "Mise en page et contenu", "Direction, largeur, structure", function () { open(root.id, "content"); }),
+        row("palette", "Style", "Fond, bordure, ombre, espacements", function () { open(root.id, "style"); }),
+        row("arrowDown", "Après défilement", "Apparence une fois la page défilée", function () { open(root.id, "style", "scrolled"); }),
+        row("listChecks", "Menu ouvert", "Apparence quand le menu est déplié", function () { open(root.id, "style", "menuOpen"); }),
+        row("sliders", "Avancé", "Ancre, écrans, CSS personnalisé", function () { open(root.id, "advanced"); })]));
+    });
+    hdrAcc(box, "rangees", "Rangées collées", function (b) { headerRows(b, sec); });
+    hdrAcc(box, "style", "Style du conteneur", function (b) { headerRootPanel(b, root); });
+    hdrAcc(box, "mobile", "Menu mobile (hamburger)", function (b) { headerMobile(b); });
+    if (PAGE.siteId) hdrAcc(box, "ecrans", "Écrans du site", function (b) {
+      b.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
+      b.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
+    });
+    var els = []; (function walk(list, depth) { (list || []).forEach(function (n) { if (n !== root) els.push({ n: n, depth: depth }); if (n.children) walk(n.children, Math.min(depth + 1, 3)); }); })(sec.children[0].children, 0);
+    if (els.length) hdrAcc(box, "elements", "Éléments de l'en-tête", function (b) {
+      b.appendChild(h("div", { class: "pb-hdr-list" }, els.map(function (e) {
+        var n = e.n, t = (preview(n) || "").slice(0, 40), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
+        return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? typeLabel(n) : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
+      })));
+    });
+  }
+  // ---- Menu mobile (hamburger) : un modèle de design, appliqué à tous les menus de l'en-tête, pour les écrans plus petits qu'un ordinateur ----
+  var HDR_BURGERS = [
+    { key: "none", label: "Menu étalé", hint: "Pas de bouton : le menu reste visible", props: null, mock: "none" },
+    { key: "classic", label: "Classique", hint: "Bouton « Menu », liste dépliée dessous", props: {}, mock: "inline" },
+    { key: "drawer-right", label: "Tiroir à droite", hint: "Panneau qui glisse de la droite", props: { mobileMode: "drawer", drawerSide: "right", burgerText: "", burgerShape: "round" }, mock: "right" },
+    { key: "drawer-left", label: "Tiroir à gauche", hint: "Panneau qui glisse de la gauche", props: { mobileMode: "drawer", drawerSide: "left", burgerText: "", burgerShape: "plain" }, mock: "left" },
+    { key: "full", label: "Plein écran", hint: "Le menu couvre tout l'écran", props: { mobileMode: "full", burger: "lines2", burgerText: "", burgerShape: "round" }, mock: "full" },
+    { key: "sheet", label: "Panneau du bas", hint: "Le menu monte depuis le bas", props: { mobileMode: "sheet", burgerText: "Menu", burgerShape: "box" }, mock: "sheet" },
+    { key: "minimal", label: "Minimal", hint: "Deux traits, sans cadre, tiroir à droite", props: { mobileMode: "drawer", drawerSide: "right", burger: "lines2", burgerText: "", burgerShape: "plain" }, mock: "right" },
+    { key: "dots", label: "Points", hint: "Trois points, bouton rond", props: { mobileMode: "drawer", drawerSide: "right", burger: "dots", burgerText: "", burgerShape: "round" }, mock: "right" },
+    { key: "text", label: "Texte seul", hint: "MENU en lettres, sans icône", props: { mobileMode: "full", burger: "text", burgerText: "Menu", burgerShape: "plain" }, mock: "full" }
+  ];
+  var HDR_BURGER_KEYS = ["mobileMode", "drawerSide", "burger", "burgerText", "burgerShape"];
+  function hdrMenus() { var out = []; (function walk(list) { (list || []).forEach(function (n) { if (n.type === "menu") out.push(n); if (n.children) walk(n.children); }); })((headerSection() || {}).children); return out; }
+  function hdrBurgerOf(props) {
+    if (!props || !props.mobileToggle) return "none";
+    var sig = function (q) { return [q.mobileMode === "drawer" || q.mobileMode === "full" || q.mobileMode === "sheet" ? q.mobileMode : "inline", q.mobileMode === "drawer" ? (q.drawerSide === "left" ? "left" : "right") : "", q.burger || "lines", typeof q.burgerText === "string" ? q.burgerText : "Menu", q.burgerShape || "box"].join("|"); };
+    var cur = sig(props), found = "";
+    HDR_BURGERS.forEach(function (m) { if (m.props && sig(m.props) === cur) found = m.key; });
+    return found || "custom";
+  }
+  function headerMobile(b) {
+    var menus = hdrMenus(), dis = !canWrite;
+    var redraw = function () { hdrOpen = "mobile"; var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); };
+    if (!menus.length) { b.appendChild(h("p", { class: "pb-hint", text: "Cet en-tête n'a pas encore de menu. Ajoutez un élément « Menu de navigation » : le modèle de menu hamburger s'appliquera ensuite à tous les menus de l'en-tête." })); return; }
+    b.appendChild(h("p", { class: "pb-hint", text: "Sur les écrans plus petits qu'un ordinateur, le menu se replie derrière un bouton hamburger. Choisissez un modèle : il s'applique à tous les menus de l'en-tête." }));
+    var active = hdrBurgerOf(menus[0].props);
+    var tiles = h("div", { class: "pb-hdr-tiles", role: "radiogroup", "aria-label": "Modèle de menu hamburger" });
+    HDR_BURGERS.forEach(function (m) {
+      var mock = h("span", { class: "pb-mm is-" + m.mock, "aria-hidden": "true" }, h("span", { class: "pb-mm-bar" }, h("i", { class: "pb-mm-logo" }), h("i", { class: "pb-mm-btn" })), h("i", { class: "pb-mm-panel" }));
+      tiles.appendChild(h("button", { type: "button", role: "radio", class: "pb-hdr-tile", "aria-checked": String(active === m.key), disabled: dis, onclick: function () {
+        hdrOpen = "mobile";
+        change(function () {
+          hdrMenus().forEach(function (n) {
+            var x = byId(n.id); if (!x) return; x.props = x.props || {};
+            HDR_BURGER_KEYS.forEach(function (k) { delete x.props[k]; });
+            if (!m.props) { delete x.props.mobileToggle; delete x.props.menuBreakpoint; return; }
+            x.props.mobileToggle = true; Object.keys(m.props).forEach(function (k) { x.props[k] = m.props[k]; });
+          });
+        }, { label: "Modèle de menu hamburger : " + m.label });
+        redraw();
+      } }, mock, h("span", { class: "pb-hdr-tile-title", text: m.label }), h("span", { class: "pb-hdr-tile-hint", text: m.hint })));
+    });
+    b.appendChild(tiles);
+    if (active === "custom") b.appendChild(h("p", { class: "pb-hint", text: "Réglage personnalisé : ce menu a des réglages de bouton différents des modèles. Choisir un modèle les remplace." }));
+    if (active !== "none") {
+      var bp = menus[0].props.menuBreakpoint || 767, mode = bp === 1023 ? "tab" : bp === 767 ? "mob" : "cus";
+      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "Quand l'utiliser" }));
+      var seg = h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Tailles d'écran concernées" });
+      [["tab", "Tablette et mobile", "Écrans de 1023 px et moins", 1023], ["mob", "Mobile seulement", "Écrans de 767 px et moins", 767], ["cus", "Personnalisé", "Choisir la largeur", bp !== 767 && bp !== 1023 ? bp : 900]].forEach(function (o) {
+        seg.appendChild(h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(mode === o[0]), disabled: dis, onclick: function () {
+          change(function () { hdrMenus().forEach(function (n) { var x = byId(n.id); if (!x) return; if (o[3] === 767) delete x.props.menuBreakpoint; else x.props.menuBreakpoint = o[3]; }); }, { label: "Taille d'écran du menu hamburger" });
+          redraw();
+        } }, h("span", { class: "pb-hdr-tile-title", text: o[1] }), h("span", { class: "pb-hdr-tile-hint", text: o[2] })));
+      });
+      b.appendChild(seg);
+      if (mode === "cus") b.appendChild(numberField("Largeur d'écran (px)", bp, { min: 320, max: 1920, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; change(function () { hdrMenus().forEach(function (q) { var x = byId(q.id); if (x) { if (n === 767) delete x.props.menuBreakpoint; else x.props.menuBreakpoint = n; } }); }, { label: "Largeur du menu hamburger", key: "burger-bp", light: true }); }, "Au-dessous de cette largeur, le menu devient un bouton."));
+    }
+  }
+  // Accordéon de l'onglet « En-tête » : une seule section ouverte à la fois ; la section ouverte est retenue quand le panneau se redessine
+  var hdrOpen = "comportement";
+  function hdrAcc(box, key, title, fill) {
+    var body = h("div", { class: "pb-hdr-acc-body" }); fill(body);
+    if (!body.childNodes.length) return;
+    var det = h("details", { class: "pb-hdr-acc", "data-hdr-sec": key, open: hdrOpen === key ? "" : null });
+    det.appendChild(h("summary", {}, h("span", { class: "pb-hdr-acc-title", text: title }), h("span", { class: "pb-hdr-acc-chev", "aria-hidden": "true" }, icon("chevronRight"))));
+    det.appendChild(body);
+    det.addEventListener("toggle", function () {
+      if (det.open) { hdrOpen = key; [].forEach.call(box.querySelectorAll(":scope > details.pb-hdr-acc"), function (o) { if (o !== det && o.open) o.open = false; }); }
+      else if (hdrOpen === key) hdrOpen = "";
+    });
+    box.appendChild(det);
+  }
+  // Rangées de l'en-tête (les conteneurs de premier niveau) : chacune peut se coller seule en haut de l'écran pendant que les autres défilent
+  function headerRows(box, sec) {
+    var rows = (sec.children || []).filter(function (n) { return n.type === "container"; });
+    // Un seul conteneur racine (cas courant) : ses rangées sont les conteneurs qu'il contient
+    if (rows.length === 1) { var inner = (rows[0].children || []).filter(function (n) { return n.type === "container"; }); if (inner.length) rows = inner; }
+    if (!rows.length) return;
+    box.appendChild(h("p", { class: "pb-hint", text: "Une rangée cochée reste en haut de l'écran pendant que les autres défilent." }));
+    var card = h("div", { class: "pb-hdr-card" });
+    rows.forEach(function (r, i) {
+      var name = r.name || "Rangée " + (i + 1);
+      card.appendChild(checkField("Coller la rangée « " + name + " »", Boolean(r.props && r.props.stickRow), function (on) {
+        change(function () { var x = byId(r.id); if (!x) return false; x.props = x.props || {}; if (on) x.props.stickRow = true; else { delete x.props.stickRow; delete x.props.stickOffset; } }, { label: "Coller une rangée de l'en-tête" });
+        var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b);
+      }, { disabled: !canWrite }));
+      if (r.props && r.props.stickRow) card.appendChild(numberField("Distance du bord haut (px) : " + name, r.props.stickOffset || 0, { min: 0, max: 200, step: 1, integer: true, disabled: !canWrite }, function (n) { if (n === null) return false; change(function () { var x = byId(r.id); if (!x) return false; if (n) x.props.stickOffset = n; else delete x.props.stickOffset; }, { label: "Distance de la rangée collée", key: "stick:" + r.id, light: true }); }));
+    });
+    box.appendChild(card);
+  }
+  var HDR_GROUPS = [
+    ["Mise en page", [["flexDirection", "Direction"], ["flexWrap", "Retour à la ligne"], ["justifyContent", "Justification"], ["alignItems", "Alignement"], ["gap", "Espacement entre éléments"]]],
+    ["Taille", [["width", "Largeur"], ["maxWidth", "Largeur maximale"], ["minHeight", "Hauteur minimale"], ["overflow", "Débordement"]]],
+    ["Espacements", [["paddingTop", "Marge interne haut"], ["paddingBottom", "Marge interne bas"], ["paddingLeft", "Marge interne gauche"], ["paddingRight", "Marge interne droite"], ["marginTop", "Marge externe haut"], ["marginBottom", "Marge externe bas"]]],
+    ["Fond, bordure et ombre", [["backgroundColor", "Couleur de fond"], ["borderStyle", "Type de bordure"], ["borderBottomWidth", "Bordure du bas (épaisseur)"], ["borderColor", "Couleur de bordure"], ["borderRadius", "Arrondi"], ["boxShadow", "Ombre"], ["opacity", "Opacité"], ["backdropBlur", "Flou de l'arrière-plan"]]],
+    ["Avancé", [["visibility", "Visibilité (garde sa place)"], ["transitionDuration", "Durée des transitions"]]]
+  ];
+  var hdrRootOpen = {};
+  function headerRootPanel(box, root) {
+    var items = [root];
+    var again = function () { var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b); renderInspector(); };
+    var card = h("div", { class: "pb-hdr-card" });
+    var bar = h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }),
+      h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), onclick: function () { setDevice(b.key); var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); } }, b.label);
+      })));
+    card.appendChild(bar);
+    var states = [{ key: "normal", label: "Normal" }].concat(SPEC.states.filter(function (st) { return ["hover", "scrolled", "menuOpen"].indexOf(st.key) >= 0; }));
+    card.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }),
+      h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'en-tête" }, states.map(function (st) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; again(); } }, st.label);
+      }))));
+    if (styleState !== "normal") card.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
+    else if (device !== "desktop") card.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
+    card.appendChild(h("p", { class: "pb-hdr-sublabel", text: "Réglages à modifier" }));
+    HDR_GROUPS.forEach(function (g) {
+      var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { var d = e.currentTarget; if (d.open) { Object.keys(hdrRootOpen).forEach(function (k) { hdrRootOpen[k] = false; }); hdrRootOpen[g[0]] = true; [].forEach.call(d.parentNode.querySelectorAll(":scope > details.pb-acc"), function (o) { if (o !== d && o.open) o.open = false; }); } else hdrRootOpen[g[0]] = false; } });
+      det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: g[0] })));
+      var inner = h("div", { class: "pb-acc-body" });
+      g[1].forEach(function (kv) { if (SP[kv[0]]) { try { inner.appendChild(styleControl(items, kv[0], kv[1])); } catch (e) { /* propriété indisponible pour ce conteneur */ } } });
+      det.appendChild(inner); card.appendChild(det);
+    });
+    box.appendChild(card);
+  }
+  var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
+  function renderHeaderSettings(box) {
+    var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
+    headerAccess(box);
+    var beh = h("div");
+    beh.appendChild(h("p", { class: "pb-hint", text: "Comment l'en-tête se comporte sur le site publié." }));
+    var card = h("div", { class: "pb-hdr-card" });
+    card.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
+    if (!live) card.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
+    if (moving) {
+      card.appendChild(h("p", { class: "pb-sub", text: "Coller sur" }));
+      HDR_DEVICES.forEach(function (dv) {
+        card.appendChild(checkField(dv[1], d.stickOn.indexOf(dv[0]) >= 0, function (on) {
+          var next = HDR_DEVICES.map(function (x) { return x[0]; }).filter(function (k) { return k === dv[0] ? on : d.stickOn.indexOf(k) >= 0; });
+          if (!next.length) { setHeader({}, "stick-last"); return; } // au moins un appareil : la case décochée revient
+          setHeader({ stickOn: next }, "stickOn");
+        }, { disabled: dis }));
+      });
+      card.appendChild(h("p", { class: "pb-hint", text: "Sur les autres appareils, l'en-tête redevient ordinaire." }));
+      card.appendChild(selectField("Bord de l'écran", d.edge, [["top", "En haut"], ["bottom", "En bas (barre fixée au bas de l'écran)"]], function (v) { setHeader({ edge: v }, "edge"); }, { disabled: dis }));
+      if (d.edge === "bottom") card.appendChild(numberField("Hauteur réservée dans la page (px)", d.reserve, { min: 32, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ reserve: n }, "reserve"); }, "Place gardée à l'emplacement de l'en-tête pour que le contenu ne saute pas. Mettez la hauteur réelle de votre barre."));
+      card.appendChild(numberField("Décalage depuis le haut (px)", d.offset, { min: 0, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ offset: n }, "offset"); }, "Distance entre le haut de l'écran et l'en-tête (ex. sous une barre fixe)."));
+    }
+    if (live) {
+      card.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis }));
+      card.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant l'état « défilé » (effet, styles « Après défilement », masquage). 8 px par défaut."));
+      if (d.fx === "shrink" || d.fx === "both") card.appendChild(numberField("Hauteur du logo réduit (px)", d.shrink.height, { min: 24, max: 120, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ shrink: { height: n } }, "shrink"); }, "Taille maximale du logo une fois l'en-tête réduit."));
+      card.appendChild(checkField("Masquer en descendant, réapparaître en remontant", d.hideOnScroll.enabled, function (on) { setHeader({ hideOnScroll: { enabled: on, tolerance: d.hideOnScroll.tolerance } }, "hide"); }, { disabled: dis, hint: "L'en-tête reste visible quand un menu est ouvert ou que le clavier y a le focus." }));
+      if (d.hideOnScroll.enabled) card.appendChild(numberField("Tolérance (px)", d.hideOnScroll.tolerance, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ hideOnScroll: { enabled: true, tolerance: n } }, "tol"); }, "Mouvement minimal avant de masquer ou d'afficher : évite les à-coups."));
+      card.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
+      card.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
+    }
+    beh.appendChild(card);
+    var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran pendant tout le défilement.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
+    var fxText = d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "";
+    var hideText = d.hideOnScroll.enabled ? " Masqué en descendant." : "";
+    var devText = moving && d.stickOn.length < 3 ? " Actif sur : " + HDR_DEVICES.filter(function (x) { return d.stickOn.indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(", ") + "." : "";
+    beh.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: modeText + fxText + hideText + devText }));
+    hdrAcc(box, "comportement", "Comportement au défilement", function (b) { b.appendChild(beh); });
+  }
   function renderPageSettings() {
     pageSettingsStale = false;
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
+    if (isHeaderDoc()) { renderHeaderSettings(box); return; }
     var seo = content.seo || {};
     var setC = function (k) { return function (v) { change(function () { content[k] = v; }, { key: "page:" + k, light: true }); }; };
     var setS = function (k) { return function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v === "" || v === false) delete content.seo[k]; else content.seo[k] = v; }, { key: "seo:" + k, light: true }); }; };
@@ -8476,7 +8799,7 @@ function selectField(label, value, options, onChange, opts) {
       el.classList.toggle("is-live", !cm.hasDraft);
       if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = part ? "Mettre à jour" : cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
       var pv = $("[data-pb-preview]"); if (pv) pv.style.display = "";
-      var tab = $("#pb-tab-page"); if (tab) tab.style.display = "none";
+      var tab = $("#pb-tab-page"); if (tab) { var isHdr = isHeaderDoc(); tab.style.display = isHdr ? "" : "none"; if (isHdr && tab.textContent !== "En-tête") tab.textContent = "En-tête"; }
       return;
     }
     var live = status === "published";

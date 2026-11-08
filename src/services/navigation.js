@@ -151,7 +151,7 @@ function duplicate(id, { userId = null } = {}) {
     db.prepare("UPDATE nav_menus SET status = 'draft' WHERE id = ?").run(copy.id); // la copie n'est jamais publiée toute seule
     const map = new Map();
     const items = db.prepare("SELECT * FROM nav_items WHERE menu_id = ? ORDER BY (parent_id IS NOT NULL), position, id").all(id);
-    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label, status, new_tab, rel, icon, visibility, description, media_id, meta, css_class, title_attr) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label, status, new_tab, rel, icon, visibility, description, media_id, meta, css_class, title_attr, badge) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     // Parents d'abord (profondeur croissante) pour que la nouvelle hiérarchie existe au moment d'insérer les enfants
     const pending = [...items];
     while (pending.length) {
@@ -159,7 +159,7 @@ function duplicate(id, { userId = null } = {}) {
       for (let i = pending.length - 1; i >= 0; i -= 1) {
         const it = pending[i];
         if (it.parent_id && !map.has(it.parent_id)) continue;
-        map.set(it.id, Number(ins.run(copy.id, it.parent_id ? map.get(it.parent_id) : null, it.position, it.type, it.object_id, it.url, it.label, it.status, it.new_tab, it.rel, it.icon, it.visibility, it.description, it.media_id, it.meta, it.css_class, it.title_attr).lastInsertRowid));
+        map.set(it.id, Number(ins.run(copy.id, it.parent_id ? map.get(it.parent_id) : null, it.position, it.type, it.object_id, it.url, it.label, it.status, it.new_tab, it.rel, it.icon, it.visibility, it.description, it.media_id, it.meta, it.css_class, it.title_attr, it.badge || "").lastInsertRowid));
         pending.splice(i, 1);
       }
       if (pending.length === before) break; // données incohérentes : on ne boucle jamais
@@ -336,7 +336,10 @@ function cleanClasses(input) {
   return [...new Set(tokens)].join(" ");
 }
 const cleanTitle = (s) => cleanLabel(s).slice(0, 120);
-const ITEM_KEYS = new Set(["id", "key", "type", "object_id", "url", "label", "title_attr", "css_class", "new_tab", "rel", "visibility", "status", "children"]);
+const cleanBadge = (s) => cleanLabel(s).slice(0, 16);
+const cleanDesc = (s) => cleanLabel(s).slice(0, 160);
+const cleanIcon = (s) => { const v = String(s || "").trim(); return /^[a-zA-Z]{1,30}$/.test(v) ? v : ""; };
+const ITEM_KEYS = new Set(["id", "key", "type", "object_id", "url", "label", "title_attr", "css_class", "icon", "description", "badge", "new_tab", "rel", "visibility", "status", "children"]);
 // Écrit le menu entier tel que l'éditeur le montre : { revision, name?, description?, status?, items: [{ id?|key, type, …, children }], locations?: { clé: booléen } }.
 // Un élément porteur d'un « id » doit appartenir à CE menu ; un élément sans « id » est créé. Tout est validé avant la première écriture ; une erreur n'écrit rien.
 // canPublish : sans ce droit, une demande qui changerait un emplacement est refusée (403), les emplacements restant tels quels.
@@ -382,7 +385,9 @@ function saveMenu(menuId, payload, { canPublish = false, userId = null } = {}) {
       const st = n.status === undefined ? "published" : ["published", "hidden"].includes(n.status) ? n.status : null;
       if (!visibility || !st) throw new UserError("Valeur d'option invalide.");
       const ref = row ? row.id : `n${plan.length}`;
-      plan.push({ row, ref, parentRef, index, base, label, newTab: n.new_tab === undefined ? external : Boolean(n.new_tab), rel: cleanRel(n.rel), visibility, status: st, css: cleanClasses(n.css_class), title: cleanTitle(n.title_attr) });
+      plan.push({ row, ref, parentRef, index, base, label, newTab: n.new_tab === undefined ? external : Boolean(n.new_tab), rel: cleanRel(n.rel), visibility, status: st, css: cleanClasses(n.css_class), title: cleanTitle(n.title_attr),
+        // Champs ajoutés plus tard : absents de la requête d'un ancien client = valeur déjà enregistrée conservée
+        icon: n.icon === undefined ? (row ? row.icon : "") : cleanIcon(n.icon), description: n.description === undefined ? (row ? row.description : "") : cleanDesc(n.description), badge: n.badge === undefined ? (row ? row.badge : "") : cleanBadge(n.badge) });
       walk(n.children === undefined ? [] : n.children, ref, depth + 1);
     });
   };
@@ -406,8 +411,8 @@ function saveMenu(menuId, payload, { canPublish = false, userId = null } = {}) {
     const ins = db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, object_id, url, label) VALUES (?, NULL, 0, ?, ?, ?, ?)");
     for (const p of plan) ids.set(p.ref, p.row ? p.row.id : Number(ins.run(menuId, p.base.type, p.base.object_id, p.base.url, p.label).lastInsertRowid));
     for (const [id] of existing) if (!seen.has(id)) db.prepare("DELETE FROM nav_items WHERE id = ?").run(id);
-    const upd = db.prepare("UPDATE nav_items SET parent_id = ?, position = ?, object_id = ?, url = ?, label = ?, status = ?, new_tab = ?, rel = ?, visibility = ?, css_class = ?, title_attr = ?, updated_at = datetime('now') WHERE id = ?");
-    for (const p of plan) upd.run(p.parentRef === null ? null : ids.get(p.parentRef), p.index, p.base.object_id, p.base.url, p.label, p.status, p.newTab ? 1 : 0, p.rel, p.visibility, p.css, p.title, ids.get(p.ref));
+    const upd = db.prepare("UPDATE nav_items SET parent_id = ?, position = ?, object_id = ?, url = ?, label = ?, status = ?, new_tab = ?, rel = ?, visibility = ?, css_class = ?, title_attr = ?, icon = ?, description = ?, badge = ?, updated_at = datetime('now') WHERE id = ?");
+    for (const p of plan) upd.run(p.parentRef === null ? null : ids.get(p.parentRef), p.index, p.base.object_id, p.base.url, p.label, p.status, p.newTab ? 1 : 0, p.rel, p.visibility, p.css, p.title, p.icon || "", p.description || "", p.badge || "", ids.get(p.ref));
     db.prepare("UPDATE nav_menus SET name = ?, description = ?, status = ?, auto_add_pages = ?, updated_at = datetime('now'), revision = revision + 1 WHERE id = ?").run(name, description, status, autoAdd, menuId);
     for (const [key, on] of Object.entries(wanted)) assign(key, on ? menuId : null, { siteId: m.site_id });
     if (Object.keys(wanted).length) db.prepare("UPDATE nav_menus SET revision = revision - ? WHERE id = ?").run(new Set(Object.keys(wanted)).size, menuId); // assign() a compté chaque emplacement : une seule version par enregistrement
@@ -539,7 +544,7 @@ function visibleItems(menuId, user) {
   const nodes = new Map();
   for (const r of rows) {
     const t = resolve(r);
-    nodes.set(r.id, { id: r.id, parent_id: r.parent_id, label: r.label || t.title, href: t.state === "ok" ? t.url : "", valid: t.state === "ok", newTab: Boolean(r.new_tab), rel: relFor(r, t.url), icon: r.icon, description: r.description, cssClass: r.css_class, titleAttr: r.title_attr, status: r.status, visibility: r.visibility, children: [] });
+    nodes.set(r.id, { id: r.id, parent_id: r.parent_id, label: r.label || t.title, href: t.state === "ok" ? t.url : "", valid: t.state === "ok", newTab: Boolean(r.new_tab), rel: relFor(r, t.url), icon: r.icon, description: r.description, badge: r.badge || "", cssClass: r.css_class, titleAttr: r.title_attr, status: r.status, visibility: r.visibility, children: [] });
   }
   const allowed = (n) => n.status === "published" && (n.visibility === "all" || (n.visibility === "members" ? Boolean(user) : !user));
   const roots = [];

@@ -2,6 +2,10 @@
 
 Règle voulue : tout réglage fait dans le panneau de propriétés d'un élément n'affecte que cet élément (son identifiant unique), à tous les niveaux d'imbrication. L'héritage voulu (réglages globaux du thème, variables CSS, classes globales) reste permis.
 
+## 0. CORRECTION DE LA CONCLUSION (à lire d'abord)
+
+La conclusion « non reproduit » de la section 1 est FAUSSE pour le cas réellement signalé. Mon essai flouait une IMAGE (un élément sans enfants). Le vrai défaut est le flou (et les autres filtres) posé sur une SECTION LIBRE ou un CONTENEUR qui contient des éléments : en CSS, `filter` sur une boîte s'applique à la boîte entière rendue avec ses enfants, donc le fond ET le titre, le texte, les boutons étaient flous. Reproduit et corrigé : voir `ISOLATION_CONTENEUR_FILTRES.md` et `tests/isolation-conteneur.test.js`. La section 1 ci-dessous est conservée telle quelle pour l'historique : ce qu'elle dit de l'image reste exact (un filtre sur une image floute l'image, c'est voulu).
+
 ## 1. Le défaut signalé (flou de l'image qui floute tout le conteneur)
 
 Constat honnête : je n'ai PAS pu reproduire ce défaut dans le code de ce dépôt. Ce qui a été essayé, avec de vrais résultats :

@@ -534,6 +534,22 @@ module.exports = () => {
       renderPreview(req, res, page, page.working, label + tbNote, c.id, themed, force);
     } catch (error) { jsonError(res, next, error); }
   });
+  // Méga-menu (éditeur d'en-tête) : rubriques de premier niveau du menu de CE site (emplacement ou nom) et noms des panneaux déjà reliés. Lecture seule, jamais un menu ni un composant d'un autre site.
+  router.get("/site-web/composants/:id(\\d+)/menu.json", need("forms.read"), (req, res) => {
+    const ctx = req.mk.ctx, c = pages.getComponent(ctx, Number(req.params.id));
+    if (!c) return res.status(404).json({ error: { code: "not_found", message: "Composant introuvable." } });
+    const siteOf = (x) => (x && Number.isInteger(x.site_id) ? x.site_id : null), siteId = siteOf(c);
+    let found = null;
+    try {
+      const nav = require("../../services/navigation");
+      if (req.query.source === "name") { const wanted = String(req.query.menuName || "").trim().toLowerCase(); const m = wanted ? nav.listMenus({ siteId }).find((x) => String(x.name).toLowerCase() === wanted) : null; found = m ? nav.forMenu(m.id, { user: null }) : null; }
+      else found = nav.forLocation(["header", "footer", "mobile"].includes(req.query.location) ? req.query.location : "header", { siteId, user: null });
+    } catch { found = null; }
+    const items = ((found && found.items) || []).map((it) => ({ id: it.id, label: it.label })).slice(0, 30);
+    const components = {};
+    for (const raw of String(req.query.ids || "").split(",").slice(0, 12)) { const id = Number(raw); const x = Number.isInteger(id) && id > 0 ? pages.getComponent(ctx, id) : null; if (x && siteOf(x) === siteId) components[id] = { id: x.id, name: x.name, hasDraft: Boolean(x.hasDraft) }; }
+    res.set("Cache-Control", "no-store").json({ items, components });
+  });
   router.put("/site-web/composants/:id(\\d+)/brouillon", need("forms.write"), (req, res, next) => {
     const c = loadComponent(req, res);
     if (!c) return;

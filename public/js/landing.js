@@ -209,11 +209,25 @@
       });
     });
   });
-  // En-tête à effet au défilement (data-kw-scroll) : la classe is-scrolled est posée dès que la page a défilé de 8 px (un seul écouteur passif, une image à la fois)
+  // En-tête réglé dans le Header Builder (data-kw-scroll) : classe is-scrolled au-delà du seuil (data-kw-threshold, 8 px par défaut), masquage en descendant /
+  // réapparition en remontant (data-kw-hide), espaceur d'un en-tête « fixé ». Un seul écouteur passif, une mise à jour par image ; aucune animation si le visiteur demande moins de mouvement.
   var fxHead = document.querySelector(".lp-site-header[data-kw-scroll]");
   if (fxHead && !document.body.hasAttribute("data-kw-builder")) {
-    var fxTick = false, fxSet = function () { fxTick = false; fxHead.classList.toggle("is-scrolled", (window.pageYOffset || document.documentElement.scrollTop) > 8); };
+    var fxThr = Number(fxHead.getAttribute("data-kw-threshold")); if (!(fxThr >= 0 && fxThr <= 1000)) fxThr = 8;
+    var fxHide = fxHead.hasAttribute("data-kw-hide"), fxTol = Number(fxHead.getAttribute("data-kw-hide-tol")); if (!(fxTol >= 0 && fxTol <= 100)) fxTol = 8;
+    var fxTick = false, fxLast = window.pageYOffset || document.documentElement.scrollTop || 0;
+    var fxSet = function () {
+      fxTick = false;
+      var y = window.pageYOffset || document.documentElement.scrollTop || 0;
+      fxHead.classList.toggle("is-scrolled", y > fxThr);
+      if (fxHide) {
+        var open = fxHead.querySelector("[aria-expanded=true]") || fxHead.contains(document.activeElement);
+        if (y <= fxThr || y < fxLast - fxTol || open) { fxHead.classList.remove("is-hidden"); fxLast = y; }
+        else if (y > fxLast + fxTol) { fxHead.classList.add("is-hidden"); fxLast = y; }
+      }
+    };
     window.addEventListener("scroll", function () { if (!fxTick) { fxTick = true; window.requestAnimationFrame(fxSet); } }, { passive: true });
+    if (fxHide) fxHead.addEventListener("focusin", function () { fxHead.classList.remove("is-hidden"); });
     fxSet();
     // « Se cache » : masqué quand on descend (au-delà de 120 px), réaffiché dès qu'on remonte ; jamais masqué tant qu'un menu de l'en-tête a le focus ou est ouvert
     if (fxHead.getAttribute("data-kw-scroll") === "hide") {
@@ -240,19 +254,167 @@
   // Menus : sous-menus (bouton, clavier), et menu mobile replié derrière un bouton
   Array.prototype.forEach.call(document.querySelectorAll(".kw-sub-toggle"), function (b) {
     b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", open ? "false" : "true"); });
-    b.parentNode.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); b.focus(); } });
+    // Échap referme et rend le focus à la rubrique ; « is-dismissed » masque le sous-menu / le panneau même si le focus reste dans la rubrique (sinon :focus-within le garderait ouvert), jusqu'à la sortie de la souris ou du focus
+    var li0 = b.parentNode, undismiss = function () { li0.classList.remove("is-dismissed"); };
+    li0.addEventListener("keydown", function (e) { if (e.key === "Escape") { b.setAttribute("aria-expanded", "false"); li0.classList.add("is-dismissed"); b.focus(); } else if (e.key === "ArrowDown" || e.key === "ArrowRight") undismiss(); });
+    li0.addEventListener("mouseleave", undismiss);
+    li0.addEventListener("focusout", function (e) { if (!e.relatedTarget || !li0.contains(e.relatedTarget)) undismiss(); });
+    b.addEventListener("click", undismiss);
   });
+  // Menu mobile : bouton « Menu » qui déplie la liste sous lui, ou — réglage « tiroir » (data-kw-menu-drawer) — l'ouvre dans un panneau latéral : fond assombri, défilement de la page bloqué,
+  // focus gardé dans le panneau (Tab boucle), Échap / clic extérieur / choix d'un lien le ferment et le focus revient au bouton. La classe is-menu-open est posée sur l'en-tête (état de style « Menu ouvert »).
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-menu-toggle]"), function (nav) {
     var list = nav.querySelector(".kw-menu-list");
     var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
-    b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
-    var setOpen = function (on) { b.setAttribute("aria-expanded", on ? "true" : "false"); nav.classList.toggle("is-open", on); };
+    // Modèle du bouton (réglé dans l'en-tête) : icône (lignes / deux lignes / points / texte seul), texte, forme
+    var kind = nav.getAttribute("data-kw-burger") || "lines", shape = nav.getAttribute("data-kw-burger-shape") || "box";
+    var txt = nav.hasAttribute("data-kw-burger-text") ? nav.getAttribute("data-kw-burger-text") : "Menu";
+    b.classList.add("is-" + kind, "is-" + shape);
+    if (kind !== "text") { var ico = document.createElement("span"); ico.setAttribute("aria-hidden", "true"); b.appendChild(ico); }
+    if (txt || kind === "text") { var lab = document.createElement("span"); lab.className = "kw-menu-burger-label"; lab.textContent = txt || "Menu"; b.appendChild(lab); }
+    if (!txt) b.setAttribute("aria-label", "Menu");
+    var side = nav.getAttribute("data-kw-menu-drawer"), head = nav.closest(".lp-site-header"), small = window.matchMedia ? window.matchMedia("(max-width: " + (Number(nav.getAttribute("data-kw-menu-bp")) || 767) + "px)") : null;
+    var panel = null, backdrop = null, locked = null;
+    var focusables = function () { return Array.prototype.filter.call(panel.querySelectorAll("a[href], button:not([disabled])"), function (e) { return e.offsetParent !== null; }); };
+    var setOpen = function (on) {
+      b.setAttribute("aria-expanded", on ? "true" : "false"); nav.classList.toggle("is-open", on);
+      if (head) head.classList.toggle("is-menu-open", on);
+      if (!side) return;
+      if (on) {
+        var host = nav.closest(".lp-site") || document.body; // le panneau garde les couleurs et les polices du site, mais sort de l'en-tête (un fond flouté ou un transform y piégerait un panneau fixé)
+        panel = document.createElement("div"); panel.className = "kw-menu-panel is-" + side; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-label", nav.getAttribute("aria-label") || "Menu");
+        var close = document.createElement("button"); close.type = "button"; close.className = "kw-menu-close"; close.setAttribute("aria-label", "Fermer le menu"); close.innerHTML = "<span aria-hidden=\"true\">×</span>";
+        close.addEventListener("click", function () { setOpen(false); b.focus(); });
+        backdrop = document.createElement("div"); backdrop.className = "kw-menu-backdrop"; backdrop.addEventListener("click", function () { setOpen(false); b.focus(); });
+        panel.appendChild(close); panel.appendChild(list); host.appendChild(backdrop); host.appendChild(panel);
+        locked = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden";
+        panel.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("a[href]")) setOpen(false); });
+        panel.addEventListener("keydown", function (e) {
+          if (e.key === "Escape") { e.stopPropagation(); setOpen(false); b.focus(); return; }
+          if (e.key !== "Tab") return;
+          var f = focusables(); if (!f.length) return; var first = f[0], last = f[f.length - 1];
+          if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); } else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+        });
+        var f0 = focusables(); (f0[1] || f0[0] || close).focus();
+      } else if (panel) {
+        nav.appendChild(list); panel.remove(); backdrop.remove(); panel = null; backdrop = null; document.documentElement.style.overflow = locked || ""; locked = null;
+      }
+    };
     b.addEventListener("click", function () { setOpen(b.getAttribute("aria-expanded") !== "true"); });
     // 22.8 — clavier et lecteurs d'écran : Échap referme le menu et rend le focus au bouton ; Tab hors du menu le referme (jamais de menu resté ouvert hors de vue)
     nav.addEventListener("keydown", function (e) { if (e.key === "Escape" && nav.classList.contains("is-open")) { setOpen(false); b.focus(); } });
-    nav.addEventListener("focusout", function (e) { if (nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
+    nav.addEventListener("focusout", function (e) { if (!side && nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
+    var collapse = function () { nav.classList.toggle("is-collapsed", !small || small.matches); }; collapse(); // repli selon la largeur d'écran choisie (767 px par défaut)
+    if (small && small.addEventListener) small.addEventListener("change", function (e) { collapse(); if (!e.matches && b.getAttribute("aria-expanded") === "true") setOpen(false); }); // retour sur grand écran : le menu redevient celui de l'en-tête
     nav.insertBefore(b, list);
     nav.classList.add("is-enhanced");
+  });
+  // Menus : clavier (flèches). Menu horizontal : Droite / Gauche changent de rubrique, Bas ouvre le sous-menu et va sur son premier lien. Liste verticale (menu vertical, tiroir) et sous-menus :
+  // Bas / Haut parcourent les liens, Droite ouvre un sous-menu imbriqué, Gauche le referme et revient à sa rubrique. Début / Fin : premier / dernier lien. Échap referme (géré plus haut).
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-list"), function (ul) {
+    ul.addEventListener("keydown", function (e) {
+      var k = e.key; if (["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Home", "End"].indexOf(k) < 0 || e.altKey || e.ctrlKey || e.metaKey) return;
+      var link = e.target.closest ? e.target.closest(".kw-menu-link") : null; if (!link) return;
+      var li = link.parentNode, group = li.parentNode, top = group === ul;
+      var sibs = Array.prototype.filter.call(group.children, function (x) { return x.tagName === "LI"; }), at = sibs.indexOf(li), n = sibs.length;
+      var root = ul.closest(".kw-menu"), vertical = !top || !root || root.classList.contains("is-vertical") || Boolean(ul.closest(".kw-menu-panel"));
+      var focusLink = function (x) { var l = x && x.querySelector(":scope > .kw-menu-link"); if (l) { e.preventDefault(); l.focus(); } };
+      var openSub = function () {
+        var t = li.querySelector(":scope > .kw-sub-toggle"); if (!t) return false; t.setAttribute("aria-expanded", "true");
+        var first = li.querySelector(":scope > .kw-submenu > li"); if (first) { focusLink(first); return true; }
+        var mega = li.querySelector(":scope > .kw-mega"), f = mega && mega.querySelector("a[href], button:not([disabled])"); // méga-menu : le premier lien ou bouton du panneau
+        if (f) { e.preventDefault(); f.focus(); return true; } return false;
+      };
+      if (k === "Home") return focusLink(sibs[0]);
+      if (k === "End") return focusLink(sibs[n - 1]);
+      if (k === (vertical ? "ArrowDown" : "ArrowRight")) return focusLink(sibs[(at + 1) % n]);
+      if (k === (vertical ? "ArrowUp" : "ArrowLeft")) return focusLink(sibs[(at - 1 + n) % n]);
+      if (!vertical && k === "ArrowDown") { openSub(); return; }          // menu horizontal : Bas entre dans le sous-menu
+      if (vertical && k === "ArrowRight") { openSub(); return; }           // liste verticale : Droite entre dans le sous-menu
+      if (!top && k === "ArrowLeft") {                                     // sous-menu : Gauche referme et remonte à la rubrique
+        var parent = group.parentNode, t = parent && parent.querySelector(":scope > .kw-sub-toggle"); if (t) t.setAttribute("aria-expanded", "false"); focusLink(parent);
+      }
+    });
+  });
+  // Mini-panier en tiroir : le panier s'ouvre dans un panneau latéral (dialogue natif : Échap ferme, le focus revient au bouton)
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-cart-open]"), function (open) {
+    var dlg = document.getElementById(open.getAttribute("data-kw-cart-open")); if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
+    open.addEventListener("click", function () { dlg.showModal(); var f = dlg.querySelector(".kw-cart-close"); if (f) f.focus(); });
+    var close = dlg.querySelector(".kw-cart-close"); if (close) close.addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", function () { open.focus(); });
+  });
+  // Menu du compte (<details>) : Échap, clic en dehors ou focus qui sort le referment ; le focus revient au titre après Échap
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-account-details"), function (d) {
+    d.addEventListener("keydown", function (e) { if (e.key === "Escape" && d.open) { d.open = false; var s = d.querySelector("summary"); if (s) s.focus(); } });
+    d.addEventListener("focusout", function (e) { if (d.open && e.relatedTarget && !d.contains(e.relatedTarget)) d.open = false; });
+    document.addEventListener("click", function (e) { if (d.open && !d.contains(e.target)) d.open = false; });
+  });
+  // Recherche : loupe → recherche en plein écran (dialogue natif : Échap ferme, le focus est rendu à la loupe), et suggestions pendant la frappe (data-kw-suggest) :
+  // requête différée de 200 ms, une seule à la fois, résultats écrits avec textContent (jamais de HTML), flèches Haut / Bas, Entrée suit le lien, annonce du nombre de résultats pour les lecteurs d'écran.
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-search-open]"), function (open) {
+    var dlg = document.getElementById(open.getAttribute("data-kw-search-open")); if (!dlg || typeof dlg.showModal !== "function" || document.body.hasAttribute("data-kw-builder")) return;
+    open.addEventListener("click", function () { dlg.showModal(); var input = dlg.querySelector("input[type=search]"); if (input) input.focus(); });
+    var close = dlg.querySelector(".kw-search-close"); if (close) close.addEventListener("click", function () { dlg.close(); });
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); }); // clic sur le fond
+    dlg.addEventListener("close", function () { open.focus(); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-suggest]"), function (form) {
+    var input = form.querySelector("input[type=search]"), host = form.parentNode, list = host.querySelector(".kw-search-suggest"), status = host.querySelector("[data-kw-suggest-status]");
+    if (!input || !list || document.body.hasAttribute("data-kw-builder")) return;
+    var url = form.getAttribute("data-kw-suggest"), timer = null, ctl = null, shown = -1;
+    var hide = function () { list.hidden = true; list.textContent = ""; shown = -1; input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant"); };
+    var mark = function (i) { var items = list.querySelectorAll("[role=option]"); Array.prototype.forEach.call(items, function (it, k) { it.setAttribute("aria-selected", k === i ? "true" : "false"); }); shown = i; if (items[i]) input.setAttribute("aria-activedescendant", items[i].id); else input.removeAttribute("aria-activedescendant"); };
+    var paint = function (results) {
+      list.textContent = "";
+      if (!results.length) { hide(); if (status) status.textContent = "Aucune suggestion"; return; }
+      results.forEach(function (r, k) {
+        var li = document.createElement("li"), a = document.createElement("a"), kind = document.createElement("span");
+        li.setAttribute("role", "option"); li.id = list.id + "-" + k; li.setAttribute("aria-selected", "false");
+        a.href = r.url; a.textContent = r.title; kind.className = "kw-suggest-kind"; kind.textContent = r.kind || ""; a.appendChild(kind); li.appendChild(a); list.appendChild(li);
+      });
+      list.hidden = false; input.setAttribute("aria-expanded", "true"); shown = -1;
+      if (status) status.textContent = results.length + (results.length > 1 ? " suggestions disponibles" : " suggestion disponible");
+    };
+    input.setAttribute("role", "combobox"); input.setAttribute("aria-expanded", "false");
+    input.addEventListener("input", function () {
+      clearTimeout(timer); var q = input.value.trim();
+      if (q.length < 2) { if (ctl) ctl.abort(); hide(); if (status) status.textContent = ""; return; }
+      timer = setTimeout(function () {
+        if (ctl) ctl.abort(); ctl = typeof AbortController === "function" ? new AbortController() : null;
+        fetch(url + "?q=" + encodeURIComponent(q), { credentials: "same-origin", signal: ctl ? ctl.signal : undefined }).then(function (r) { return r.ok ? r.json() : { results: [] }; })
+          .then(function (j) { if (input.value.trim() === q) paint(Array.isArray(j.results) ? j.results.slice(0, 6) : []); }, function () { /* annulée ou hors ligne : aucune suggestion */ });
+      }, 200);
+    });
+    input.addEventListener("keydown", function (e) {
+      var items = list.querySelectorAll("[role=option]");
+      if (e.key === "ArrowDown" && items.length) { e.preventDefault(); mark((shown + 1) % items.length); }
+      else if (e.key === "ArrowUp" && items.length) { e.preventDefault(); mark((shown - 1 + items.length) % items.length); }
+      else if (e.key === "Enter" && shown >= 0 && items[shown]) { e.preventDefault(); items[shown].querySelector("a").click(); }
+      else if (e.key === "Escape" && !list.hidden) { e.stopPropagation(); hide(); }
+    });
+    document.addEventListener("click", function (e) { if (!host.contains(e.target)) hide(); });
+  });
+  // Méga-menu : le panneau est recalé pour rester dans l'écran (décalage horizontal minimal), à l'ouverture au survol, au focus ou au clic
+  var fitMega = function (li) {
+    var p = li.querySelector(":scope > .kw-mega"); if (!p || window.getComputedStyle(p).position !== "absolute" || li.closest("[data-kw-mega-width=full]")) return;
+    p.style.marginLeft = "0px";
+    var r = p.getBoundingClientRect(), vw = document.documentElement.clientWidth, shift = 0;
+    if (r.right > vw - 8) shift = vw - 8 - r.right;
+    if (r.left + shift < 8) shift = 8 - r.left;
+    p.style.marginLeft = shift + "px";
+  };
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-item.has-mega"), function (li) {
+    var later = function () { window.requestAnimationFrame(function () { fitMega(li); }); };
+    li.addEventListener("mouseenter", later); li.addEventListener("focusin", later);
+    var t = li.querySelector(":scope > .kw-sub-toggle"); if (t) t.addEventListener("click", later);
+  });
+  // Méga-menu et sous-menus ouverts au clic ou au clavier : un clic en dehors du menu, ou le focus qui le quitte, les referme (jamais de panneau resté ouvert hors de portée)
+  document.addEventListener("click", function (e) {
+    Array.prototype.forEach.call(document.querySelectorAll(".kw-menu .kw-sub-toggle[aria-expanded=true]"), function (t) { var li = t.parentNode; if (li && !li.contains(e.target)) t.setAttribute("aria-expanded", "false"); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll(".kw-menu-item.has-mega"), function (li) {
+    li.addEventListener("focusout", function (e) { var t = li.querySelector(":scope > .kw-sub-toggle"); if (t && e.relatedTarget && !li.contains(e.relatedTarget)) t.setAttribute("aria-expanded", "false"); });
   });
   // Fenêtres (modales) de la page
   Array.prototype.forEach.call(document.querySelectorAll("[data-kw-modal-open]"), function (b) {
@@ -642,5 +804,26 @@
     var apply = function () { box.style.setProperty("--kw-cmp-pos", range.value + "%"); };
     range.addEventListener("input", apply);
     apply();
+  });
+})();
+
+// Rangée d'en-tête collée seule (data-kw-stick-row = distance au bord en px) : quand la rangée atteint le haut de l'écran elle se fixe, une place de même hauteur garde la page stable ;
+// elle reprend sa place quand on remonte. Désactivé dans l'éditeur et avec « réduire les animations » n'y change rien (aucun mouvement).
+(function () {
+  "use strict";
+  var rows = document.querySelectorAll("[data-kw-stick-row]");
+  if (!rows.length || document.body.hasAttribute("data-kw-builder")) return;
+  Array.prototype.forEach.call(rows, function (row) {
+    var off = Number(row.getAttribute("data-kw-stick-row")) || 0;
+    var ph = document.createElement("div"); ph.className = "kw-row-holder"; row.parentNode.insertBefore(ph, row);
+    var stuck = false, tick = false;
+    var update = function () {
+      tick = false;
+      var top = (stuck ? ph : row).getBoundingClientRect().top;
+      if (!stuck && top <= off) { ph.style.height = row.offsetHeight + "px"; ph.style.display = "block"; row.style.top = off + "px"; row.classList.add("kw-row-stuck"); stuck = true; }
+      else if (stuck && top > off) { row.classList.remove("kw-row-stuck"); row.style.top = ""; ph.style.display = "none"; stuck = false; }
+    };
+    var onScroll = function () { if (!tick) { tick = true; requestAnimationFrame(update); } };
+    window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll); update();
   });
 })();

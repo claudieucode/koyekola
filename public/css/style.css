@@ -131,7 +131,10 @@ main:focus { outline: 2px solid transparent; }
 .icon { flex-shrink: 0; vertical-align: middle; }
 
 .container { max-width: 900px; margin: 0 auto; padding: 0 20px; }
-.container-wide { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+/* Largeur du contenu large (en-tête, pied, listes, grilles) : jeton unique, 1240 px par défaut ; relevé sur très grand écran pour que les grilles gagnent une colonne au lieu de laisser des marges vides */
+:root { --kw-w-wide: 1240px; }
+@media (min-width: 1800px) { :root { --kw-w-wide: 1520px; } }
+.container-wide { max-width: var(--kw-w-wide); margin: 0 auto; padding: 0 20px; }
 .container-narrow { max-width: 620px; margin: 0 auto; padding: 0 20px; }
 
 main { display: block; }

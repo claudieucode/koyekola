@@ -55,12 +55,12 @@ describe("Theme Builder : identité Kolakisa, retour, aperçu, grille/liste", { 
   test("identité : barre marine Kolakisa, titre en police d'affichage, pas de bleu Elementor, jetons de la charte (clair et sombre)", async () => {
     const { context, page } = await open();
     await page.goto(url(siteB)); await page.waitForSelector("#tb-types button"); await page.waitForSelector(".tb-tcard");
-    const c = await page.evaluate(() => { const g = (s, p) => getComputedStyle(document.querySelector(s))[p]; return { bar: g(".tb-bar", "backgroundColor"), logo: g(".tb-logo", "backgroundColor"), h1: g("#tb-title", "fontFamily"), radius: g(".tb-tcard", "borderTopLeftRadius") }; });
-    assert.equal(c.bar, "rgb(6, 25, 42)", "barre = marine profond de la charte"); assert.equal(c.logo, "rgb(2, 119, 182)", "logo = bleu d'action");
-    assert.equal(c.radius, "12px"); assert.ok(/Bricolage|system-ui|sans-serif/.test(c.h1));
+    const c = await page.evaluate(() => { const g = (s, p) => getComputedStyle(document.querySelector(s))[p]; return { bar: g(".tb-bar", "backgroundColor"), logoImg: g(".tb-logo", "backgroundImage"), h1: g("#tb-title", "fontFamily"), radius: g(".tb-tcard", "borderTopLeftRadius") }; });
+    assert.equal(c.bar, "rgb(6, 25, 42)", "barre = marine profond de la charte"); assert.match(c.logoImg, /linear-gradient/, "logo = dégradé bleu d'action");
+    assert.equal(c.radius, "14px"); assert.ok(/Bricolage|system-ui|sans-serif/.test(c.h1));
     await page.evaluate(() => document.documentElement.setAttribute("data-kola-theme", "dark"));
     const d = await page.evaluate(() => getComputedStyle(document.querySelector(".tb")).backgroundColor);
-    assert.equal(d, "rgb(13, 21, 36)", "mode sombre : fond de la charte, pas de blanc forcé");
+    assert.equal(d, "rgb(9, 21, 35)", "mode sombre : fond de la charte, pas de blanc forcé");
     assert.deepEqual(errors, []); await context.close();
   });
 

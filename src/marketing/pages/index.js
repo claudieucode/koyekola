@@ -10,6 +10,7 @@ const { checkCtx, audit } = require("../audience/shared");
 const { transaction } = require("../db/tx");
 const landing = require("../landing");
 const { TYPES, normalizeSections, normalizeSection, newSectionId, imageUrl, line, bad } = require("./sections");
+const headerSettings = require("./headerSettings");
 const tokensModule = require("./tokens");
 const primarySite = require("../../services/primarySite"); // R9-4 : ligne dédiée du site principal, jamais traitée comme un site ordinaire
 const { normalizeTokens, DEFAULT_TOKENS } = tokensModule;
@@ -938,7 +939,7 @@ function partOf(ctx, cid, which, draftId = null) {
   if (!cid) return null;
   const c = getComponent(ctx, Number(cid));
   const section = c && draftId !== null && Number(draftId) === c.id && c.draft ? c.draft : c && c.section;
-  return c && section && section.type !== "component" ? { ...section, id: section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which, bleed: partBleeds(section) } : null;
+  return c && section && section.type !== "component" ? { ...section, id: section.id || `part${which}${c.id}`.slice(0, 20), fromComponent: c.id, sitePart: which, bleed: partBleeds(section), ...(which === "header" ? { headerClass: headerSettings.classes(section), headerAttrs: headerSettings.dataAttrs(section) } : {}) } : null;
 }
 function siteParts(ctx, siteId, { draftId = null } = {}) {
   const none = { header: null, footer: null };
@@ -965,7 +966,7 @@ function withSiteParts(ctx, page, sections, { draftId = null, themeBuilder = fal
   const p = siteParts(ctx, page && page.site_id, { draftId });
   // Theme Builder (23.1) : seulement la page publiée et son aperçu (jamais le canevas de l'éditeur) ; sans modèle applicable, comportement historique inchangé
   if (themeBuilder && page && page.site_id !== undefined) {
-    const tb = require("../../themeBuilder/render").partsFor(ctx, page);
+    const tb = require("../../themeBuilder/render").partsFor(ctx, page, page && page.visitor);
     for (const which of ["header", "footer"]) {
       // Le Theme Builder gère cette partie mais aucun de ses modèles ne s'applique à cette page : pas de partie (jamais l'ancien réglage du site)
       if (tb[which] === undefined && tb.managed && tb.managed[which]) { p[which] = null; continue; }

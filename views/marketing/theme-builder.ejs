@@ -12,13 +12,14 @@
     <a class="tb-close" id="tb-exit" href="<%= backUrl %>" aria-label="Retour <%= backIsCustom ? 'à l\'écran précédent' : 'au tableau de bord de « ' + siteName + ' »' %>"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Retour</span></a>
   </header>
   <div class="tb-layout">
-    <nav class="tb-side" aria-label="Types de modèles"><ul id="tb-types"></ul></nav>
+    <nav class="tb-side" aria-label="Types de modèles"><ul id="tb-types"></ul>
+      <button type="button" class="tb-collapse" id="tb-collapse" aria-pressed="false" title="Réduire la barre latérale"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15"/></svg><span class="tb-lbl">Réduire</span></button></nav>
     <main class="tb-main" id="tb-main">
       <div class="tb-head">
         <div class="tb-head-text"><button type="button" class="tb-back" id="tb-back" hidden><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="tb-back-l">Retour</span></button><h1 id="tb-title">Personnalisez chaque partie de votre site</h1><p class="tb-lead" id="tb-lead"></p></div>
         <div class="tb-top-actions">
-          <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new">Ajouter un modèle</button>
-          <% } %><button class="btn btn-outline" type="button" id="tb-lib-open">Bibliothèque de modèles</button>
+          <% if (perms.write) { %><button class="btn btn-primary" type="button" id="tb-new"><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Ajouter un modèle</button>
+          <% } %><button class="btn tb-sec" type="button" id="tb-lib-open"><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.4"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.4"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.4"/></svg>Bibliothèque de modèles</button>
           <% if (perms.write) { %>
           <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
           <a class="btn btn-outline" id="tb-export-footers" href="<%= base %>/api/modeles/export-lot.json" title="Télécharger tous les pieds de page de ce site dans un seul fichier (sans les conditions)" download>Exporter les pieds</a>
@@ -26,10 +27,10 @@
         </div>
       </div>
       <form class="tb-tools" id="tb-tools" role="search" aria-label="Filtrer les modèles">
-        <label class="sw-field">Recherche<input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type  ( / )" autocomplete="off"></label>
-        <label class="sw-field">État<select id="tb-st"><option value="">Tous (hors archives)</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
-        <label class="sw-field">Trier par<select id="tb-sort"><option value="recent">Modifiés récemment</option><option value="name">Nom (A → Z)</option><option value="status">État</option></select></label>
-        <button class="btn btn-outline" type="button" id="tb-why">Pourquoi ce modèle ?</button>
+        <label class="sw-field tb-search"><span class="tb-fl">Recherche</span><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input type="search" id="tb-q" maxlength="80" placeholder="Nom ou type  ( / )" autocomplete="off"></label>
+        <label class="sw-field"><span class="tb-fl">État</span><select id="tb-st"><option value="">Tous (hors archives)</option><option value="published">Publiés</option><option value="draft">Brouillons</option><option value="archived">Archivés</option></select></label>
+        <label class="sw-field"><span class="tb-fl">Trier par</span><select id="tb-sort"><option value="recent">Modifiés récemment</option><option value="name">Nom (A → Z)</option><option value="status">État</option></select></label>
+        <button class="btn tb-sec" type="button" id="tb-why"><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.6a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1.1.9-1.1 1.7M12 16.8h.01"/></svg>Pourquoi ce modèle ?</button>
         <div class="tb-views" role="group" aria-label="Mode d'affichage">
           <button type="button" id="tb-v-grid" data-view="grid" aria-pressed="true" aria-label="Affichage en grille" title="Grille ( v )"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg></button>
           <button type="button" id="tb-v-list" data-view="list" aria-pressed="false" aria-label="Affichage en liste" title="Liste ( v )"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>
@@ -45,9 +46,9 @@
         <div id="tb-cat-body" hidden>
           <p class="sw-muted tb-cat-lead">Parcourez, prévisualisez puis ajoutez un modèle à votre site. « Utiliser ce modèle » crée votre copie en brouillon : rien n'est publié et vos modèles existants restent intacts.</p>
           <form class="tb-tools tb-cat-tools" id="tb-cat-tools" role="search" aria-label="Filtrer les modèles prédéfinis">
-            <label class="sw-field">Recherche<input type="search" id="tb-cat-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
-            <label class="sw-field">Identité<select id="tb-cat-skin"><option value="">Toutes les identités</option></select></label>
-            <label class="sw-field">Mise en page<select id="tb-cat-layout"><option value="">Toutes les mises en page</option></select></label>
+            <label class="sw-field tb-search"><span class="tb-fl">Recherche</span><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input type="search" id="tb-cat-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
+            <label class="sw-field"><span class="tb-fl">Identité</span><select id="tb-cat-skin"><option value="">Toutes les identités</option></select></label>
+            <label class="sw-field"><span class="tb-fl">Mise en page</span><select id="tb-cat-layout"><option value="">Toutes les mises en page</option></select></label>
           </form>
           <p class="tb-cat-status" id="tb-cat-status" role="status" hidden></p>
           <div class="tb-cards tb-cat-cards" id="tb-cat-cards" aria-busy="false"></div>
@@ -71,10 +72,10 @@
       <div class="tb-prev-title"><h2 id="tb-lib-h">Bibliothèque de modèles</h2><p class="tb-prev-sub" id="tb-lib-sub">100 modèles par type, prêts à personnaliser. « Utiliser » crée votre propre copie en brouillon.</p></div>
     </header>
     <form class="tb-tools tb-lib-tools" id="tb-lib-tools" role="search" aria-label="Filtrer la bibliothèque">
-      <label class="sw-field">Type<select id="tb-lib-type"></select></label>
-      <label class="sw-field">Recherche<input type="search" id="tb-lib-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
-      <label class="sw-field">Identité<select id="tb-lib-skin"><option value="">Toutes</option></select></label>
-      <label class="sw-field">Mise en page<select id="tb-lib-layout"><option value="">Toutes</option></select></label>
+      <label class="sw-field"><span class="tb-fl">Type</span><select id="tb-lib-type"></select></label>
+      <label class="sw-field tb-search"><span class="tb-fl">Recherche</span><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input type="search" id="tb-lib-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
+      <label class="sw-field"><span class="tb-fl">Identité</span><select id="tb-lib-skin"><option value="">Toutes</option></select></label>
+      <label class="sw-field"><span class="tb-fl">Mise en page</span><select id="tb-lib-layout"><option value="">Toutes</option></select></label>
       <div class="tb-views" role="group" aria-label="Mode d'affichage">
         <button type="button" data-lview="grid" aria-pressed="true" aria-label="Grille" title="Grille"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg></button>
         <button type="button" data-lview="list" aria-pressed="false" aria-label="Liste" title="Liste"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>

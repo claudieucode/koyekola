@@ -45,7 +45,7 @@ module.exports = ({ db }) => {
   const shownPage = (req, page) => {
     const visitor = visitorContext(db, req.mkPages.organizationId, req);
     // En-tête et pied de page du site (composants choisis dans le site) autour des sections de la page
-    return landing.viewModel(ctxOf(req), { ...page, visitor, sections: pages.withSiteParts(ctxOf(req), page, pages.resolveSections(ctxOf(req), page.sections), { themeBuilder: true }).filter((s) => !s.hidden && audienceMatches(s.audience, visitor)).map((s) => (s.type === "layout" ? { ...s, children: visibleTree(s.children, visitor) } : s)) });
+    return landing.viewModel(ctxOf(req), { ...page, visitor, sections: pages.withSiteParts(ctxOf(req), { ...page, visitor }, pages.resolveSections(ctxOf(req), page.sections), { themeBuilder: true }).filter((s) => !s.hidden && audienceMatches(s.audience, visitor)).map((s) => (s.type === "layout" ? { ...s, children: visibleTree(s.children, visitor) } : s)) });
   };
   // Design system du site de la page (site actif seulement)
   const siteOf = (req, page) => { const site = page.site_id ? pages.getSite(ctxOf(req), page.site_id) : null; return site && site.status === "active" ? site : null; };

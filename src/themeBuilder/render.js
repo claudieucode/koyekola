@@ -89,7 +89,7 @@ const pageRowOf = (ctx, siteId, t) => ctx.db.prepare("SELECT * FROM mk_landing_p
 const hasParts = (ctx, siteId) => published(ctx, siteId).some((t) => ["header", "footer", "sidebar", "custom"].includes(t.type));
 
 // page : ligne de page ({ id, site_id }) → { header: id de composant | undefined, footer: … } ; undefined = aucun modèle ne s'applique (repli historique)
-function partsFor(ctx, page) {
+function partsFor(ctx, page, visitor = null) {
   const out = { header: undefined, footer: undefined, meta: {}, managed: { header: false, footer: false } };
   try {
     if (!page || page.site_id === undefined) return out;
@@ -97,7 +97,7 @@ function partsFor(ctx, page) {
     const pool = published(ctx, page.site_id);
     out.managed.header = pool.some((t) => t.type === "header"); out.managed.footer = pool.some((t) => t.type === "footer");
     const view = homeOf(ctx, page.site_id) === page.id ? "front" : "page";
-    const w = resolveParts(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [] });
+    const w = resolveParts(ctx, page.site_id, { siteId: page.site_id, view, id: page.id, parents: [], authorId: null, categories: [], categoryAncestors: [], tags: [], visitor: visitor ? { loggedIn: Boolean(visitor.loggedIn) } : null });
     if (w.header) { out.header = w.header.sourceId; out.meta.header = { id: w.header.id, name: w.header.name }; }
     if (w.footer) { out.footer = w.footer.sourceId; out.meta.footer = { id: w.footer.id, name: w.footer.name }; }
   } catch { /* jamais bloquant : repli historique */ }

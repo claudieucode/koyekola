@@ -43,7 +43,7 @@ describe("Theme Builder : refonte compacte (navigateur)", { skip: SKIP }, () => 
     const r = await page.evaluate(() => {
       const h = (s) => [...document.querySelectorAll(s)].map((c) => Math.round(c.getBoundingClientRect().height));
       const tops = [...document.querySelectorAll(".tb-card, .tb-tcard")].map((c) => c.getBoundingClientRect().top);
-      return { card: h(".tb-card"), ghost: h(".tb-tcard"), cols: tops.filter((t) => Math.abs(t - tops[0]) < 12).length };
+      return { card: h(".tb-card"), ghost: h(".tb-tcard"), cols: getComputedStyle(document.getElementById("tb-cards")).gridTemplateColumns.split(" ").length }; /* colonnes de la grille (le titre « Parties sans modèle » ouvre une nouvelle rangée) */
     });
     assert.ok(r.card.length === 2 && r.card.every((x) => x < 340), `modèles : ${r.card}`);
     assert.ok(r.ghost.length >= 5 && r.ghost.every((x) => x < 200), `structures types : ${r.ghost}`);
@@ -60,7 +60,7 @@ describe("Theme Builder : refonte compacte (navigateur)", { skip: SKIP }, () => 
     assert.equal(await card.locator(".tb-ch .tb-menu > button").count(), 1, "le menu ⋯ est dans l'en-tête");
     assert.equal(await card.locator(".tb-actions .tb-menu").count(), 0);
     const bg = (sel) => card.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
-    assert.equal(await bg(".tb-actions a.btn-primary"), "rgb(2, 119, 182)", "Modifier = bleu d'action Kolakisa");
+    assert.equal(await bg(".tb-actions a.btn-primary"), "rgb(11, 42, 64)", "Modifier = marine Kolakisa (action principale)");
     assert.notEqual(await bg(".tb-actions .btn-outline"), await bg(".tb-actions a.btn-primary"));
     await context.close();
   });
@@ -70,7 +70,7 @@ describe("Theme Builder : refonte compacte (navigateur)", { skip: SKIP }, () => 
     const r = await page.evaluate(() => [...document.querySelectorAll(".tb-card")].map((c) => {
       const b = [...c.querySelectorAll(".tb-actions .btn")]; return { labels: b.map((x) => x.textContent.trim()), tops: new Set(b.map((x) => Math.round(x.getBoundingClientRect().top))).size, cond: Boolean([...c.querySelectorAll(".tb-cond .btn")].find((x) => x.textContent === "Conditions")), h: [...b].map((x) => Math.round(x.getBoundingClientRect().height)) };
     }));
-    for (const c of r) { assert.equal(c.tops, 1, `retour à la ligne : ${c.labels}`); assert.ok(c.cond, "Conditions présent"); assert.ok(c.labels.includes("Modifier") && c.labels.includes("Aperçu") && c.labels.some((l) => /Publier|Republier/.test(l)), c.labels.join("|")); assert.ok(c.h.every((x) => x === 30), `hauteurs : ${c.h}`); }
+    for (const c of r) { assert.equal(c.tops, 1, `retour à la ligne : ${c.labels}`); assert.ok(c.cond, "Conditions présent"); assert.ok(c.labels.includes("Modifier") && c.labels.includes("Aperçu") && c.labels.some((l) => /Publier|Republier/.test(l)), c.labels.join("|")); assert.ok(c.h.every((x) => x === 32), `hauteurs : ${c.h}`); }
     assert.ok(r.some((c) => c.labels.includes("Republier")) && r.some((c) => c.labels.includes("Publier")), "états Publié et Brouillon");
     await context.close();
   });

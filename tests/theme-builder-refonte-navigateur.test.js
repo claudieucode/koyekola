@@ -73,6 +73,7 @@ describe("Theme Builder refondu dans un navigateur réel", { skip: SKIP }, () =>
     assert.equal(await page.getAttribute("html", "data-kola-pref"), "dark");
     assert.equal(await page.getAttribute('#tb-theme [data-tb-theme="dark"]', "aria-checked"), "true");
     assert.deepEqual(await geo(), before, "le changement de thème ne déplace aucun panneau");
+    await page.waitForTimeout(300); // les couleurs finissent leur transition (120 ms) avant la mesure du contraste
     assert.ok(await contrastOf(page, ".tb h1", "#tb .tb-main") >= 4.5, "sombre : titre lisible");
     assert.ok(await contrastOf(page, ".tb-side button", "#tb .tb-side") >= 4.5, "sombre : navigation lisible");
     const bg = await page.evaluate(() => getComputedStyle(document.querySelector("#tb")).backgroundColor);

@@ -76,6 +76,7 @@ function normalizeOne(raw, where) {
   if (kind === "child_of" && !out.parent) throw bad(`${where} : choisissez la page parente.`);
   if (kind === "visitor" && !out.state) throw bad(`${where} : choisissez « connecté » ou « non connecté ».`);
   if (kind === "custom" && !out.id) throw bad(`${where} : condition personnalisée manquante.`);
+  if (kind === "visitor" && !out.who) throw bad(`${where} : choisissez « visiteur connecté » ou « visiteur non connecté ».`);
   return out;
 }
 // Normalise { include, exclude } ; vide = « tout le site ». Si `type` est donné, refuse une condition qui ne peut jamais correspondre à une vue de ce type.

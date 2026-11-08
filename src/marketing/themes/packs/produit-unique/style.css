@@ -66,7 +66,7 @@ body[data-pk-numeros="off"] .pu-no{display:none}
 .pu-foot{background:var(--pu-ink2);color:#e8dfc9;padding:48px 0 22px;margin-top:0}.pu-foot-g{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem}.pu-big{font-family:var(--kw-font-heading);font-size:1.6rem;margin:.4rem 0}.pu-foot .pu-lab{color:var(--pu-sa)}.pu-foot .pu-small{color:#b9b09b}.pu-cell--foot{width:44px;height:38px}
 .pu-fl{display:grid;gap:.1rem}.pu-fl a{text-decoration:none;display:inline-flex;align-items:center;min-height:36px}.pu-fl a:hover{text-decoration:underline}.pu-copy{text-align:center;font-size:.8rem;color:#b9b09b;margin:2rem 0 0}
 /* révélation (activée seulement par motion.js) */
-.pu-js .pu-rv{opacity:0;transform:translateY(20px)}.pu-js .pu-rv.pu-in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease}
+body.pu-js .pu-rv{opacity:0;transform:translateY(20px)}body.pu-js .pu-rv.pu-in{opacity:1;transform:none;transition:opacity .6s ease,transform .6s ease}
 @keyframes produit-sway{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
 /* ===== boutique réelle (catalogue, fiche, panier, commande, compte) ===== */
 .sh-head{background:var(--pu-ink);color:#f7f0e3;display:flex;justify-content:space-between;align-items:center;padding:.4rem var(--pu-gut);min-height:56px;position:sticky;top:0;z-index:50}
@@ -103,6 +103,6 @@ input,select,textarea{font:inherit;background:#fff;color:var(--pu-ink);border:2p
   body[data-pk-barre="on"] .pu-bar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;align-items:center;justify-content:space-between;gap:1rem;background:var(--pu-ink);color:#f7f0e3;padding:.55rem var(--pu-gut);border-top:3px solid var(--pu-sa)}
   body[data-pk-barre="on"] .pu-foot{padding-bottom:90px}.pu-bar-t{font-family:var(--kw-font-heading);font-size:1.1rem}.pu-bar-b{background:var(--pu-buy);color:var(--pu-ink);font-weight:800;text-decoration:none;display:inline-flex;align-items:center;min-height:46px;padding:0 1.6em;clip-path:var(--pu-cut)}}
 @media (max-width:520px){.pu-btn{width:100%}.pu-h1--xl{font-size:2.5rem}.pu-logo{font-size:1.25rem}.pu-buy{display:none}.pu-ben li,.pu-steps li{padding-left:3.6rem}.sh-grid{grid-template-columns:repeat(2,1fr);gap:1rem .8rem}.sh-card-name{font-size:1rem;padding:.6rem .7rem 0}.sh-card .sh-price,.sh-card .sh-stock{padding:0 .7rem}.sh-head{flex-wrap:wrap}}
-@media (prefers-reduced-motion:reduce){.pu-jar--hero{animation:none}.pu-prog{animation:none!important;transform:none!important}.pu-js .pu-rv{opacity:1;transform:none}.pu-js .pu-rv.pu-in{transition:none}.pu-btn,.sh-card{transition:none}.sh-card:hover{transform:none}}
-body[data-pk-motion="off"] .pu-jar--hero{animation:none}body[data-pk-motion="off"] .pu-js .pu-rv,body[data-pk-motion="calm"] .pu-js .pu-rv{opacity:1;transform:none}body[data-pk-motion="calm"] .pu-jar--hero{animation:none}
+@media (prefers-reduced-motion:reduce){.pu-jar--hero{animation:none}.pu-prog{animation:none!important;transform:none!important}body.pu-js .pu-rv{opacity:1;transform:none}body.pu-js .pu-rv.pu-in{transition:none}.pu-btn,.sh-card{transition:none}.sh-card:hover{transform:none}}
+body[data-pk-motion="off"] .pu-jar--hero{animation:none}body.pu-js[data-pk-motion="off"] .pu-rv,body.pu-js[data-pk-motion="calm"] .pu-rv{opacity:1;transform:none}body[data-pk-motion="calm"] .pu-jar--hero{animation:none}
 @media print{.pu-head,.pu-bar,.pu-foot,.sh-head,.pu-cart,.pu-buy{display:none}.pu-ch,.pu-ch--nuit,.pu-end{background:#fff;color:#000}.pu-rail{position:static}}
