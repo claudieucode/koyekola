@@ -3970,7 +3970,7 @@ function selectField(label, value, options, onChange, opts) {
       })));
     } else if (styleState !== "normal") styleState = "normal";
     box.appendChild(bar);
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier (contour conservé tant qu'aucun autre repère visible n'est réglé)", active: "moment du clic" }[styleState] + (device === "desktop" ? ", sur l'ordinateur et sur les écrans plus petits tant qu'ils n'ont pas de réglage propre." : " de l'écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris), les autres écrans ne changent pas.") }));
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier (contour conservé tant qu'aucun autre repère visible n'est réglé)", active: "moment du clic", scrolled: "moment où la page a défilé au-delà du seuil de l'en-tête", menuOpen: "moment où le menu de l'en-tête est ouvert" }[styleState] + (device === "desktop" ? ", sur l'ordinateur et sur les écrans plus petits tant qu'ils n'ont pas de réglage propre." : " de l'écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris), les autres écrans ne changent pas.") }));
     else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris)." }));
     // Une propriété, une seule place : la couleur du texte va dans la typographie quand elle existe, la couleur de fond
     // dans « Fond » (avec l'image et le dégradé)
@@ -7934,6 +7934,7 @@ function selectField(label, value, options, onChange, opts) {
         h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: title }), hint ? h("span", { class: "pb-hdr-hint", text: hint }) : null),
         h("span", { class: "pb-hdr-go", "aria-hidden": "true" }, icon("chevronRight")));
     };
+    hdrAcc(box, "disposition", "Disposition et contenu", function (b) { headerLayout(b, sec); });
     hdrAcc(box, "reglages", "Réglages du conteneur", function (b) {
       b.appendChild(h("div", { class: "pb-hdr-list" }, [
         row("layout", "Mise en page et contenu", "Direction, largeur, structure", function () { open(root.id, "content"); }),
@@ -7956,6 +7957,134 @@ function selectField(label, value, options, onChange, opts) {
         return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? typeLabel(n) : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
       })));
     });
+  }
+  // ======== Disposition et contenu : placer logo, menu et actions selon l'écran, sans toucher à la structure ========
+  // Principe : on retrouve la « barre principale » = le plus petit conteneur qui réunit le logo (ou titre du site) et le menu ; ses enfants sont les « emplacements ».
+  // Un modèle de disposition règle CETTE barre (flex / grille, sens, alignement, espacement) et l'ordre des emplacements, pour l'écran choisi seulement : les écrans plus petits
+  // héritent de l'écran plus grand tant qu'on n'a rien réglé pour eux (même mécanisme que tous les réglages par écran). Rien n'est déplacé dans l'arbre : un « Annuler » défait tout.
+  var HDR_BRAND = ["sitelogo", "sitetitle"];
+  function hdrMain(sec) {
+    var brand = null, nav = null;
+    (function walk(list) { (list || []).forEach(function (n) { if (!brand && HDR_BRAND.indexOf(n.type) >= 0) brand = n; if (!nav && n.type === "menu") nav = n; if (n.children) walk(n.children); }); })(sec.children);
+    if (!brand && !nav) return null;
+    var chain = function (n) { var l = locate(n.id); return l ? l.ancestors.filter(function (a) { return a.type !== "layout" && kidsOf(a); }) : []; };
+    var ca = brand ? chain(brand) : null, cb = nav ? chain(nav) : null, lca = null;
+    if (ca && cb) { for (var i = 0; i < Math.min(ca.length, cb.length) && ca[i] === cb[i]; i++) lca = ca[i]; }
+    else { var one = ca || cb; lca = one[one.length - 1] || null; }
+    if (!lca) lca = (sec.children || []).filter(function (n) { return n.type === "container"; })[0] || null;
+    if (!lca || !(lca.children || []).length) return null;
+    var contains = function (root, t) { var f = false; (function w(n) { if (n === t) f = true; (n.children || []).forEach(w); })(root); return f; };
+    var slots = lca.children.map(function (c) { return { node: c, role: brand && contains(c, brand) ? "brand" : nav && contains(c, nav) ? "nav" : "actions" }; });
+    return { lca: lca, brand: brand, nav: nav, slots: slots };
+  }
+  function hdrSlotLabel(sl) {
+    if (sl.node.name) return sl.node.name;
+    if (sl.role === "brand") return "Logo / titre du site";
+    if (sl.role === "nav") return "Menu de navigation";
+    var names = []; (function w(n) { if (!(n.children || []).length) { var t = typeLabel(n); if (names.indexOf(t) < 0) names.push(t); } else n.children.forEach(w); })(sl.node);
+    return names.slice(0, 3).join(" + ") || typeLabel(sl.node);
+  }
+  var HDR_ROW = { display: "flex", flexDirection: "row", flexWrap: "nowrap", alignItems: "center", justifyContent: "space-between", gap: "24px" };
+  var HDR_COL = { display: "flex", flexDirection: "column", flexWrap: "nowrap", justifyContent: "center", gap: "12px" };
+  var HDR_LAYOUTS = [
+    { key: "classic", label: "Logo · Menu · Actions", hint: "Le menu occupe le centre", lca: HDR_ROW, slots: { brand: { order: 1, flexGrow: 0 }, nav: { order: 2, flexGrow: 1 }, actions: { order: 3, flexGrow: 0 } }, mock: "m1" },
+    { key: "right", label: "Logo à gauche, le reste à droite", hint: "Menu et actions regroupés à droite", lca: HDR_ROW, slots: { brand: { order: 1, flexGrow: 1 }, nav: { order: 2, flexGrow: 0 }, actions: { order: 3, flexGrow: 0 } }, mock: "m2" },
+    { key: "center", label: "Logo centré, menu dessous", hint: "Tout centré sur deux lignes", lca: Object.assign({}, HDR_COL, { alignItems: "center" }), slots: { brand: { order: 1, flexGrow: 0, alignSelf: "center" }, nav: { order: 2, flexGrow: 0, alignSelf: "center" }, actions: { order: 3, flexGrow: 0, alignSelf: "center" } }, mock: "m3" },
+    { key: "split", label: "Menu · Logo centré · Actions", hint: "Logo au milieu, menu à gauche", lca: { display: "grid", gridTemplate: "1fr auto 1fr", alignItems: "center", gap: "16px" }, slots: { nav: { order: 1, justifySelf: "start" }, brand: { order: 2, justifySelf: "center" }, actions: { order: 3, justifySelf: "end" } }, mock: "m4" },
+    { key: "compact", label: "Barre compacte", hint: "Logo, actions, puis bouton menu", lca: Object.assign({}, HDR_ROW, { gap: "12px" }), slots: { brand: { order: 1, flexGrow: 1 }, actions: { order: 2, flexGrow: 0 }, nav: { order: 3, flexGrow: 0 } }, mock: "m5" },
+    { key: "stack", label: "Empilé", hint: "Tout sur une colonne, pleine largeur", lca: Object.assign({}, HDR_COL, { alignItems: "stretch", gap: "10px" }), slots: { brand: { order: 1, flexGrow: 0, alignSelf: "stretch" }, nav: { order: 2, flexGrow: 0, alignSelf: "stretch" }, actions: { order: 3, flexGrow: 0, alignSelf: "stretch" } }, mock: "m6" }
+  ];
+  var HDR_LAYOUT_KEYS = ["display", "flexDirection", "flexWrap", "justifyContent", "alignItems", "gap", "gridTemplate"];
+  var HDR_SLOT_KEYS = ["order", "flexGrow", "alignSelf", "justifySelf"];
+  var hdrEditOpen = null;
+  function hdrOrdered(main) {
+    var val = function (sl, i) { var v = ownValue(sl.node, "order"); if (v === undefined || v === "") v = inheritedValue(sl.node, "order"); return v === undefined || v === "" || isNaN(Number(v)) ? i + 1 : Number(v); };
+    return main.slots.map(function (sl, i) { return { sl: sl, i: i, v: val(sl, i) }; }).sort(function (a, b) { return a.v - b.v || a.i - b.i; }).map(function (x) { return x.sl; });
+  }
+  function headerLayout(b, sec) {
+    var main = hdrMain(sec), dis = !canWrite;
+    var redraw = function () { hdrOpen = "disposition"; var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); };
+    if (!main) { b.appendChild(h("p", { class: "pb-hint", text: "Cet en-tête n'a ni logo ni menu : ajoutez-en un pour pouvoir régler la disposition." })); return; }
+    b.appendChild(h("p", { class: "pb-hint", text: "Choisissez l'écran, puis un modèle de placement. Les réglages d'un écran n'affectent pas les autres : le téléphone suit la tablette, qui suit l'ordinateur, tant que vous n'y avez rien changé." }));
+    // Écran
+    b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "1 · Écran à régler" }));
+    b.appendChild(h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Écran à régler" }, SPEC.breakpoints.map(function (bp) {
+      return h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(device === bp.key), onclick: function () { setDevice(bp.key); redraw(); } }, h("span", { class: "pb-hdr-tile-title", text: bp.label }));
+    })));
+    // Modèles
+    b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "2 · Modèle de placement" }));
+    var grid = h("div", { class: "pb-hdr-tiles", role: "group", "aria-label": "Modèles de disposition" });
+    HDR_LAYOUTS.forEach(function (m) {
+      var mock = h("span", { class: "pb-lm " + m.mock, "aria-hidden": "true" }, h("i", { class: "pb-lm-b is-brand" }), h("i", { class: "pb-lm-b is-nav" }), h("i", { class: "pb-lm-b is-act" }));
+      grid.appendChild(h("button", { type: "button", class: "pb-hdr-tile", disabled: dis, onclick: function () {
+        change(function () {
+          var L = byId(main.lca.id); if (!L) return false;
+          var set = styleSet(L, device, "normal", true); HDR_LAYOUT_KEYS.forEach(function (k) { delete set[k]; }); Object.keys(m.lca).forEach(function (k) { set[k] = m.lca[k]; }); cleanStyles(L);
+          main.slots.forEach(function (sl) { var n = byId(sl.node.id); if (!n) return; var st = styleSet(n, device, "normal", true); HDR_SLOT_KEYS.forEach(function (k) { delete st[k]; }); var o = m.slots[sl.role] || m.slots.actions; Object.keys(o).forEach(function (k) { st[k] = o[k]; }); cleanStyles(n); });
+        }, { label: "Disposition de l'en-tête : " + m.label + " (" + bpLabel(device) + ")" });
+        toast("Disposition « " + m.label + " » appliquée à l'écran « " + bpLabel(device) + " ».");
+        redraw();
+      } }, mock, h("span", { class: "pb-hdr-tile-title", text: m.label }), h("span", { class: "pb-hdr-tile-hint", text: m.hint })));
+    });
+    b.appendChild(grid);
+    if (device !== "desktop") b.appendChild(h("div", { class: "pb-hdr-resetrow" }, h("button", { type: "button", class: "btn btn-outline btn-sm", disabled: dis, onclick: function () {
+      change(function () {
+        var L = byId(main.lca.id); if (!L) return false; var set = styleSet(L, device, "normal", false); if (set) HDR_LAYOUT_KEYS.forEach(function (k) { delete set[k]; }); cleanStyles(L);
+        main.slots.forEach(function (sl) { var n = byId(sl.node.id); var st = n && styleSet(n, device, "normal", false); if (st) { HDR_SLOT_KEYS.forEach(function (k) { delete st[k]; }); cleanStyles(n); } });
+      }, { label: "Retour à la disposition de l'écran plus grand" });
+      redraw();
+    } }, "Reprendre la disposition de l'écran plus grand")));
+    // Ordre et placement
+    b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "3 · Ordre et placement (écran : " + bpLabel(device) + ")" }));
+    var ordered = hdrOrdered(main), card = h("div", { class: "pb-hdr-list" });
+    ordered.forEach(function (sl, idx) {
+      var grow = Number(ownValue(sl.node, "flexGrow") !== undefined ? ownValue(sl.node, "flexGrow") : inheritedValue(sl.node, "flexGrow")) > 0;
+      var hidden = (sl.node.hideOn || []).indexOf(device) >= 0;
+      var move = function (d) { return function () {
+        var list = hdrOrdered(main), at = list.indexOf(sl), to = at + d; if (to < 0 || to >= list.length) return;
+        var t = list[at]; list[at] = list[to]; list[to] = t;
+        change(function () { list.forEach(function (x, i) { var n = byId(x.node.id); if (!n) return; styleSet(n, device, "normal", true).order = i + 1; cleanStyles(n); }); }, { label: "Ordre des éléments de l'en-tête (" + bpLabel(device) + ")" });
+        redraw();
+      }; };
+      var btn = function (txt, label, fn, off) { return h("button", { type: "button", class: "pb-hdr-mini", "aria-label": label, "data-tip": label, disabled: dis || off, onclick: fn }, txt); };
+      card.appendChild(h("div", { class: "pb-hdr-slot" + (hidden ? " is-hidden" : "") },
+        h("span", { class: "pb-hdr-slot-n", text: String(idx + 1) }),
+        h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: hdrSlotLabel(sl) }), h("span", { class: "pb-hdr-hint", text: hidden ? "Masqué sur cet écran" : grow ? "Occupe l'espace libre" : "Taille de son contenu" })),
+        h("span", { class: "pb-hdr-slot-tools" },
+          btn("↑", "Avancer d'une place", move(-1), idx === 0), btn("↓", "Reculer d'une place", move(1), idx === ordered.length - 1),
+          btn(grow ? "↔" : "⇥", grow ? "Ne plus occuper l'espace libre" : "Occuper l'espace libre (pousse les autres éléments)", function () { change(function () { var n = byId(sl.node.id); if (!n) return false; var st = styleSet(n, device, "normal", true); st.flexGrow = grow ? 0 : 1; cleanStyles(n); }, { label: "Espace libre (" + bpLabel(device) + ")" }); redraw(); }),
+          btn(hidden ? "◌" : "●", hidden ? "Afficher sur cet écran" : "Masquer sur cet écran", function () {
+            var cur = (sl.node.hideOn || []).slice(), next = hidden ? cur.filter(function (x) { return x !== device; }) : cur.concat(device);
+            if (!hidden && BPS.every(function (x) { return next.indexOf(x) >= 0; })) { toast("Un élément ne peut pas être masqué sur tous les écrans."); return; }
+            change(function () { var n = byId(sl.node.id); if (!n) return false; if (next.length) n.hideOn = next; else delete n.hideOn; }, { label: "Visibilité sur l'écran « " + bpLabel(device) + " »" }); redraw();
+          }))));
+    });
+    b.appendChild(card);
+    // Contenu et couleurs
+    b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "4 · Texte et couleurs des éléments" }));
+    if (styleState !== "normal") b.appendChild(h("p", { class: "pb-hint", text: "Vous modifiez l'état « " + styleState + " » : repassez sur « Normal » (dans « Style du conteneur ») pour l'apparence habituelle." }));
+    var leaves = []; (function w(n) { if (!(n.children || []).length) { if (["spacer", "divider"].indexOf(n.type) < 0) leaves.push(n); } else n.children.forEach(w); })(main.lca);
+    var list = h("div", { class: "pb-hdr-list" });
+    leaves.forEach(function (n) {
+      var open = hdrEditOpen === n.id, p = n.props || {};
+      var title = typeLabel(n), sub = (preview(n) || "").slice(0, 36);
+      var head = h("button", { type: "button", class: "pb-hdr-row", "aria-expanded": String(open), onclick: function () { hdrEditOpen = open ? null : n.id; redraw(); } },
+        h("span", { class: "pb-hdr-ico", "aria-hidden": "true" }, icon(NT[n.type] ? NT[n.type].icon : "layout")),
+        h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: n.name || title }), sub ? h("span", { class: "pb-hdr-hint", text: sub }) : null),
+        h("span", { class: "pb-hdr-go" + (open ? " is-open" : ""), "aria-hidden": "true" }, icon("chevronRight")));
+      list.appendChild(head);
+      if (open) {
+        var body = h("div", { class: "pb-hdr-quick" });
+        var tk = typeof p.text === "string" ? "text" : typeof p.label === "string" && n.type === "button" ? "label" : null;
+        if (tk) body.appendChild(textField(tk === "label" ? "Texte du bouton" : "Texte", p[tk], function (v) { setProp(n.id, tk, v); }, { disabled: dis, max: 160 }));
+        if (n.type === "button" && typeof p.url === "string") body.appendChild(textField("Lien du bouton", p.url, function (v) { setProp(n.id, "url", v); }, { disabled: dis, max: 500, placeholder: "/page ou https://…" }));
+        var ids = [n];
+        [["color", "Couleur du texte"], ["backgroundColor", "Couleur de fond"]].forEach(function (c) { if (SP[c[0]]) { try { body.appendChild(styleControl(ids, c[0], c[1])); } catch (e) { /* indisponible */ } } });
+        body.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { styleState = "normal"; inspTab = "style"; store.set("insp-tab", "style"); select(n.id); renderInspector(); } }, "Tous les réglages de cet élément →"));
+        list.appendChild(body);
+      }
+    });
+    b.appendChild(list);
   }
   // ---- Menu mobile (hamburger) : un modèle de design, appliqué à tous les menus de l'en-tête, pour les écrans plus petits qu'un ordinateur ----
   var HDR_BURGERS = [

@@ -44,8 +44,6 @@ function matches(c, ctx) {
     case "front_page": return v === "front";
     case "singular": return SINGLE.has(v);
     case "not_found": return v === "not_found";
-    // Visiteur : le contexte porte { visitor: { loggedIn } } (rendu public) ; sans information, le visiteur est traité comme non connecté
-    case "visitor": return ((ctx.visitor && ctx.visitor.loggedIn) ? "member" : "guest") === c.who;
     case "search": return v === "search" || a.kind === "search";
     case "shop": return v === "product_archive" || v === "product" || v === "shop_page" || v === "account";
     case "account": return v === "account";

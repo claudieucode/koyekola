@@ -18,8 +18,8 @@ describe("Header Builder L6 : en-tête selon le visiteur (site publié)", { skip
     env = await setup({ siteName: "Site visiteurs" });
     guestHeader = await adopt("luxe-01.luxe-01");           // ordinaire
     memberHeader = await adopt("luxe-02.luxe-02");                   // collé : reconnaissable (kw-theme-sticky)
-    guestHeader = await conditions(guestHeader, { include: [{ kind: "visitor", who: "guest" }], exclude: [] });
-    memberHeader = await conditions(memberHeader, { include: [{ kind: "visitor", who: "member" }], exclude: [] });
+    guestHeader = await conditions(guestHeader, { include: [{ kind: "visitor", state: "out" }], exclude: [] });
+    memberHeader = await conditions(memberHeader, { include: [{ kind: "visitor", state: "in" }], exclude: [] });
     await publish(guestHeader); await publish(memberHeader);
   });
   after(async () => { if (env) await env.close(); });
@@ -46,6 +46,6 @@ describe("Header Builder L6 : en-tête selon le visiteur (site publié)", { skip
   test("« Pourquoi ce modèle ? » et la liste décrivent la condition en français", async () => {
     const list = JSON.parse((await env.boss.get(env.U("/api/modeles"))).text).templates;
     const g = list.find((t) => t.id === guestHeader.id), m = list.find((t) => t.id === memberHeader.id);
-    assert.match(g.describe.include, /Visiteurs non connectés/); assert.match(m.describe.include, /Visiteurs connectés/);
+    assert.match(g.describe.include, /Visiteur non connecté/); assert.match(m.describe.include, /Visiteur connecté/);
   });
 });

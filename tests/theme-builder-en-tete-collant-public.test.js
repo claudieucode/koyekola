@@ -43,10 +43,10 @@ describe("En-tête collant / superposé : pages publiées", () => {
   });
   test("en-tête collant et verre dépoli : l'enveloppe porte kw-theme-sticky", async () => {
     await adopt("luxe-02.luxe-02"); assert.match(header(await live()), /kw-theme-sticky/);
-    await adopt("tech-01.tech-01"); assert.match(header(await live()), /kw-theme-sticky/);
+    await adopt("tech-03.tech-03"); assert.match(header(await live()), /kw-theme-sticky/);
   });
   test("en-tête superposé : l'enveloppe porte kw-theme-overlay (jamais les deux)", async () => {
-    await adopt("tech-10.tech-10"); const h = header(await live());
+    await adopt("tech-02.tech-02"); const h = header(await live());
     assert.match(h, /kw-theme-overlay/); assert.doesNotMatch(h, /kw-theme-sticky/);
   });
   test("collant à plusieurs rangées : tout l'en-tête colle ensemble (une seule enveloppe)", async () => {

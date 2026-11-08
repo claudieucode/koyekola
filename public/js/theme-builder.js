@@ -395,7 +395,6 @@
       for (const k of def.criteria) {
         const w = el("label", "sw-field"); let inp;
         if (k === "sub") { w.append(el("span", "", "Type d'archive")); inp = el("select"); for (const s of opts.subs[ks.value] || []) { const o = el("option", "", { all: "Toutes", blog: "Blog", category: "Catégorie", tag: "Étiquette", author: "Auteur", date: "Date", search: "Recherche", shop: "Boutique" }[s] || s); o.value = s; inp.append(o); } }
-        else if (k === "who") { w.append(el("span", "", "Visiteur")); inp = el("select"); for (const [v, t] of [["member", "Connecté"], ["guest", "Non connecté"]]) { const o = el("option", "", t); o.value = v; inp.append(o); } }
         else if (k === "parent") { w.append(el("span", "", "Page parente")); inp = el("select"); for (const p of opts.pages) { const o = el("option", "", p.name); o.value = p.id; inp.append(o); } }
         else if (k === "direct" || k === "child") { w.append(el("span", "", k === "direct" ? "Enfants directs seulement" : "Inclure les sous-éléments")); inp = el("input"); inp.type = "checkbox"; }
         else if (k === "state") { w.append(el("span", "", "Connexion")); inp = el("select"); for (const [v, l] of [["in", "Connecté"], ["out", "Non connecté"]]) { const o = el("option", "", l); o.value = v; inp.append(o); } }

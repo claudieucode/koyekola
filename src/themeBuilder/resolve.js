@@ -40,7 +40,6 @@ function condOverlap(a, b) {
   const va = C.KINDS[a.kind].views, vb = C.KINDS[b.kind].views;
   if (!va.some((v) => vb.includes(v))) return false;
   if (a.kind !== b.kind) return true;
-  if (a.kind === "visitor" && a.who !== b.who) return false; // un visiteur connecté n'est jamais un visiteur non connecté : pas de chevauchement
   for (const k of LISTS) if (a[k] && b[k] && !a[k].some((x) => b[k].map((y) => String(y).toLowerCase()).includes(String(x).toLowerCase()))) return false;
   if (a.kind === "child_of" && a.parent !== b.parent && a.direct && b.direct) return false;
   if (a.sub && b.sub && a.sub !== b.sub) return false;

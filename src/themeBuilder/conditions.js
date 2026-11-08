@@ -59,6 +59,12 @@ function normalizeOne(raw, where) {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw bad(`${where} : condition invalide.`);
   const kind = String(raw.kind || "");
   if (!Object.hasOwn(KINDS, kind)) throw bad(`${where} : type de condition inconnu.`);
+  // Condition « visiteur » : deux écritures existent (état « in / out » + rôles, et l'ancien « who » : member / guest, écrit par les premiers en-têtes). Une seule est conservée : « state ».
+  if (kind === "visitor" && raw.who !== undefined && raw.state === undefined) {
+    if (raw.who !== "member" && raw.who !== "guest") throw bad(`${where} : choisissez « visiteur connecté » ou « visiteur non connecté ».`);
+    raw = { ...raw, state: raw.who === "member" ? "in" : "out" };
+  }
+  if (kind === "visitor" && raw.who !== undefined) { raw = { ...raw }; delete raw.who; }
   const allowed = CRITERIA[kind], out = { kind };
   for (const k of Object.keys(raw)) if (k !== "kind" && !allowed.includes(k)) throw bad(`${where} : critère « ${k} » non pris en charge pour « ${KINDS[kind].label} ».`);
   for (const k of allowed) {
@@ -76,7 +82,6 @@ function normalizeOne(raw, where) {
   if (kind === "child_of" && !out.parent) throw bad(`${where} : choisissez la page parente.`);
   if (kind === "visitor" && !out.state) throw bad(`${where} : choisissez « connecté » ou « non connecté ».`);
   if (kind === "custom" && !out.id) throw bad(`${where} : condition personnalisée manquante.`);
-  if (kind === "visitor" && !out.who) throw bad(`${where} : choisissez « visiteur connecté » ou « visiteur non connecté ».`);
   return out;
 }
 // Normalise { include, exclude } ; vide = « tout le site ». Si `type` est donné, refuse une condition qui ne peut jamais correspondre à une vue de ce type.

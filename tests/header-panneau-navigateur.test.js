@@ -23,9 +23,9 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
 
   const openSec = async (name) => { const d = page.locator("details.pb-hdr-acc", { has: page.locator("summary", { hasText: name }) }).first(); if (!(await d.evaluate((e) => e.open))) await d.locator("> summary").click(); await page.waitForTimeout(150); };
 
-  test("six sections en accordéon : une seule ouverte à la fois, celle ouverte ferme les autres", async () => {
+  test("huit sections en accordéon : une seule ouverte à la fois, celle ouverte ferme les autres", async () => {
     await page.locator("#pb-tab-page").click();
-    const names = ["Réglages du conteneur", "Rangées collées", "Style du conteneur", "Écrans du site", "Éléments de l'en-tête", "Comportement au défilement"];
+    const names = ["Disposition et contenu", "Réglages du conteneur", "Rangées collées", "Style du conteneur", "Menu mobile (hamburger)", "Écrans du site", "Éléments de l'en-tête", "Comportement au défilement"];
     const pane = page.locator("[data-pb-page-settings]");
     for (const n of names) assert.equal(await pane.locator("details.pb-hdr-acc > summary", { hasText: n }).count(), 1, `section « ${n} »`);
     const openCount = () => pane.locator("details.pb-hdr-acc[open]").count();
@@ -70,6 +70,67 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     const c2 = await cls(); assert.match(c2, /is-menu-open/); assert.doesNotMatch(c2, /is-scrolled/);
     await pane.getByRole("radio", { name: "Normal" }).click(); await page.waitForTimeout(300);
     assert.doesNotMatch(await cls(), /is-scrolled|is-menu-open/, "retour à l'aperçu normal");
+  });
+
+  // Barre principale d'un en-tête enregistré : le plus petit conteneur qui réunit le logo / titre et le menu (même règle que l'éditeur)
+  const mainBar = () => {
+    const draft = JSON.parse(env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft), sec = Array.isArray(draft.sections) ? draft.sections[0] : draft;
+    const path = (node, pred, acc = []) => { if (pred(node)) return acc; for (const c of node.children || []) { const r = path(c, pred, acc.concat(node)); if (r) return r; } return null; };
+    const a = path(sec, (n) => n.type === "sitelogo" || n.type === "sitetitle"), b = path(sec, (n) => n.type === "menu");
+    let lca = null; for (let i = 0; i < Math.min(a.length, b.length) && a[i] === b[i]; i++) if (a[i].type !== "layout") lca = a[i];
+    return lca;
+  };
+
+  test("disposition : un modèle de placement s'écrit sur la barre principale pour l'écran choisi seulement, les autres écrans n'en sont pas modifiés", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Disposition et contenu");
+    await pane.getByRole("radio", { name: "Ordinateur" }).first().click(); await page.waitForTimeout(300);
+    await pane.locator(".pb-hdr-tile", { hasText: "Logo centré, menu dessous" }).click(); await page.waitForTimeout(400);
+    await pane.getByRole("radio", { name: "Mobile" }).first().click(); await page.waitForTimeout(400);
+    await pane.locator(".pb-hdr-tile", { hasText: "Barre compacte" }).click(); await page.waitForTimeout(400);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const bar = mainBar();
+    assert.equal(bar.styles.desktop.flexDirection, "column", "ordinateur : colonne centrée");
+    assert.equal(bar.styles.desktop.alignItems, "center");
+    assert.equal(bar.styles.mobile.flexDirection, "row", "mobile : barre compacte à part");
+    assert.equal(bar.styles.tablet && bar.styles.tablet.flexDirection, undefined, "la tablette n'est pas touchée");
+    const nav = bar.children.find((c) => JSON.stringify(c).includes('"type":"menu"'));
+    assert.equal(nav.styles.mobile.order, 3, "mobile : le menu (bouton) passe en dernier");
+    assert.equal(nav.styles.desktop.order, 2, "ordinateur : le menu en deuxième");
+    // le canevas (écran Mobile) montre bien cette disposition
+    const canvas = page.frameLocator("iframe[data-pb-frame]");
+    const dir = await canvas.locator(".kw-n-" + bar.id).first().evaluate((e) => getComputedStyle(e).flexDirection);
+    assert.equal(dir, "row", "le canevas affiche la disposition mobile");
+  });
+
+  test("disposition : avancer / reculer un emplacement, occuper l'espace libre, masquer sur l'écran ; reprise de l'écran plus grand", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Disposition et contenu");
+    await pane.getByRole("radio", { name: "Mobile" }).first().click(); await page.waitForTimeout(300);
+    const rows = pane.locator(".pb-hdr-slot");
+    const firstLabel = await rows.nth(0).locator(".pb-hdr-title").innerText();
+    await rows.nth(1).getByRole("button", { name: "Avancer d'une place" }).click(); await page.waitForTimeout(400);
+    assert.notEqual(await pane.locator(".pb-hdr-slot").nth(0).locator(".pb-hdr-title").innerText(), firstLabel, "l'ordre a changé");
+    await pane.locator(".pb-hdr-slot").nth(0).getByRole("button", { name: /Occuper l'espace libre|Ne plus occuper/ }).click(); await page.waitForTimeout(300);
+    await pane.locator(".pb-hdr-slot").nth(1).getByRole("button", { name: "Masquer sur cet écran" }).click(); await page.waitForTimeout(300);
+    assert.match(await pane.locator(".pb-hdr-slot").nth(1).innerText(), /Masqué sur cet écran/);
+    await pane.locator(".pb-hdr-slot").nth(1).getByRole("button", { name: "Afficher sur cet écran" }).click(); await page.waitForTimeout(300);
+    await pane.getByRole("button", { name: "Reprendre la disposition de l'écran plus grand" }).click(); await page.waitForTimeout(400);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const bar = mainBar();
+    assert.ok(!bar.styles.mobile || bar.styles.mobile.flexDirection === undefined, "mobile : retour à l'héritage");
+  });
+
+  test("disposition : texte et couleur d'un élément modifiés sur place (bouton)", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Disposition et contenu");
+    await pane.getByRole("radio", { name: "Ordinateur" }).first().click(); await page.waitForTimeout(300);
+    const btn = pane.locator(".pb-hdr-row", { hasText: "Bouton" }).first();
+    if (await btn.count() === 0) return; // en-tête sans bouton : rien à modifier ici
+    await btn.click(); await page.waitForTimeout(300);
+    const field = pane.locator(".pb-hdr-quick .pb-field", { hasText: "Texte du bouton" }).locator("input, textarea").first();
+    await field.fill("Réserver"); await field.press("Tab"); await page.waitForTimeout(400);
+    assert.ok(await pane.locator(".pb-hdr-quick [data-prop=\"color\"], .pb-hdr-quick [data-prop=\"backgroundColor\"]").count() >= 2, "couleurs du texte et du fond proposées");
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(1500);
+    const draft = env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft;
+    assert.match(draft, /Réserver/);
   });
 
   test("menu hamburger : aperçu RÉEL et cliquable (le vrai menu s'ouvre), et le canevas passe sur l'écran mobile", async () => {

@@ -28,7 +28,10 @@ const BREAKPOINTS = [
   { key: "tablet", label: "Tablette", media: "(max-width: 1023px)" },
   { key: "mobile", label: "Mobile", media: "(max-width: 767px)" },
 ];
-const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }];
+// « scrolled » / « menuOpen » : états propres à un EN-TÊTE (Header Builder). Ils n'ajoutent rien après le sélecteur de l'élément : ils le préfixent par l'état de l'enveloppe de l'en-tête
+// (.lp-site-header.is-scrolled : la page a défilé au-delà du seuil ; .is-menu-open : le menu mobile est ouvert). Ils suivent les écrans comme les autres états (scrolled@mobile…).
+const STATES = [{ key: "hover", label: "Survol", sel: ":hover" }, { key: "focus", label: "Focus", sel: ":focus-visible" }, { key: "active", label: "Clic", sel: ":active" }, { key: "scrolled", label: "Après défilement", sel: "", pre: ".lp-site-header.is-scrolled" }, { key: "menuOpen", label: "Menu ouvert", sel: "", pre: ".lp-site-header.is-menu-open" }];
+const stateSel = (state, sel) => (state.pre ? `${state.pre} ${sel}` : `${sel}${state.sel}`);
 // États PAR ÉCRAN : `states` reste un objet plat { clé: réglages }. La clé « hover » (sans écran) est l'état de l'ordinateur, inchangé et lu tel quel ; les autres écrans
 // s'écrivent « hover@tablet », « hover@mobile », « hover@wide ». Un écran sans réglage propre hérite de l'ordinateur (puis de la tablette pour le mobile) par simple cascade CSS.
 const stateScope = (state, bp) => (bp === "desktop" ? state : `${state}@${bp}`);
@@ -2060,8 +2063,8 @@ function stateRules(sel, states, band, rules, calm) {
     const d = declarations(still, band), m = moving ? declarations(moving) : "";
     // Un contour réglé par l'auteur sur l'état focus doit l'emporter sur le contour par défaut du site (landing.css : .kw-button:focus-visible…) : classe doublée, valeurs inchangées
     const at = sc.state.key === "focus" && /(^|;)outline-/.test(d) && /^\.kw-n-[a-z0-9]+$/.test(sel) ? `${sel}${sel}` : sel;
-    if (d) out.push(`${at}${sc.state.sel}{${d}}`);
-    if (m) out.push(`@media (prefers-reduced-motion:no-preference){${sel}${sc.state.sel}{${m}}}`);
+    if (d) out.push(`${stateSel(sc.state, at)}{${d}}`);
+    if (m) out.push(`@media (prefers-reduced-motion:no-preference){${stateSel(sc.state, sel)}{${m}}}`);
   }
 }
 function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
@@ -2075,8 +2078,8 @@ function classCss(classes, breakpoints = DEFAULT_BREAKPOINTS) {
       const set = c.states && c.states[sc.key];
       if (!set) continue;
       const { still, moving } = splitMotion(sc.state.key === "focus" ? keepFocusRing(set) : set), d = declarations(still), m = moving ? declarations(moving) : "";
-      if (d) (sc.bp.media ? media[sc.bp.key] : base).push(`${sel}${sc.state.sel}{${d}}`);
-      if (m) (sc.bp.media ? media[sc.bp.key] : base).push(`@media (prefers-reduced-motion:no-preference){${sel}${sc.state.sel}{${m}}}`);
+      if (d) (sc.bp.media ? media[sc.bp.key] : base).push(`${stateSel(sc.state, sel)}{${d}}`);
+      if (m) (sc.bp.media ? media[sc.bp.key] : base).push(`@media (prefers-reduced-motion:no-preference){${stateSel(sc.state, sel)}{${m}}}`);
     }
     if (c.styles && Object.values(c.styles).some((x) => x && (x.transitionDuration !== undefined || x.transitionEasing !== undefined))) base.push(`@media (prefers-reduced-motion:reduce){${sel}{transition:none!important}}`);
   }
@@ -2196,7 +2199,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
         const set = states[sc.key];
         if (!set) continue;
         const dp = [declarations(onlyKeys(set, bgOnly)), ...extra(set)].filter(Boolean).join(";");
-        if (dp) (sc.bp.media ? rules.media[sc.bp.key] : rules.base).push(`${sel}${sc.state.sel}::before{${dp}}`);
+        if (dp) (sc.bp.media ? rules.media[sc.bp.key] : rules.base).push(`${stateSel(sc.state, sel)}::before{${dp}}`);
       }
     }
   };
