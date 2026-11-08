@@ -6,7 +6,7 @@ module.exports = [
   L("blog-consultant", "Blog de consultant", ["consultant", "expertise", "appel à l'action"], "Article sobre, encadré de conclusion et bouton vers le blog ; mise en avant de l'auteur comme expert.", "clair", (k) => [k.section([
     k.W("postterms", { show: "category", look: "pills" }), T(k, 42), k.W("postmeta", META()), BODY(k, "700px"), k.card([k.L("Pour aller plus loin"), EX(k, { fontSize: "16px" }), k.B("Lire les autres articles", "/blog")]), k.W("authorbox", {})], { maxWidth: "800px" })]),
   L("blog-developpeur", "Blog de développeur", ["développeur", "code", "sommaire"], "Sommaire collant à gauche, texte avec zones de code à droite ; temps de lecture et mise à jour visibles.", "nuit", (k) => [k.section([
-    k.W("breadcrumb", CRUMB), T(k, 40, { fontFamily: "mono" }), k.W("postmeta", META({ showUpdated: true })),
+    k.W("breadcrumb", CRUMB), T(k, 40, { fontFamily: "font.jetbrains-mono" }), k.W("postmeta", META({ showUpdated: true })),
     k.grid(2, [k.W("toc", { title: "Dans cet article", depth: "3", numbered: false }, { position: "sticky", top: "24px" }, null, { position: "static" }), BODY(k, "720px", { margin: "0" })], { gridTemplate: "1fr 3fr", alignItems: "start" })], { maxWidth: "1100px" })]),
   L("blog-graphiste", "Blog de graphiste", ["graphiste", "visuel", "image dominante"], "Image dominante en ouverture, titre sous l'image en grand format, texte réduit et élégant.", "editorial", (k) => [
     k.band([IMG(k, { maxHeight: "540px", borderRadius: "0px" })], { paddingTop: "0px", paddingBottom: "0px", paddingLeft: "0px", paddingRight: "0px" }),
