@@ -22,14 +22,14 @@
   D.locations.forEach(function (l) { S.locations[l.key] = l.on; });
   function build(flat) {
     var by = {}, roots = [];
-    flat.forEach(function (f) { by[f.id] = { key: nk(), id: f.id, type: f.type, object_id: f.object_id, url: f.url, label: f.label, title_attr: f.title_attr, css_class: f.css_class, new_tab: f.new_tab, rel: f.rel ? f.rel.split(" ").filter(Boolean) : [], visibility: f.visibility, status: f.status, resource: f.resource, stateLabel: f.stateLabel, children: [], open: false }; });
+    flat.forEach(function (f) { by[f.id] = { key: nk(), id: f.id, type: f.type, object_id: f.object_id, url: f.url, label: f.label, title_attr: f.title_attr, css_class: f.css_class, icon: f.icon || "", description: f.description || "", badge: f.badge || "", new_tab: f.new_tab, rel: f.rel ? f.rel.split(" ").filter(Boolean) : [], visibility: f.visibility, status: f.status, resource: f.resource, stateLabel: f.stateLabel, children: [], open: false }; });
     flat.forEach(function (f) { var n = by[f.id]; if (f.parent && by[f.parent]) by[f.parent].children.push(n); else roots.push(n); });
     return roots;
   }
   S.items = build(D.items);
   function ser(nodes, forSnap) {
     return nodes.map(function (n) {
-      var o = { type: n.type, label: n.label, title_attr: n.title_attr, css_class: n.css_class, new_tab: !!n.new_tab, rel: n.rel.join(" "), visibility: n.visibility, status: n.status, children: ser(n.children, forSnap) };
+      var o = { type: n.type, label: n.label, title_attr: n.title_attr, css_class: n.css_class, icon: n.icon || "", description: n.description || "", badge: n.badge || "", new_tab: !!n.new_tab, rel: n.rel.join(" "), visibility: n.visibility, status: n.status, children: ser(n.children, forSnap) };
       if (!forSnap) { if (n.id) o.id = n.id; else o.key = n.key; }
       if (D.types[n.type] && D.types[n.type].needsObject) o.object_id = n.object_id;
       if (n.type === "custom") o.url = n.url;
@@ -198,6 +198,9 @@
     p.appendChild(h("details", { class: "mk-nm-adv" }, [h("summary", { text: "Options avancées" }), h("div", { class: "mk-nm-adv-body" }, [
       field(id + "title", "Attribut « title » du lien", text("title", "title_attr", 120)),
       field(id + "css", "Classes CSS supplémentaires", text("css", "css_class", 100), "Cinq classes au plus ; lettres, chiffres, tiret et soulignement."),
+      field(id + "badge", "Pastille (ex. Nouveau, -20 %)", text("badge", "badge", 16), "Petit texte affiché à côté du lien dans l'en-tête du site (16 caractères au plus)."),
+      field(id + "desc", "Description sous le lien", text("desc", "description", 160), "Affichée sous le lien dans les menus de l'en-tête qui l'activent."),
+      field(id + "icon", "Icône (nom, ex. home, star)", text("icon", "icon", 30), "Nom d'une icône du site ; vide = aucune."),
       h("div", { class: "mk-nm-opts" }, [
         check(id + "tab", "Ouvrir dans un nouvel onglet", n.new_tab, function (v) { n.new_tab = v; refresh(); }),
         check(id + "hid", "Masquer cet élément sur le site", n.status === "hidden", function (v) { n.status = v ? "hidden" : "published"; syncRow(n); refresh(); }),
@@ -323,7 +326,7 @@
     var li = tree.querySelector('[data-key="' + nodes[0].key + '"]'); if (li) { li.scrollIntoView({ block: "nearest" }); li.classList.add("is-new"); setTimeout(function () { li.classList.remove("is-new"); }, 1500); }
     return true;
   }
-  var newNode = function (o) { return Object.assign({ key: nk(), id: null, object_id: null, url: "", label: "", title_attr: "", css_class: "", new_tab: false, rel: [], visibility: "all", status: "published", resource: { title: "", url: "", state: "ok" }, stateLabel: "", children: [], open: false }, o); };
+  var newNode = function (o) { return Object.assign({ key: nk(), id: null, object_id: null, url: "", label: "", title_attr: "", css_class: "", icon: "", description: "", badge: "", new_tab: false, rel: [], visibility: "all", status: "published", resource: { title: "", url: "", state: "ok" }, stateLabel: "", children: [], open: false }, o); };
   function picker(def) {
     var uid = "nm-pk-" + def.id, selected = new Map(), shown = [], offset = 0, query = "", seqn = 0, timer = null;
     var input = h("input", { type: "search", id: uid + "-q", placeholder: "Rechercher…", autocomplete: "off" });

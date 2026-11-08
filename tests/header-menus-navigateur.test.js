@@ -121,5 +121,19 @@ describe("Header Builder L3 : menus et tiroir mobile (navigateur)", { skip: SKIP
     await context.close();
   });
 
+  test("pastille d'un élément de menu : affichée à côté du lien, en texte (jamais du HTML), sans changer la destination ; pointeur et point de rupture appliqués", async () => {
+    env.db.prepare("UPDATE nav_items SET badge = ? WHERE label = 'Contact'").run("<b>Nouveau</b>");
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ pointer: "underline", pointerAnim: "slide", pointerColor: "#ff0000", mobileToggle: true, menuBreakpoint: 1100 }));
+    const { context, page } = await env.visit();
+    const badge = page.locator(".lp-site-header .kw-menu-badge");
+    assert.equal(await badge.count(), 1); assert.equal(await badge.textContent(), "<b>Nouveau</b>", "la pastille est du TEXTE");
+    assert.equal(await page.locator(".lp-site-header .kw-menu-badge b").count(), 0);
+    assert.match(await page.locator(".lp-site-header nav.kw-menu").getAttribute("class"), /kw-ptr-underline kw-pa-slide/);
+    assert.equal(await page.locator(".lp-site-header .kw-menu-burger").isVisible(), false, "1280 px > 1100 : menu étendu, pas de bouton");
+    await page.setViewportSize({ width: 1000, height: 800 }); await page.waitForTimeout(250);
+    assert.equal(await page.locator(".lp-site-header .kw-menu-burger").isVisible(), true, "1000 px < 1100 : le menu se replie derrière le bouton");
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(env.errors, []); });
 });

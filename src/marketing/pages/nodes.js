@@ -613,6 +613,12 @@ const NODE_TYPES = {
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
     // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
     if (out.mobileToggle && p.mobileMode === "drawer") { out.mobileMode = "drawer"; out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Pointeur des liens du menu (survol / page courante) : trait dessous, dessus, double trait, cadre ou fond ; animation et couleur facultatives
+    if (["underline", "overline", "double", "framed", "background"].includes(p.pointer)) {
+      out.pointer = p.pointer; out.pointerAnim = ["fade", "slide", "grow", "drop"].includes(p.pointerAnim) ? p.pointerAnim : "fade";
+      const pc = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(p.pointerColor || "").trim()) ? String(p.pointerColor).trim().toLowerCase() : "";
+      if (pc) out.pointerColor = pc;
+    }
     // Largeur d'écran (px) en dessous de laquelle le menu se replie derrière le bouton : 767 par défaut (non enregistré), de 320 à 1920
     if (out.mobileToggle) { const bp = Number(p.menuBreakpoint); if (Number.isInteger(bp) && bp >= 320 && bp <= 1920 && bp !== 767) out.menuBreakpoint = bp; }
     // Méga-menu : « identifiant de l'élément du menu → identifiant du composant (panneau) », pour les rubriques de premier niveau d'un menu du CMS. Seuls des entiers positifs ;

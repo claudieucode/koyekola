@@ -96,7 +96,7 @@ module.exports = () => {
   // ----- Éditeur d'un menu -----
   const renderEditor = (req, res, menu) => {
     const flat = [];
-    const walk = (nodes, parent) => nodes.forEach((n) => { flat.push({ id: n.id, parent, type: n.type, object_id: n.object_id, url: n.url, label: n.label, title_attr: n.title_attr, css_class: n.css_class, new_tab: Boolean(n.new_tab), rel: n.rel, visibility: n.visibility, status: n.status, resource: { title: n.resource.title, url: n.resource.url, state: n.resource.state }, stateLabel: n.stateLabel }); walk(n.children, n.id); });
+    const walk = (nodes, parent) => nodes.forEach((n) => { flat.push({ id: n.id, parent, type: n.type, object_id: n.object_id, url: n.url, label: n.label, title_attr: n.title_attr, css_class: n.css_class, icon: n.icon || "", description: n.description || "", badge: n.badge || "", new_tab: Boolean(n.new_tab), rel: n.rel, visibility: n.visibility, status: n.status, resource: { title: n.resource.title, url: n.resource.url, state: n.resource.state }, stateLabel: n.stateLabel }); walk(n.children, n.id); });
     walk(navigation.tree(menu.id), null);
     const assigned = navigation.assignments({ siteId: req.navSite });
     const types = Object.fromEntries(Object.entries(navigation.TYPES).map(([k, d]) => [k, { label: d.label, needsObject: Boolean(d.needsObject) }]));

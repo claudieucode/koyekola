@@ -832,6 +832,7 @@ if (!navMenuColumns.includes("revision")) db.exec("ALTER TABLE nav_menus ADD COL
 if (!navMenuColumns.includes("auto_add_pages")) db.exec("ALTER TABLE nav_menus ADD COLUMN auto_add_pages INTEGER NOT NULL DEFAULT 0");
 const navItemColumns = db.prepare("PRAGMA table_info(nav_items)").all().map((c) => c.name);
 if (!navItemColumns.includes("css_class")) db.exec("ALTER TABLE nav_items ADD COLUMN css_class TEXT NOT NULL DEFAULT ''");
+if (!navItemColumns.includes("badge")) db.exec("ALTER TABLE nav_items ADD COLUMN badge TEXT NOT NULL DEFAULT ''"); // pastille de l'élément de menu (« Nouveau », « -20 % »)
 if (!navItemColumns.includes("title_attr")) db.exec("ALTER TABLE nav_items ADD COLUMN title_attr TEXT NOT NULL DEFAULT ''");
 
 // Profil d'un compte créé par un administrateur (CMS → Utilisateurs → Ajouter un compte) : prénom, nom, site web, langue préférée.

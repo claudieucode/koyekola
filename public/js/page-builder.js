@@ -2299,6 +2299,11 @@ function selectField(label, value, options, onChange, opts) {
         } }, "Ajouter les pages publiées"));
         }
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
+        box.appendChild(selectField("Pointeur des liens", p.pointer || "", [["", "Aucun (soulignement au survol)"], ["underline", "Trait dessous"], ["overline", "Trait dessus"], ["double", "Double trait"], ["framed", "Cadre"], ["background", "Fond"]], function (v) { change(function () { var x = byId(it.id).props; if (v) { x.pointer = v; } else { delete x.pointer; delete x.pointerAnim; delete x.pointerColor; } }); }, { disabled: disabled }));
+        if (p.pointer) {
+          box.appendChild(selectField("Animation du pointeur", p.pointerAnim || "fade", [["fade", "Fondu"], ["slide", "Glissement"], ["grow", "Étirement"], ["drop", "Chute"]], function (v) { setProp(it.id, "pointerAnim", v); }, { disabled: disabled }));
+          box.appendChild(textField("Couleur du pointeur (#rrggbb, vide = couleur d'accent)", p.pointerColor || "", function (v) { change(function () { var x = byId(it.id).props; if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim())) x.pointerColor = String(v).trim(); else delete x.pointerColor; }); }, { max: 7, disabled: disabled, placeholder: "#1e3a5f" }));
+        }
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
         if (p.mobileToggle) {
           box.appendChild(numberField("Replier le menu sous cette largeur d'écran (px)", p.menuBreakpoint || 767, { min: 320, max: 1920, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id).props; if (n === 767) delete x.menuBreakpoint; else x.menuBreakpoint = n; }); }, "767 par défaut. Montez à 1024 pour que le bouton « Menu » apparaisse aussi sur tablette ; 1920 pour l'avoir partout."));
