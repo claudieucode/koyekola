@@ -11,10 +11,13 @@ const SPLITS = [
   ["f01", [["minimaliste", 8]]], ["f02", [["magazine", 10]]], ["f03", [["journal", 10]]], ["f04", [["blog-pro", 10]]], ["f05", [["technologie", 8]]], ["f06", [["education", 8]]],
   ["f07", [["photographie", 8], ["business", 8]]], ["f09", [["voyage", 6], ["sante", 6], ["formats", 8]]], ["f12", [["creatif", 10]]],
 ];
+// Identités PROPRES (valeurs fixes) : plus aucune couleur ni police ne vient de la charte du site (voir single_post/identities.js et docs/theme-builder/single-post/IDENTITE_GRAPHIQUE_INDEPENDANTE.md).
+const Own = require("./single_post/identities");
+const assign = Own.assigner();
 const layouts = [];
 for (const [file, parts] of SPLITS) {
   const list = require(`./single_post/v2/${file}`); let i = 0;
-  for (const [family, n] of parts) for (let j = 0; j < n; j += 1, i += 1) layouts.push({ ...list[i], family });
+  for (const [family, n] of parts) for (let j = 0; j < n; j += 1, i += 1) layouts.push({ ...list[i], family, ...assign(list[i].skin) });
   if (i !== list.length) throw new Error(`single_post/v2/${file} : ${list.length} mises en page, ${i} classées dans une famille`);
 }
-module.exports = { type: "single_post", kind: "page", flat: true, families: FAMILIES.map(([key, label]) => ({ key, label })), layouts };
+module.exports = { type: "single_post", kind: "page", flat: true, ownSkins: true, skins: Own.ALL, families: FAMILIES.map(([key, label]) => ({ key, label })), layouts };

@@ -30,9 +30,11 @@ describe("Article individuel : la bibliothèque (code)", () => {
     for (const o of old) assert.ok(all.filter((e) => e.layoutId === o).length <= 1, `${o} : l'ancien produit mises en page × identités ne doit plus exister`);
   });
   test("liste, recherche sans accents et filtres par identité cohérents (la somme des identités fait 100)", () => {
-    const sum = ["clair", "marque", "nuit", "editorial", "doux"].reduce((n, s) => n + Catalog.list("single_post", { skin: s }).total, 0);
-    assert.equal(sum, 100);
-    for (const s of ["clair", "marque", "nuit", "editorial", "doux"]) assert.ok(Catalog.list("single_post", { skin: s }).total >= 8, `identité ${s} trop rare`);
+    // identités PROPRES (valeurs fixes, voir single_post/identities.js) : plus aucune des cinq identités du site
+    const skins = Catalog.list("single_post", { limit: 60 }).skins;
+    assert.ok(skins.length >= 30, `${skins.length} identités`);
+    assert.equal(skins.reduce((n, s) => n + Catalog.list("single_post", { skin: s.key }).total, 0), 100);
+    for (const s of ["clair", "marque", "nuit", "editorial", "doux"]) assert.equal(Catalog.list("single_post", { skin: s }).total, 0, `l'identité du site « ${s} » ne doit plus exister`);
     assert.equal(Catalog.list("single_post", { q: "zzzz-inconnu" }).total, 0);
     assert.ok(Catalog.list("single_post", { q: "MAGAZINE" }).total >= 3);
   });
