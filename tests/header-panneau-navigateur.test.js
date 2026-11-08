@@ -22,7 +22,7 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     assert.equal((await page.locator("#pb-tab-page").innerText()).trim(), "En-tête");
     await page.locator("#pb-tab-page").click();
     const pane = page.locator("[data-pb-page-settings]");
-    await pane.getByText("Style du conteneur de l'en-tête").waitFor();
+    await pane.getByText("Style du conteneur", { exact: true }).waitFor();
     for (const t of ["Mise en page", "Taille", "Espacements", "Fond, bordure et ombre", "Avancé"]) assert.ok(await pane.locator("summary", { hasText: t }).count() >= 1, `groupe « ${t} »`);
     for (const t of ["Normal", "Après défilement", "Menu ouvert"]) assert.ok(await pane.getByRole("radio", { name: t }).count() >= 1, `état « ${t} »`);
     for (const t of ["Ordinateur", "Tablette", "Mobile"]) assert.ok(await pane.getByRole("radio", { name: t }).count() >= 1, `écran « ${t} »`);
