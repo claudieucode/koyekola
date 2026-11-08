@@ -2396,3 +2396,23 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-hdr-card .pb-check { margin: 0; }
 .pb-hdr-card .pb-seg button { padding: 0 4px; font-size: 11.5px; }
 .pb-hdr-card > .pb-sub { padding-bottom: 2px; border-bottom: 0; }
+
+/* Accordéons de l'onglet « En-tête » : une section ouverte à la fois */
+.pb-hdr-acc { margin: 0 0 8px; border: 1px solid var(--line, #d9e2ea); border-radius: var(--pb-radius-md, 8px); background: var(--card, #fff); overflow: hidden; }
+.pb-hdr-acc > summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 8px 12px; cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: var(--text, #10222f); }
+.pb-hdr-acc > summary::-webkit-details-marker { display: none; }
+.pb-hdr-acc > summary:hover { background: #f4f8fb; }
+.pb-hdr-acc > summary:focus-visible { outline: 2px solid var(--primary, #1e5f8f); outline-offset: -2px; }
+.pb-hdr-acc-chev { display: inline-flex; color: var(--muted, #5b6b78); transition: transform .18s ease; }
+.pb-hdr-acc-chev svg { width: 14px; height: 14px; }
+.pb-hdr-acc[open] > summary { border-bottom: 1px solid var(--line, #e3eaf0); background: #f7fafc; }
+.pb-hdr-acc[open] > summary .pb-hdr-acc-chev { transform: rotate(90deg); }
+.pb-hdr-acc-body { padding: 10px; }
+.pb-hdr-acc-body > .pb-hdr-list, .pb-hdr-acc-body .pb-hdr-card { margin-bottom: 0; }
+.pb-hdr-acc-body > .pb-hint:first-child { margin-top: 0; }
+@media (prefers-reduced-motion: reduce) { .pb-hdr-acc-chev { transition: none; } }
+/* Dans un accordéon : la carte intérieure n'a pas de second cadre */
+.pb-hdr-acc-body { padding: 0; }
+.pb-hdr-acc-body > .pb-hdr-card, .pb-hdr-acc-body > .pb-hdr-list { border: 0; border-radius: 0; }
+.pb-hdr-acc-body > :not(.pb-hdr-card):not(.pb-hdr-list) { margin: 10px 12px; }
+.pb-hdr-acc-body > div:not(.pb-hdr-card):not(.pb-hdr-list) { margin: 0; }

@@ -7888,29 +7888,41 @@ function selectField(label, value, options, onChange, opts) {
         h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: title }), hint ? h("span", { class: "pb-hdr-hint", text: hint }) : null),
         h("span", { class: "pb-hdr-go", "aria-hidden": "true" }, icon("chevronRight")));
     };
-    box.appendChild(h("p", { class: "pb-sub", text: "Réglages du conteneur" }));
-    box.appendChild(h("div", { class: "pb-hdr-list" }, [
-      row("layout", "Mise en page et contenu", "Direction, largeur, structure", function () { open(root.id, "content"); }),
-      row("palette", "Style", "Fond, bordure, ombre, espacements", function () { open(root.id, "style"); }),
-      row("arrowDown", "Après défilement", "Apparence une fois la page défilée", function () { open(root.id, "style", "scrolled"); }),
-      row("listChecks", "Menu ouvert", "Apparence quand le menu est déplié", function () { open(root.id, "style", "menuOpen"); }),
-      row("sliders", "Avancé", "Ancre, écrans, CSS personnalisé", function () { open(root.id, "advanced"); })]));
-    headerRows(box, sec);
-    headerRootPanel(box, root);
-    if (PAGE.siteId) {
-      box.appendChild(h("p", { class: "pb-sub", text: "Écrans du site (points de rupture)" }));
-      box.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
-      box.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
-    }
+    hdrAcc(box, "reglages", "Réglages du conteneur", function (b) {
+      b.appendChild(h("div", { class: "pb-hdr-list" }, [
+        row("layout", "Mise en page et contenu", "Direction, largeur, structure", function () { open(root.id, "content"); }),
+        row("palette", "Style", "Fond, bordure, ombre, espacements", function () { open(root.id, "style"); }),
+        row("arrowDown", "Après défilement", "Apparence une fois la page défilée", function () { open(root.id, "style", "scrolled"); }),
+        row("listChecks", "Menu ouvert", "Apparence quand le menu est déplié", function () { open(root.id, "style", "menuOpen"); }),
+        row("sliders", "Avancé", "Ancre, écrans, CSS personnalisé", function () { open(root.id, "advanced"); })]));
+    });
+    hdrAcc(box, "rangees", "Rangées collées", function (b) { headerRows(b, sec); });
+    hdrAcc(box, "style", "Style du conteneur", function (b) { headerRootPanel(b, root); });
+    if (PAGE.siteId) hdrAcc(box, "ecrans", "Écrans du site", function (b) {
+      b.appendChild(h("p", { class: "pb-hint", text: "La largeur à partir de laquelle un écran compte comme « tablette » ou « mobile » se règle pour tout le site (en-tête compris). Le repli du menu en bouton se règle séparément, sur le menu." }));
+      b.appendChild(h("a", { class: "btn btn-outline btn-sm", href: "/marketing/site-web/sites/" + PAGE.siteId + "/responsive", target: "_blank", rel: "noopener" }, "Régler les écrans du site"));
+    });
     var els = []; (function walk(list, depth) { (list || []).forEach(function (n) { if (n !== root) els.push({ n: n, depth: depth }); if (n.children) walk(n.children, Math.min(depth + 1, 3)); }); })(sec.children[0].children, 0);
-    if (els.length) {
-      box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête" }));
-      box.appendChild(h("div", { class: "pb-hdr-list" }, els.map(function (e) {
+    if (els.length) hdrAcc(box, "elements", "Éléments de l'en-tête", function (b) {
+      b.appendChild(h("div", { class: "pb-hdr-list" }, els.map(function (e) {
         var n = e.n, t = (preview(n) || "").slice(0, 40), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
-        var hint = n.name ? typeLabel(n) : t || (inside ? inside : "");
-        return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? hint : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
+        return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? typeLabel(n) : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
       })));
-    }
+    });
+  }
+  // Accordéon de l'onglet « En-tête » : une seule section ouverte à la fois ; la section ouverte est retenue quand le panneau se redessine
+  var hdrOpen = "comportement";
+  function hdrAcc(box, key, title, fill) {
+    var body = h("div", { class: "pb-hdr-acc-body" }); fill(body);
+    if (!body.childNodes.length) return;
+    var det = h("details", { class: "pb-hdr-acc", "data-hdr-sec": key, open: hdrOpen === key ? "" : null });
+    det.appendChild(h("summary", {}, h("span", { class: "pb-hdr-acc-title", text: title }), h("span", { class: "pb-hdr-acc-chev", "aria-hidden": "true" }, icon("chevronRight"))));
+    det.appendChild(body);
+    det.addEventListener("toggle", function () {
+      if (det.open) { hdrOpen = key; [].forEach.call(box.querySelectorAll(":scope > details.pb-hdr-acc"), function (o) { if (o !== det && o.open) o.open = false; }); }
+      else if (hdrOpen === key) hdrOpen = "";
+    });
+    box.appendChild(det);
   }
   // Rangées de l'en-tête (les conteneurs de premier niveau) : chacune peut se coller seule en haut de l'écran pendant que les autres défilent
   function headerRows(box, sec) {
@@ -7918,7 +7930,6 @@ function selectField(label, value, options, onChange, opts) {
     // Un seul conteneur racine (cas courant) : ses rangées sont les conteneurs qu'il contient
     if (rows.length === 1) { var inner = (rows[0].children || []).filter(function (n) { return n.type === "container"; }); if (inner.length) rows = inner; }
     if (!rows.length) return;
-    box.appendChild(h("p", { class: "pb-sub", text: "Rangées collées" }));
     box.appendChild(h("p", { class: "pb-hint", text: "Une rangée cochée reste en haut de l'écran pendant que les autres défilent." }));
     var card = h("div", { class: "pb-hdr-card" });
     rows.forEach(function (r, i) {
@@ -7942,7 +7953,6 @@ function selectField(label, value, options, onChange, opts) {
   function headerRootPanel(box, root) {
     var items = [root];
     var again = function () { var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b); renderInspector(); };
-    box.appendChild(h("p", { class: "pb-sub", text: "Style du conteneur" }));
     var card = h("div", { class: "pb-hdr-card" });
     var bar = h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }),
       h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
@@ -7957,7 +7967,7 @@ function selectField(label, value, options, onChange, opts) {
     if (styleState !== "normal") card.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
     else if (device !== "desktop") card.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
     HDR_GROUPS.forEach(function (g) {
-      var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { hdrRootOpen[g[0]] = e.currentTarget.open; } });
+      var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { var d = e.currentTarget; if (d.open) { Object.keys(hdrRootOpen).forEach(function (k) { hdrRootOpen[k] = false; }); hdrRootOpen[g[0]] = true; [].forEach.call(d.parentNode.querySelectorAll(":scope > details.pb-acc"), function (o) { if (o !== d && o.open) o.open = false; }); } else hdrRootOpen[g[0]] = false; } });
       det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: g[0] })));
       var inner = h("div", { class: "pb-acc-body" });
       g[1].forEach(function (kv) { if (SP[kv[0]]) { try { inner.appendChild(styleControl(items, kv[0], kv[1])); } catch (e) { /* propriété indisponible pour ce conteneur */ } } });
@@ -7969,8 +7979,8 @@ function selectField(label, value, options, onChange, opts) {
   function renderHeaderSettings(box) {
     var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
     headerAccess(box);
-    box.appendChild(h("p", { class: "pb-sub", text: "Comportement au défilement" }));
-    box.appendChild(h("p", { class: "pb-hint", text: "Comment l'en-tête se comporte sur le site publié." }));
+    var beh = h("div");
+    beh.appendChild(h("p", { class: "pb-hint", text: "Comment l'en-tête se comporte sur le site publié." }));
     var card = h("div", { class: "pb-hdr-card" });
     card.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
     if (!live) card.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
@@ -7997,12 +8007,13 @@ function selectField(label, value, options, onChange, opts) {
       card.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
       card.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
     }
-    box.appendChild(card);
+    beh.appendChild(card);
     var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran pendant tout le défilement.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
     var fxText = d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "";
     var hideText = d.hideOnScroll.enabled ? " Masqué en descendant." : "";
     var devText = moving && d.stickOn.length < 3 ? " Actif sur : " + HDR_DEVICES.filter(function (x) { return d.stickOn.indexOf(x[0]) >= 0; }).map(function (x) { return x[1].toLowerCase(); }).join(", ") + "." : "";
-    box.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: modeText + fxText + hideText + devText }));
+    beh.appendChild(h("p", { class: "pb-note", "data-pb-header-summary": "", text: modeText + fxText + hideText + devText }));
+    hdrAcc(box, "comportement", "Comportement au défilement", function (b) { b.appendChild(beh); });
   }
   function renderPageSettings() {
     pageSettingsStale = false;
