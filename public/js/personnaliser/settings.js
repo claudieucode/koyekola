@@ -490,9 +490,47 @@
     if (boot.principal) { body.appendChild(note("Le site principal n'a pas de CSS additionnel : cette option est réservée aux sites créés.", null, "")); return true; }
     return false;
   }
+  // En-tête : comportement (mode, effets, décalage, empilement, masquage au défilement, appareils) de l'en-tête du Theme Builder de CE site ; enregistré et publié par le serveur, validé par lui
+  function headerView(body) {
+    var tb = note("L'en-tête et le pied de page se composent dans le Theme Builder (leur unique gestionnaire : création, affectation, publication).", boot.links.themeBuilder, "Ouvrir le Theme Builder");
+    var hd = boot.header;
+    if (!hd) { body.appendChild(tb); body.appendChild(h("p", { class: "kwc-empty-note", text: "Ce site n'a pas encore d'en-tête créé dans le Theme Builder : le comportement se règle ici dès qu'il en a un." })); return; }
+    var st = JSON.parse(JSON.stringify(hd.settings)), can = hd.editable && boot.can.edit;
+    body.appendChild(h("p", { class: "kwc-help", text: "En-tête actuel : " + hd.name }));
+    if (!hd.editable) body.appendChild(h("div", { class: "kwc-warn", role: "status" }, [h("p", { text: hd.reason })]));
+    var out = h("div", { class: "kwc-fields" });
+    function field(label, control, help) { return h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: label })]), control, help ? h("small", { class: "kwc-help", text: help }) : null]); }
+    function select(opts, value, on) { var el = h("select", { class: "kwc-input", disabled: !can }, opts.map(function (o) { return h("option", { value: o[0], text: o[1], selected: o[0] === value }); })); el.addEventListener("change", function () { on(el.value); dirty2(); }); return el; }
+    function num(value, min, max, on) { var el = h("input", { class: "kwc-input", type: "number", min: min, max: max, value: value, disabled: !can }); el.addEventListener("input", function () { var n = Number(el.value); if (Number.isFinite(n)) { on(Math.min(max, Math.max(min, Math.round(n)))); dirty2(); } }); return el; }
+    function check(label, value, on) { var el = h("input", { type: "checkbox", checked: value, disabled: !can }); el.addEventListener("change", function () { on(el.checked); dirty2(); }); return h("label", { class: "kwc-check" }, [el, h("span", { text: " " + label })]); }
+    var btn = h("button", { type: "button", class: "kwc-btn kwc-btn-primary", text: "Enregistrer et publier l'en-tête", disabled: true });
+    var snapshot = JSON.stringify(st);
+    function dirty2() { btn.disabled = !can || JSON.stringify(st) === snapshot; }
+    function draw() {
+      out.textContent = "";
+      out.appendChild(field("Position", select([["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut"], ["fixed", "Fixé en haut"], ["overlay", "Superposé au visuel d'ouverture"]], st.mode, function (v) { st.mode = v; if (v === "static") st.fx = ""; draw(); }), "Collé : reste visible en haut quand on descend. Superposé : se place sur l'image d'ouverture."));
+      if (st.mode !== "static") {
+        out.appendChild(field("Effet au défilement", select([["", "Aucun"], ["shrink", "Réduire l'en-tête"], ["solid", "Devenir plein (fond opaque)"], ["both", "Réduire et devenir plein"]], st.fx || "", function (v) { st.fx = v; })));
+        out.appendChild(field("Décalage par rapport au haut (px)", num(st.offset, 0, 200, function (n) { st.offset = n; }), "Utile sous une barre d'annonce ou d'administration."));
+        out.appendChild(field("Niveau d'empilement (1 à 100)", num(st.zIndex, 1, 100, function (n) { st.zIndex = n; }), "Plus le nombre est grand, plus l'en-tête passe devant les autres éléments."));
+        out.appendChild(field("Seuil d'activation du défilement (px)", num(st.threshold, 0, 1000, function (n) { st.threshold = n; })));
+        out.appendChild(check("Masquer en descendant, réafficher en remontant", st.hideOnScroll.enabled, function (v) { st.hideOnScroll.enabled = v; }));
+        var dev = h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: "Coller sur ces appareils" })])]);
+        [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]].forEach(function (d) { dev.appendChild(check(d[1], st.stickOn.indexOf(d[0]) !== -1, function (v) { var set = st.stickOn.filter(function (x) { return x !== d[0]; }); if (v) set.push(d[0]); st.stickOn = set.length ? set : ["desktop", "tablet", "mobile"]; })); });
+        out.appendChild(dev);
+      }
+      out.appendChild(btn);
+    }
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      post(boot.base + "/entete", { settings: st }).then(function (r) { st = JSON.parse(JSON.stringify(r.settings)); snapshot = JSON.stringify(st); hd.settings = r.settings; toast("En-tête publié.", "ok"); K.preview.softReload(); draw(); dirty2(); },
+        function (e) { toast(e.message, "error"); dirty2(); });
+    });
+    draw(); body.appendChild(out); body.appendChild(tb);
+  }
   var VIEWS = {
     menus: menusView, widgets: widgetsView, accueil: homeView,
-    "themebuilder-header": function (body) { body.appendChild(note("L'en-tête et le pied de page se composent dans le Theme Builder (leur unique gestionnaire : création, affectation, publication).", boot.links.themeBuilder, "Ouvrir le Theme Builder")); },
+    "themebuilder-header": headerView,
     "themebuilder-footer": function (body) { body.appendChild(note("L'en-tête et le pied de page se composent dans le Theme Builder (leur unique gestionnaire : création, affectation, publication).", boot.links.themeBuilder, "Ouvrir le Theme Builder")); }
   };
   boot.categories.forEach(function (cat) {
