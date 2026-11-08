@@ -3176,7 +3176,7 @@ function selectField(label, value, options, onChange, opts) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
     var reset = own !== undefined ? h("button", { type: "button", class: "pb-reset", "data-tip": "Effacer : revenir à la valeur héritée", "aria-label": "Effacer « " + (label || SP[key].label) + " » pour cet écran", disabled: dis, onclick: function () { setStyle(idsOf(items), key, ""); } }, "↺") : h("span", { class: "pb-reset-slot", "aria-hidden": "true" });
-    var lab = h("label", { for: id, class: "pb-prop-label", title: SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
+    var lab = h("label", { for: id, class: "pb-prop-label", title: label && label !== SP[key].label ? label + " (" + SP[key].label + ")" : SP[key].label, "aria-label": SP[key].label }, label || SP[key].label);
     if (control && control.scrub) control.scrub(lab);
     return h("div", { class: "pb-field pb-style-field pb-prop" + (own !== undefined ? " is-set" : ""), "data-prop": key },
       h("div", { class: "pb-prop-head" }, lab, marks, items.length === 1 ? styleRestore(it, key) : null),
