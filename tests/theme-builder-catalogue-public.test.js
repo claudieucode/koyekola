@@ -83,7 +83,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     const b = await hostReq(srv, "b.test", "/blog"); assert.equal(b.status, 200); assert.doesNotMatch(b.text, /kw-theme-(header|footer)/, "isolation");
   });
   test("article, archives, recherche et page introuvable de la bibliothèque : rendus avec les contenus réels du site", async () => {
-    await adopt(A, "single_post", Catalog.entries("single_post")[0].key); await adopt(A, "archive", "blog.grille"); await adopt(A, "search_results", Catalog.entries("search_results")[0].key); await adopt(A, "not_found", Catalog.entries("not_found")[0].key);
+    await adopt(A, "single_post", Catalog.entries("single_post")[0].key); await adopt(A, "archive", "blog-professionnel.ressources"); await adopt(A, "search_results", Catalog.entries("search_results")[0].key); await adopt(A, "not_found", Catalog.entries("not_found")[0].key);
     const post = await hostReq(srv, "a.test", "/blog/article-a"); assert.equal(post.status, 200); assert.match(post.text, /kw-theme-template/); assert.match(post.text, /<h1[^>]*>[^<]*Article de A/);
     const arch = await hostReq(srv, "a.test", "/blog"); assert.match(arch.text, /kw-theme-template/); assert.match(arch.text, /Article de A/); assert.doesNotMatch(arch.text, /Article de B/);
     const q = await hostReq(srv, "a.test", "/blog?q=Article"); assert.match(q.text, /kw-theme-template/); assert.match(q.text, /Article de A/);

@@ -18,7 +18,7 @@ function useTemplate(ctx, siteId, type, key, { name, conditions, identity } = {}
   if (!Types.has(type) || !Catalog.types().includes(type)) throw bad("Ce type de modèle n'a pas de catalogue.");
   const meta = Catalog.find(type, String(key || ""));
   if (!meta) throw bad("Modèle du catalogue introuvable.", "not_found");
-  const mode = ["single_product", "single_page"].includes(type) && ["own", "site", "hybrid"].includes(identity) ? identity : "own";
+  const mode = ["single_product", "single_page", "archive"].includes(type) && ["own", "site", "hybrid"].includes(identity) ? identity : "own";
   const doc = Catalog.build(type, meta.key, { formId: siteFormId(ctx, siteId), identity: mode });
   const label = String(name || meta.name).slice(0, 100);
   return transaction(ctx.db, () => {

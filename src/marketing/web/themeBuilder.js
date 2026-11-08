@@ -220,7 +220,7 @@ module.exports = () => {
   const libPreview = (thumb) => (req, res, next) => {
     try {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
-      const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)) });
+      const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)), identity: String(req.query.identite || "") });
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
       require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb, sampleMenu: true, withTheme: String(req.query.theme || "") === "1" }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
@@ -233,7 +233,7 @@ module.exports = () => {
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
     // Pied de page : le document vient du CATALOGUE (notre code), pas de la saisie de la personne. Certains modèles contiennent des décors en widget « HTML » (réservé à « pages.code » quand on l'ajoute soi-même) : l'insertion depuis la bibliothèque ne doit pas être refusée à un compte sans ce droit (décision du propriétaire). Les modifications ultérieures du widget restent protégées (comparaison avec l'enregistré).
-    const t = useTemplate(String(b.type) === "footer" ? depuisCatalogue(ctx) : ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined, identity: b.identity ? String(b.identity) : undefined });
+    const t = useTemplate(String(b.type) === "footer" ? depuisCatalogue(ctx) : ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined, identity: b.identity ? String(b.identity) : b.identite ? String(b.identite) : undefined });
     // En-tête : la clé du modèle d'origine est gardée dans le document (sert à « Revenir au modèle initial ») ; échec = installation sans cette fonction, jamais une erreur
     if (String(b.type) === "header" && t.sourceKind === "component") { try { const c = P().getComponent(ctx, t.sourceId); if (c) P().updateComponent(ctx, t.sourceId, { section: stampKey(c.section, String(b.key)) }); } catch { /* origine non mémorisée */ } }
     return { template: card(ctx, t, new Set()) };

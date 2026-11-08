@@ -1,3 +1,5 @@
+> **Remplacé le 8 novembre 2026.** La bibliothèque décrite ci-dessous (10 contenus × 10 compositions) a été remplacée par 100 concepts à identité indépendante : voir `docs/theme-builder/archive/ARCHIVE_LIBRARY.md`. Ce document reste comme historique.
+
 # Bibliothèque « Archives » du Theme Builder
 
 Catégorie `archive` (groupe « Pages et contenus »). S'applique aux listes du blog, aux archives de catégorie, d'étiquette et d'auteur. Fichier : `src/themeBuilder/catalog/archive.js`.
