@@ -9,7 +9,8 @@ const FILES = ["header", "footer", "single_page", "single_post", "archive", "sea
 const LOADED = new Map();
 function def(type) {
   if (!FILES.includes(type)) return null;
-  if (!LOADED.has(type)) LOADED.set(type, require(`./${type}`));
+  // Nouvelle bibliothèque « Page 404 » (en construction) : chargée à la place de l'ancienne UNIQUEMENT si KW_404_V2=1 (développement et tests) ; sans cette variable, rien ne change pour les sites
+  if (!LOADED.has(type)) LOADED.set(type, require(`./${type === "not_found" && process.env.KW_404_V2 === "1" ? "not_found2" : type}`));
   return LOADED.get(type);
 }
 const types = () => FILES.filter((t) => Types.has(t));

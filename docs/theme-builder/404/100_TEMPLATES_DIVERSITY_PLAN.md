@@ -28,6 +28,8 @@ Pour **toute paire** de modèles (4 950 paires) :
 
 Résultat du calcul sur ce plan : **distance minimale = 5 axes (sur 8) ; distance structurelle minimale = 3 (sur 6) ; 0 paire hors seuil.** Histogramme des distances (nombre de paires) : 5 axes → 401 · 6 → 1 051 · 7 → 1 945 · 8 → 1 553.
 
+**Mise à jour (groupe 1) — le plan est une cible, la mesure fait foi.** En construisant le premier groupe, les valeurs « N, A, R, P, T, D » du tableau ci-dessous (assignées par optimisation) se sont révélées **incohérentes avec certains concepts** (ex. « Page blanche » avec une animation au pointeur). Règle retenue : **seules les colonnes C (composition) et M (média) et le texte du concept engagent** ; pour chaque modèle construit, les 8 axes sont **déclarés dans le catalogue après conception** (`axes` dans `not_found2.js`), la densité D est **mesurée** (nombre d'éléments de contenu) et le test compare ces valeurs réelles deux à deux, en plus des arbres construits. Les modèles déjà construits sont décrits dans GROUP_01_REPORT.md ; leurs valeurs réelles remplacent celles du tableau.
+
 **Limites honnêtes de cette mesure.**
 - Les axes C et M sont figés par le concept (ils le définissent). Les axes N, A, R, P, T, D ont été **ajustés par un algorithme d'optimisation** pour atteindre les seuils ; chaque assignation devra être relue avec le concept lors de la conception du groupe correspondant (un choix incohérent sera corrigé, pas l'inverse).
 - Une distance élevée dans ce plan ne prouve pas que les rendus diffèrent : la preuve définitive sera la **signature réelle de l'arbre de composition** de chaque modèle construit (types d'éléments, imbrication, grilles), mesurée automatiquement avec les mêmes seuils (voir TEST_PLAN.md, section « diversité »).

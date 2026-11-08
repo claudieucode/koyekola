@@ -96,7 +96,8 @@ describe("Page 404 : bibliothèque → aperçu → site public (vrai serveur)", 
       const base = U(A, `/api/bibliotheque/not_found/${e.key}`);
       const pv = await boss.get(`${base}/apercu`), th = await boss.get(`${base}/vignette`);
       assert.equal(pv.status, 200, e.key); assert.equal(th.status, 200, e.key);
-      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "");
+      // L'aperçu complet marque le <body> « démonstration » et charge le script de la page (comportements réels) ; la vignette, non : c'est voulu, le reste du document doit être identique
+      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/ data-kw-demo="1"/, "").replace(/<script src="[^"]*landing\.js[^"]*"[^>]*><\/script>/, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "");
       assert.equal(core(pv.text), core(th.text), `${e.key} : aperçu = vignette`);
       assert.match(pv.text, /kw-theme-template/, e.key);
       const title = docOf(e.key).children; let t = ""; walk({ children: title }, (x) => { if (x.type === "heading" && x.props.level === "1") t = x.props.text; });
