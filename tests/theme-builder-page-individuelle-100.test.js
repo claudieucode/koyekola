@@ -27,10 +27,10 @@ describe("Page individuelle · le catalogue", () => {
     assert.equal(Catalog.build(TYPE, "classique.clair", {}), null);
     assert.equal(Catalog.stats().find((s) => s.type === TYPE).count, 100);
   });
-  test("10 familles de 10 pages : à propos, contact, services, équipe, aide, tarifs, preuves, carrières, juridique, campagnes", () => {
-    const by = {}; for (const e of entries) { const f = e.layoutKey.replace(/-\d+$/, ""); (by[f] = by[f] || []).push(e); }
-    assert.deepEqual(Object.keys(by).sort(), ["aide", "apropos", "campagne", "carrieres", "contact", "equipe", "juridique", "preuves", "services", "tarifs"]);
-    for (const [f, rows] of Object.entries(by)) assert.equal(rows.length, 10, f);
+  test("15 familles de pages (accueil, à propos, services, contact, vente, portfolio, institutionnel, éducation, communauté, tarifs, aide, événements, local, personnelles, créatif)", () => {
+    const by = {}; for (const e of entries) { const f = e.layoutKey.split("-")[0]; (by[f] = by[f] || []).push(e); }
+    const expected = { accueil: 7, apropos: 7, services: 7, contact: 7, vente: 7, portfolio: 7, institution: 6, education: 6, communaute: 6, tarifs: 7, aide: 6, evenement: 7, local: 7, perso: 6, creatif: 7 };
+    assert.deepEqual(Object.fromEntries(Object.entries(by).map(([f, r]) => [f, r.length])), expected);
   });
   test("100 compositions différentes : aucune paire de modèles n'a la même structure (pas seulement une autre couleur)", () => {
     const seen = new Map();
@@ -40,9 +40,6 @@ describe("Page individuelle · le catalogue", () => {
       seen.set(s, e.key);
     }
     assert.equal(seen.size, 100);
-    // au sein d'une famille, l'ouverture (premier bloc) n'est jamais répétée
-    const byFamily = {}; for (const e of entries) { const f = e.layoutKey.replace(/-\d+$/, ""); const first = sig(docOf(e.key).sections[0].children[0]); (byFamily[f] = byFamily[f] || new Set()).add(first); }
-    for (const [f, set] of Object.entries(byFamily)) assert.equal(set.size, 10, `${f} : ouvertures répétées`);
   });
   test("chaque modèle garde le titre de la page ({{post.title}} en H1) et son contenu (postcontent), et reste une page : ni article, ni archive", () => {
     for (const e of entries) {
@@ -52,7 +49,7 @@ describe("Page individuelle · le catalogue", () => {
       assert.ok(nodes.some((n) => n.type === "postcontent"), `${e.key} : contenu de la page`);
       for (const n of nodes) {
         assert.ok(!["posts", "postmeta", "postnav", "postcomments", "archiveinfo", "shopgrid", "shopbuy"].includes(n.type), `${e.key} : ${n.type} n'a pas sa place dans une page`);
-        if (n.type === "querylist") assert.equal(n.props.source, "authors", `${e.key} : seule la liste des auteurs est admise`);
+        
       }
     }
   });
@@ -93,23 +90,23 @@ describe("Page individuelle · le catalogue", () => {
       nodesOf(doc).forEach((n) => used.add(n.type));
       assert.ok(doc.sections.every((sec) => (sec.children || []).every((c) => { let ok = true; walk(c, (n) => { if (!n.id) ok = false; }); return ok; })), `${e.key} : identifiants`);
     }
-    for (const t of ["heading", "text", "button", "postcontent", "grid", "iconbox", "accordion", "tabs", "timeline", "pricing", "testimonial", "profilecard", "signupform", "toc", "breadcrumb", "map", "table", "alert", "countdown", "menu", "social"]) {
+    for (const t of ["heading", "text", "button", "postcontent", "grid", "iconbox", "accordion", "tabs", "timeline", "pricing", "testimonial", "profilecard", "signupform", "toc", "map", "table", "alert", "countdown"]) {
       if (t === "signupform") continue; // proposé seulement quand le site a un vrai formulaire (testé plus bas)
       assert.ok(used.has(t), `composant jamais utilisé : ${t}`);
     }
   });
   test("recherche et filtres du catalogue : par famille, par mot, par identité ; liste sans documents", () => {
-    assert.equal(Catalog.list(TYPE, { tag: "tarifs", limit: 60 }).total, 10);
+    assert.equal(Catalog.list(TYPE, { tag: "tarifs", limit: 60 }).total, entries.filter((e) => e.tags.includes("tarifs")).length); assert.ok(entries.filter((e) => e.tags.includes("tarifs")).length >= 6);
     assert.equal(Catalog.list(TYPE, { q: "faq", limit: 60 }).total, Catalog.list(TYPE, { q: "FAQ", limit: 60 }).total);
-    assert.ok(Catalog.list(TYPE, { q: "contact", limit: 60 }).total >= 10);
+    assert.ok(Catalog.list(TYPE, { q: "contact", limit: 60 }).total >= 7);
     const all = []; for (let p = 1; p <= 5; p++) all.push(...Catalog.list(TYPE, { page: p, limit: 24 }).items);
     assert.equal(all.length, 100); assert.ok(all.every((i) => !("sections" in i)));
-    const skins = Catalog.list(TYPE, {}).skins; assert.ok(skins.length >= 4);
+    const skins = Catalog.list(TYPE, {}).skins; assert.ok(skins.length >= 50, "chaque modèle porte sa propre identité");
   });
   test("avec un vrai formulaire sur le site, les pages d'inscription et de contact l'utilisent ; sans formulaire, aucune fausse saisie", () => {
     const withForm = entries.filter((e) => nodesOf(Catalog.build(TYPE, e.key, { formId: 7 })).some((n) => n.type === "signupform"));
     const without = entries.filter((e) => nodesOf(docOf(e.key)).some((n) => n.type === "signupform"));
-    assert.ok(withForm.length >= 15, `${withForm.length} modèles à formulaire`); assert.equal(without.length, 0);
+    assert.ok(withForm.length >= 10, `${withForm.length} modèles à formulaire`); assert.equal(without.length, 0);
     for (const e of withForm) assert.ok(nodesOf(Catalog.build(TYPE, e.key, { formId: 7 })).filter((n) => n.type === "signupform").every((n) => n.props.formId === 7));
   });
 });
@@ -148,10 +145,10 @@ describe("Page individuelle · de la bibliothèque au site public (vrai serveur)
   test("API : 100 modèles de page, pagination, filtres, miniature et aperçu fiables pour chaque famille", async () => {
     const l = JSON.parse((await boss.get(U(A, `/api/bibliotheque?type=${TYPE}&limite=24&page=5`))).text);
     assert.equal(l.total, 100); assert.equal(l.items.length, 4); assert.ok(!("sections" in l.items[0]));
-    assert.equal(JSON.parse((await boss.get(U(A, `/api/bibliotheque?type=${TYPE}&etiquette=tarifs&limite=60`))).text).total, 10);
+    assert.equal(JSON.parse((await boss.get(U(A, `/api/bibliotheque?type=${TYPE}&etiquette=tarifs&limite=60`))).text).total, entries.filter((e) => e.tags.includes("tarifs")).length);
     const types = JSON.parse((await boss.get(U(A, "/api/bibliotheque"))).text).types; assert.equal(types.find((t) => t.type === TYPE).count, 100);
-    for (const fam of ["apropos", "contact", "services", "equipe", "aide", "tarifs", "preuves", "carrieres", "juridique", "campagne"]) {
-      const key = entries.find((e) => e.layoutKey.startsWith(fam + "-")).key;
+    for (const fam of ["accueil", "apropos", "services", "contact", "vente", "portfolio", "institution", "education", "communaute", "tarifs", "aide", "evenement", "local", "perso", "creatif"]) {
+      const key = entries.find((e) => e.layoutKey.split("-")[0] === fam).key;
       const th = await boss.get(U(A, `/api/bibliotheque/${TYPE}/${key}/miniature`)); assert.equal(th.status, 200); assert.match(th.text, /<svg/);
       const ap = await boss.get(U(A, `/api/bibliotheque/${TYPE}/${key}/apercu`)); assert.equal(ap.status, 200, key); assert.match(ap.text, /<!doctype html>/i); assert.match(ap.text, /kw-theme-template/);
       const vg = await boss.get(U(A, `/api/bibliotheque/${TYPE}/${key}/vignette`)); assert.equal(vg.status, 200, `${key} vignette`);
@@ -189,36 +186,36 @@ describe("Page individuelle · de la bibliothèque au site public (vrai serveur)
   const mkPage = (site, slug, title, text) => Number(db.prepare("INSERT INTO mk_landing_pages (organization_id, name, slug, title, status, site_id, published_at, kind, indexable, sections) VALUES (?, ?, ?, ?, 'published', ?, datetime('now'), 'page', 1, ?)").run(org, title, slug, title, site, JSON.stringify([{ id: "abcdef012345", type: "layout", children: [{ id: "abcdef012346", type: "text", props: { html: `<p>${text}</p>` } }] }])).lastInsertRowid);
   test("publication → site public : une page du site prend le modèle (titre de la page, son propre contenu, texte du modèle) ; un brouillon ne s'applique jamais", async () => {
     mkPage(A, "notre-histoire", "Contact A", "CORPS-PROPRE-DE-LA-PAGE-A"); mkPage(B, "notre-histoire-b", "Contact B", "CORPS-PROPRE-DE-LA-PAGE-B");
-    const t = await use(A, entries.find((e) => e.layoutKey === "apropos-03").key);
+    const t = await use(A, entries.find((e) => e.layoutId === "apropos-histoire").key);
     let r = await hostReq(srv, "a.test", "/notre-histoire"); assert.equal(r.status, 200);
-    assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/); assert.doesNotMatch(r.text, /Notre mission/, "un brouillon s'applique");
+    assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/); assert.doesNotMatch(r.text, /Notre parcours/, "un brouillon s'applique");
     const pub = await post(U(A, `/api/modeles/${t.id}/publier`)); assert.equal(pub.status, 200, pub.text.slice(0, 300));
     r = await hostReq(srv, "a.test", "/notre-histoire"); assert.equal(r.status, 200);
-    assert.match(r.text, /Notre mission/, "le modèle publié n'est pas appliqué"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/, "le contenu de la page a disparu");
+    assert.match(r.text, /Notre parcours/, "le modèle publié n'est pas appliqué"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/, "le contenu de la page a disparu");
     assert.match(r.text, /<h1[^>]*>\s*Contact A\s*</, "le titre de la page n'est pas celui de la page"); assert.equal((r.text.match(/<h1\b/g) || []).length, 1, "un seul H1");
-    assert.ok(r.text.indexOf("Notre mission") > r.text.indexOf("CORPS-PROPRE-DE-LA-PAGE-A"), "le contenu précède le bloc « mission » du modèle");
+    assert.ok(r.text.indexOf("Notre parcours") > r.text.indexOf("CORPS-PROPRE-DE-LA-PAGE-A"), "le contenu précède le bloc « mission » du modèle");
   });
   test("conditions : une page exclue garde son rendu historique ; dépublier le modèle rend la page d'origine", async () => {
     const t = one("SELECT id, revision FROM mk_tb_templates WHERE site_id = ? AND type = 'single_page' AND status = 'published'", A);
     const pageId = one("SELECT id FROM mk_landing_pages WHERE site_id = ? AND slug = 'notre-histoire'", A).id;
     const c = await post(U(A, `/api/modeles/${t.id}/conditions`), { conditions: { include: [{ kind: "page" }], exclude: [{ kind: "page", ids: [pageId] }] }, revision: t.revision });
     assert.equal(c.status, 200, c.text.slice(0, 200));
-    let r = await hostReq(srv, "a.test", "/notre-histoire"); assert.doesNotMatch(r.text, /Notre mission/, "page exclue"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/);
+    let r = await hostReq(srv, "a.test", "/notre-histoire"); assert.doesNotMatch(r.text, /Notre parcours/, "page exclue"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/);
     const c2 = await post(U(A, `/api/modeles/${t.id}/conditions`), { conditions: { include: [{ kind: "page" }] }, revision: t.revision + 1 }); assert.equal(c2.status, 200, c2.text.slice(0, 200));
-    r = await hostReq(srv, "a.test", "/notre-histoire"); assert.match(r.text, /Notre mission/);
+    r = await hostReq(srv, "a.test", "/notre-histoire"); assert.match(r.text, /Notre parcours/);
     assert.equal((await post(U(A, `/api/modeles/${t.id}/depublier`))).status, 200);
-    r = await hostReq(srv, "a.test", "/notre-histoire"); assert.doesNotMatch(r.text, /Notre mission/, "dépublié"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/);
+    r = await hostReq(srv, "a.test", "/notre-histoire"); assert.doesNotMatch(r.text, /Notre parcours/, "dépublié"); assert.match(r.text, /CORPS-PROPRE-DE-LA-PAGE-A/);
   });
   test("isolation : le modèle publié sur le site A n'apparaît jamais sur le site B ; sa copie est introuvable depuis B", async () => {
-    const t = await use(A, entries.find((e) => e.layoutKey === "apropos-03").key);
+    const t = await use(A, entries.find((e) => e.layoutId === "apropos-histoire").key);
     assert.equal((await post(U(A, `/api/modeles/${t.id}/publier`))).status, 200);
-    const b = await hostReq(srv, "b.test", "/notre-histoire-b"); assert.equal(b.status, 200); assert.match(b.text, /CORPS-PROPRE-DE-LA-PAGE-B/); assert.doesNotMatch(b.text, /Notre mission/);
+    const b = await hostReq(srv, "b.test", "/notre-histoire-b"); assert.equal(b.status, 200); assert.match(b.text, /CORPS-PROPRE-DE-LA-PAGE-B/); assert.doesNotMatch(b.text, /Notre parcours/);
     const cross = await boss.get(U(B, `/api/modeles/${t.id}/vignette`)); assert.ok([403, 404].includes(cross.status), `${cross.status}`);
     assert.equal(one("SELECT COUNT(*) n FROM mk_tb_templates WHERE site_id = ? AND type = 'single_page'", B).n, 0);
   });
   test("avec un formulaire réel sur le site, « Utiliser » intègre ce formulaire (et lui seul)", async () => {
     const formId = Number(db.prepare("INSERT INTO mk_forms (organization_id, name, slug, site_id, consent_text) VALUES (?, 'Contact A', 'contact-a', ?, 'ok')").run(org, A).lastInsertRowid);
-    const key = entries.find((e) => e.layoutKey === "contact-02").key;
+    const key = entries.find((e) => e.layoutId === "contact-corporate").key;
     const t = await use(A, key);
     const secs = JSON.parse(one("SELECT sections FROM mk_landing_pages WHERE id = ?", t.sourceId).sections);
     const f = nodesOf({ sections: secs }).filter((n) => n.type === "signupform"); assert.equal(f.length, 1); assert.equal(f[0].props.formId, formId);

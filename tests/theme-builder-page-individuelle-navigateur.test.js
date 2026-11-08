@@ -38,7 +38,9 @@ describe("Page individuelle · 100 modèles dans Chrome (desktop, tablette, mobi
     for (const e of root.querySelectorAll("*")) {
       if (!vis(e)) continue;
       const r = e.getBoundingClientRect();
-      if (r.right > vw + 2 && getComputedStyle(e).position !== "fixed") { defects.push(`dépasse à droite : ${e.tagName.toLowerCase()}.${String(e.className).split(" ")[0]} (${Math.round(r.right)} > ${vw})`); break; }
+      // un élément qui défile volontairement à l'intérieur d'un cadre qui découpe (bandeau défilant) ne fait pas déborder la page
+      const clipped = (() => { for (let a = e.parentElement; a && a !== root; a = a.parentElement) { const o = getComputedStyle(a).overflowX; if (o === "hidden" || o === "clip" || o === "auto" || o === "scroll") return a.getBoundingClientRect().right <= vw + 2; } return false; })();
+      if (r.right > vw + 2 && !clipped && getComputedStyle(e).position !== "fixed") { defects.push(`dépasse à droite : ${e.tagName.toLowerCase()}.${String(e.className).split(" ")[0]} (${Math.round(r.right)} > ${vw})`); break; }
     }
     // blocs frères d'une grille ou d'une ligne qui se chevauchent
     for (const e of root.querySelectorAll("*")) {
