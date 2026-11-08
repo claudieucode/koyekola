@@ -33,6 +33,18 @@ const LOCATION_LABEL = { header: "En-tête", footer: "Pied de page", mobile: "Mo
 // En-tête qui s'applique à l'accueil du site (Theme Builder). Réglages de COMPORTEMENT (collé, superposé, masqué au défilement…) modifiables d'ici seulement si :
 //  · le composant appartient à CE site (jamais un composant partagé : le modifier changerait d'autres sites) ;
 //  · il n'a pas de modifications non publiées dans le Theme Builder (elles seraient publiées sans que la personne les ait vues).
+// Pied de page qui s'applique à l'accueil du site : lecture seule (nom, lien vers son éditeur) ; il se compose dans le Theme Builder, son unique gestionnaire.
+const footerOf = (req, t) => {
+  try {
+    const ctx = req.mk.ctx;
+    if (!TB.hasParts(ctx, t.siteId)) return null;
+    const win = TB.resolveParts(ctx, t.siteId, { ...TB.defaultContext(t.siteId, "/"), visitor: { loggedIn: false } });
+    if (!win.footer) return null;
+    const c = pages.getComponent(ctx, Number(win.footer.sourceId));
+    if (!c || !c.section) return null;
+    return { id: c.id, name: win.footer.name || c.name, editUrl: `/marketing/site-web/composants/${c.id}/editeur` };
+  } catch { return null; }
+};
 const headerOf = (req, t) => {
   try {
     const ctx = req.mk.ctx;
@@ -45,7 +57,7 @@ const headerOf = (req, t) => {
     if (t.readOnly) reason = "Ce site est archivé ou supprimé : restaurez-le avant de le modifier.";
     else if (c.site_id === null || c.site_id !== t.siteId) reason = "Cet en-tête est partagé entre plusieurs sites : modifiez-le dans le Theme Builder pour ne pas changer les autres sites.";
     else if (c.hasDraft) reason = "Cet en-tête a des modifications non publiées dans le Theme Builder : publiez-les ou annulez-les avant de régler son comportement ici.";
-    return { component: c, info: { id: c.id, name: win.header.name || c.name, settings: headerSettings.resolve(c.section), editable: !reason, reason } };
+    return { component: c, info: { id: c.id, name: win.header.name || c.name, settings: headerSettings.resolve(c.section), editable: !reason, reason, editUrl: `/marketing/site-web/composants/${c.id}/editeur` } };
   } catch { return null; }
 };
 
@@ -82,6 +94,7 @@ module.exports = () => {
       global: { ...gs.uiSpec(t.siteId), base: siteStyles.liveBase(req.mk.ctx, t.siteId) },
       menus, zones, home: { id: homeId, pages: homePages },
       header: (() => { const h = headerOf(req, t); return h ? h.info : null; })(),
+      footer: footerOf(req, t),
       links: {
         close: t.principal ? "/marketing" : `/marketing/site-web/sites/${t.siteId}/tableau-de-bord`,
         menus: t.principal ? "/marketing/site-web/navigation" : `/marketing/site-web/navigation?site=${t.siteId}`,
