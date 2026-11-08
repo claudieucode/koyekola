@@ -1,0 +1,10 @@
+<%# Livraison et retours (src/marketing/pages/widgets/footer.js). Variables : p, d (delivery, returns, empty), cls, attrs, isBuilder. %>
+<% if (d && !d.empty) { %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (d.delivery) { %><p class="kw-biz-block"><% if (p.showIcon) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("send", { size: 18 }) %></span><% } %><span class="kw-biz-text"><strong>Livraison : </strong><%= d.delivery %></span></p><% } %>
+  <% if (d.returns) { %><p class="kw-biz-block"><% if (p.showIcon) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("arrowLeft", { size: 18 }) %></span><% } %><span class="kw-biz-text"><strong>Retours : </strong><%= d.returns %></span></p><% } %>
+</div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Livraison et retours : aucun texte. Écrivez-le dans Paramètres → Données de l’entreprise.</p></div>
+<% } %>

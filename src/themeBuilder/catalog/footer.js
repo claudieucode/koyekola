@@ -3,7 +3,11 @@
 //   C(colonnes, o)   colonnes Flexbox qui passent à la ligne (largeur minimale, poids relatif en 1er élément du tableau) — le standard du tutoriel Elementor « pied avec conteneurs » ;
 //   L(gauche, droite, o)  une ligne à deux zones (« space-between ») ;  T(g, c, d, o)  trois zones, le centre étant vraiment centré ;  Z(éléments, o)  pile centrée.
 // Les éléments sont des widgets natifs du Page Builder : logo et titre du site, menus AFFECTÉS (emplacements « Pied de page » et « En-tête » : aucun lien de navigation inventé), listes dynamiques
-// (catégories, articles, formations), recherche, compte, mini-panier, formulaire d'inscription RÉEL du site, réseaux, coordonnées, carte, boutons, liens légaux, copyright.
+// (catégories, articles, formations), recherche, compte, mini-panier, formulaire d'inscription RÉEL du site, réseaux, carte, boutons, copyright.
+// Chantier F : les modèles lisent les DONNÉES D'ENTREPRISE du site avec les widgets « Pied de page » (coordonnées, téléphone, e-mail, horaires, informations légales, paiements, livraison, retour en haut,
+// copyright au nom de l'entreprise) au lieu de textes figés. Ces widgets n'affichent RIEN tant que le site n'a pas renseigné ses données : chaque colonne ou rangée qui en contient garde donc toujours
+// un élément permanent (titre, bouton ou lien) pour ne jamais laisser un trou. Aucune donnée d'exemple n'est écrite dans un modèle.
+// États au survol et au focus (modèle de données `states` du moteur) et zones cliquables d'au moins 44 px sur mobile : voir finishNode().
 // Responsive : aucune position absolue ; les colonnes ont une largeur minimale et passent à la ligne ; les lignes se replient en pile sous 640 px.
 // Voir docs/theme-builder/kolakisa-footer-library.md pour la grammaire des rangées et l'ajout d'un modèle.
 const { kit, sty } = require("./kit");
@@ -32,12 +36,61 @@ const tone = (S, bg) => {
 };
 const PAD = { xs: "10px", sm: "16px", md: "", lg: "44px", xl: "64px" };
 const NETWORKS = [{ network: "facebook", url: "https://www.facebook.com/" }, { network: "linkedin", url: "https://www.linkedin.com/" }, { network: "instagram", url: "https://www.instagram.com/" }, { network: "youtube", url: "https://www.youtube.com/" }];
+// ── Contraste (WCAG) et états des liens et boutons ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
+const lumOf = (h) => { const v = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+const isHex6 = (c) => typeof c === "string" && /^#[0-9a-f]{6}$/i.test(c);
+const contrastOf = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+const rgbOf = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const hexOf = (v) => `#${v.map((x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, "0")).join("")}`;
+// Fond réel d'une couleur éventuellement semi-transparente (#rrggbbaa) posée sur le fond de la rangée
+const flat = (c, bg) => { if (isHex6(c)) return c; if (!(typeof c === "string" && /^#[0-9a-f]{8}$/i.test(c)) || !isHex6(bg)) return null; const a = parseInt(c.slice(7, 9), 16) / 255, f = rgbOf(c.slice(0, 7)), b = rgbOf(bg); return hexOf(f.map((x, i) => x * a + b[i] * (1 - a))); };
+// Le texte secondaire (« mute ») doit rester lisible (≥ 4,5:1) sur le fond ET sur le fond alterné des cartes : sinon on le rapproche progressivement de la couleur du texte
+function legible(S) {
+  if (!isHex6(S.mute) || !isHex6(S.fg) || !isHex6(S.bg)) return S;
+  const backs = [S.bg, flat(S.alt, S.bg)].filter(Boolean), a = rgbOf(S.mute), b = rgbOf(S.fg);
+  let mute = S.mute;
+  for (let t = 0; t <= 1.0001 && !backs.every((x) => contrastOf(mute, x) >= 4.5); t += 0.05) mute = hexOf(a.map((v, i) => v + (b[i] - v) * t));
+  return mute === S.mute ? S : { ...S, mute };
+}
+const FOCUS = (S) => ({ outlineStyle: "solid", outlineWidth: "2px", outlineColor: S.fg, outlineOffset: "3px" });
+// Survol d'un lien : souligné, et couleur d'accent seulement si elle reste lisible (≥ 4,5:1) sur le fond de la rangée
+const linkStates = (S) => ({ hover: { textDecoration: "underline", ...(isHex6(S.accent) && isHex6(S.bg) && contrastOf(S.accent, S.bg) >= 4.5 ? { color: S.accent } : {}) }, focus: FOCUS(S) });
+// Survol d'un bouton : les deux couleurs du bouton s'inversent (même contraste que l'état normal)
+const buttonStates = (S, solid) => ({ hover: solid ? { backgroundColor: S.onAccent, color: S.accent, borderStyle: "solid", borderWidth: "1.5px", borderColor: S.accent } : { backgroundColor: S.accent, color: S.onAccent }, focus: FOCUS(S) });
+const T44 = { minHeight: "44px", display: "inline-flex", alignItems: "center" };
+const mergePart = (node, key, add) => { const cur = (node.parts || {})[key] || {}; node.parts = { ...(node.parts || {}), [key]: { ...cur, styles: { ...(cur.styles || {}), ...(add.styles ? Object.fromEntries(Object.entries(add.styles).map(([bp, v]) => [bp, { ...((cur.styles || {})[bp] || {}), ...v }])) : {}) }, ...(add.states ? { states: add.states } : {}) } }; };
+// Applique à un élément (et à ses enfants) les états survol / focus et les zones cliquables de 44 px sur mobile. Mutation sur des nœuds fraîchement construits.
+function finishNode(S, n) {
+  for (const c of n.children || []) finishNode(S, c);
+  // le site impose sa police aux liens : les liens des widgets de données reprennent la police (et la casse) de l'identité, comme les autres liens du pied
+  const fam = S.font && S.font.startsWith("font.") ? { fontFamily: S.font } : {}, caps = S.caps && S.caps !== "none" ? { textTransform: S.caps, letterSpacing: S.track } : {};
+  const mobile = (st) => { n.styles = { ...(n.styles || {}), mobile: { ...((n.styles || {}).mobile || {}), ...st } }; };
+  if (n.type === "link") { n.states = linkStates(S); mobile(T44); }
+  else if (n.type === "button") { const solid = n.props && n.props.variant === "primary"; n.states = buttonStates(S, solid); mobile({ ...T44, justifyContent: "center" }); }
+  else if (n.type === "menu") mergePart(n, "link", { styles: { mobile: { paddingTop: "12px", paddingBottom: "12px" } }, states: linkStates(S) });
+  else if (n.type === "account") mergePart(n, "link", { styles: { mobile: { paddingTop: "12px", paddingBottom: "12px" } }, states: linkStates(S) });
+  else if (n.type === "minicart") { n.states = linkStates(S); mobile(T44); }
+  else if (n.type === "social") mergePart(n, "link", { styles: { mobile: { width: "44px", height: "44px" } }, states: { hover: { opacity: 0.8 }, focus: FOCUS(S) } });
+  else if (["bizcontact", "bizphone", "bizemail", "bizlegal"].includes(n.type)) {
+    mergePart(n, "link", { styles: { desktop: n.type === "bizlegal" ? { ...fam, ...caps } : fam, mobile: { paddingTop: "14px", paddingBottom: "14px" } }, states: linkStates(S) });
+    if (n.type === "bizcontact" || n.type === "bizlegal") mergePart(n, "item", { styles: { mobile: { minHeight: "44px", alignItems: "center" } } });
+  } else if (n.type === "backtotop") mergePart(n, "button", { styles: { desktop: { ...fam, ...caps }, mobile: { height: "44px" } }, states: { hover: { textDecoration: "underline" }, focus: FOCUS(S) } });
+  else if (n.type === "sitetitle") { // lien du titre du site : marge haute et basse pour atteindre ~44 px selon la taille de la police
+    const f = parseInt(((n.styles || {}).desktop || {}).fontSize, 10) || 22, pad = Math.max(0, Math.ceil((46 - 1.2 * f) / 2));
+    if (pad) mergePart(n, "link", { styles: { mobile: { paddingTop: `${pad}px`, paddingBottom: `${pad}px` } }, states: linkStates(S) }); else mergePart(n, "link", { states: linkStates(S) });
+  } else if (n.type === "sitelogo") { // logo : image portée à 44 px de haut sur mobile si elle est plus petite ; logo texte (site sans logo) : marges haute et basse
+    mergePart(n, "text", { styles: { mobile: { paddingTop: "5px", paddingBottom: "5px" } } });
+    const h = Number(n.props && n.props.height) || 0;
+    if (h && h < 44) mergePart(n, "image", { styles: { mobile: { height: "44px" } } });
+  }
+  return n;
+}
 const ABOUT = "Décrivez en une ou deux phrases votre activité et ce que vos visiteurs trouveront ici.";
 
 // ── Un élément : « nom:arg|libellé|adresse » ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 // center : l'élément est centré (rangées Z et colonnes centrées)
 function item(k, code, env, center) {
-  return ownFont(k.S, code, rawItem(k, code, env, center));
+  return finishNode(k.S, ownFont(k.S, code, rawItem(k, code, env, center)));
 }
 function rawItem(k, code, env, center) {
   const [head, a1, a2, a3] = code.split("|");
@@ -66,8 +119,18 @@ function rawItem(k, code, env, center) {
       if (x === "plain") { n.props.shape = "plain"; n.props.size = "24"; } else if (x === "big") n.props.size = "48"; else if (x === "sq") n.props.shape = "square";
       return n;
     }
-    case "copy": return k.W("copyright", { owner: "", text: "Tous droits réservés." }, { color: S.mute, fontSize: "13px", ...(center || x === "c" ? { textAlign: "center" } : {}) });
-    case "legal": return k.row([k.LINK("Cookies", "/cookies", { fontSize: "13px", fontWeight: "500" }), k.LINK("Contact", "/contact", { fontSize: "13px", fontWeight: "500" }), ...(x === "3" ? [k.LINK("FAQ", "/faq", { fontSize: "13px", fontWeight: "500" })] : [])], { gap: "16px" });
+    // Copyright automatique : année courante + raison sociale des Données de l'entreprise ; sans elle (étiquette vide), le nom du site
+    case "copy": return k.W("copyright", { owner: "{{business.legalname}}", text: "Tous droits réservés." }, { color: S.mute, fontSize: "13px", ...(center || x === "c" ? { textAlign: "center" } : {}) });
+    // Liens légaux : Cookies et Contact (pages de la plateforme) + les pages légales renseignées dans les Données de l'entreprise (mentions, confidentialité, CGV), invisibles tant qu'elles ne le sont pas
+    case "legal": return k.row([k.LINK("Cookies", "/cookies", { fontSize: "13px", fontWeight: "500" }), k.LINK("Contact", "/contact", { fontSize: "13px", fontWeight: "500" }), ...(x === "3" ? [k.LINK("FAQ", "/faq", { fontSize: "13px", fontWeight: "500" })] : []),
+      k.W("bizlegal", { title: "", showName: false, showForm: false, showRegistrations: false, showPublisher: false, showHost: false, showPages: true, layout: "inline" }, { color: S.fg, fontSize: "13px", fontWeight: "500", marginTop: "-8px" })] /* -8 px : annule la marge haute de la liste des pages légales (widget) pour aligner ses liens sur Cookies et Contact */, { gap: "16px" });
+    // Informations légales (raison sociale, forme, immatriculations) ; les pages légales sont déjà dans « legal »
+    case "legalinfo": return k.W("bizlegal", { title: "", showName: true, showForm: true, showRegistrations: true, showPublisher: false, showHost: false, showPages: false, layout: x === "inline" ? "inline" : "stack" }, { color: S.mute, fontSize: "13px", ...mid });
+    case "phone": return k.W("bizphone", { which: "1", prefix: "", showLabel: false, showIcon: true }, { color: S.fg, fontSize: "14px", fontWeight: "600", ...mid });
+    case "email": return k.W("bizemail", { prefix: "", text: "", showIcon: true }, { color: S.fg, fontSize: "14px", fontWeight: "600", ...mid });
+    case "pay": return k.W("bizpayments", { title: a1 || "Paiement accepté", look: "pills", showIcon: false }, { color: S.fg, fontSize: "13px", ...mid });
+    case "deliv": return k.W("bizdelivery", { title: a1 || "Livraison et retours", showDelivery: true, showReturns: true, showIcon: false }, { color: S.mute, fontSize: "14px", ...mid });
+    case "top": return k.W("backtotop", { mode: "inline", side: "right", label: "Retour en haut", showLabel: true, threshold: 300 }, { color: S.fg, fontSize: "13px", fontWeight: "600" });
     case "news": {
       const heading = a1 || "Restez informé", intro = a2 || "Décrivez ici ce que recevront vos abonnés.";
       if (env && env.formId) return k.W("signupform", { formId: env.formId, heading, intro, button: "S'abonner" }, { width: "100%", maxWidth: "460px", ...(center ? { marginLeft: "auto", marginRight: "auto" } : {}) });
@@ -75,11 +138,9 @@ function rawItem(k, code, env, center) {
     }
     case "cta": return k.B(a1 || "Nous contacter", a2 || "/contact", undefined, center ? { alignSelf: "center" } : {});
     case "cta2": return k.B(a1 || "Nous contacter", a2 || "/contact", "outline", { ...(S.bg === "token:primary" ? { color: S.fg, borderColor: S.fg } : {}), ...(center ? { alignSelf: "center" } : {}) });
-    case "contact": {
-      const n = k.W("iconlist", { items: [{ text: "Votre adresse e-mail", icon: "mail" }, { text: "Votre numéro de téléphone", icon: "smartphone" }, { text: "Votre adresse postale", icon: "mapPin" }], iconColor: S.accent, ...(x === "inline" ? { inline: true } : {}) }, { color: S.fg, fontSize: "14px" });
-      return n;
-    }
-    case "hours": return k.T("<p><strong>Horaires</strong><br>Indiquez vos jours et heures d'ouverture.</p>", { color: S.mute, fontSize: "14px", ...mid });
+    // Coordonnées : adresse, téléphone et e-mail CLIQUABLES lus dans les Données de l'entreprise (rien tant qu'ils ne sont pas renseignés : plus de faux texte « Votre adresse e-mail »)
+    case "contact": return k.W("bizcontact", { title: a1 || "", showName: false, showAddress: true, showPhone: true, showEmail: true, showIcons: true, layout: x === "inline" ? "inline" : "stack" }, { color: S.fg, fontSize: "14px", ...mid });
+    case "hours": return k.W("bizhours", { title: a1 === "-" ? "" : a1 || "Horaires d'ouverture", showOpenNow: true, groupDays: true, showExceptions: true, showNote: true, closedLabel: "Fermé" }, { color: S.mute, fontSize: "14px", ...mid });
     case "map": return k.W("map", { address: "France", zoom: 5, height: x === "wide" ? 300 : 240, title: "Carte : remplacez l'adresse par la vôtre" }, { width: "100%", borderRadius: S.radius });
     case "cats": return k.W("querylist", { title: "", source: "categories", mode: "popular", count: 6, layout: "list", showCount: false, empty: "Les catégories apparaîtront ici." }, { color: S.fg, fontSize: "14px" });
     case "recent": return k.W("querylist", { title: "", source: "posts", mode: "recent", count: Number(x) || 3, layout: "compact", showImage: false, showDate: true, empty: "Les articles apparaîtront ici." }, { color: S.fg, fontSize: "14px" });
@@ -110,7 +171,7 @@ function ownFont(S, code, node) {
 
 // ── Une rangée → une bande ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 function band(S0, row, first, env) {
-  const S = tone(S0, row.bg), k = kit(S);
+  const S = legible(tone(S0, row.bg)), k = kit(S);
   const center = !!(row.z || row.center);
   const it = (codes) => codes.map((c) => item(k, c, env, center));
   const padV = PAD[row.pad] || S.pad;
@@ -150,8 +211,10 @@ const L = (l, r, o = {}) => ({ l, r, ...o });
 const T = (l, c, r, o = {}) => ({ t: [l, c, r], ...o });
 const Z = (z, o = {}) => ({ z, ...o });
 const BAR = L(["copy"], ["legal"], { pad: "sm" });
+const BARTOP = L(["copy"], ["legal", "top"], { pad: "sm" }); // barre du bas avec lien « Retour en haut »
 const NAV = ["head|Navigation", "menu"], EXP = ["head|Explorer", "hmenu"];
-const CONTACT = ["head|Contact", "contact"];
+// Colonne de coordonnées : le titre et le lien vers la page de contact restent toujours ; adresse, téléphone et e-mail s'y ajoutent dès que le site les a renseignés
+const CONTACT = ["head|Contact", "contact", "link|Nous écrire|/contact"];
 
 const LAYOUTS = [];
 const fam = (family, models) => {
@@ -203,7 +266,7 @@ fam("colonnes", [
 
 fam("newsletter", [
   ["newsletter-carte-centree", "Abonnement en carte centrée", ["newsletter", "carte", "centré"], "Bloc d'abonnement mis en avant au centre, copyright dessous.", [Z(["news|Recevez nos nouveautés|Une lettre de temps en temps, sans spam.", "copy:c"], { pad: "lg", gap: "26px" })]],
-  ["newsletter-et-menus", "Abonnement et deux menus", ["newsletter", "navigation", "complet"], "Grande colonne d'abonnement, navigation du pied et navigation du site.", [C([[2, "news|Restez informé|Décrivez ici ce que recevront vos abonnés."], NAV, EXP]), BAR]],
+  ["newsletter-et-menus", "Abonnement et deux menus", ["newsletter", "navigation", "complet"], "Grande colonne d'abonnement, navigation du pied et navigation du site.", [C([[2, "news|Restez informé|Décrivez ici ce que recevront vos abonnés."], NAV, EXP]), BARTOP]],
   ["newsletter-bandeau-couleur", "Bandeau d'abonnement coloré", ["bandeau", "newsletter", "accent"], "Bandeau d'abonnement de couleur au-dessus d'un pied compact.", [Z(["news|Ne manquez rien|Inscrivez-vous pour recevoir les prochaines nouvelles."], { bg: "accent", pad: "lg" }), L(["logo:32", "menuh"], ["copy"], { pad: "sm" })]],
   ["newsletter-marque-a-gauche", "Marque et abonnement à gauche", ["asymétrique", "newsletter", "marque"], "Marque, présentation et abonnement dans la grande colonne ; deux fines colonnes de liens.", [C([[3, "logo", "about", "news|Abonnez-vous|Recevez les nouveautés dans votre boîte."], NAV, EXP]), BAR]],
   ["newsletter-et-reseaux", "Abonnement et réseaux", ["newsletter", "réseaux", "horizontal"], "Abonnement à gauche, réseaux à droite, copyright dessous.", [L(["news|Restez informé|Une idée, une actualité, de temps en temps."], ["social"], { pad: "lg" }), Z(["copy:c"], { pad: "xs" })]],
@@ -211,25 +274,25 @@ fam("newsletter", [
   ["newsletter-deux-rangees", "Deux rangées : invitation puis liens", ["newsletter", "deux rangées", "marque"], "Rangée d'invitation (titre et abonnement), rangée de marque, navigation et réseaux.", [C([[1, "H|Restez informé|2"], [1, "news|Recevoir les nouveautés|Moins d'un message par mois."]], { pad: "lg" }), C([[2, "logo", "about"], NAV, ["head|Suivez-nous", "social"]], { bg: "alt" }), Z(["copy:c"], { pad: "sm" })]],
   ["newsletter-compacte", "Abonnement compact", ["compact", "newsletter", "copyright"], "Un abonnement et le copyright, sur une ligne.", [L(["news|S'abonner|Les nouveautés par e-mail."], ["copy"], { pad: "md" })]],
   ["newsletter-reseaux-centres", "Abonnement, réseaux et copyright centrés", ["centré", "newsletter", "réseaux"], "Pile centrée : abonnement, réseaux, copyright.", [Z(["news|Suivez l'actualité|Un e-mail, jamais plus.", "social", "copy:c"], { pad: "lg" })]],
-  ["newsletter-blog", "Abonnement, récents et rubriques", ["blog", "newsletter", "articles récents"], "Abonnement, articles récents et catégories du blog.", [C([[2, "news|S'abonner au blog|Chaque nouvel article dans votre boîte."], ["head|Récents", "recent:3"], ["head|Rubriques", "cats"]]), BAR]],
+  ["newsletter-blog", "Abonnement, récents et rubriques", ["blog", "newsletter", "articles récents"], "Abonnement, articles récents et catégories du blog.", [C([[2, "news|S'abonner au blog|Chaque nouvel article dans votre boîte."], ["head|Récents", "recent:3"], ["head|Rubriques", "cats"]]), BARTOP]],
 ]);
 
 fam("contact", [
-  ["coordonnees-trois-colonnes", "Coordonnées en trois colonnes", ["contact", "coordonnées", "classique"], "Marque, navigation, coordonnées et horaires.", [C([[2, "logo", "about"], NAV, ["head|Contact", "contact", "hours"]]), BAR]],
-  ["carte-a-droite", "Coordonnées et carte à droite", ["carte", "contact", "adresse"], "Marque, coordonnées et horaires à gauche ; carte à droite.", [C([[2, "logo", "about", "contact", "hours"], [3, "map"]], { pad: "lg" }), BAR]],
-  ["carte-pleine-largeur", "Carte large sous les colonnes", ["carte", "colonnes", "large"], "Trois colonnes de contact et de liens, puis une carte pleine largeur.", [C([[2, "logo", "about"], NAV, CONTACT]), C([["map:wide"]], { pad: "xs" }), BAR]],
-  ["coordonnees-bandeau-couleur", "Bandeau de coordonnées coloré", ["bandeau", "contact", "accent"], "Bandeau de couleur : coordonnées en ligne et bouton ; navigation dessous.", [L(["contact:inline"], ["cta2|Nous écrire|/contact"], { bg: "accent", pad: "md" }), L(["logo:32", "menuh"], ["copy"], { pad: "sm" })]],
-  ["contact-rendez-vous", "Contact et rendez-vous", ["rendez-vous", "contact", "bouton"], "Marque, coordonnées et un bouton « Prendre rendez-vous ».", [C([[2, "logo", "about"], CONTACT, ["head|Un échange ?", "text|Choisissez un créneau qui vous convient.", "cta|Prendre rendez-vous|/contact"]]), BAR]],
-  ["horaires-et-carte", "Horaires, carte et navigation", ["horaires", "carte", "commerce local"], "Horaires, carte et navigation en trois colonnes.", [C([["head|Horaires", "hours", "cta2|Nous contacter|/contact"], [2, "head|Nous trouver", "map"], NAV]), Z(["copy:c"], { pad: "sm" })]],
+  ["coordonnees-trois-colonnes", "Coordonnées en trois colonnes", ["contact", "coordonnées", "classique"], "Marque, navigation, coordonnées cliquables et horaires lus dans les Données de l'entreprise.", [C([[2, "logo", "about"], NAV, ["head|Contact", "contact", "hours", "link|Nous écrire|/contact"]]), BARTOP]],
+  ["carte-a-droite", "Coordonnées et carte à droite", ["carte", "contact", "adresse"], "Marque, coordonnées et horaires à gauche ; carte à droite.", [C([[2, "logo", "about", "contact", "hours"], [3, "map"]], { pad: "lg" }), BARTOP]],
+  ["carte-pleine-largeur", "Carte large sous les colonnes", ["carte", "colonnes", "large"], "Trois colonnes de contact et de liens, puis une carte pleine largeur.", [C([[2, "logo", "about"], NAV, CONTACT]), C([["map:wide"]], { pad: "xs" }), BARTOP]],
+  ["coordonnees-bandeau-couleur", "Bandeau de coordonnées coloré", ["bandeau", "contact", "accent"], "Bandeau de couleur : coordonnées en ligne et bouton ; navigation dessous.", [L(["H|Une question ?|3", "contact:inline"], ["cta2|Nous écrire|/contact"], { bg: "accent", pad: "md" }), L(["logo:32", "menuh"], ["copy"], { pad: "sm" })]],
+  ["contact-rendez-vous", "Contact et rendez-vous", ["rendez-vous", "contact", "bouton"], "Marque, coordonnées et un bouton « Prendre rendez-vous ».", [C([[2, "logo", "about"], CONTACT, ["head|Un échange ?", "text|Choisissez un créneau qui vous convient.", "cta|Prendre rendez-vous|/contact", "phone"]]), BARTOP]],
+  ["horaires-et-carte", "Horaires, carte et navigation", ["horaires", "carte", "commerce local"], "Horaires d'ouverture (avec « ouvert maintenant »), carte et navigation en trois colonnes.", [C([["head|Horaires", "hours|-", "cta2|Nous contacter|/contact"], [2, "head|Nous trouver", "map"], NAV]), Z(["copy:c"], { pad: "sm" })]],
   ["contact-et-reseaux", "Contact, réseaux et liens", ["contact", "réseaux", "présentation"], "Présentation et coordonnées, réseaux, navigation.", [C([[2, "title:22", "about", "contact"], ["head|Suivez-nous", "social"], NAV]), BAR]],
   ["contact-centre", "Coordonnées centrées", ["centré", "contact", "élégant"], "Logo, coordonnées en ligne, bouton et navigation, centrés.", [Z(["logo:44", "contact:inline", "cta|Nous contacter|/contact", "menuh", "copy:c"], { pad: "lg" })]],
   ["carte-a-gauche", "Carte à gauche, contact à droite", ["carte", "contact", "asymétrique"], "Grande carte à gauche, coordonnées, horaires et bouton à droite.", [C([[3, "map"], [2, "head|Nous trouver", "contact", "hours", "cta2|Nous écrire|/contact"]], { pad: "lg" }), BAR]],
-  ["contact-compact", "Contact compact", ["compact", "contact", "réseaux"], "Coordonnées en ligne et réseaux, puis copyright.", [L(["contact:inline"], ["social:plain"], { pad: "sm" }), L(["copy"], ["legal"], { pad: "xs", rule: "thin" })]],
+  ["contact-compact", "Contact compact", ["compact", "contact", "réseaux"], "Coordonnées en ligne et réseaux, puis copyright.", [L(["link|Nous écrire|/contact", "contact:inline"], ["social:plain"], { pad: "sm" }), L(["copy"], ["legal"], { pad: "xs", rule: "thin" })]],
 ]);
 
 fam("reseaux", [
   ["reseaux-centres", "Réseaux centrés", ["réseaux", "centré", "invitation"], "Invitation à suivre, grandes icônes de réseaux centrées, copyright.", [Z(["H|Suivez-nous|3", "social:big", "copy:c"], { pad: "lg" })]],
-  ["reseaux-logo-menu", "Rangée logo, navigation et réseaux", ["réseaux", "logo", "navigation"], "Logo, navigation et icônes de réseaux sur une rangée ; copyright et légal dessous.", [L(["logo:36", "menuh"], ["social"], { pad: "md" }), BAR]],
+  ["reseaux-logo-menu", "Rangée logo, navigation et réseaux", ["réseaux", "logo", "navigation"], "Logo, navigation et icônes de réseaux sur une rangée ; copyright et légal dessous.", [L(["logo:36", "menuh"], ["social"], { pad: "md" }), BARTOP]],
   ["reseaux-colonne-droite", "Réseaux en colonne de droite", ["réseaux", "colonnes", "marque"], "Marque et navigation à gauche, réseaux et bouton à droite.", [C([[2, "logo", "about"], NAV, ["head|Suivez-nous", "social", "cta2|Nous contacter|/contact"]]), BAR]],
   ["reseaux-bandeau-couleur", "Bandeau de réseaux coloré", ["bandeau", "réseaux", "accent"], "Bandeau de couleur : invitation et réseaux ; navigation et copyright dessous.", [L(["H|Rejoignez-nous|3"], ["social:big"], { bg: "accent", pad: "md" }), L(["menuh"], ["copy"], { pad: "sm" })]],
   ["reseaux-trois-liens-legaux", "Réseaux et trois liens légaux", ["légal", "réseaux", "faq"], "Copyright, liens cookies / contact / FAQ et réseaux sans fond.", [L(["copy", "legal:3"], ["social:plain"], { pad: "sm" })]],
@@ -241,41 +304,41 @@ fam("reseaux", [
 ]);
 
 fam("boutique", [
-  ["boutique-quatre-colonnes", "Boutique en quatre colonnes", ["boutique", "compte", "panier"], "Marque, aide, espace client avec panier, accès à la boutique.", [C([[2, "logo", "about"], ["head|Aide", "menu"], ["head|Mon espace", "account", "cart"], ["head|Acheter", "links|La boutique>/boutique|Le catalogue>/catalogue"]]), BAR]],
-  ["boutique-service-client", "Service client et boutique", ["boutique", "service client", "réseaux"], "Marque et réseaux, service client, liens de la boutique.", [C([[2, "logo", "about", "social:plain"], ["head|Service client", "menu", "link|FAQ|/faq"], ["head|Boutique", "links|La boutique>/boutique|Le catalogue>/catalogue|Le blog>/blog"]]), Z(["copy:c"], { pad: "sm" })]],
-  ["boutique-compte-panier", "Compte et panier en ligne", ["compact", "compte", "panier"], "Logo et navigation, compte et mini-panier ; copyright et légal dessous.", [L(["logo:32", "menuh"], ["account", "cart"], { pad: "md" }), BAR]],
-  ["boutique-recherche", "Recherche dans le catalogue", ["recherche", "boutique", "aide"], "Grande recherche du catalogue, aide et espace client.", [C([[2, "head|Rechercher", "search:catalogue"], ["head|Aide", "menu"], ["head|Mon espace", "account"]]), L(["copy"], ["social:plain"], { pad: "sm" })]],
-  ["boutique-offres-newsletter", "Offres par e-mail", ["newsletter", "boutique", "promotions"], "Abonnement aux nouveautés, aide et espace client.", [C([[2, "news|Nos nouveautés|Recevez nos nouveautés et nos offres."], ["head|Boutique", "menu"], ["head|Mon espace", "account", "cart"]]), Z(["copy:c"], { pad: "sm" })]],
+  ["boutique-quatre-colonnes", "Boutique en quatre colonnes", ["boutique", "compte", "panier"], "Marque et moyens de paiement, aide et livraison, espace client avec panier, accès à la boutique.", [C([[2, "logo", "about", "pay"], ["head|Aide", "menu", "deliv"], ["head|Mon espace", "account", "cart"], ["head|Acheter", "links|La boutique>/boutique|Le catalogue>/catalogue"]]), BARTOP]],
+  ["boutique-service-client", "Service client et boutique", ["boutique", "service client", "réseaux"], "Marque et réseaux, service client, liens de la boutique.", [C([[2, "logo", "about", "social:plain"], ["head|Service client", "menu", "link|FAQ|/faq", "phone", "email", "deliv"], ["head|Boutique", "links|La boutique>/boutique|Le catalogue>/catalogue|Le blog>/blog"]]), Z(["pay", "copy:c"], { pad: "sm", gap: "12px" })]],
+  ["boutique-compte-panier", "Compte et panier en ligne", ["compact", "compte", "panier"], "Logo et navigation, compte et mini-panier ; copyright et légal dessous.", [L(["logo:32", "menuh"], ["account", "cart"], { pad: "md" }), L(["copy", "pay"], ["legal", "top"], { pad: "sm" })]],
+  ["boutique-recherche", "Recherche dans le catalogue", ["recherche", "boutique", "aide"], "Grande recherche du catalogue, aide et espace client.", [C([[2, "head|Rechercher", "search:catalogue"], ["head|Aide", "menu", "deliv"], ["head|Mon espace", "account"]]), L(["copy"], ["social:plain"], { pad: "sm" })]],
+  ["boutique-offres-newsletter", "Offres par e-mail", ["newsletter", "boutique", "promotions"], "Abonnement aux nouveautés, aide et espace client.", [C([[2, "news|Nos nouveautés|Recevez nos nouveautés et nos offres."], ["head|Boutique", "menu"], ["head|Mon espace", "account", "cart"]]), Z(["pay", "copy:c"], { pad: "sm", gap: "12px" })]],
   ["boutique-bandeau-appel", "Bandeau d'appel vers la boutique", ["bandeau", "bouton", "boutique"], "Bandeau de couleur invitant à visiter la boutique, puis navigation compacte.", [L(["H|Découvrez la boutique|3"], ["cta2|Voir la boutique|/boutique"], { bg: "accent", pad: "md" }), L(["logo:32", "menuh"], ["copy"], { pad: "sm" })]],
-  ["boutique-formations", "Formations et espace élève", ["formation", "catalogue", "compte"], "Formations récentes, navigation et espace élève.", [C([[3, "head|Nos formations", "courses:3"], NAV, ["head|Espace élève", "account", "cta|Voir le catalogue|/catalogue"]]), BAR]],
+  ["boutique-formations", "Formations et espace élève", ["formation", "catalogue", "compte"], "Formations récentes, navigation et espace élève.", [C([[3, "head|Nos formations", "courses:3"], NAV, ["head|Espace élève", "account", "cta|Voir le catalogue|/catalogue"]]), BARTOP]],
   ["boutique-categories-articles", "Catégories et articles", ["blog", "catégories", "boutique"], "Catégories, articles récents, aide et réseaux.", [C([["head|Catégories", "cats"], ["head|Articles", "recent:3"], ["head|Aide", "menu"], ["head|Suivre", "social"]]), Z(["copy:c"], { pad: "sm" })]],
   ["boutique-mini", "Boutique minimale", ["minimaliste", "panier", "compact"], "Logo, navigation et panier sur une ligne, copyright centré.", [L(["logo:32"], ["menuh", "cart"], { pad: "sm" }), Z(["copy:c"], { pad: "xs" })]],
-  ["boutique-cartes", "Boutique en cartes", ["cartes", "boutique", "compte"], "Trois cartes : marque, aide et espace client.", [C([["logo", "about"], ["head|Aide", "menu"], ["head|Mon espace", "account", "cart"]], { cards: true, pad: "lg" }), Z(["copy:c"], { pad: "sm" })]],
+  ["boutique-cartes", "Boutique en cartes", ["cartes", "boutique", "compte"], "Trois cartes : marque, aide et espace client.", [C([["logo", "about", "pay"], ["head|Aide", "menu", "deliv"], ["head|Mon espace", "account", "cart"]], { cards: true, pad: "lg" }), Z(["copy:c"], { pad: "sm" })]],
 ]);
 
 fam("editorial", [
   ["journal-titre-et-filets", "Titre de journal sous double filet", ["éditorial", "journal", "date"], "Titre centré, rubriques en capitales et date du jour sous double filet.", [Z(["title:34", "menuh:caps", "date"], { rule: "double", pad: "lg", gap: "16px" }), BAR]],
-  ["magazine-trois-listes", "Trois listes d'articles", ["magazine", "populaires", "rubriques"], "À la une, les plus lus et rubriques en trois colonnes.", [C([["head|À la une", "recent:3"], ["head|Les plus lus", "popular:3"], ["head|Rubriques", "cats"]]), L(["copy"], ["social:plain"], { pad: "sm" })]],
+  ["magazine-trois-listes", "Trois listes d'articles", ["magazine", "populaires", "rubriques"], "À la une, les plus lus et rubriques en trois colonnes.", [C([["head|À la une", "recent:3"], ["head|Les plus lus", "popular:3"], ["head|Rubriques", "cats"]]), L(["copy"], ["social:plain", "top"], { pad: "sm" })]],
   ["blog-recherche-et-recents", "Blog, recherche et récents", ["blog", "recherche", "articles récents"], "Présentation avec recherche, articles récents et rubriques.", [C([[2, "title:22", "about", "search:blog"], [2, "head|Articles récents", "recent:4"], ["head|Rubriques", "cats"]]), Z(["copy:c"], { pad: "sm" })]],
-  ["editorial-quatre-colonnes", "Quatre colonnes éditoriales", ["éditorial", "filet épais", "date"], "Titre et présentation, deux navigations et rubriques sous un filet épais.", [C([[2, "title:26", "about"], NAV, EXP, ["head|Rubriques", "cats"]], { rule: "thick" }), L(["copy"], ["date"], { pad: "sm" })]],
-  ["blog-abonnement-et-rubriques", "Abonnement au blog", ["blog", "newsletter", "rubriques"], "Abonnement au blog, rubriques et articles récents.", [C([[2, "news|S'abonner au blog|Chaque nouvel article dans votre boîte."], ["head|Rubriques", "cats"], ["head|Récents", "recent:3"]]), BAR]],
-  ["journal-date-et-reseaux", "Date, réseaux et grand titre", ["journal", "date", "réseaux"], "Date et réseaux, grand titre et rubriques, mentions en bas.", [L(["date"], ["social:plain"], { rule: "thin", pad: "sm" }), Z(["title:40", "menuh:caps"], { pad: "md", gap: "14px" }), BAR]],
+  ["editorial-quatre-colonnes", "Quatre colonnes éditoriales", ["éditorial", "filet épais", "date"], "Titre et présentation, deux navigations et rubriques sous un filet épais.", [C([[2, "title:26", "about"], NAV, EXP, ["head|Rubriques", "cats"]], { rule: "thick" }), L(["copy"], ["date", "top"], { pad: "sm" })]],
+  ["blog-abonnement-et-rubriques", "Abonnement au blog", ["blog", "newsletter", "rubriques"], "Abonnement au blog, rubriques et articles récents.", [C([[2, "news|S'abonner au blog|Chaque nouvel article dans votre boîte."], ["head|Rubriques", "cats"], ["head|Récents", "recent:3"]]), BARTOP]],
+  ["journal-date-et-reseaux", "Date, réseaux et grand titre", ["journal", "date", "réseaux"], "Date et réseaux, grand titre et rubriques, mentions en bas.", [L(["date"], ["social:plain"], { rule: "thin", pad: "sm" }), Z(["title:40", "menuh:caps"], { pad: "md", gap: "14px" }), BARTOP]],
   ["magazine-populaires-et-reseaux", "Populaires, réseaux et à propos", ["magazine", "populaires", "réseaux"], "Grande colonne d'articles populaires, réseaux et présentation.", [C([[3, "head|Articles populaires", "popular:4"], ["head|Suivez-nous", "social"], ["head|À propos", "about"]]), Z(["copy:c"], { pad: "sm" })]],
-  ["blog-a-lire", "À lire aussi", ["blog", "lecture", "compact"], "Grande colonne d'articles à lire, navigation étroite.", [C([[3, "head|À lire aussi", "recent:3"], [1, "menu"]]), L(["copy"], [], { pad: "xs" })]],
+  ["blog-a-lire", "À lire aussi", ["blog", "lecture", "compact"], "Grande colonne d'articles à lire, navigation étroite.", [C([[3, "head|À lire aussi", "recent:3"], [1, "menu"]]), L(["copy"], ["top"], { pad: "xs" })]],
   ["editorial-colophon", "Colophon centré", ["éditorial", "centré", "colophon"], "Titre, présentation, filet, rubriques en capitales et copyright, centrés.", [Z(["title:28", "about", "div", "menuh:caps", "copy:c"], { rule: "double", pad: "lg", max: "760px" })]],
   ["magazine-archives", "Rubriques, récents, populaires, recherche", ["magazine", "recherche", "dense"], "Quatre colonnes de découverte du contenu.", [C([["head|Rubriques", "cats"], ["head|Récents", "recent:4"], ["head|Populaires", "popular:4"], ["head|Rechercher", "search:blog"]]), Z(["copy:c"], { pad: "sm" })]],
 ]);
 
 fam("entreprise", [
-  ["entreprise-bandeau-appel", "Bandeau d'appel, puis trois colonnes", ["entreprise", "appel à l'action", "contact"], "Bandeau de couleur « Prêt à commencer ? », puis marque, navigation, coordonnées.", [L(["H|Prêt à commencer ?|2"], ["cta2|Nous contacter|/contact"], { bg: "accent", pad: "lg" }), C([[2, "logo", "about"], NAV, CONTACT]), BAR]],
-  ["saas-produit-ressources", "Produit, ressources, entreprise", ["saas", "colonnes", "réseaux"], "Marque avec réseaux, puis trois colonnes de liens.", [C([[2, "logo", "about", "social:plain"], ["head|Produit", "menu"], ["head|Ressources", "hmenu"], ["head|Entreprise", "links|Contact>/contact|FAQ>/faq"]]), BAR]],
+  ["entreprise-bandeau-appel", "Bandeau d'appel, puis trois colonnes", ["entreprise", "appel à l'action", "contact"], "Bandeau de couleur « Prêt à commencer ? », puis marque, navigation, coordonnées.", [L(["H|Prêt à commencer ?|2"], ["cta2|Nous contacter|/contact"], { bg: "accent", pad: "lg" }), C([[2, "logo", "about"], NAV, CONTACT]), BARTOP]],
+  ["saas-produit-ressources", "Produit, ressources, entreprise", ["saas", "colonnes", "réseaux"], "Marque avec réseaux, puis trois colonnes de liens.", [C([[2, "logo", "about", "social:plain"], ["head|Produit", "menu"], ["head|Ressources", "hmenu"], ["head|Entreprise", "links|Contact>/contact|FAQ>/faq"]]), BARTOP]],
   ["saas-essai-gratuit", "Invitation à l'essai", ["saas", "inscription", "conversion"], "Invitation à commencer avec deux boutons, puis marque et navigations.", [L(["H|Prêt à commencer ?|2"], ["cta|Commencer|/inscription", "cta2|Nous contacter|/contact"], { bg: "alt", pad: "lg" }), C([[2, "logo", "about"], NAV, EXP]), L(["copy"], ["legal"], { pad: "sm" })]],
-  ["corporate-trois-groupes", "Marque, navigation, contact et bouton", ["corporate", "contact", "bouton"], "Les trois groupes du pied type : marque, navigation, contact avec bouton.", [C([[2, "logo", "about"], NAV, ["head|Contact", "contact", "cta|Nous contacter|/contact"]]), BAR]],
-  ["corporate-rendez-vous", "Navigation et rendez-vous", ["corporate", "rendez-vous", "compact"], "Logo, navigation et bouton de rendez-vous ; mentions dessous.", [L(["logo:36", "menuh"], ["cta|Prendre rendez-vous|/contact"], { pad: "md" }), BAR]],
+  ["corporate-trois-groupes", "Marque, navigation, contact et bouton", ["corporate", "contact", "bouton"], "Les trois groupes du pied type : marque, navigation, contact avec bouton.", [C([[2, "logo", "about"], NAV, ["head|Contact", "contact", "cta|Nous contacter|/contact"]]), BARTOP]],
+  ["corporate-rendez-vous", "Navigation et rendez-vous", ["corporate", "rendez-vous", "compact"], "Logo, navigation et bouton de rendez-vous ; mentions dessous.", [L(["logo:36", "menuh"], ["phone", "cta|Prendre rendez-vous|/contact"], { pad: "md" }), BARTOP]],
   ["saas-compte-et-aide", "Compte, aide et navigation", ["saas", "compte", "connexion"], "Marque, accès au compte (connexion, inscription) et aide.", [C([[2, "logo", "about"], ["head|Compte", "link|Se connecter|/connexion", "link|Créer un compte|/inscription"], ["head|Aide", "menu"]]), Z(["copy:c"], { pad: "sm" })]],
-  ["corporate-reseaux-legal", "Entreprise : réseaux et mentions légales", ["corporate", "réseaux", "légal"], "Titre et présentation, navigation, réseaux ; copyright et trois liens légaux.", [C([[2, "title:22", "about"], NAV, ["head|Nous suivre", "social"]]), L(["copy"], ["legal:3"], { pad: "sm" })]],
-  ["saas-newsletter-produit", "Produit et actualités", ["saas", "newsletter", "navigation"], "Marque, navigation et abonnement aux actualités du produit.", [C([[2, "logo", "about"], NAV, [2, "news|Actualités du produit|Les nouveautés par e-mail."]]), BAR]],
-  ["corporate-sombre-large", "Pied sombre large", ["sombre", "corporate", "large"], "Rangée d'encre : marque, deux navigations, coordonnées ; mentions sur fond alterné.", [C([[2, "logo", "about"], NAV, EXP, CONTACT], { bg: "ink", pad: "lg" }), L(["copy"], ["legal"], { bg: "alt", pad: "sm" })]],
+  ["corporate-reseaux-legal", "Entreprise : réseaux et mentions légales", ["corporate", "réseaux", "légal"], "Titre et présentation, navigation, réseaux ; copyright et trois liens légaux.", [C([[2, "title:22", "about"], NAV, ["head|Nous suivre", "social"]]), L(["copy", "legalinfo:inline"], ["legal:3", "top"], { pad: "sm" })]],
+  ["saas-newsletter-produit", "Produit et actualités", ["saas", "newsletter", "navigation"], "Marque, navigation et abonnement aux actualités du produit.", [C([[2, "logo", "about"], NAV, [2, "news|Actualités du produit|Les nouveautés par e-mail."]]), BARTOP]],
+  ["corporate-sombre-large", "Pied sombre large", ["sombre", "corporate", "large"], "Rangée d'encre : marque, deux navigations, coordonnées ; mentions sur fond alterné.", [C([[2, "logo", "about"], NAV, EXP, CONTACT], { bg: "ink", pad: "lg" }), L(["copy", "legalinfo:inline"], ["legal", "top"], { bg: "alt", pad: "sm" })]],
   ["entreprise-deux-niveaux", "Deux niveaux", ["complet", "deux rangées", "navigation"], "Rangée alternée de navigations, rangée de marque, réseaux et mentions.", [C([NAV, EXP, ["head|Aide", "links|FAQ>/faq|Nous contacter>/contact"]], { bg: "alt", pad: "md" }), T(["logo:32"], ["copy"], ["social:plain"], { pad: "sm" })]],
 ]);
 
@@ -288,8 +351,8 @@ fam("creatif", [
   ["portfolio-titre-et-reseaux", "Portfolio : titre et grands réseaux", ["portfolio", "réseaux", "titre du site"], "Titre du site à gauche, grandes icônes de réseaux à droite ; navigation et copyright.", [L(["title:28"], ["social:big"], { pad: "lg" }), L(["menuh"], ["copy"], { pad: "sm", rule: "thin" })]],
   ["invitation-geante-couleur", "Grande invitation colorée", ["affiche", "réseaux", "accent"], "Grand titre « Restons en contact » et réseaux sur fond de couleur ; navigation dessous.", [Z(["H|Restons en contact|1", "social:big"], { bg: "accent", pad: "xl", gap: "24px" }), L(["menuh"], ["copy"], { pad: "sm" })]],
   ["pile-a-gauche", "Pile à gauche", ["empilé", "gauche", "aéré"], "Une seule colonne alignée à gauche : logo, présentation, navigation, copyright.", [C([["logo:44", "about", "menu", "copy"]], { pad: "lg" })]],
-  ["annonce-et-liens", "Annonce et liens", ["annonce", "pastille", "bouton"], "Pastille « Nouveau » et message avec bouton, puis marque et navigation.", [L(["badge|Nouveau", "text|Une annonce à mettre en avant : modifiez ce message."], ["cta2|En savoir plus|/blog"], { bg: "alt", pad: "sm" }), C([[2, "logo", "about"], NAV, EXP]), BAR]],
-  ["double-bande-cartes", "Marque et cartes alternées", ["cartes", "deux rangées", "fond alterné"], "Rangée de marque et de réseaux, rangée alternée de deux cartes.", [L(["logo:40", "about"], ["social"], { pad: "lg" }), C([["head|Navigation", "menu"], ["head|Contact", "contact"]], { bg: "alt", cards: true, pad: "lg" }), Z(["copy:c"], { pad: "sm" })]],
+  ["annonce-et-liens", "Annonce et liens", ["annonce", "pastille", "bouton"], "Pastille « Nouveau » et message avec bouton, puis marque et navigation.", [L(["badge|Nouveau", "text|Une annonce à mettre en avant : modifiez ce message."], ["cta2|En savoir plus|/blog"], { bg: "alt", pad: "sm" }), C([[2, "logo", "about"], NAV, EXP]), BARTOP]],
+  ["double-bande-cartes", "Marque et cartes alternées", ["cartes", "deux rangées", "fond alterné"], "Rangée de marque et de réseaux, rangée alternée de deux cartes.", [L(["logo:40", "about"], ["social"], { pad: "lg" }), C([["head|Navigation", "menu"], CONTACT], { bg: "alt", cards: true, pad: "lg" }), Z(["copy:c"], { pad: "sm" })]],
 ]);
 
 fam("centre", [
@@ -298,7 +361,7 @@ fam("centre", [
   ["centre-titre-double-filet", "Titre centré sous double filet", ["centré", "éditorial", "filets"], "Titre du site, rubriques en capitales et copyright sous double filet.", [Z(["title:30", "menuh:caps", "copy:c"], { rule: "double", pad: "lg" })]],
   ["centre-abonnement", "Logo, abonnement et navigation centrés", ["centré", "newsletter", "navigation"], "Pile centrée : logo, abonnement, navigation, copyright.", [Z(["logo:40", "news|Restez informé|Les nouveautés dans votre boîte.", "menuh", "copy:c"], { pad: "lg", gap: "22px" })]],
   ["centre-question", "Invitation à nous contacter", ["centré", "bouton", "contact"], "Titre « Une question ? », bouton, navigation, copyright, centrés.", [Z(["H|Une question ?|3", "cta|Nous contacter|/contact", "menuh", "copy:c"], { pad: "lg" })]],
-  ["centre-legal", "Navigation et mentions centrées", ["centré", "légal", "sobre"], "Navigation, liens légaux et copyright centrés.", [Z(["menuh", "legal", "copy:c"], { pad: "md", gap: "12px" })]],
+  ["centre-legal", "Navigation et mentions centrées", ["centré", "légal", "sobre"], "Navigation, liens légaux, informations légales de l'entreprise et copyright centrés.", [Z(["menuh", "legal", "legalinfo:inline", "copy:c"], { pad: "md", gap: "12px" })]],
   ["centre-logo-au-milieu", "Logo au centre, menu et réseaux de part et d'autre", ["logo central", "réseaux", "navigation"], "Navigation à gauche, logo au centre, réseaux à droite ; copyright dessous.", [T(["menuh"], ["logo:44"], ["social:plain"], { pad: "md" }), Z(["copy:c"], { pad: "xs" })]],
   ["centre-presentation", "Présentation centrée", ["centré", "présentation", "réseaux"], "Logo, présentation, navigation, réseaux et copyright, centrés.", [Z(["logo:56", "about", "menuh", "social", "copy:c"], { pad: "xl", gap: "20px" })]],
   ["centre-deux-lignes", "Navigation, filet, copyright", ["centré", "filet", "compact"], "Navigation centrée, filet, copyright centré.", [Z(["menuh", "div", "copy:c"], { pad: "md", gap: "14px", max: "760px" })]],

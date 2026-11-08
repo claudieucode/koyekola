@@ -147,8 +147,28 @@ function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
     const n = (ctx.db.prepare("SELECT COALESCE(MAX(number), 0) m FROM mk_tb_versions WHERE template_id = ?").get(t.id).m) + 1;
     ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify(snapshotOf(ctx, t)), ctx.userId ?? null);
     ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
+    if (t.type === "footer" && t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); if (c) require("./revisions").onPublished(ctx, t.sourceId, c.section); } // révision « publication » du pied
     ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id IS ?").run(t.id, siteId); touch(ctx, siteId, t.id);
     return { template: get(ctx, siteId, id), version: n, conflicts, replaced: replaced.map((o) => ({ id: o.id, name: o.name })) };
+  });
+}
+// Publication avec PORTÉE (chantier B, pied de page) : « Où afficher ce modèle ? » tout le site / conditions personnalisées, appliquée dans la MÊME transaction que la publication.
+// strict : une première publication sans portée choisie est refusée (needsScope) ; sans strict, comportement d'origine de publish().
+function publishScoped(ctx, siteId, id, { scope = null, conditions = null, revision = null, replace = false, strict = false } = {}) {
+  const t = get(ctx, siteId, id);
+  if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le publier.");
+  const first = t.status !== "published" && !ctx.db.prepare("SELECT 1 FROM mk_tb_versions WHERE template_id = ?").get(t.id);
+  if (strict && first && scope !== "site" && scope !== "custom") throw Object.assign(bad("Choisissez d'abord où afficher ce modèle : tout le site ou des conditions personnalisées.", "conflict"), { needsScope: true, conflicts: [] });
+  if (scope !== null && scope !== undefined && scope !== "site" && scope !== "custom") throw Object.assign(bad("Choisissez où afficher ce modèle : tout le site ou des conditions personnalisées.", "conflict"), { needsScope: true, conflicts: [] });
+  if (revision !== null && Number(revision) !== t.revision) throw bad("Ce modèle a été modifié ailleurs : rechargez avant de publier.", "conflict");
+  return transaction(ctx.db, () => {
+    if (scope) {
+      let cond; try { cond = Cond.normalize(conditions === null || conditions === undefined ? t.conditions : conditions, t.type); } catch (e) { throw bad(e.message); }
+      if (scope === "site") cond = { include: [], exclude: cond.exclude };
+      else if (!cond.include.length && !cond.exclude.length) throw bad("Conditions personnalisées : ajoutez au moins une condition (ou choisissez « Tout le site »).");
+      if (JSON.stringify(cond) !== JSON.stringify(t.conditions)) { ctx.db.prepare("UPDATE mk_tb_templates SET conditions = ? WHERE id = ? AND site_id IS ?").run(JSON.stringify(cond), t.id, siteId); touch(ctx, siteId, t.id); }
+    }
+    return publish(ctx, siteId, id, { revision: null, replace });
   });
 }
 function unpublish(ctx, siteId, id) {
@@ -205,4 +225,4 @@ function checkpoint(ctx, siteId, id) {
   ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
   return n;
 }
-module.exports = { checkpoint, byDocument, docName, list, get, bySource, create, rename, setConditions, publish, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };
+module.exports = { checkpoint, byDocument, docName, list, get, bySource, create, rename, setConditions, publish, publishScoped, unpublish, archive, restore, remove, duplicate, versions, restoreVersion, conflictsFor, stampOf, site, MAX_PER_SITE };

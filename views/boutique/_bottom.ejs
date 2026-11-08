@@ -1,5 +1,8 @@
   </main>
+  <%# Pied de page : celui du Theme Builder quand un modèle publié s'applique à la page (même rendu que le blog et les pages du Page Builder, via themeLayout) ; sinon, et sur la page de commande (paiement), le pied fixe d'origine, inchangé. Jamais les deux. %>
+  <% if (typeof themeFooter === "string" && themeFooter && !(typeof keepShopFooter !== "undefined" && keepShopFooter)) { %><%- themeFooter %><% } else { %>
   <footer class="sh-foot"><a href="<%= shop.base %>"><%= shop.name %></a> · <a href="<%= shop.base %>/panier">Panier</a> · <a href="<%= shop.base %>/compte">Mon compte</a></footer>
+  <% } %>
   <script src="<%= asset("/js/boutique.js") %>" defer></script>
   <% if (site && site.assets && site.assets.pack && site.assets.pack.script) { %><%- site.assets.pack.script %><% } %>
 </body>

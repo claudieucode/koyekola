@@ -462,6 +462,64 @@ const PARTS = {
     image: part("Images", "img", IMAGE),
     quote: part("Citations", "blockquote", TEXT_BG),
   },
+  // Widgets « Pied de page » (widgets/footer.js) : titre, icônes, liens, lignes, boutons réglables un à un
+  bizcontact: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Lignes", ".kw-biz-item", { ...LAYOUT, ...TEXT }),
+    icon: part("Icônes", ".kw-biz-icon", ICON),
+    text: part("Textes", ".kw-biz-text", TEXT),
+    link: part("Liens (téléphone, e-mail)", ".kw-biz-link", LINK, ["hover", "focus"]),
+  },
+  bizphone: {
+    icon: part("Icône", ".kw-biz-icon", ICON),
+    prefix: part("Texte avant le numéro", ".kw-biz-prefix", TEXT),
+    link: part("Numéro cliquable", ".kw-biz-link", LINK, ["hover", "focus"]),
+  },
+  bizemail: {
+    icon: part("Icône", ".kw-biz-icon", ICON),
+    prefix: part("Texte avant l'adresse", ".kw-biz-prefix", TEXT),
+    link: part("Adresse cliquable", ".kw-biz-link", LINK, ["hover", "focus"]),
+  },
+  bizhours: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    status: part("Ouvert / fermé", ".kw-biz-status", TEXT),
+    row: part("Lignes des jours", ".kw-biz-row", { ...TEXT, ...LAYOUT }),
+    exceptions: part("Jours spéciaux", ".kw-biz-exceptions", TEXT),
+    note: part("Remarque", ".kw-biz-note", TEXT),
+  },
+  bizlegal: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Lignes", ".kw-biz-item", { ...LAYOUT, ...TEXT }),
+    label: part("Noms (SIRET, RCS…)", ".kw-biz-label", TEXT),
+    link: part("Liens des pages légales", ".kw-biz-link", LINK, ["hover", "focus"]),
+  },
+  bizpayments: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Moyens de paiement", ".kw-biz-pay-item", TEXT_BG),
+    icon: part("Icônes", ".kw-biz-icon", ICON),
+  },
+  bizdelivery: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    block: part("Paragraphes", ".kw-biz-block", { ...LAYOUT, ...TEXT }),
+    icon: part("Icônes", ".kw-biz-icon", ICON),
+  },
+  bizfields: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Lignes", ".kw-biz-item", { ...LAYOUT, ...TEXT }),
+    label: part("Noms", ".kw-biz-label", TEXT),
+  },
+  backtotop: {
+    button: part("Bouton", ".kw-btt-link", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),
+    icon: part("Flèche", ".kw-btt-icon", ICON),
+    text: part("Texte", ".kw-btt-text", TEXT),
+  },
+  emailsubscribe: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    intro: part("Introduction", ".kw-emailsub-intro", TEXT),
+    input: part("Champ e-mail", ".kw-emailsub-form input[type=email]", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),
+    button: part("Bouton", ".kw-emailsub-submit", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    consent: part("Case de consentement", ".kw-emailsub-form .checkbox-row", TEXT),
+  },
 };
 
 // Une propriété est-elle permise pour cette partie ? groupOf : clé → groupe (STYLE_PROPS et propriétés composées)
@@ -489,7 +547,7 @@ function scan(sections, groupOf) {
           const def = defs[key];
           if (!def) { out.push({ id: n.id, type: n.type, part: key, problem: "partie inconnue" }); continue; }
           for (const [scope, set] of [...Object.entries((val && val.styles) || {}), ...Object.entries((val && val.states) || {})]) {
-            if ((val.states || {})[scope] && !def.states.includes(scope)) out.push({ id: n.id, type: n.type, part: key, problem: `état « ${scope} » non proposé` });
+            if ((val.states || {})[scope] && !def.states.includes(String(scope).split("@")[0])) out.push({ id: n.id, type: n.type, part: key, problem: `état « ${scope} » non proposé` });
             for (const k of Object.keys(set || {})) if (!allows(def, k, groupOf)) out.push({ id: n.id, type: n.type, part: key, prop: k, scope, problem: "réglage non proposé pour cette partie" });
           }
         }

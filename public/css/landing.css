@@ -1715,4 +1715,54 @@ html.kw-noscroll { overflow: hidden; }
 .kw-marquee-item:has(.kw-marquee-img) { display: inline-flex; align-items: center; }
 
 .kw-st-vis { display: inline; }
-.kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::before, .kw-menu-burger.is-lines2[aria-expanded="true"] > span[aria-hidden]::after { top: 1px; }
+
+/* Widgets « Pied de page » (coordonnées, téléphone, e-mail, horaires, informations légales, paiements, livraison, champs personnalisés) :
+   couleurs héritées du pied (currentColor) ; tout se règle ensuite par l'onglet Style de chaque élément. */
+.kw-bizcontact, .kw-bizphone, .kw-bizemail, .kw-bizhours, .kw-bizlegal, .kw-bizpayments, .kw-bizdelivery, .kw-bizfields, .kw-emailsubscribe { overflow-wrap: anywhere; }
+.kw-biz-title { margin: 0 0 8px; font-weight: 700; }
+.kw-biz-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.kw-bizcontact.is-inline .kw-biz-list, .kw-bizlegal.is-inline .kw-biz-list { flex-direction: row; flex-wrap: wrap; gap: 8px 24px; }
+.kw-biz-item { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.kw-biz-text { min-width: 0; } .kw-biz-text address { font-style: normal; margin: 0; }
+.kw-biz-icon { display: inline-flex; flex: none; margin-right: 8px; opacity: .85; } .kw-biz-item .kw-biz-icon { margin-right: 0; }
+.kw-biz-prefix, .kw-biz-label { opacity: .85; }
+.kw-biz-link { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.kw-biz-link:hover { text-decoration-thickness: 2px; } .kw-biz-link:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+.kw-bizphone, .kw-bizemail { margin: 0; display: flex; align-items: center; flex-wrap: wrap; }
+.kw-biz-status { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 8px; font-weight: 600; }
+.kw-biz-dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: .5; flex: none; }
+.kw-biz-status.is-open .kw-biz-dot { background: #16a34a; opacity: 1; } .kw-biz-status.is-closed .kw-biz-dot { background: #dc2626; opacity: 1; }
+.kw-biz-muted { font-weight: 400; opacity: .8; }
+.kw-biz-hours { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.kw-biz-row { display: flex; justify-content: space-between; gap: 16px; padding: 2px 0; } .kw-biz-row dt, .kw-biz-row dd { margin: 0; }
+.kw-biz-row dd { text-align: right; } .kw-biz-row.is-today { font-weight: 700; }
+.kw-biz-exceptions { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: .9em; }
+.kw-biz-note { margin: 8px 0 0; font-size: .9em; opacity: .85; }
+.kw-biz-pages { margin-top: 8px; }
+.kw-biz-pay { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.kw-biz-pay-item { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
+.kw-bizpayments.is-pills .kw-biz-pay-item { padding: 4px 12px; border: 1px solid currentColor; border-radius: 999px; font-size: .9em; }
+.kw-bizpayments.is-pills .kw-biz-icon, .kw-bizpayments .kw-biz-pay-item .kw-biz-icon { margin-right: 0; }
+.kw-bizpayments.is-plain .kw-biz-pay-item + .kw-biz-pay-item::before { content: "·"; margin-right: 6px; opacity: .6; }
+.kw-biz-block { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 8px; } .kw-biz-block .kw-biz-icon { margin-right: 0; }
+.kw-biz-empty { padding: 10px 12px; border: 1px dashed rgba(100, 116, 139, .6); border-radius: 8px; } .kw-biz-hint { margin: 0; font-size: .875rem; opacity: .8; }
+
+/* Retour en haut : bouton fixé (apparaît après défilement une fois le script prêt ; sans script il reste visible) ou lien en ligne ; dans l'éditeur il reste à sa place */
+.kw-backtotop.is-fixed { position: fixed; bottom: 20px; z-index: 40; }
+.kw-backtotop.is-fixed.is-right { right: 20px; } .kw-backtotop.is-fixed.is-left { left: 20px; }
+.kw-btt-link { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; }
+.kw-backtotop.is-fixed .kw-btt-link { padding: 12px; border-radius: 999px; background: var(--lp-accent, #0277b6); color: #fff; box-shadow: 0 8px 24px rgba(15, 23, 42, .28); }
+.kw-backtotop.is-inline .kw-btt-link { text-decoration: underline; text-underline-offset: 3px; }
+.kw-btt-link:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+.kw-btt-icon { display: inline-flex; } .kw-btt-text { white-space: nowrap; }
+.kw-backtotop.is-armed:not(.is-visible) { opacity: 0; visibility: hidden; pointer-events: none; }
+.kw-backtotop.is-armed { transition: opacity .25s ease, visibility .25s ease; }
+.lp-builder .kw-backtotop.is-fixed { position: static; display: inline-block; }
+@media (prefers-reduced-motion: reduce) { .kw-backtotop.is-armed { transition: none; } }
+
+/* Abonnement par e-mail : champ e-mail + bouton (les champs viennent du formulaire d'inscription réel) */
+.kw-emailsub-intro { margin: 0 0 8px; }
+.kw-emailsub-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+.kw-emailsub-form .field-group { flex: 1 1 200px; margin: 0; } .kw-emailsub-form .checkbox-row { flex: 1 1 100%; font-size: .85em; }
+.kw-emailsub-submit { flex: none; }
+.kw-emailsub { min-width: 0; } .kw-biz-name { font-weight: 700; } .kw-bizcontact.is-stack .kw-biz-list, .kw-bizlegal.is-stack .kw-biz-list { flex-direction: column; }

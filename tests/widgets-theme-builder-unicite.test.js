@@ -12,9 +12,10 @@ const part = (id, text) => ({ id, type: "layout", children: [{ id: `${id}h`.slic
 // Contenu HTML EXACT de l'élément <div class="… lp-site-footer …"> (balises <div> comptées jusqu'à sa fermeture) : ce qui est « dans » le pied de page choisi
 const footerPart = (html) => {
   const at = html.indexOf("lp-site-footer"); if (at < 0) return "";
-  const start = html.lastIndexOf("<div", at); let depth = 0;
-  const re = /<div\b|<\/div>/g; re.lastIndex = start; let m;
-  while ((m = re.exec(html))) { depth += m[0] === "</div>" ? -1 : 1; if (depth === 0) return html.slice(start, m.index + 6); }
+  // Le pied est un <footer> (rendu unifié, chantier A) ou, si le modèle contient déjà un <footer>, un <div> : on prend la balise ouvrante la plus proche
+  const tag = html.lastIndexOf("<footer", at) > html.lastIndexOf("<div", at) ? "footer" : "div", start = html.lastIndexOf(`<${tag}`, at); let depth = 0;
+  const re = new RegExp(`<${tag}\\b|</${tag}>`, "g"); re.lastIndex = start; let m;
+  while ((m = re.exec(html))) { depth += m[0] === `</${tag}>` ? -1 : 1; if (depth === 0) return html.slice(start, m.index + m[0].length); }
   return html.slice(start);
 };
 

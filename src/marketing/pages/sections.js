@@ -23,7 +23,12 @@ function linkUrl(v, label) {
   if (/^\/(?!\/)[^\s<>"'`\\]*$/.test(url)) return url;
   if (/^#[a-z][a-z0-9-]{0,39}$/.test(url)) return url; // ancre d'un élément de la même page
   if (/^https:\/\/[^\s<>"'`\\/@]+(\/[^\s<>"'`\\]*)?$/i.test(url)) return url;
-  throw bad(`${label} : l'adresse doit commencer par https://, être une page du site (« /catalogue ») ou une ancre de la page (« #tarifs »).`);
+  // Liste blanche stricte de deux schémas non web : e-mail (« mailto:nom@domaine.fr », sans paramètre) et téléphone (« tel: » + chiffres, « + » initial permis ;
+  // les séparateurs d'un numéro — espaces, points, tirets, parenthèses — sont retirés). Jamais javascript:, data:, vbscript:, sms: ni un autre schéma.
+  if (url.length <= 262 && /^mailto:[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]{1,63}(?:\.[A-Za-z0-9-]{1,63}){1,5}$/.test(url)) return url;
+  const tel = /^tel:(\+?[0-9][0-9 .()-]{3,28})$/.exec(url);
+  if (tel) { const num = tel[1].replace(/[ .()-]/g, ""); if (/^\+?[0-9]{4,15}$/.test(num)) return `tel:${num}`; }
+  throw bad(`${label} : l'adresse doit commencer par https://, être une page du site (« /catalogue »), une ancre de la page (« #tarifs »), une adresse e-mail (« mailto:contact@exemple.fr ») ou un numéro de téléphone (« tel:+33123456789 »).`);
 }
 // Image : https://…, fichier de la médiathèque marketing (/uploads/marketing/…) ou de la médiathèque du site
 // (/uploads/thumbnails/…, images publiques du blog et du Centre de gestion)

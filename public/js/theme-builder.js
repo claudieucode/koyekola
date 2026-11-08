@@ -101,11 +101,11 @@
     if (canWrite && t.status !== "archived") {
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
-      item("Archiver", () => act(t, "archiver", "Modèle archivé."));
+      item("Archiver", () => { if (t.type === "footer" && t.status === "published" && !confirm(`Archiver « ${t.name} » ?\n\nCe pied s'affiche actuellement : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.\nIl ne sera plus affiché sur le site. Vous pourrez le restaurer depuis les archives.`)) return; act(t, "archiver", "Modèle archivé (récupérable dans les archives)."); });
       if (t.origin) item("Revenir au modèle initial", () => revertOrigin(t));
     }
     if (canWrite && t.status === "archived") { item("Restaurer", () => act(t, "restaurer", "Modèle restauré en brouillon.")); if (canRemove) item("Supprimer définitivement", () => remove(t)); }
-    item("Exporter (JSON)", () => { location.href = `${base}/api/modeles/${t.id}/export.json`; }); item("Versions", () => versions(t)); item("Où est-il utilisé ?", () => where(t));
+    item("Exporter (JSON)", () => { location.href = `${base}/api/modeles/${t.id}/export.json`; }); if (t.type === "footer") item("Exporter avec les conditions", () => { location.href = `${base}/api/modeles/${t.id}/export.json?conditions=1`; }); item("Versions", () => versions(t)); if (t.type === "footer" && t.sourceKind === "component") item("Historique des révisions", () => revisions(t)); item("Où est-il utilisé ?", () => where(t));
     wrap.append(btn, ul); return wrap;
   }
   function infoBtn(name, fn) { const b = el("button", "tb-info"); b.type = "button"; b.setAttribute("aria-label", `Informations sur ${name}`); b.append(svgOf(ICONS.info)); b.firstChild.setAttribute("width", "18"); b.firstChild.setAttribute("height", "18"); b.addEventListener("click", fn); return b; }
@@ -283,12 +283,71 @@
   });
   // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
   async function revertOrigin(t) {
-    if (!t.origin || !confirm(`Revenir au modèle initial « ${t.origin.name} » ?\n\nL'en-tête « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé dans « Versions » : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
-    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle initial « ${r.original.name} » (brouillon). Pour annuler : Versions › Restaurer la version ${r.version}.`, "ok"); await refresh(); }
+    const foot = t.type === "footer", what = foot ? "Le pied de page" : "L'en-tête";
+    if (!t.origin || !confirm(`Revenir au modèle ${foot ? "d'origine" : "initial"} « ${t.origin.name} » ?\n\n${what} « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé automatiquement dans ${foot ? "« Historique des révisions »" : "« Versions »"} : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
+    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle d'origine « ${r.original.name} » (brouillon).${foot ? " Pour annuler : Historique des révisions › Restaurer." : ` Pour annuler : Versions › Restaurer la version ${r.version}.`}`, "ok"); await refresh(); }
     catch (e) { status(e.message, "err"); }
   }
-  async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
+  async function remove(t) { const where = t.describe ? `\n\nCe modèle s'affichait : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.` : ""; if (!confirm(`Supprimer définitivement « ${t.name} » ?${where}\n\nLe document (page ou composant) et son historique de révisions restent conservés dans vos composants.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
+  // Publication d'un pied : « Où afficher ce pied ? » (tout le site / conditions personnalisées), résumé, conflits expliqués AVANT publication, test d'adresse
+  let pubT = null, pubPlan = null, pubTimer = 0, pubSeq = 0;
+  const scopeOf = () => { const r = document.querySelector('input[name="tb-scope"]:checked'); return r ? r.value : ""; };
+  const pubRd = (id) => [...$(id).querySelectorAll("[data-row]")].map((r) => r.read());
+  const pubConds = () => ({ include: scopeOf() === "custom" ? pubRd("tb-pub-inc") : [], exclude: pubRd("tb-pub-exc") });
+  const issue = (k, txt) => { const d = el("div", "tb-issue"); d.dataset.k = k; d.append(el("p", "", txt)); return d; };
+  function pubGate() {
+    const sc = scopeOf(), box = $("tb-pub-issues"), rep = box.querySelector("[data-replace]");
+    const blocked = pubPlan && pubPlan.blocking.length && !(rep && rep.checked);
+    $("tb-pub-go").disabled = !sc || !pubPlan || Boolean(blocked) || (sc === "custom" && !pubConds().include.length && !pubConds().exclude.length);
+  }
+  async function pubRefresh() {
+    const my = ++pubSeq, sc = scopeOf(), kids = $("tb-pub-conds").children; $("tb-pub-conds").hidden = !sc;
+    for (let i = 0; i < 3; i++) kids[i].hidden = sc === "site";
+    if (!sc) { $("tb-pub-sum").textContent = ""; $("tb-pub-issues").textContent = ""; $("tb-pub-go").disabled = true; return; }
+    let r; $("tb-pub-msg").hidden = true;
+    try { r = (await api(`/modeles/${pubT.id}/plan-publication?conditions=${encodeURIComponent(JSON.stringify(pubConds()))}`)).plan; } catch (e) { if (my === pubSeq) { $("tb-pub-msg").hidden = false; $("tb-pub-msg").textContent = e.message; $("tb-pub-go").disabled = true; } return; }
+    if (my !== pubSeq) return;
+    const keep = $("tb-pub-issues").querySelector("[data-replace]") && $("tb-pub-issues").querySelector("[data-replace]").checked;
+    pubPlan = r; $("tb-pub-sum").textContent = `Résumé : ${r.summary.text}.`;
+    const box = $("tb-pub-issues"); box.textContent = "";
+    if (r.impact.of) { const names = r.impact.takesFrom.map((x) => `« ${x.name} » (${x.pages})`).join(", "); box.append(issue("info", `Parmi les ${r.impact.of} page(s) publiée(s) du site, ce pied s'affichera sur ${r.impact.wins}${names ? `, à la place de ${names}` : ""}.`)); }
+    for (const b of r.blocking) { const d = issue("block", b.message); const lb = el("label", "tb-scope-opt"), cb = el("input"); cb.type = "checkbox"; cb.dataset.replace = "1"; cb.checked = Boolean(keep); cb.addEventListener("change", pubGate); lb.append(cb, el("span", "", `Remplacer « ${b.otherName} » (il repasse en brouillon, rien n'est supprimé)`)); d.append(lb); box.append(d); }
+    for (const w of r.warnings) box.append(issue("warn", `${w.message} Vous pouvez garder les deux : la règle de priorité est automatique (le plus précis, puis le plus récent).`));
+    for (const o of r.overlaps) box.append(issue("info", o.message));
+    pubGate();
+  }
+  const pubSoon = () => { clearTimeout(pubTimer); pubTimer = setTimeout(pubRefresh, 200); };
+  async function publishDialog(t) {
+    try {
+      if (!opts) opts = await api("/options");
+      const first = (await api(`/modeles/${t.id}/plan-publication`)).plan.firstPublish;
+      pubT = t; pubPlan = null; $("tb-dlg-pub-h").textContent = `Publier « ${t.name} »`;
+      const inc = $("tb-pub-inc"), exc = $("tb-pub-exc"); inc.textContent = ""; exc.textContent = "";
+      for (const c of t.conditions.include || []) inc.append(row(allowedKinds(t.type), c));
+      for (const c of t.conditions.exclude || []) exc.append(row(allowedKinds(t.type), c));
+      $("tb-scope-site").checked = !first && !(t.conditions.include || []).length; $("tb-scope-custom").checked = !first && (t.conditions.include || []).length > 0;
+      $("tb-pub-url").value = ""; $("tb-pub-try-out").textContent = ""; $("tb-pub-msg").hidden = true;
+      openDlg("tb-dlg-pub"); await pubRefresh(); ($("tb-scope-site").checked || $("tb-scope-custom").checked ? $("tb-pub-go") : $("tb-scope-site")).focus();
+    } catch (e) { status(e.message, "err"); }
+  }
+  $("tb-pub-add-inc").addEventListener("click", () => { $("tb-pub-inc").append(row(allowedKinds(pubT.type))); pubSoon(); });
+  $("tb-pub-add-exc").addEventListener("click", () => { $("tb-pub-exc").append(row(allowedKinds(pubT.type))); pubSoon(); });
+  $("tb-form-pub").addEventListener("change", (e) => { if (!e.target.matches("[data-replace]")) pubSoon(); });
+  $("tb-form-pub").addEventListener("click", (e) => { if (e.target.closest("[data-row] button")) pubSoon(); });
+  $("tb-pub-try").addEventListener("click", async () => {
+    const out = $("tb-pub-try-out"); out.textContent = "";
+    try { const r = await api(`/modeles/${pubT.id}/s-applique?url=${encodeURIComponent($("tb-pub-url").value.trim())}&conditions=${encodeURIComponent(JSON.stringify(pubConds()))}`); out.textContent = `${r.pageLabel} : ${r.message}${r.note ? ` ${r.note}` : ""}`; }
+    catch (e) { out.textContent = e.message; }
+  });
+  $("tb-form-pub").addEventListener("submit", async (e) => {
+    e.preventDefault(); const rep = $("tb-pub-issues").querySelector("[data-replace]");
+    try {
+      const r = await post(`/modeles/${pubT.id}/publier`, { strict: true, scope: scopeOf(), conditions: pubConds(), revision: pubT.revision, replace: Boolean(rep && rep.checked) });
+      closeDlg($("tb-dlg-pub")); status(`Publié. ${r.summary.text}.${r.replaced && r.replaced.length ? ` Remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : ""}`, "ok"); await refresh();
+    } catch (err) { $("tb-pub-msg").hidden = false; $("tb-pub-msg").textContent = err.message; }
+  });
   async function publish(t) {
+    if (t.type === "footer" && t.status !== "published") return publishDialog(t);
     const go = async (replace) => { const r = await post(`/modeles/${t.id}/publier`, { revision: t.revision, replace }); status(r.replaced && r.replaced.length ? `Publié : remplace « ${r.replaced.map((o) => o.name).join(" », « ")} » (repassé en brouillon).` : r.conflicts && r.conflicts.length ? `Publié, avec ${r.conflicts.length} avertissement(s) : voir les conflits.` : "Modèle publié.", "ok"); await refresh(); };
     try { await go(false); }
     catch (e) {
@@ -307,6 +366,27 @@
 
   // ---- éditeur de conditions
   const LIST = { ids: "Identifiants (virgules)", category: "Catégories (virgules)", childCategory: "Sous-catégories de (virgules)", tag: "Étiquettes (virgules)", author: "Auteurs (identifiants)", names: "Noms (virgules)" };
+  // Sélecteur avec recherche (listes de pages, catégories, étiquettes, auteurs, rôles…) : puces + champ de recherche + résultats (boutons, accessibles au clavier). Valeurs lues par get().
+  const PICK = { "page.ids": ["page", "Pages"], "course.ids": ["course", "Formations"], "post.category": ["category", "Catégories"], "post.tag": ["tag", "Étiquettes"], "product.category": ["product_category", "Catégories de produits"], "product.tag": ["product_tag", "Étiquettes de produits"],
+    "page.author": ["author", "Auteurs"], "post.author": ["author", "Auteurs"], "product.author": ["author", "Auteurs"], "author.ids": ["author", "Auteurs"], "visitor.roles": ["role", "Rôles"] };
+  function picker(type, title, numeric) {
+    const root = el("div", "tb-pick"), chips = el("div", "tb-pick-chips"), inp = el("input"), list = el("ul", "tb-pick-list"), sel = new Map(); let t = 0, seq = 0;
+    inp.type = "search"; inp.placeholder = "Rechercher dans la liste…"; inp.autocomplete = "off"; inp.setAttribute("aria-label", `${title} : rechercher`); list.hidden = true;
+    const changed = () => root.dispatchEvent(new Event("change", { bubbles: true }));
+    const paint = () => { chips.textContent = ""; for (const [v, l] of sel) { const c = el("span", "tb-chip"); c.append(el("span", "", l)); const x = el("button", "", "×"); x.type = "button"; x.setAttribute("aria-label", `Retirer ${l}`); x.addEventListener("click", () => { sel.delete(v); paint(); changed(); inp.focus(); }); c.append(x); chips.append(c); } };
+    const load = async () => {
+      const my = ++seq; let r; try { r = await api(`/cibles?type=${type}&q=${encodeURIComponent(inp.value.trim())}`); } catch { return; } if (my !== seq) return;
+      list.textContent = ""; const items = r.items.filter((i) => !sel.has(i.value)); list.hidden = false;
+      if (!items.length) list.append(el("li", "tb-pick-empty", r.items.length ? "Tout est déjà choisi." : "Aucun résultat."));
+      for (const i of items) { const li = el("li"), b = el("button", "", i.hint ? `${i.label} (${i.hint})` : i.label); b.type = "button"; b.addEventListener("click", () => { sel.set(i.value, i.label); paint(); changed(); inp.value = ""; list.hidden = true; inp.focus(); }); li.append(b); list.append(li); }
+    };
+    inp.addEventListener("focus", load); inp.addEventListener("input", () => { clearTimeout(t); t = setTimeout(load, 200); });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Escape" && !list.hidden) { e.stopPropagation(); e.preventDefault(); list.hidden = true; } });
+    root.addEventListener("focusout", () => setTimeout(() => { if (!root.contains(document.activeElement)) list.hidden = true; }, 120));
+    root.append(chips, inp, list);
+    root._pick = { get: () => [...sel.keys()], set: (vals) => { sel.clear(); for (const v of [].concat(vals || [])) { const pg = type === "page" && opts ? opts.pages.find((p) => p.id === Number(v)) : null; sel.set(numeric ? Number(v) : v, pg ? pg.name : numeric ? `n° ${v}` : String(v)); } paint(); } };
+    return root;
+  }
   function row(kindsAllowed, c) {
     const r = el("div", "tb-row"); const kw = el("label", "sw-field", "Condition"); const ks = el("select"); for (const k of opts.kinds.filter((k) => kindsAllowed.includes(k.key))) { const o = el("option", "", k.label); o.value = k.key; ks.append(o); } kw.append(ks); r.append(kw);
     const params = el("div", "tb-row-params"); params.style.display = "contents"; r.append(params); const rm = el("button", "btn btn-sm btn-outline", "Retirer"); rm.type = "button"; rm.addEventListener("click", () => { r.remove(); $("tb-dlg-cond").dataset.dirty = "1"; }); r.append(rm);
@@ -318,6 +398,8 @@
         else if (k === "who") { w.append(el("span", "", "Visiteur")); inp = el("select"); for (const [v, t] of [["member", "Connecté"], ["guest", "Non connecté"]]) { const o = el("option", "", t); o.value = v; inp.append(o); } }
         else if (k === "parent") { w.append(el("span", "", "Page parente")); inp = el("select"); for (const p of opts.pages) { const o = el("option", "", p.name); o.value = p.id; inp.append(o); } }
         else if (k === "direct" || k === "child") { w.append(el("span", "", k === "direct" ? "Enfants directs seulement" : "Inclure les sous-éléments")); inp = el("input"); inp.type = "checkbox"; }
+        else if (k === "state") { w.append(el("span", "", "Connexion")); inp = el("select"); for (const [v, l] of [["in", "Connecté"], ["out", "Non connecté"]]) { const o = el("option", "", l); o.value = v; inp.append(o); } }
+        else if (PICK[`${ks.value}.${k}`]) { const [pt, title] = PICK[`${ks.value}.${k}`]; w.append(el("span", "", title)); inp = picker(pt, title, ["page", "course", "author"].includes(pt)); }
         else if (k === "id") { w.append(el("span", "", "Identifiant")); inp = el("input"); }
         else if (k === "args") continue;
         else { w.append(el("span", "", LIST[k] || k)); inp = el("input"); inp.maxLength = 400; if (k === "ids" && ks.value === "page") { inp.placeholder = "ex. " + (opts.pages[0] ? opts.pages[0].id : "12"); } }
@@ -325,10 +407,10 @@
       }
     };
     ks.addEventListener("change", fields); if (c) ks.value = c.kind; fields();
-    if (c) for (const inp of params.querySelectorAll("[data-k]")) { const v = c[inp.dataset.k]; if (v === undefined) continue; if (inp.type === "checkbox") inp.checked = Boolean(v); else inp.value = Array.isArray(v) ? v.join(", ") : v; }
+    if (c) for (const inp of params.querySelectorAll("[data-k]")) { const v = c[inp.dataset.k]; if (v === undefined) continue; if (inp._pick) inp._pick.set(v); else if (inp.type === "checkbox") inp.checked = Boolean(v); else inp.value = Array.isArray(v) ? v.join(", ") : v; }
     r.dataset.row = "1"; r.getKind = () => ks.value; r.read = () => {
       const o = { kind: ks.value };
-      for (const inp of params.querySelectorAll("[data-k]")) { const k = inp.dataset.k; if (inp.type === "checkbox") { if (inp.checked) o[k] = true; } else if (inp.value.trim() !== "") { o[k] = k === "parent" ? Number(inp.value) : k === "sub" ? (inp.value === "all" ? undefined : inp.value) : inp.value; } }
+      for (const inp of params.querySelectorAll("[data-k]")) { const k = inp.dataset.k; if (inp._pick) { const v = inp._pick.get(); if (v.length) o[k] = v; } else if (inp.type === "checkbox") { if (inp.checked) o[k] = true; } else if (inp.value.trim() !== "") { o[k] = k === "parent" ? Number(inp.value) : k === "sub" ? (inp.value === "all" ? undefined : inp.value) : inp.value; } }
       return o;
     };
     return r;
@@ -357,7 +439,18 @@
   });
   $("tb-import")?.addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return; e.target.value = "";
-    try { if (f.size > 2000000) throw new Error("Fichier trop volumineux."); const payload = JSON.parse(await f.text()); await post("/importer", { payload }); status("Modèle importé en brouillon.", "ok"); await refresh(); }
+    try {
+      if (f.size > 2000000) throw new Error("Fichier trop volumineux (2 Mo au plus).");
+      const payload = JSON.parse(await f.text());
+      let warn = [];
+      if (payload && typeof payload.format === "string" && payload.format.startsWith("kolakisa-footer-")) { // pied de page : aperçu avant import
+        const pv = (await post("/importer-apercu", { payload })).preview;
+        const lines = pv.items.map((i) => `• ${i.finalName} : ${i.elements} élément(s)`);
+        if (!window.confirm(`Importer ${pv.items.length} pied(s) de page en BROUILLON (rien ne sera publié) ?\n\n${lines.join("\n")}${pv.warnings.length ? `\n\nAvertissements :\n- ${pv.warnings.join("\n- ")}` : ""}`)) return;
+        warn = pv.warnings;
+      }
+      await post("/importer", { payload }); status(`Modèle importé en brouillon.${warn.length ? ` ${warn.length} avertissement(s).` : ""}`, "ok"); await refresh();
+    }
     catch (err) { status(err instanceof SyntaxError ? "Ce fichier n'est pas un JSON valide." : err.message, "err"); }
   });
   $("tb-legacy")?.addEventListener("click", async () => {
@@ -369,6 +462,34 @@
   function info(title, build) { $("tb-dlg-info-h").textContent = title; const box = $("tb-info"); box.textContent = ""; build(box); openDlg("tb-dlg-info"); }
   async function versions(t) {
     try { const r = await api(`/modeles/${t.id}/versions`); info(`Versions — ${t.name}`, (box) => { if (!r.versions.length) box.append(el("p", "sw-muted", "Aucune version publiée pour l'instant.")); const ul = el("ul"); for (const v of r.versions) { const li = el("li"); li.append(document.createTextNode(`Version ${v.number} · ${dates(v.createdAt)} · ${v.describe.include}${v.describe.exclude ? ` (sauf ${v.describe.exclude})` : ""} `)); if (canWrite) { const b = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); b.type = "button"; b.addEventListener("click", async () => { try { const rr = await post(`/modeles/${t.id}/versions/${v.number}/restaurer`); closeDlg($("tb-dlg-info")); status(`Version ${v.number} : contenu restauré en brouillon de travail (rien n'est changé en ligne avant la publication).${rr.conditionsRestored ? "" : " Les conditions en ligne n'ont pas été modifiées."}`, "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }); li.append(b); } ul.append(li); } box.append(ul); }); }
+    catch (e) { status(e.message, "err"); }
+  }
+  // ---- historique des révisions du pied (liste paginée, aperçu, comparaison, restauration en brouillon)
+  async function revisions(t) {
+    const kinds = { draft: "Brouillon", publish: "Publication", safety: "Sécurité", restore: "Restauration" };
+    let rows = [], next = null, picked = [];
+    const draw = (box) => {
+      box.textContent = "";
+      box.append(el("p", "sw-muted", "Chaque enregistrement du brouillon et chaque publication est gardé ici (50 au plus ; les plus anciens disparaissent, jamais la dernière publication). Restaurer crée un nouveau brouillon : la version en ligne ne change qu'à la prochaine publication."));
+      if (!rows.length) box.append(el("p", "", "Aucune révision pour l'instant."));
+      const ul = el("ul");
+      for (const r of rows) {
+        const li = el("li"); const cb = el("input"); cb.type = "checkbox"; cb.checked = picked.includes(r.id); cb.setAttribute("aria-label", `Choisir la révision du ${dates(r.createdAt)} pour comparer`);
+        cb.addEventListener("change", () => { picked = cb.checked ? [...picked, r.id].slice(-2) : picked.filter((x) => x !== r.id); draw(box); });
+        li.append(cb, document.createTextNode(` ${kinds[r.kind] || r.kind} · ${dates(r.createdAt)}${r.by ? ` · ${r.by}` : ""} · ${r.widgets} élément(s) · ${r.summary}${r.isCurrentDraftContent ? " · (= contenu actuel)" : ""} `));
+        const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button";
+        pv.addEventListener("click", async () => { try { const d = await api(`/modeles/${t.id}/revisions/${r.id}/apercu`); const out = el("div"); out.append(el("b", "", `Aperçu — ${kinds[r.kind] || r.kind} du ${dates(r.createdAt)}`)); const th = new DOMParser().parseFromString(d.thumb || "", "image/svg+xml").documentElement; if (th && th.nodeName === "svg") { th.setAttribute("style", "max-width:240px;display:block"); out.append(document.importNode(th, true)); } out.append(el("p", "sw-muted", Object.entries(d.types).map(([k, n]) => `${n} × ${k}`).join(", ") || "Vide")); const old = box.querySelector("[data-rev-out]"); if (old) old.remove(); out.dataset.revOut = "1"; box.append(out); } catch (e) { status(e.message, "err"); } });
+        li.append(pv);
+        if (canWrite && t.status !== "archived") { const rs = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); rs.type = "button"; rs.addEventListener("click", async () => { if (!confirm(`Restaurer cette révision comme nouveau brouillon ?\n\nLe brouillon actuel est d'abord gardé dans l'historique. La version en ligne ne change pas tant que vous ne publiez pas.`)) return; try { await post(`/modeles/${t.id}/revisions/${r.id}/restaurer`); closeDlg($("tb-dlg-info")); status("Révision restaurée en brouillon (rien n'est changé en ligne avant la publication).", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }); li.append(rs); }
+        ul.append(li);
+      }
+      box.append(ul);
+      if (next) { const more = el("button", "btn btn-sm btn-outline", "Voir les plus anciennes"); more.type = "button"; more.addEventListener("click", async () => { try { const d = await api(`/modeles/${t.id}/revisions?avant=${next}`); rows = rows.concat(d.revisions); next = d.next; draw(box); } catch (e) { status(e.message, "err"); } }); box.append(more); }
+      const cmp = el("button", "btn btn-sm btn-primary", "Comparer les 2 révisions cochées"); cmp.type = "button"; cmp.disabled = picked.length !== 2;
+      cmp.addEventListener("click", async () => { try { const [a, b] = picked.slice().sort((x, y) => x - y); const d = (await api(`/modeles/${t.id}/revisions/comparer?a=${a}&b=${b}`)).comparison; const out = el("p", "", d.identical ? "Ces deux révisions sont identiques." : `Entre la plus ancienne et la plus récente : ${d.added} élément(s) ajouté(s), ${d.removed} retiré(s), ${d.modified} modifié(s).`); const old = box.querySelector("[data-rev-cmp]"); if (old) old.remove(); out.dataset.revCmp = "1"; box.append(out); } catch (e) { status(e.message, "err"); } });
+      box.append(cmp);
+    };
+    try { const d = await api(`/modeles/${t.id}/revisions`); rows = d.revisions; next = d.next; info(`Historique des révisions — ${t.name}`, draw); }
     catch (e) { status(e.message, "err"); }
   }
   async function where(t) {

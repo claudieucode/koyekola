@@ -151,6 +151,10 @@ function preflight(ctx, page) {
     else if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
     else if (f.status !== "published") errors.push(`Le formulaire « ${f.name} » n'est pas publié : publiez-le d'abord (Audience → Formulaires d'inscription).`);
   });
+  // Widget « Abonnement par e-mail » : il a besoin d'un formulaire d'inscription publié DU MÊME SITE (dont seul l'e-mail est obligatoire)
+  for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
+    if (n.type === "emailsubscribe" && !n.hidden && !require("../pages/emailSubscribe").formFor(ctx, page, n.props)) errors.push("Un widget « Abonnement par e-mail » ne trouve aucun formulaire d'inscription publié pour ce site (dont seul l'e-mail est obligatoire) : publiez-en un dans Audience → Formulaires d'inscription.");
+  });
   // Widgets personnalisés incomplets (ex. un média sans image) : le brouillon s'enregistre, mais la page ne peut pas être publiée ainsi
   for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
     const cw = pageNodes.CUSTOM_WIDGETS[n.type];
@@ -428,7 +432,7 @@ function autoNavigation(page, sections, visitor) {
 
 // Contexte des étiquettes dynamiques d'une page : visiteur, page, site, date, adresse (+ article ou formation d'un modèle de thème)
 function baseScope(ctx, visitor, page) {
-  return { visitor, page, site: siteInfo(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
+  return { visitor, page, site: siteInfo(ctx, page), business: require("../pages/business").forPage(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
 }
 const headerIdentity = require("../pages/headerIdentity");
 function viewModel(ctx, page) {
@@ -519,7 +523,7 @@ function linksOf(page) {
     if (s.type === "layout") pageNodes.walk(s.children, visit);
   });
   // Les ancres (#…) sautent dans la page sans passer par le compteur de clics (même règle que href() du rendu)
-  return out.filter((l) => !/^(#|mailto:)/.test(String(l.url)));
+  return out.filter((l) => !/^(#|mailto:|tel:)/.test(String(l.url)));
 }
 
 // ---------- Statistiques ----------

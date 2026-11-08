@@ -56,7 +56,7 @@ function partMode(section) { return headerSettings.classes(section); }
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
 // Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).
 function renderVm(res, vm, siteOk, cls, done) {
-  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false }, (err, body) => {
+  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false, legalSite: siteOk || null }, (err, body) => {
     if (err) return done(null);
     try { done(wrapHtml(res, vm, siteOk, body, cls)); } catch { done(null); }
   });
@@ -105,7 +105,7 @@ function renderParts(req, res) {
       const TB = require("../../themeBuilder/render");
       if (!TB.hasParts(ctx, site.id)) return resolve({});
       const visitor = visitorContext(db, marketing.organizationId, req);
-      const baseCtx = { ...(res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0])), visitor: { loggedIn: Boolean(visitor && visitor.loggedIn) } };
+      const baseCtx = TB.withVisitor(res.locals.themeCtx || TB.defaultContext(site.id, String(req.originalUrl || req.url || "/").split("?")[0]), visitor, req); // + visiteur connecté / rôle (conditions du pied)
       const win = TB.resolveParts(ctx, site.id, baseCtx);
       const out = {};
       const extras = TB.resolveExtras(ctx, site.id, baseCtx);
@@ -211,7 +211,7 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
       // En-tête : contexte de page NEUTRE sous l'en-tête (dégradé CSS sans image ni texte qui paraisse réel) pour juger un en-tête superposé, transparent ou en verre ; mêmes éléments dans la vignette (plus court)
       const demoNote = type === "product_archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des produits d\'exemple : votre boutique affichera ses vrais produits.</p>' : "";
       const body = demoNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
-      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
+      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb || type === "footer" ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
     });
   } catch { done(null); }
 }

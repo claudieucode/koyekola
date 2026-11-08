@@ -52,7 +52,7 @@ const META = {
   "section:bento": m([], "", ["mosaïque"]), "section:cover": m([], "", ["couverture", "dégradé"]), "section:media-text": m([], "", ["image", "texte"]), "section:iconbox": m([], "", ["icônes"]),
   "section:team": m([], "", ["équipe", "personnes"]), "section:steps": m([], "", ["étapes", "chronologie"]), "section:cols-2": m([], "", ["colonnes"]), "section:cols-3": m([], "", ["colonnes"]),
   "section:cols-4": m([], "", ["colonnes"]), "section:courses": m(SEC.formation, "formation", ["formations", "catalogue"]),
-  "section:logos": m([], "", ["partenaires", "logos", "références"], NEW), "section:contact-info": m([], "", ["adresse", "téléphone", "e-mail", "accès"], NEW), "section:hours": m(SEC.horaires, "vitrine", ["horaires", "ouverture"], NEW),
+  "section:footer-bar": m([], "", ["pied de page", "copyright", "mentions légales", "retour en haut"], NEW), "section:logos": m([], "", ["partenaires", "logos", "références"], NEW), "section:contact-info": m([], "", ["adresse", "téléphone", "e-mail", "accès"], NEW), "section:hours": m(SEC.horaires, "vitrine", ["horaires", "ouverture"], NEW),
   "section:menu-carte": m(SEC.resto, "vitrine", ["carte", "menu", "plats", "prix"], NEW), "section:listings": m(["immobilier"], "vitrine", ["biens", "annonces", "immobilier"], NEW),
   "section:project-grid": m(SEC.creatif.concat(["agence-digitale"]), "vitrine", ["projets", "galerie", "réalisations"], NEW), "section:values": m(SEC.asso, "vitrine", ["valeurs", "missions"], NEW),
   "section:process-4": m([], "", ["méthode", "étapes", "processus"], NEW), "section:services-prices": m(SEC.pro.concat(SEC.agence), "vitrine", ["prestations", "prix", "liste de prix"], NEW),

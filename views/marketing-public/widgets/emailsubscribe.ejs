@@ -1,0 +1,18 @@
+<%# Abonnement par e-mail (src/marketing/pages/widgets/footer.js). AUCUNE logique d'inscription propre : même formulaire réel, mêmes protections (piège à robots, jeton, consentement) et même route POST /p/<page>/inscription que le widget « Formulaire ». Variables : p, d (form|null), n, cls, attrs, isBuilder. %>
+<% const ws = typeof widgetForm !== "undefined" && widgetForm && widgetForm.id === n.id ? widgetForm : null; const inPreview = isBuilder || (typeof preview !== "undefined" && preview); %>
+<% if (d && d.form) { %>
+<div class="<%= cls %>"<%- attrs %>><div class="kw-emailsub" id="kw-f-<%= n.id %>">
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (ws && ws.thanks) { %><p class="lp-thanks" role="status"><%= ws.thanks %></p>
+  <% } else { %>
+    <% if (p.intro) { %><p class="kw-emailsub-intro"><%= p.intro %></p><% } %>
+    <% if (ws && ws.error) { %><p class="lp-error" role="alert"><%= ws.error %></p><% } %>
+    <form class="kw-emailsub-form" method="post" action="/p/<%= typeof page !== "undefined" && page ? page.slug : "" %>/inscription" novalidate><input type="hidden" name="tz" data-tz><input type="hidden" name="w" value="<%= n.id %>">
+      <%- include("../_signup-fields", { form: d.form, fieldCatalog: {}, propertyDefs: [], values: ws && ws.values ? ws.values : {}, prefix: "w" + n.id, autofocus: false }) %>
+      <button type="submit" class="kw-button kw-btn-primary kw-emailsub-submit"<%= inPreview ? " disabled" : "" %>><%= p.button %></button>
+    </form>
+  <% } %>
+</div></div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Abonnement par e-mail : aucun formulaire d’inscription publié (dont seul l’e-mail est obligatoire) n’a été trouvé pour ce site. Publiez-en un dans Audience → Formulaires d’inscription.</p></div>
+<% } %>

@@ -257,6 +257,8 @@ router.get("/cours/:slug", (req, res) => {
   const courseScope = { id: course.id, title: course.title, subtitle: course.subtitle || "", priceCents: course.price_cents || 0, url: `/cours/${encodeURIComponent(course.slug)}`,
     image: /^\/uploads\/thumbnails\/[A-Za-z0-9._-]+$/.test(course.thumbnail_path || "") || /^https:\/\/[^\s"'<>]+$/.test(course.thumbnail_path || "") ? course.thumbnail_path : "",
     category: course.category || "", instructor: course.instructor_name || "", description: plainText(course.description || "").slice(0, 400) };
+  // Pied de page (Theme Builder) : la fiche déclare sa vue « formation » avec l'identifiant et la catégorie de la formation
+  res.locals.themeCtx = { siteId: req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null, view: "course", id: course.id, authorId: null, parents: [], categories: course.category ? [course.category] : [], categoryAncestors: [], tags: [] };
   themeRender.renderRegion(req, res, db, "single_course", { category: course.category || "", scope: { course: courseScope } }, (themeTemplate) => res.render("course-detail", {
     themeTemplate, course, sections, totalMinutes, lessonCount, enrolled, inCart, isOwner, reviews, myReview, crumbs, faqs, texts,
     completedIds, progress, promise, instructor, similar, ratingRows, moreReviewsUrl,

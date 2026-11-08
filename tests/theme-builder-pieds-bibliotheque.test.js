@@ -1,5 +1,5 @@
 // Bibliothèque de PIEDS DE PAGE du Theme Builder : exactement 100 compositions distinctes (10 familles × 10, identités propres), toutes valides, responsive, sans élément factice,
-// utilisables (copie indépendante) et rendues par le vrai moteur (aperçu = vignette = site publié, un seul pied par page). Voir docs/theme-builder/kolakisa-footer-library.md.
+// utilisables (copie indépendante) et rendues par le vrai moteur (aperçu = vignette = site publié, un seul pied par page). Voir docs/theme-builder/kolakisa-footer-library.md et docs/footer-builder/FOOTER_CATALOGUE.md.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
@@ -65,7 +65,8 @@ describe("Pieds de page : le catalogue", () => {
     // une famille entière est consacrée à chaque besoin annoncé : newsletter, coordonnées, réseaux, boutique
     const has = (family, type) => all.filter((e) => e.layoutKey === family).filter((e) => nodesOf(e.key).some((n) => n.type === type)).length;
     assert.ok(has("newsletter", "signupform") + all.filter((e) => e.layoutKey === "newsletter").filter((e) => nodesOf(e.key).some((n) => n.type === "button" && n.props.label === "Nous contacter")).length >= 10, "newsletter : abonnement ou repli");
-    assert.ok(has("contact", "iconlist") >= 8 && has("contact", "map") >= 4, "contact : coordonnées et carte");
+    // chantier F : les coordonnées ne sont plus une liste d'icônes au texte figé mais le widget « Coordonnées » (bizcontact), lu dans les Données de l'entreprise
+    assert.ok(has("contact", "bizcontact") >= 8 && has("contact", "map") >= 4, "contact : coordonnées et carte");
     assert.ok(has("reseaux", "social") >= 9, "réseaux");
     assert.ok(has("boutique", "minicart") + has("boutique", "account") >= 6, "boutique : compte ou panier");
   });

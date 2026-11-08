@@ -1,0 +1,92 @@
+<%#
+  KOLAKISA CMS → Paramètres → Données de l'entreprise. Un formulaire simple, sans JavaScript : l'envoi est validé par le serveur (src/marketing/pages/business.js).
+  Ces données alimentent les widgets « Pied de page » (Coordonnées, Horaires, Informations légales…) et les étiquettes {{business.…}}.
+%><%- include("partials/top", { title, active, layout: "form" }) %>
+<%
+  const dis = writable ? "" : " disabled";
+  const v = (x) => (x === undefined || x === null ? "" : x);
+  const input = (label, name, value, extra = {}) => `<div class="field-group"><label for="b-${name}">${label}</label><input id="b-${name}" type="${extra.type || "text"}" name="${name}" value="${String(v(value)).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;")}"${extra.max ? ` maxlength="${extra.max}"` : ""}${extra.ph ? ` placeholder="${extra.ph}"` : ""}${extra.auto ? ` autocomplete="${extra.auto}"` : ""}${writable ? "" : " disabled"}></div>`;
+%>
+<div class="mk-head"><h1>Données de l'entreprise</h1></div>
+<p class="mk-lead">Ces informations sont réglées une seule fois pour <strong><%= T.name %></strong>. Le pied de page, les widgets « Coordonnées », « Horaires d'ouverture » ou « Informations légales » et les étiquettes comme <code>{{business.phone}}</code> les reprennent automatiquement. <a href="<%= back %>">Retour aux réglages</a></p>
+<% if (!writable) { %><p class="pl-note">Lecture seule : <%= T.readOnly ? "ce site est archivé." : "la permission « settings.write » est nécessaire pour modifier." %></p><% } %>
+<% if (errors.length) { %><div class="mk-flash mk-flash-error" role="alert"><span class="mk-flash-body"><p>Rien n'a été enregistré :</p><ul><% errors.forEach((e) => { %><li><%= e %></li><% }) %></ul></span></div><% } %>
+<form class="pl" method="post" action="<%= action %>" novalidate>
+  <% if (T.siteId) { %><input type="hidden" name="site" value="<%= T.siteId %>"><% } %>
+  <fieldset class="pl-fieldset"<%= writable ? "" : " disabled" %>>
+    <legend class="sr-only">Données de l'entreprise de <%= T.name %></legend>
+
+    <section class="pl-section"><h2>Identité</h2>
+      <%- input("Raison sociale (nom officiel)", "legalName", F.legalName, { max: 150, auto: "organization" }) %>
+      <%- input("Slogan", "tagline", F.tagline, { max: 200 }) %>
+    </section>
+
+    <section class="pl-section"><h2>Adresse</h2>
+      <%- input("Rue et numéro", "street", F.address.street, { max: 150, auto: "street-address" }) %>
+      <%- input("Code postal", "postalCode", F.address.postalCode, { max: 12, auto: "postal-code" }) %>
+      <%- input("Ville", "city", F.address.city, { max: 80, auto: "address-level2" }) %>
+      <%- input("Pays", "country", F.address.country, { max: 80, auto: "country-name" }) %>
+    </section>
+
+    <section class="pl-section"><h2>Téléphone et e-mail</h2>
+      <% F.phones.forEach((ph, i) => { %><div class="field-group"><%- input("Téléphone " + (i + 1) + (i === 0 ? " (principal)" : ""), "phone" + (i + 1) + "_number", ph.number, { max: 30, type: "tel", ph: "+33 1 23 45 67 89" }) %><%- input("Libellé du téléphone " + (i + 1) + " (facultatif, ex. Service client)", "phone" + (i + 1) + "_label", ph.label, { max: 40 }) %></div><% }) %>
+      <%- input("E-mail de contact", "email", F.email, { max: 254, type: "email", ph: "contact@mon-site.fr", auto: "email" }) %>
+      <p class="pl-help">Pour ne pas montrer une information au public (les widgets et étiquettes ne la liront plus), cochez la case correspondante.</p>
+      <label class="mk-cms-check"><input type="checkbox" name="hide_address" value="1"<%= F.hidden.address ? " checked" : "" %>> Ne pas afficher l'adresse au public</label>
+      <label class="mk-cms-check"><input type="checkbox" name="hide_phone" value="1"<%= F.hidden.phone ? " checked" : "" %>> Ne pas afficher les téléphones au public</label>
+      <label class="mk-cms-check"><input type="checkbox" name="hide_email" value="1"<%= F.hidden.email ? " checked" : "" %>> Ne pas afficher l'e-mail au public</label>
+    </section>
+
+    <section class="pl-section"><h2>Horaires d'ouverture</h2>
+      <p class="pl-help">Heures au format 09:00 (jusqu'à minuit : 24:00). Jusqu'à 3 plages par jour (ex. 09:00–12:00 puis 14:00–18:00). Cochez « Fermé » ou laissez vide pour un jour fermé. L'heure utilisée est celle du fuseau horaire du site (Paramètres → Général).</p>
+      <% days.forEach((d) => { const h = F.hours.days[d.key]; %>
+      <div class="field-group"><strong><%= d.label %></strong>
+        <% h.ranges.forEach((r, i) => { %><span><label class="sr-only" for="b-h-<%= d.key %>-o<%= i + 1 %>"><%= d.label %>, plage <%= i + 1 %>, ouverture</label><input id="b-h-<%= d.key %>-o<%= i + 1 %>" type="time" name="h_<%= d.key %>_o<%= i + 1 %>" value="<%= r.open %>"<%= writable ? "" : " disabled" %>> à <label class="sr-only" for="b-h-<%= d.key %>-c<%= i + 1 %>"><%= d.label %>, plage <%= i + 1 %>, fermeture</label><input id="b-h-<%= d.key %>-c<%= i + 1 %>" type="time" name="h_<%= d.key %>_c<%= i + 1 %>" value="<%= r.close %>"<%= writable ? "" : " disabled" %>></span> <% }) %>
+        <label class="mk-cms-check"><input type="checkbox" name="h_<%= d.key %>_closed" value="1"<%= h.closed ? " checked" : "" %>> Fermé</label>
+      </div>
+      <% }) %>
+      <h3>Jours spéciaux (fermetures, horaires de fête)</h3>
+      <p class="pl-help">Une date précise remplace les horaires habituels de ce jour. Format de la date : AAAA-MM-JJ (exemple 2026-12-25).</p>
+      <% F.hours.exceptions.forEach((x, i) => { const k = i + 1; %>
+      <div class="field-group"><label class="sr-only" for="b-x<%= k %>-date">Date de l'exception <%= k %></label><input id="b-x<%= k %>-date" type="text" name="x<%= k %>_date" value="<%= x.date %>" placeholder="2026-12-25" maxlength="10"<%= writable ? "" : " disabled" %>>
+        <label class="sr-only" for="b-x<%= k %>-label">Nom de l'exception <%= k %></label><input id="b-x<%= k %>-label" type="text" name="x<%= k %>_label" value="<%= x.label %>" placeholder="Noël" maxlength="60"<%= writable ? "" : " disabled" %>>
+        <% x.ranges.forEach((r, j) => { %><input type="time" aria-label="Exception <%= k %>, plage <%= j + 1 %>, ouverture" name="x<%= k %>_o<%= j + 1 %>" value="<%= r.open %>"<%= writable ? "" : " disabled" %>> à <input type="time" aria-label="Exception <%= k %>, plage <%= j + 1 %>, fermeture" name="x<%= k %>_c<%= j + 1 %>" value="<%= r.close %>"<%= writable ? "" : " disabled" %>> <% }) %>
+        <label class="mk-cms-check"><input type="checkbox" name="x<%= k %>_closed" value="1"<%= x.closed ? " checked" : "" %>> Fermé ce jour-là</label></div>
+      <% }) %>
+      <%- input("Remarque sur les horaires (facultative)", "hoursNote", F.hours.note, { max: 160 }) %>
+    </section>
+
+    <section class="pl-section"><h2>Informations légales</h2>
+      <%- input("Forme juridique (ex. SARL, SAS, auto-entrepreneur)", "legalForm", F.legal.form, { max: 60 }) %>
+      <%- input("Capital (ex. 10 000 €)", "capital", F.legal.capital, { max: 40 }) %>
+      <% F.legal.registrations.forEach((r, i) => { %><div class="field-group"><%- input("Numéro " + (i + 1) + " : nom (ex. SIRET, RCS, TVA)", "reg" + (i + 1) + "_label", r.label, { max: 40 }) %><%- input("Numéro " + (i + 1) + " : valeur", "reg" + (i + 1) + "_value", r.value, { max: 60 }) %></div><% }) %>
+      <%- input("Directeur de la publication", "publisher", F.legal.publisher, { max: 100 }) %>
+      <%- input("Hébergeur : nom", "hostName", F.legal.hostName, { max: 100 }) %>
+      <%- input("Hébergeur : adresse", "hostAddress", F.legal.hostAddress, { max: 200 }) %>
+    </section>
+
+    <section class="pl-section"><h2>Pages légales</h2>
+      <p class="pl-help">Une page du site (« /mentions-legales ») ou une adresse https://.</p>
+      <%- input("Mentions légales", "pageNotice", F.legalPages.notice, { max: 300, ph: "/mentions-legales" }) %>
+      <%- input("Politique de confidentialité", "pagePrivacy", F.legalPages.privacy, { max: 300, ph: "/confidentialite" }) %>
+      <%- input("Conditions générales de vente", "pageTerms", F.legalPages.terms, { max: 300, ph: "/cgv" }) %>
+    </section>
+
+    <section class="pl-section"><h2>Paiement, livraison et retours</h2>
+      <fieldset class="pl-fieldset"><legend>Moyens de paiement acceptés</legend>
+        <% payments.forEach(([key, label]) => { %><label class="mk-cms-check"><input type="checkbox" name="pay_<%= key %>" value="1"<%= F.payments.includes(key) ? " checked" : "" %>> <%= label %></label><% }) %>
+      </fieldset>
+      <div class="field-group"><label for="b-deliveryText">Livraison (texte court)</label><textarea id="b-deliveryText" name="deliveryText" rows="3" maxlength="300"<%= writable ? "" : " disabled" %>><%= F.delivery.text %></textarea></div>
+      <div class="field-group"><label for="b-returnsText">Retours (texte court)</label><textarea id="b-returnsText" name="returnsText" rows="3" maxlength="300"<%= writable ? "" : " disabled" %>><%= F.delivery.returns %></textarea></div>
+    </section>
+
+    <section class="pl-section"><h2>Informations personnalisées</h2>
+      <p class="pl-help">Jusqu'à 6 informations libres (ex. « Numéro d'agrément », « Médiateur »). Étiquettes : <code>{{business.custom1}}</code> à <code>{{business.custom6}}</code>.</p>
+      <% F.custom.forEach((c, i) => { %><div class="field-group"><%- input("Information " + (i + 1) + " : nom", "custom" + (i + 1) + "_label", c.label, { max: 40 }) %><%- input("Information " + (i + 1) + " : valeur", "custom" + (i + 1) + "_value", c.value, { max: 200 }) %></div><% }) %>
+    </section>
+  </fieldset>
+  <div class="pl-savebar">
+    <% if (writable) { %><button type="submit" class="btn btn-primary">Enregistrer les modifications</button><% } %>
+  </div>
+</form>
+<%- include("partials/bottom") %>

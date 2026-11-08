@@ -85,6 +85,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./performance")()); // Programme 22.9 : tableau de bord de performance des pages publiées
   admin.use(require("./responsiveStudio")()); // Programme 22.8 : diagnostic et corrections responsive (brouillons seulement)
   admin.use(require("./themeBuilder")()); // Programme 23.1 : Theme Builder par site (modèles, conditions, résolution)
+  admin.use(require("./footerRevisions")()); // Pied de page, chantier E : historique des révisions, aperçu, comparaison, restauration en brouillon
   admin.use(require("./contentIntel")()); // Programme 22.6 : intelligence éditoriale et qualité SEO (analyse, propositions ; brouillons seulement)
   admin.use(require("./aiBuilder")()); // Programme 21.8 : interface « Assistant IA » de création de site (orchestre 21.3 à 21.6, aucune logique de moteur)
   admin.use(require("./aiShop")()); // Programme 21.10 : constructeur de boutique par IA (orchestre le moteur e-commerce 20.5, aucune logique commerciale)
@@ -105,6 +106,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./pageTests")());
   admin.use(require("./articles")()); // KOLAKISA CMS → Articles (palier 4) : gestion des articles du blog
   admin.use(require("./taxonomies")()); // Catégories et étiquettes (palier 5)
+  admin.use(require("./businessSettings")()); // Paramètres → Données de l'entreprise (pied de page) — avant le moteur de réglages
   admin.use(require("./settings")()); // Paramètres : moteur de réglages (palier 14) — avant les modules qui avaient leur propre écran
   admin.use(require("./comments")()); // Commentaires : modération et réglages (palier 6)
   admin.use(require("./navigation")()); // Navigation : menus, éléments, emplacements (palier 7)

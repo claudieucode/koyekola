@@ -13,7 +13,7 @@ const layout = (children, id = "sect00000001") => ({ id, type: "layout", childre
 describe("registre des widgets (sans serveur)", () => {
   test("chaque widget a une fiche : catégorie Elementor, mots de recherche, version ; HTML réservé", () => {
     const spec = nodes.editorSpec();
-    assert.deepEqual(Object.values(spec.widgetGroups), ["Mise en page", "Basique", "Général", "Formulaire", "Avancé", "Site", "E-commerce", "Réseaux sociaux"]);
+    assert.deepEqual(Object.values(spec.widgetGroups), ["Mise en page", "Basique", "Général", "Formulaire", "Avancé", "Site", "E-commerce", "Réseaux sociaux", "Pied de page"]);
     for (const t of spec.types) {
       assert.ok(spec.widgetGroups[t.group], `${t.type} : catégorie`);
       assert.ok(t.keywords && t.keywords.length > 2, `${t.type} : mots de recherche`);

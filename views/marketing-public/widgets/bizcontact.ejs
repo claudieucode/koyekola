@@ -1,0 +1,14 @@
+<%# Coordonnées (widget « Pied de page » : src/marketing/pages/widgets/footer.js). Variables : p, d (name, address, phone{label,href}, email{label,href}, empty), cls, attrs, isBuilder. Texte échappé ; adresses tel:/mailto: reconstruites côté serveur. Sans donnée : rien sur la page publiée. %>
+<% if (d && !d.empty) { %>
+<div class="<%= cls %> <%= p.layout === "inline" ? "is-inline" : "is-stack" %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <ul class="kw-biz-list">
+    <% if (d.name) { %><li class="kw-biz-item kw-biz-name"><strong><%= d.name %></strong></li><% } %>
+    <% if (d.address) { %><li class="kw-biz-item"><% if (p.showIcons) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("mapPin", { size: 18 }) %></span><% } %><address class="kw-biz-text"><span class="sr-only">Adresse : </span><%= d.address %></address></li><% } %>
+    <% if (d.phone) { %><li class="kw-biz-item"><% if (p.showIcons) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("smartphone", { size: 18 }) %></span><% } %><span class="kw-biz-text"><span class="sr-only">Téléphone : </span><a class="kw-biz-link" href="<%= d.phone.href %>"><%= d.phone.label %></a></span></li><% } %>
+    <% if (d.email) { %><li class="kw-biz-item"><% if (p.showIcons) { %><span class="kw-biz-icon" aria-hidden="true"><%- icon("mail", { size: 18 }) %></span><% } %><span class="kw-biz-text"><span class="sr-only">E-mail : </span><a class="kw-biz-link" href="<%= d.email.href %>"><%= d.email.label %></a></span></li><% } %>
+  </ul>
+</div>
+<% } else if (isBuilder) { %>
+<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Coordonnées : aucune adresse, téléphone ou e-mail à afficher. Renseignez-les dans Paramètres → Données de l’entreprise : ils s’afficheront ici automatiquement.</p></div>
+<% } %>

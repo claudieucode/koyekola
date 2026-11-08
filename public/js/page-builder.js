@@ -338,7 +338,9 @@
   var resetMemo = {};               // réglages modifiés par élément, recalculés à chaque modification
   var resetBtns = [];               // icônes affichées dans l'inspecteur (leur visibilité suit l'état réel)
   var inspItem = null;              // élément dont l'inspecteur est en cours de dessin
-  var stylePath = function (key) { return (styleState === "normal" ? "s:" + device : "t:" + styleState) + ":" + key; };
+  // États PAR ÉCRAN : « hover » = ordinateur (données d'origine inchangées), « hover@tablet » / « hover@mobile » = réglages propres à cet écran (même format que le serveur : nodes.js STATE_SCOPES)
+  var stateKey = function (state, dev) { return !dev || dev === "desktop" ? state : state + "@" + dev; };
+  var stylePath = function (key) { return (styleState === "normal" ? "s:" + device : "t:" + stateKey(styleState, device)) + ":" + key; };
   function commitSaved(json) {
     if (json === undefined) saved.set(content.sections); else saved.setJson(json);
     resetMemo = {};
@@ -408,7 +410,7 @@
   }
   // Un groupe de réglages de style (écran et état affichés) : seuls ses réglages modifiés sont restaurés
   function groupRestore(it, group, keys) {
-    var kind = styleState === "normal" ? "s" : "t", scopeName = styleState === "normal" ? device : styleState;
+    var kind = styleState === "normal" ? "s" : "t", scopeName = styleState === "normal" ? device : stateKey(styleState, device);
     var all = keys.concat(Object.keys(SP).filter(function (k) { return SP[k].group === group; }));
     return restoreButton(it, function (ch) {
       return ch.filter(function (p) { var q = KR.parsePath(p); return q.kind === kind && q.scope === scopeName && all.indexOf(q.key) >= 0; });
@@ -981,9 +983,10 @@
     var o = holderOf(it, create, key);
     if (!o) return null;
     if (state && state !== "normal") {
+      var sk = stateKey(state, bp);
       if (!o.states) { if (!create) return null; o.states = {}; }
-      if (!o.states[state]) { if (!create) return null; o.states[state] = {}; }
-      return o.states[state];
+      if (!o.states[sk]) { if (!create) return null; o.states[sk] = {}; }
+      return o.states[sk];
     }
     if (!o.styles) { if (!create) return null; o.styles = {}; }
     if (!o.styles[bp]) { if (!create) return null; o.styles[bp] = {}; }
@@ -992,7 +995,12 @@
   function ownValue(it, key) { var s = styleSet(it, device, styleState, false, key); return s && s[key] !== undefined ? s[key] : undefined; }
   // Valeur héritée (écrans plus grands) : affichée en indication grise
   function inheritedValue(it, key) {
-    if (styleState !== "normal") return undefined;
+    if (styleState !== "normal") {
+      // État d'un écran plus petit : la valeur de l'écran plus grand (ordinateur, puis tablette) est reprise, affichée en gris
+      var sh = holderOf(it, false, key), sup = ancestors(device);
+      for (var q = 0; q < sup.length; q++) { var ss = sh && sh.states && sh.states[stateKey(styleState, sup[q])]; if (ss && ss[key] !== undefined) return ss[key]; }
+      return undefined;
+    }
     var i = BPS.indexOf(device);
     // Grille sans réglage propre à la tablette / au mobile : 2 colonnes au plus sur tablette, 1 sur mobile (voir pageCss)
     if (!styleTarget && it.type === "grid" && (key === "columns" || key === "gridTemplate") && (device === "tablet" || device === "mobile")) {
@@ -3171,7 +3179,7 @@ function selectField(label, value, options, onChange, opts) {
     var own = ownValue(it, key);
     var dis = lockedAny(items);
     var oh = holderOf(it, false);
-    var others = styleState === "normal" ? BPS.filter(function (b) { return b !== "desktop" && oh && oh.styles && oh.styles[b] && oh.styles[b][key] !== undefined; }) : [];
+    var others = BPS.filter(function (b) { var bag = oh && (styleState === "normal" ? oh.styles && oh.styles[b] : oh.states && oh.states[stateKey(styleState, b)]); return b !== "desktop" && bag && bag[key] !== undefined; });
     var marks = others.length ? h("span", { class: "pb-prop-bps" }, others.map(function (b) {
       return h("span", { class: "pb-prop-bp" + (b === device ? " is-current" : ""), title: "Valeur propre à l'écran « " + bpLabel(b) + " »", role: "img", "aria-label": "Valeur propre : " + bpLabel(b) }, icon(DEVICE_ICON[b]));
     })) : null;
@@ -3886,6 +3894,13 @@ function selectField(label, value, options, onChange, opts) {
     return out;
   }
   // Sélecteur d'écran : icônes (nom en infobulle) ; un point signale un écran où cet élément a ses propres réglages
+  // Nombre de réglages propres à un état, pour un écran (dev) ou pour tous les écrans (dev = null)
+  function stateCount(it, state, dev) {
+    var bh = holderOf(it, false), n = 0;
+    if (!bh || !bh.states) return 0;
+    BPS.forEach(function (b) { if (dev && b !== dev) return; var set = bh.states[stateKey(state, b)]; if (set) n += Object.keys(set).length; });
+    return n;
+  }
   function breakpointSwitch(items) {
     var it = items[0];
     var seg = h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
@@ -3950,11 +3965,12 @@ function selectField(label, value, options, onChange, opts) {
       bar.appendChild(h("span", { class: "pb-insp-bar-label is-second", text: "État" }));
       var stateList = (Array.isArray(schema.states) ? SPEC.states.filter(function (st) { return schema.states.indexOf(st.key) >= 0; }) : schema.states ? SPEC.states : []).filter(function (st) { return st.key !== "scrolled" && st.key !== "menuOpen"; }).concat(hdrState(it) ? SPEC.states.filter(function (st) { return st.key === "scrolled" || st.key === "menuOpen"; }) : []);
       bar.appendChild(h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'élément" }, [{ key: "normal", label: "Normal" }].concat(stateList).map(function (st) {
-        return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; renderInspector(); renderContext(); } }, st.label);
+        var sn = st.key === "normal" ? 0 : stateCount(it, st.key, device), sa = st.key === "normal" ? 0 : stateCount(it, st.key, null);
+        return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), "data-state": st.key, class: sa ? "has-values" : null, "aria-label": st.label + (sn ? " : " + sn + " réglage(s) pour cet écran" : sa ? " : réglages sur un autre écran" : ""), "data-tip": sa ? st.label + " · " + sn + " réglage(s) propre(s) à cet écran, " + sa + " au total" : st.label, onclick: function () { styleState = st.key; renderInspector(); renderContext(); forceStatePreview(); } }, st.label, sn ? h("span", { class: "pb-state-n", "aria-hidden": "true" }, String(sn)) : null);
       })));
     } else if (styleState !== "normal") styleState = "normal";
     box.appendChild(bar);
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier", active: "moment du clic", scrolled: "moment où la page a défilé au-delà du seuil de l'en-tête", menuOpen: "moment où le menu de l'en-tête est ouvert" }[styleState] + ", sur tous les écrans." }));
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Style appliqué au " + { hover: "survol de la souris", focus: "focus au clavier (contour conservé tant qu'aucun autre repère visible n'est réglé)", active: "moment du clic" }[styleState] + (device === "desktop" ? ", sur l'ordinateur et sur les écrans plus petits tant qu'ils n'ont pas de réglage propre." : " de l'écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris), les autres écrans ne changent pas.") }));
     else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint pb-insp-note", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand (en gris)." }));
     // Une propriété, une seule place : la couleur du texte va dans la typographie quand elle existe, la couleur de fond
     // dans « Fond » (avec l'image et le dégradé)
@@ -4080,7 +4096,7 @@ function selectField(label, value, options, onChange, opts) {
     var bps = BPS.filter(function (b) { return it.styles && it.styles[b] && Object.keys(it.styles[b]).length; });
     add("Réglages par écran", bps.length ? bps.map(bpLabel).join(", ") : "aucun (style par défaut)");
     var sts = Object.keys(it.states || {});
-    if (sts.length) add("États stylés", sts.map(function (k) { return { hover: "survol", focus: "focus", active: "clic" }[k]; }).join(", "));
+    if (sts.length) add("États stylés", sts.map(function (k) { var pq = k.split("@"); return { hover: "survol", focus: "focus", active: "clic" }[pq[0]] + (pq[1] ? " (" + bpLabel(pq[1]).toLowerCase() + ")" : ""); }).join(", "));
     if (it.audience) add("Affiché à", (SPEC.audiences.find(function (a) { return a[0] === it.audience.who; }) || [0, it.audience.who])[1] + (it.audience.value !== undefined ? " " + it.audience.value : ""));
     if (it.hideOn && it.hideOn.length) add("Masqué sur", it.hideOn.map(bpLabel).join(", "));
     add("État", [it.hidden ? "masqué" : "", lockedDeep(it.id) ? "verrouillé" : ""].filter(Boolean).join(", ") || "visible, modifiable");
@@ -4469,8 +4485,8 @@ function selectField(label, value, options, onChange, opts) {
     if (states.length) box.appendChild(accGroup("i-states", "États (survol, clic…)", Boolean(it.states && Object.keys(it.states).length), function (b) {
       b.appendChild(h("p", { class: "pb-hint", text: "Couleurs, ombre, transformation… propres à un état : réglées dans l'onglet Style, pour cet état." }));
       b.appendChild(h("div", { class: "pb-row pb-wrap" }, states.map(function (st) {
-        var n = it.states && it.states[st.key] ? Object.keys(it.states[st.key]).length : 0;
-        return h("button", { type: "button", class: "btn btn-outline btn-sm", "data-state": st.key, onclick: function () { inspTab = "style"; store.set("insp-tab", inspTab); styleState = st.key; renderInspector(); renderContext(); } }, "Régler : " + st.label + (n ? " (" + n + ")" : ""));
+        var n = stateCount(it, st.key, null);
+        return h("button", { type: "button", class: "btn btn-outline btn-sm", "data-state": st.key, onclick: function () { inspTab = "style"; store.set("insp-tab", inspTab); styleState = st.key; renderInspector(); renderContext(); forceStatePreview(); } }, "Régler : " + st.label + (n ? " (" + n + ", tous écrans)" : ""));
       })));
     }, it.states ? Object.keys(it.states).length : 0));
   }
@@ -4591,7 +4607,7 @@ function selectField(label, value, options, onChange, opts) {
   var presetKeyLabel = function (k) { return (SP[k] && SP[k].label) || COMPOSED_LABEL[k] || k; };
   var presetCatOf = function (k) { for (var i = 0; i < PRESET_CATS.length; i++) if (PRESET_CATS[i].keys.indexOf(k) >= 0) return PRESET_CATS[i].id; return null; };
   var presetCatLabel = function (id) { var c = PRESET_CATS.filter(function (x) { return x.id === id; })[0]; return c ? c.label : id; };
-  var presetScopeLabel = function (scope) { var s = SPEC.states.filter(function (x) { return x.key === scope; })[0]; return s ? "État : " + s.label : bpLabel(scope); };
+  var presetScopeLabel = function (scope) { var pq = String(scope).split("@"), s = SPEC.states.filter(function (x) { return x.key === pq[0]; })[0]; return s ? "État : " + s.label + (pq[1] ? " (" + bpLabel(pq[1]).toLowerCase() + ")" : "") : bpLabel(scope); };
   var styleDef = function (name) { return siteClasses.filter(function (x) { return x.name === name; })[0] || null; };
   var styleTitle = function (c) { return c.label || c.name; };
   // Identifiant technique à partir du nom saisi (minuscules, tirets, sans accents, jamais un préfixe réservé)
@@ -5427,7 +5443,7 @@ function selectField(label, value, options, onChange, opts) {
     var main = doc && doc.body && doc.readyState === "complete" ? doc.getElementById("main") : null;
     if (!main || !doc.body.classList.contains("lp-builder")) return false;
     if (next.head !== prev.head || next.rest !== prev.rest || next.bodyClass !== prev.bodyClass) return false;
-    var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE"; });
+    var liveStyles = Array.prototype.filter.call(doc.head.children, function (el) { return el.tagName === "STYLE" && el.id !== "pb-force-state"; });
     // Le nombre de feuilles peut changer (la première règle d'un élément en crée une) : elles sont réconciliées plus bas, sans recharger le cadre
     if (liveStyles.length !== prev.styles.length) return false;
     var prevHtml = {};
@@ -5747,9 +5763,39 @@ function selectField(label, value, options, onChange, opts) {
     $$(".pb-drop-line, .pb-drop-box, .pb-drop-label", doc).forEach(function (x) { x.remove(); });
   }
   // Sélection dans le canevas : cadre, nom, dimensions, parent en pointillés, poignées de redimensionnement
+  // Aperçu d'un état dans le canevas : tant qu'un état (survol, focus, clic) est choisi dans le panneau, l'élément sélectionné est AFFICHÉ dans cet état, sans survol réel.
+  // Les règles « .kw-n-<id>:hover » de la page sont recopiées avec une classe (« .pb-force-state ») : mêmes valeurs, mêmes écrans (requêtes de média comprises), une seule cible.
+  function forceStatePreview() {
+    var doc = frame.contentDocument;
+    if (!doc || !doc.head) return;
+    var old = doc.getElementById("pb-force-state");
+    if (old) old.parentNode.removeChild(old);
+    $$(".pb-force-state", doc).forEach(function (el) { el.classList.remove("pb-force-state"); });
+    if (styleState === "normal" || selection.length !== 1 || styleTarget) return;
+    var id = selection[0], el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]');
+    var pseudo = { hover: ":hover", focus: ":focus-visible", active: ":active" }[styleState];
+    if (!el || !pseudo || !/^[a-z0-9]{6,20}$/.test(id)) return;
+    var needle = ".kw-n-" + id + pseudo, out = [];
+    var walkRules = function (rules, wrap) {
+      Array.prototype.forEach.call(rules, function (r) {
+        if (r.cssRules && r.media) walkRules(r.cssRules, function (t) { return wrap("@media " + r.media.mediaText + "{" + t + "}"); });
+        else if (r.selectorText && r.selectorText.indexOf(needle) >= 0) {
+          var sel = r.selectorText.split(",").filter(function (x) { return x.trim().indexOf(needle) >= 0; }).map(function (x) { return x.split(needle).join(".kw-n-" + id + ".pb-force-state"); }).join(",");
+          out.push(wrap(sel + "{" + r.style.cssText + "}"));
+        }
+      });
+    };
+    Array.prototype.forEach.call(doc.styleSheets, function (sh) { try { walkRules(sh.cssRules, function (t) { return t; }); } catch (e) { /* feuille inaccessible */ } });
+    if (!out.length) return;
+    var st = doc.createElement("style");
+    st.id = "pb-force-state"; st.textContent = out.join("\n");
+    doc.head.appendChild(st);
+    el.classList.add("pb-force-state");
+  }
   function markCanvasSelection(scroll, pre) {
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
+    guarded(forceStatePreview);
     $$(".is-selected", doc).forEach(function (el) { el.classList.remove("is-selected"); });
     selection.forEach(function (id) { var el = doc.querySelector('[data-node-id="' + id + '"],[data-section-id="' + id + '"]'); if (el) el.classList.add("is-selected"); });
     drawOverlays(pre);
