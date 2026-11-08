@@ -301,3 +301,17 @@ dialog::backdrop { background: rgb(5 14 25 / .62); }
 .tb-pick { display: grid; gap: 6px; min-width: 0; } .tb-pick-chips { display: flex; flex-wrap: wrap; gap: 4px; } .tb-pick-chips:empty { display: none; }
 .tb-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; border: 1px solid var(--tb-line); border-radius: 999px; padding: 2px 4px 2px 10px; background: var(--tb-soft); } .tb-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tb-chip button { border: 0; background: transparent; cursor: pointer; color: inherit; font-size: 16px; line-height: 1; padding: 2px 6px; border-radius: 999px; }
 .tb-pick-list { list-style: none; margin: 0; padding: 4px; border: 1px solid var(--tb-line); border-radius: 8px; max-height: 180px; overflow: auto; background: var(--tb-surface, Canvas); } .tb-pick-list[hidden] { display: none; } .tb-pick-list li button { width: 100%; text-align: left; border: 0; background: transparent; color: inherit; padding: 6px 8px; border-radius: 6px; cursor: pointer; } .tb-pick-list li button:hover, .tb-pick-list li button:focus-visible { background: var(--tb-soft); } .tb-pick-list .tb-pick-empty { padding: 6px 8px; color: var(--tb-muted, #64748b); }
+
+/* Tablette en portrait (801 à 820 px) : la mise en page passe sur une colonne (règle ci-dessus) ; la navigation des catégories devient alors, comme sur téléphone, un bandeau défilant au lieu d'une longue liste */
+@media (min-width: 801px) and (max-width: 820px) {
+  .tb-layout { grid-template-rows: auto minmax(0, 1fr); }
+  .tb-side { border-right: 0; border-bottom: 1px solid var(--tb-line); padding: 4px 8px; overflow: auto hidden; }
+  .tb-side ul { display: flex; gap: 4px; width: max-content; } .tb-side li.tb-grp { display: none; }
+  .tb-side button { width: auto; white-space: nowrap; padding: 6px 12px; } .tb-side button::before { left: 12px; right: 12px; top: auto; bottom: 0; width: auto; height: 3px; border-radius: 3px 3px 0 0; transform: scaleX(0); }
+}
+/* Bandeau de navigation (tablette portrait, téléphone) : le bouton « réduire la barre latérale » n a plus d objet */
+@media (max-width: 820px) { #tb-collapse { display: none; } }
+/* Cibles tactiles : la règle de la refonte (36 px) venait après la règle des écrans tactiles ; elle ne doit pas la remplacer */
+@media (max-width: 900px), (pointer: coarse) { .tb-side button { min-height: 44px; } }
+/* Sélecteur de thème (clair / sombre / auto) : cibles de 44 px sur les écrans tactiles et étroits */
+@media (max-width: 900px), (pointer: coarse) { .tb-theme button { width: 44px; height: 44px; } .tb-theme { padding: 2px; } }
