@@ -7866,6 +7866,7 @@ function selectField(label, value, options, onChange, opts) {
     box.appendChild(h("p", { class: "pb-hint", text: "Mise en page, fond, bordure, ombre, espacements, ancre, visibilité par écran… s'ouvrent dans le panneau de droite, avec le choix de l'écran (ordinateur, tablette, mobile) et de l'état." }));
     var row = function (items) { return h("div", { class: "pb-hdr-access", style: "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px" }, items.map(function (b) { return h("button", { type: "button", class: "btn btn-outline btn-sm", onclick: function () { open(root.id, b[1], b[2]); } }, b[0]); })); };
     box.appendChild(row([["Mise en page et contenu", "content"], ["Style (état normal)", "style"], ["Style après défilement", "style", "scrolled"], ["Style menu ouvert", "style", "menuOpen"], ["Avancé (ancre, écrans, CSS)", "advanced"]]));
+    headerRootPanel(box, root);
     var els = []; (function walk(list) { (list || []).forEach(function (n) { if (n !== root) els.push(n); if (n.children) walk(n.children); }); })(sec.children[0].children);
     if (els.length) {
       box.appendChild(h("p", { class: "pb-sub", text: "Éléments de l'en-tête (cliquez pour tout régler)" }));
@@ -7873,6 +7874,39 @@ function selectField(label, value, options, onChange, opts) {
         var t = (preview(n) || "").slice(0, 18); return h("button", { type: "button", class: "btn btn-ghost btn-sm", onclick: function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); } }, typeLabel(n) + (t ? " · " + t : ""));
       })));
     }
+  }
+  // Réglages du conteneur de l'en-tête rendus ICI (mêmes contrôles que le panneau de droite : mêmes valeurs, mêmes écrans et états), regroupés comme dans Elementor
+  var HDR_GROUPS = [
+    ["Mise en page", [["flexDirection", "Direction"], ["flexWrap", "Retour à la ligne"], ["justifyContent", "Justification"], ["alignItems", "Alignement"], ["gap", "Espacement entre éléments"]]],
+    ["Taille", [["width", "Largeur"], ["maxWidth", "Largeur maximale"], ["minHeight", "Hauteur minimale"], ["overflow", "Débordement"]]],
+    ["Espacements", [["paddingTop", "Marge interne haut"], ["paddingBottom", "Marge interne bas"], ["paddingLeft", "Marge interne gauche"], ["paddingRight", "Marge interne droite"], ["marginTop", "Marge externe haut"], ["marginBottom", "Marge externe bas"]]],
+    ["Fond, bordure et ombre", [["backgroundColor", "Couleur de fond"], ["borderStyle", "Type de bordure"], ["borderBottomWidth", "Bordure du bas (épaisseur)"], ["borderColor", "Couleur de bordure"], ["borderRadius", "Arrondi"], ["boxShadow", "Ombre"], ["opacity", "Opacité"], ["backdropBlur", "Flou de l'arrière-plan"]]],
+    ["Avancé", [["position", "Position"], ["zIndex", "Niveau d'empilement"], ["visibility", "Visibilité (garde sa place)"], ["transitionDuration", "Durée des transitions"]]]
+  ];
+  var hdrRootOpen = {};
+  function headerRootPanel(box, root) {
+    var items = [root];
+    var again = function () { var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b); renderInspector(); };
+    box.appendChild(h("p", { class: "pb-sub", text: "Style du conteneur de l'en-tête" }));
+    var bar = h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }),
+      h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), onclick: function () { setDevice(b.key); var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); } }, b.label);
+      })));
+    box.appendChild(bar);
+    var states = [{ key: "normal", label: "Normal" }].concat(SPEC.states.filter(function (st) { return ["hover", "scrolled", "menuOpen"].indexOf(st.key) >= 0; }));
+    box.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }),
+      h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'en-tête" }, states.map(function (st) {
+        return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; again(); } }, st.label);
+      }))));
+    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
+    else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
+    HDR_GROUPS.forEach(function (g) {
+      var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { hdrRootOpen[g[0]] = e.currentTarget.open; } });
+      det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: g[0] })));
+      var inner = h("div", { class: "pb-acc-body" });
+      g[1].forEach(function (kv) { if (SP[kv[0]]) { try { inner.appendChild(styleControl(items, kv[0], kv[1])); } catch (e) { /* propriété indisponible pour ce conteneur */ } } });
+      det.appendChild(inner); box.appendChild(det);
+    });
   }
   var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
   function renderHeaderSettings(box) {
