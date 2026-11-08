@@ -7966,6 +7966,7 @@ function selectField(label, value, options, onChange, opts) {
       }))));
     if (styleState !== "normal") card.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
     else if (device !== "desktop") card.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
+    card.appendChild(h("p", { class: "pb-hdr-sublabel", text: "Réglages à modifier" }));
     HDR_GROUPS.forEach(function (g) {
       var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { var d = e.currentTarget; if (d.open) { Object.keys(hdrRootOpen).forEach(function (k) { hdrRootOpen[k] = false; }); hdrRootOpen[g[0]] = true; [].forEach.call(d.parentNode.querySelectorAll(":scope > details.pb-acc"), function (o) { if (o !== d && o.open) o.open = false; }); } else hdrRootOpen[g[0]] = false; } });
       det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: g[0] })));

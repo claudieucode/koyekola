@@ -2426,3 +2426,10 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 [data-pb-page-settings] .pb-prop:has(> .pb-link-btn) > .pb-link-btn { grid-column: 2; }
 [data-pb-page-settings] .pb-prop-label { white-space: normal; }
 .pb-hdr-acc-body > div > .pb-hint:first-child { margin: 10px 12px; }
+/* Groupes à l'intérieur de « Style du conteneur » : clairement des sous-parties (étiquette, retrait, filet à gauche, texte plus petit), pas des onglets du même niveau que les accordéons principaux */
+.pb-hdr-card > .pb-hdr-sublabel { padding: 12px 12px 6px; border-top: 1px solid var(--editor-border); font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--editor-muted); }
+.pb-hdr-card > details.pb-acc { margin: 0 12px 8px 20px; padding: 0; border: 1px solid var(--editor-border); border-left: 3px solid var(--editor-accent); border-radius: 6px; background: var(--editor-panel-secondary); overflow: hidden; }
+.pb-hdr-card > details.pb-acc:last-child { margin-bottom: 12px; }
+.pb-hdr-card > details.pb-acc > summary { min-height: 36px; padding: 6px 10px; font-size: 12.5px; font-weight: 600; color: var(--editor-text-secondary); }
+.pb-hdr-card > details.pb-acc[open] > summary { color: var(--editor-text); border-bottom: 1px solid var(--editor-border); }
+.pb-hdr-card > details.pb-acc > .pb-acc-body { padding: 10px; background: var(--editor-card); }
