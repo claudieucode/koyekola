@@ -7918,16 +7918,18 @@ function selectField(label, value, options, onChange, opts) {
     // Un seul conteneur racine (cas courant) : ses rangées sont les conteneurs qu'il contient
     if (rows.length === 1) { var inner = (rows[0].children || []).filter(function (n) { return n.type === "container"; }); if (inner.length) rows = inner; }
     if (!rows.length) return;
-    box.appendChild(h("p", { class: "pb-sub", text: "Rangées de l'en-tête" }));
-    box.appendChild(h("p", { class: "pb-hint", text: "Cochez une rangée pour qu'elle reste collée en haut de l'écran quand on dépasse sa place, pendant que les autres rangées défilent (par exemple la barre de navigation, sans la barre d'annonce)." }));
+    box.appendChild(h("p", { class: "pb-sub", text: "Rangées collées" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Une rangée cochée reste en haut de l'écran pendant que les autres défilent." }));
+    var card = h("div", { class: "pb-hdr-card" });
     rows.forEach(function (r, i) {
       var name = r.name || "Rangée " + (i + 1);
-      box.appendChild(checkField("Coller la rangée « " + name + " »", Boolean(r.props && r.props.stickRow), function (on) {
+      card.appendChild(checkField("Coller la rangée « " + name + " »", Boolean(r.props && r.props.stickRow), function (on) {
         change(function () { var x = byId(r.id); if (!x) return false; x.props = x.props || {}; if (on) x.props.stickRow = true; else { delete x.props.stickRow; delete x.props.stickOffset; } }, { label: "Coller une rangée de l'en-tête" });
         var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b);
       }, { disabled: !canWrite }));
-      if (r.props && r.props.stickRow) box.appendChild(numberField("Distance du bord haut (px) : " + name, r.props.stickOffset || 0, { min: 0, max: 200, step: 1, integer: true, disabled: !canWrite }, function (n) { if (n === null) return false; change(function () { var x = byId(r.id); if (!x) return false; if (n) x.props.stickOffset = n; else delete x.props.stickOffset; }, { label: "Distance de la rangée collée", key: "stick:" + r.id, light: true }); }));
+      if (r.props && r.props.stickRow) card.appendChild(numberField("Distance du bord haut (px) : " + name, r.props.stickOffset || 0, { min: 0, max: 200, step: 1, integer: true, disabled: !canWrite }, function (n) { if (n === null) return false; change(function () { var x = byId(r.id); if (!x) return false; if (n) x.props.stickOffset = n; else delete x.props.stickOffset; }, { label: "Distance de la rangée collée", key: "stick:" + r.id, light: true }); }));
     });
+    box.appendChild(card);
   }
   var HDR_GROUPS = [
     ["Mise en page", [["flexDirection", "Direction"], ["flexWrap", "Retour à la ligne"], ["justifyContent", "Justification"], ["alignItems", "Alignement"], ["gap", "Espacement entre éléments"]]],
@@ -7940,58 +7942,62 @@ function selectField(label, value, options, onChange, opts) {
   function headerRootPanel(box, root) {
     var items = [root];
     var again = function () { var b = $("[data-pb-page-settings]"); b.textContent = ""; renderHeaderSettings(b); renderInspector(); };
-    box.appendChild(h("p", { class: "pb-sub", text: "Style du conteneur de l'en-tête" }));
+    box.appendChild(h("p", { class: "pb-sub", text: "Style du conteneur" }));
+    var card = h("div", { class: "pb-hdr-card" });
     var bar = h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "Écran" }),
       h("div", { class: "pb-seg pb-bp-seg", role: "radiogroup", "aria-label": "Écran modifié" }, SPEC.breakpoints.map(function (b) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(device === b.key), onclick: function () { setDevice(b.key); var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderHeaderSettings(bx); } }, b.label);
       })));
-    box.appendChild(bar);
+    card.appendChild(bar);
     var states = [{ key: "normal", label: "Normal" }].concat(SPEC.states.filter(function (st) { return ["hover", "scrolled", "menuOpen"].indexOf(st.key) >= 0; }));
-    box.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }),
+    card.appendChild(h("div", { class: "pb-insp-bar" }, h("span", { class: "pb-insp-bar-label", text: "État" }),
       h("div", { class: "pb-seg pb-state-seg", role: "radiogroup", "aria-label": "État de l'en-tête" }, states.map(function (st) {
         return h("button", { type: "button", role: "radio", "aria-checked": String(styleState === st.key), onclick: function () { styleState = st.key; again(); } }, st.label);
       }))));
-    if (styleState !== "normal") box.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
-    else if (device !== "desktop") box.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
+    if (styleState !== "normal") card.appendChild(h("p", { class: "pb-hint", text: styleState === "scrolled" ? "Ces réglages s'appliquent seulement après le défilement (au-delà du seuil)." : styleState === "menuOpen" ? "Ces réglages s'appliquent seulement quand le menu est ouvert." : "Ces réglages s'appliquent au survol." }));
+    else if (device !== "desktop") card.appendChild(h("p", { class: "pb-hint", text: "Écran « " + bpLabel(device) + " » : un champ vide reprend la valeur de l'écran plus grand." }));
     HDR_GROUPS.forEach(function (g) {
       var det = h("details", { class: "pb-acc", open: hdrRootOpen[g[0]] ? "" : null, ontoggle: function (e) { hdrRootOpen[g[0]] = e.currentTarget.open; } });
       det.appendChild(h("summary", {}, h("span", { class: "pb-acc-title", text: g[0] })));
       var inner = h("div", { class: "pb-acc-body" });
       g[1].forEach(function (kv) { if (SP[kv[0]]) { try { inner.appendChild(styleControl(items, kv[0], kv[1])); } catch (e) { /* propriété indisponible pour ce conteneur */ } } });
-      det.appendChild(inner); box.appendChild(det);
+      det.appendChild(inner); card.appendChild(det);
     });
+    box.appendChild(card);
   }
   var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
   function renderHeaderSettings(box) {
     var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
     headerAccess(box);
-    box.appendChild(h("p", { class: "pb-sub", text: "Comportement de l'en-tête" }));
-    box.appendChild(h("p", { class: "pb-hint", text: "Ces réglages décident comment l'en-tête se comporte sur le site publié. Ils sont enregistrés avec l'en-tête : déplacer ou supprimer un bloc ne les change plus." }));
-    box.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
-    if (!live) box.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
+    box.appendChild(h("p", { class: "pb-sub", text: "Comportement au défilement" }));
+    box.appendChild(h("p", { class: "pb-hint", text: "Comment l'en-tête se comporte sur le site publié." }));
+    var card = h("div", { class: "pb-hdr-card" });
+    card.appendChild(selectField("Position", d.mode, [["static", "Ordinaire (défile avec la page)"], ["sticky", "Collé en haut pendant le défilement"], ["fixed", "Fixé en haut (reste visible, sans décalage)"], ["overlay", "Superposé au visuel d'ouverture (transparent)"]], function (v) { setHeader({ mode: v }, "mode"); }, { disabled: dis }));
+    if (!live) card.appendChild(h("p", { class: "pb-hint", text: "Un en-tête ordinaire n'a ni effet de défilement ni masquage. Choisissez une autre position pour les activer." }));
     if (moving) {
-      box.appendChild(h("p", { class: "pb-sub", text: "Coller sur" }));
+      card.appendChild(h("p", { class: "pb-sub", text: "Coller sur" }));
       HDR_DEVICES.forEach(function (dv) {
-        box.appendChild(checkField(dv[1], d.stickOn.indexOf(dv[0]) >= 0, function (on) {
+        card.appendChild(checkField(dv[1], d.stickOn.indexOf(dv[0]) >= 0, function (on) {
           var next = HDR_DEVICES.map(function (x) { return x[0]; }).filter(function (k) { return k === dv[0] ? on : d.stickOn.indexOf(k) >= 0; });
           if (!next.length) { setHeader({}, "stick-last"); return; } // au moins un appareil : la case décochée revient
           setHeader({ stickOn: next }, "stickOn");
         }, { disabled: dis }));
       });
-      box.appendChild(h("p", { class: "pb-hint", text: "Sur les autres appareils, l'en-tête redevient ordinaire." }));
-      box.appendChild(selectField("Bord de l'écran", d.edge, [["top", "En haut"], ["bottom", "En bas (barre fixée au bas de l'écran)"]], function (v) { setHeader({ edge: v }, "edge"); }, { disabled: dis }));
-      if (d.edge === "bottom") box.appendChild(numberField("Hauteur réservée dans la page (px)", d.reserve, { min: 32, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ reserve: n }, "reserve"); }, "Place gardée à l'emplacement de l'en-tête pour que le contenu ne saute pas. Mettez la hauteur réelle de votre barre."));
-      box.appendChild(numberField("Décalage depuis le haut (px)", d.offset, { min: 0, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ offset: n }, "offset"); }, "Distance entre le haut de l'écran et l'en-tête (ex. sous une barre fixe)."));
+      card.appendChild(h("p", { class: "pb-hint", text: "Sur les autres appareils, l'en-tête redevient ordinaire." }));
+      card.appendChild(selectField("Bord de l'écran", d.edge, [["top", "En haut"], ["bottom", "En bas (barre fixée au bas de l'écran)"]], function (v) { setHeader({ edge: v }, "edge"); }, { disabled: dis }));
+      if (d.edge === "bottom") card.appendChild(numberField("Hauteur réservée dans la page (px)", d.reserve, { min: 32, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ reserve: n }, "reserve"); }, "Place gardée à l'emplacement de l'en-tête pour que le contenu ne saute pas. Mettez la hauteur réelle de votre barre."));
+      card.appendChild(numberField("Décalage depuis le haut (px)", d.offset, { min: 0, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ offset: n }, "offset"); }, "Distance entre le haut de l'écran et l'en-tête (ex. sous une barre fixe)."));
     }
     if (live) {
-      box.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis }));
-      box.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant l'état « défilé » (effet, styles « Après défilement », masquage). 8 px par défaut."));
-      if (d.fx === "shrink" || d.fx === "both") box.appendChild(numberField("Hauteur du logo réduit (px)", d.shrink.height, { min: 24, max: 120, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ shrink: { height: n } }, "shrink"); }, "Taille maximale du logo une fois l'en-tête réduit."));
-      box.appendChild(checkField("Masquer en descendant, réapparaître en remontant", d.hideOnScroll.enabled, function (on) { setHeader({ hideOnScroll: { enabled: on, tolerance: d.hideOnScroll.tolerance } }, "hide"); }, { disabled: dis, hint: "L'en-tête reste visible quand un menu est ouvert ou que le clavier y a le focus." }));
-      if (d.hideOnScroll.enabled) box.appendChild(numberField("Tolérance (px)", d.hideOnScroll.tolerance, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ hideOnScroll: { enabled: true, tolerance: n } }, "tol"); }, "Mouvement minimal avant de masquer ou d'afficher : évite les à-coups."));
-      box.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
-      box.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
+      card.appendChild(selectField("Effet au défilement", d.fx, [["", "Aucun"], ["shrink", "Réduire la hauteur des rangées"], ["solid", "Passer à un fond plein"], ["both", "Réduire et fond plein"]], function (v) { setHeader({ fx: v }, "fx"); }, { disabled: dis }));
+      card.appendChild(numberField("Seuil de défilement (px)", d.threshold, { min: 0, max: 1000, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ threshold: n }, "threshold"); }, "Distance parcourue par la page avant l'état « défilé » (effet, styles « Après défilement », masquage). 8 px par défaut."));
+      if (d.fx === "shrink" || d.fx === "both") card.appendChild(numberField("Hauteur du logo réduit (px)", d.shrink.height, { min: 24, max: 120, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ shrink: { height: n } }, "shrink"); }, "Taille maximale du logo une fois l'en-tête réduit."));
+      card.appendChild(checkField("Masquer en descendant, réapparaître en remontant", d.hideOnScroll.enabled, function (on) { setHeader({ hideOnScroll: { enabled: on, tolerance: d.hideOnScroll.tolerance } }, "hide"); }, { disabled: dis, hint: "L'en-tête reste visible quand un menu est ouvert ou que le clavier y a le focus." }));
+      if (d.hideOnScroll.enabled) card.appendChild(numberField("Tolérance (px)", d.hideOnScroll.tolerance, { min: 0, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ hideOnScroll: { enabled: true, tolerance: n } }, "tol"); }, "Mouvement minimal avant de masquer ou d'afficher : évite les à-coups."));
+      card.appendChild(numberField("Niveau d'empilement (1 à 100)", d.zIndex, { min: 1, max: 100, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ zIndex: n }, "z"); }, "Plus la valeur est haute, plus l'en-tête passe au-dessus des autres éléments. 60 par défaut."));
+      card.appendChild(h("p", { class: "pb-hint", text: "Pour changer l'apparence d'un élément après le défilement (fond, couleur, taille), sélectionnez-le puis choisissez l'état « Après défilement » dans l'onglet Style." }));
     }
+    box.appendChild(card);
     var modeText = { static: "Ordinaire : défile avec la page.", sticky: "Collé : reste visible en haut de l'écran pendant le défilement.", fixed: "Fixé : reste en haut de l'écran pendant tout le défilement.", overlay: "Superposé : posé sur le haut du visuel d'ouverture de chaque page." }[d.mode];
     var fxText = d.fx ? " Effet : " + ({ shrink: "hauteur réduite", solid: "fond plein", both: "hauteur réduite et fond plein" })[d.fx] + " après " + d.threshold + " px." : "";
     var hideText = d.hideOnScroll.enabled ? " Masqué en descendant." : "";
