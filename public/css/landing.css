@@ -1766,3 +1766,29 @@ html.kw-noscroll { overflow: hidden; }
 .kw-emailsub-form .field-group { flex: 1 1 200px; margin: 0; } .kw-emailsub-form .checkbox-row { flex: 1 1 100%; font-size: .85em; }
 .kw-emailsub-submit { flex: none; }
 .kw-emailsub { min-width: 0; } .kw-biz-name { font-weight: 700; } .kw-bizcontact.is-stack .kw-biz-list, .kw-bizlegal.is-stack .kw-biz-list { flex-direction: column; }
+
+/* Mini-panier : nombre d'articles entre parenthèses, total, tiroir à gauche */
+.kw-mc-count.is-text { min-width: 0; padding: 0; background: none; color: inherit; font-size: inherit; font-weight: 600; line-height: inherit; border-radius: 0; }
+.kw-mc-total { font-weight: 600; white-space: nowrap; }
+.kw-cart-drawer.is-left { right: auto; left: 0; }
+.kw-cart-drawer.is-left[open] { animation-name: kw-slide-l; }
+
+/* Recherche : bouton « loupe » seul ou loupe DANS le champ (modèle minimal) */
+.kw-search .kw-search-go { min-width: 48px; min-height: 48px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; }
+.kw-search-minimal { position: relative; }
+.kw-search-minimal input { width: 100%; padding-right: 52px; }
+.kw-search-minimal .kw-search-go.is-inline { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); min-width: 44px; min-height: 44px; border: 0; background: none; color: inherit; box-shadow: none; }
+
+/* Compte : icône devant le texte, ou icône seule */
+.kw-account-link:has(.kw-account-ico) { display: inline-flex; align-items: center; gap: 6px; }
+.kw-account-ico { display: inline-flex; flex: none; }
+
+/* Sous-menus : indicateur (plus, angle, aucun) et animation d'ouverture (fondu, glissement) */
+.kw-menu.kw-ind-none .kw-sub-toggle::before { display: none; }
+.kw-menu.kw-ind-plus .kw-sub-toggle::before { content: "+"; width: auto; height: auto; margin: 0; border: 0; transform: none; font-size: 18px; line-height: 1; font-weight: 700; }
+.kw-menu.kw-ind-plus .kw-sub-toggle[aria-expanded="true"]::before { content: "\2212"; }
+.kw-menu.kw-ind-angle .kw-sub-toggle::before { width: 7px; height: 7px; border-right: 0; border-bottom: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(-45deg) translate(2px, -2px); }
+@media (prefers-reduced-motion: no-preference) {
+  .kw-menu.kw-sa-fade .kw-submenu, .kw-menu.kw-sa-fade .kw-mega { animation: kw-fade .16s ease-out; }
+  .kw-menu.kw-sa-slide .kw-submenu, .kw-menu.kw-sa-slide .kw-mega { animation: kw-fade-in .18s ease-out; }
+}

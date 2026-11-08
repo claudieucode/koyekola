@@ -35,3 +35,22 @@ describe("Styles de l'image du logo et du mini-panier", () => {
     assert.match(css, /\.kw-mc-icon:hover\{[^}]*#ff0000/); assert.match(css, /\.kw-mc-count:hover\{[^}]*#00ff00/);
   });
 });
+
+describe("Menu, recherche, compte : nouveaux réglages (validation)", () => {
+  const menu = (props) => norm({ type: "menu", props: { source: "manual", items: [{ label: "A", url: "/a" }], ...props } }).props;
+  test("menu : indicateur de sous-menu et animation d'ouverture bornés", () => {
+    assert.equal(menu({ indicator: "plus" }).indicator, "plus"); assert.equal(menu({ indicator: "angle" }).indicator, "angle"); assert.equal(menu({ indicator: "none" }).indicator, "none");
+    assert.equal(menu({ indicator: "chevron" }).indicator, undefined, "le chevron est la valeur par défaut : non enregistré");
+    assert.equal(menu({ indicator: "x" }).indicator, undefined);
+    assert.equal(menu({ submenuAnim: "fade" }).submenuAnim, "fade"); assert.equal(menu({ submenuAnim: "slide" }).submenuAnim, "slide"); assert.equal(menu({ submenuAnim: "boom" }).submenuAnim, undefined);
+  });
+  test("recherche : bouton « loupe » seule ou « dans le champ » ; compte : icône et texte ou icône seule", () => {
+    assert.equal(norm({ type: "search", props: { buttonType: "icon" } }).props.buttonType, "icon");
+    assert.equal(norm({ type: "search", props: { buttonType: "inline" } }).props.buttonType, "inline");
+    assert.equal(norm({ type: "search", props: { buttonType: "text" } }).props.buttonType, undefined);
+    assert.equal(norm({ type: "search", props: { buttonType: "<b>" } }).props.buttonType, undefined);
+    assert.equal(norm({ type: "account", props: { look: "icon" } }).props.look, "icon");
+    assert.equal(norm({ type: "account", props: { look: "icon-text" } }).props.look, "icon-text");
+    assert.equal(norm({ type: "account", props: { look: "autre" } }).props.look, undefined);
+  });
+});

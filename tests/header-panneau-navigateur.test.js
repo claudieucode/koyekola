@@ -165,6 +165,27 @@ describe("Header Builder : onglet « En-tête » de l'éditeur (navigateur)", { 
     for (const m of m2) { assert.ok(!m.props.mobileToggle, "menu étalé : plus de bouton"); assert.equal(m.props.mobileMode, undefined); assert.equal(m.props.menuBreakpoint, undefined); }
   });
 
+  test("éléments d'en-tête : les réglages du logo sont rangés en groupes repliables, un seul ouvert à la fois", async () => {
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
+    await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click();
+    const insp = page.locator("[data-pb-inspector]"); await insp.getByText("Hauteur du logo (px)").waitFor({ timeout: 10000 });
+    const groups = insp.locator("details.pb-hdr-acc > summary");
+    for (const t of ["Logo et lien", "Au défilement", "Variantes du logo"]) assert.equal(await groups.filter({ hasText: t }).count(), 1, `groupe « ${t} »`);
+    assert.equal(await insp.locator("details.pb-hdr-acc[open]").count(), 1, "un seul groupe ouvert au départ");
+    await groups.filter({ hasText: "Au défilement" }).click(); await page.waitForTimeout(300);
+    assert.equal(await insp.locator("details.pb-hdr-acc[open]").count(), 1, "ouvrir un groupe referme l'autre");
+    await groups.filter({ hasText: "Logo et lien" }).click(); await page.waitForTimeout(300);
+  });
+
+  test("capture (seulement si SHOT est défini)", async () => {
+    if (!process.env.SHOT) return;
+    const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
+    await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click(); await page.waitForTimeout(600);
+    await page.locator("[data-pb-inspector]").screenshot({ path: process.env.SHOT + "-light.png" });
+    await page.evaluate(() => { try { localStorage.setItem("pb:palette-theme", JSON.stringify("dark")); } catch (e) {} });
+    await page.locator('button[data-theme-mode="dark"], [data-pb-palette-dark]').first().click({ timeout: 2000 }).catch(() => {});
+  });
+
   test("logo : hauteur libre, lien personnalisé et nouvel onglet dans le panneau de droite", async () => {
     const pane = page.locator("[data-pb-page-settings]"); await openSec("Éléments de l'en-tête");
     await pane.locator("details.pb-hdr-acc[open] .pb-hdr-row:not([aria-expanded])", { hasText: "Logo du site" }).first().click();

@@ -43,3 +43,36 @@ describe("Header Builder : logo du site (navigateur)", { skip: SKIP }, () => {
     assert.deepEqual(env.errors, []);
   });
 });
+
+describe("Header Builder : menu, recherche, compte, nouveaux réglages (navigateur)", { skip: SKIP }, () => {
+  let env;
+  before(async () => {
+    env = await setup({ siteName: "Site widgets 2" });
+    const db = env.db, menu = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Principal', 'principal', 'published')").run(env.site).lastInsertRowid);
+    const item = (parent, pos, label, url) => Number(db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, ?, ?, 'custom', ?, ?, 'published')").run(menu, parent, pos, url, label).lastInsertRowid);
+    item(null, 0, "Accueil", "/"); const s = item(null, 1, "Services", "/services"); item(s, 0, "Web", "/web"); item(null, 2, "Contact", "/contact");
+    db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(env.site, menu);
+  });
+  after(async () => { if (env) await env.close(); });
+  const withNode = (type, props, extra = {}) => (s) => { let found = false, host = null; const walk = (nodes) => { for (const n of nodes) { if (n.type === type) { found = true; n.props = { ...n.props, ...props }; } if (!host && Array.isArray(n.children)) host = n; if (n.children) walk(n.children); } }; walk(s.children); if (!found) host.children.push({ id: ("wdx" + type + "01").slice(0, 12).padEnd(10, "0") + "aa", type, props: { ...(extra.base || {}), ...props } }); };
+
+  test("menu : indicateur « plus » et animation « fondu » appliqués sur le site publié", async () => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withNode("menu", { source: "location", location: "header", indicator: "plus", submenuAnim: "fade" }));
+    const { context, page } = await env.visit();
+    const nav = page.locator(".lp-site-header nav.kw-menu"); assert.match(await nav.getAttribute("class"), /kw-ind-plus/); assert.match(await nav.getAttribute("class"), /kw-sa-fade/);
+    const before = await page.locator(".lp-site-header .kw-sub-toggle").first().evaluate((e) => getComputedStyle(e, "::before").content);
+    assert.match(before, /\+/, "le bouton du sous-menu affiche un plus");
+    await context.close();
+  });
+
+  test("recherche : loupe dans le champ (minimal) et loupe seule ; compte : icône seule avec nom accessible", async () => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, (s) => { withNode("search", { target: "catalogue", placeholder: "Chercher…", button: "Lancer la recherche", buttonType: "inline" }, { base: { target: "catalogue" } })(s); withNode("account", { look: "icon", login: "Se connecter" }, { base: { showCart: false } })(s); });
+    const { context, page } = await env.visit();
+    const form = page.locator(".lp-site-header form.kw-search-minimal"); assert.equal(await form.count(), 1);
+    const go = form.locator("button.kw-search-go.is-inline"); assert.equal(await go.getAttribute("aria-label"), "Lancer la recherche"); assert.equal(await go.locator("svg").count(), 1);
+    const fb = await form.locator("input").boundingBox(), gb = await go.boundingBox(); assert.ok(gb.x >= fb.x && gb.x + gb.width <= fb.x + fb.width + 1, "la loupe est DANS le champ");
+    const acc = page.locator(".lp-site-header .kw-account-link").first(); assert.equal(await acc.locator("svg").count(), 1, "icône"); assert.match(await acc.locator(".sr-only").innerText(), /connecter/i, "nom lu par les lecteurs d'écran");
+    await context.close();
+    assert.deepEqual(env.errors, []);
+  });
+});

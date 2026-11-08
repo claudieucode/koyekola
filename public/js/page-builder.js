@@ -2116,6 +2116,17 @@ function selectField(label, value, options, onChange, opts) {
       box.appendChild(schemaScalar(f, p[f.key], set, disabled, it.type));
     });
   }
+  // Groupes repliables (un seul ouvert à la fois) pour les réglages des éléments d'en-tête : même présentation que l'onglet « En-tête »
+  function accGroups(root) {
+    var first = true;
+    return function (title) {
+      var det = h("details", { class: "pb-hdr-acc", open: first ? "" : null }); first = false;
+      det.appendChild(h("summary", {}, h("span", { class: "pb-hdr-acc-title", text: title }), h("span", { class: "pb-hdr-acc-chev", "aria-hidden": "true" }, icon("chevronRight"))));
+      var body = h("div", { class: "pb-hdr-acc-body" }); det.appendChild(body);
+      det.addEventListener("toggle", function () { if (det.open) [].forEach.call(root.querySelectorAll(":scope > details.pb-hdr-acc"), function (o) { if (o !== det && o.open) o.open = false; }); });
+      root.appendChild(det); return body;
+    };
+  }
   function nodeContentFields(it, box, disabled) {
     var p = it.props || (it.props = {});
     if (NT[it.type] && NT[it.type].schema && !deniedWidget(it.type)) {
@@ -2126,6 +2137,7 @@ function selectField(label, value, options, onChange, opts) {
     var set = function (k, light) { return function (v) { setProp(it.id, k, v, { key: it.id + ":" + k, light: light !== false }); }; };
     // Deux réglages qui ne s'affichent qu'ENSEMBLE (ex. texte + adresse d'un bouton) : quand un seul est rempli, on le dit au lieu de ne rien montrer
     var pairSet = function (k, other, what) { return function (v) { set(k)(v); if (!String(v || "").trim() !== !(byId(it.id).props[other] || "").toString().trim()) toast(what + " n'apparaît que si le texte ET l'adresse sont remplis."); }; };
+    var grp = ["menu", "sitelogo", "search", "account"].indexOf(it.type) >= 0 && isHeaderDoc() ? accGroups(box) : null;
     switch (it.type) {
       case "heading":
         box.appendChild(textField("Texte", p.text, set("text"), { max: 200, disabled: disabled, dyn: true, hint: "Ou double-cliquez sur le titre dans la page. { } : insérer une donnée dynamique." }));
@@ -2269,6 +2281,7 @@ function selectField(label, value, options, onChange, opts) {
         }
         break;
       case "menu":
+        if (grp) box = grp("Source et liens");
         box.appendChild(textField("Nom du menu (lecteurs d'écran)", p.label, set("label"), { max: 60, disabled: disabled }));
         // Source des liens : le menu AFFECTÉ à un emplacement dans Apparence → Menus (une seule source de vérité, recommandé), un menu précis, ou une liste écrite ici
         var menuSource = p.source === "location" || p.source === "name" ? p.source : "manual";
@@ -2306,12 +2319,16 @@ function selectField(label, value, options, onChange, opts) {
           toast(pagesOnSite.length + " page(s) publiée(s) ajoutée(s) au menu.");
         } }, "Ajouter les pages publiées"));
         }
+        if (grp) box = grp("Apparence du menu");
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
         box.appendChild(selectField("Pointeur des liens", p.pointer || "", [["", "Aucun (soulignement au survol)"], ["underline", "Trait dessous"], ["overline", "Trait dessus"], ["double", "Double trait"], ["framed", "Cadre"], ["background", "Fond"]], function (v) { change(function () { var x = byId(it.id).props; if (v) { x.pointer = v; } else { delete x.pointer; delete x.pointerAnim; delete x.pointerColor; } }); }, { disabled: disabled }));
         if (p.pointer) {
           box.appendChild(selectField("Animation du pointeur", p.pointerAnim || "fade", [["fade", "Fondu"], ["slide", "Glissement"], ["grow", "Étirement"], ["drop", "Chute"]], function (v) { setProp(it.id, "pointerAnim", v); }, { disabled: disabled }));
           box.appendChild(textField("Couleur du pointeur (#rrggbb, vide = couleur d'accent)", p.pointerColor || "", function (v) { change(function () { var x = byId(it.id).props; if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim())) x.pointerColor = String(v).trim(); else delete x.pointerColor; }); }, { max: 7, disabled: disabled, placeholder: "#1e3a5f" }));
         }
+        box.appendChild(selectField("Indicateur de sous-menu", p.indicator || "chevron", [["chevron", "Chevron (par défaut)"], ["angle", "Angle"], ["plus", "Plus / moins"], ["none", "Aucun"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "chevron") delete x.indicator; else x.indicator = v; }); }, { disabled: disabled }));
+        box.appendChild(selectField("Animation d'ouverture des sous-menus", p.submenuAnim || "", [["", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.submenuAnim = v; else delete x.submenuAnim; }); }, { disabled: disabled }));
+        if (grp) box = grp("Bouton mobile (hamburger)");
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
         if (p.mobileToggle) {
           box.appendChild(numberField("Replier le menu sous cette largeur d'écran (px)", p.menuBreakpoint || 767, { min: 320, max: 1920, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id).props; if (n === 767) delete x.menuBreakpoint; else x.menuBreakpoint = n; }); }, "767 par défaut. Montez à 1024 pour que le bouton « Menu » apparaisse aussi sur tablette ; 1920 pour l'avoir partout."));
@@ -2372,16 +2389,19 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(checkField("Ouvrir le lien dans un nouvel onglet (adresses https:// seulement)", p.newTab, function (v) { setProp(it.id, "newTab", v); }, { disabled: disabled }));
         break;
       case "sitelogo":
+        if (grp) box = grp("Logo et lien");
         box.appendChild(numberField("Hauteur du logo (px)", p.height || 48, { min: 20, max: 160, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; setProp(it.id, "height", n); }, "De 20 à 160 px. Pour la largeur, le rognage ou l'arrondi : onglet Style, partie « Image »."));
         box.appendChild(checkField("Le logo est un lien", p.link !== false, function (v) { setProp(it.id, "link", v); }, { disabled: disabled }));
         if (p.link !== false) {
           box.appendChild(textField("Adresse du lien (vide = accueil du site)", p.href || "", function (v) { change(function () { var x = byId(it.id).props; if (String(v).trim()) x.href = String(v).trim(); else { delete x.href; delete x.newTab; } }); }, { max: 500, disabled: disabled, placeholder: "/page ou https://…" }));
           if (/^https:\/\//.test(p.href || "")) box.appendChild(checkField("Ouvrir dans un nouvel onglet", p.newTab === true, function (v) { setProp(it.id, "newTab", v ? true : undefined); }, { disabled: disabled }));
         }
+        if (grp) box = grp("Au défilement");
         box.appendChild(selectField("Taille du logo une fois la page défilée", p.scrollHeight ? String(p.scrollHeight) : "", [["", "Identique"], ["24", "24 px"], ["32", "32 px"], ["40", "40 px"], ["48", "48 px"], ["64", "64 px"]].concat([24, 32, 40, 48, 64].indexOf(Number(p.scrollHeight)) < 0 && p.scrollHeight ? [[String(p.scrollHeight), p.scrollHeight + " px"]] : []), function (v) { setProp(it.id, "scrollHeight", v ? Number(v) : ""); }, { disabled: disabled }));
         box.appendChild(textField("Texte alternatif au défilement (logo sans image)", p.scrollText || "", set("scrollText"), { max: 40, disabled: disabled, onChange: true, hint: "Ex. des initiales. Remplace le nom du site quand la page défile. Agit dans un en-tête collant ou superposé." }));
         box.appendChild(h("p", { class: "pb-hint", text: "Le logo vient des réglages SEO (Organisation › Logo) ; sans logo, le nom du site s'affiche. Accueil : la page d'accueil du site si elle est en ligne, sinon l'accueil de KOLAKISA." }));
         if (isHeaderDoc()) {
+          if (grp) box = grp("Variantes du logo");
           // Variantes de logo (en-tête) : l'état « en haut de page » (ex. logo clair sur fond transparent) et les petits écrans ; elles remplacent le logo principal quand elles s'appliquent
           [["logoTop", "Logo en haut de page", "Affiché tant que la page n'a pas défilé (par exemple un logo clair sur un en-tête transparent). Le logo principal revient après le défilement. Sans effet si l'en-tête est ordinaire."], ["logoMobile", "Logo mobile", "Remplace le logo sur les écrans de 767 px et moins."]].forEach(function (v) {
             box.appendChild(h("p", { class: "pb-sub", text: v[1] }));
@@ -2543,13 +2563,19 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(textField("Texte s'il n'y a aucune formation", p.empty, set("empty"), { max: 160, disabled: disabled }));
         break;
       case "search":
+        if (grp) box = grp("Recherche");
         box.appendChild(selectField("Rechercher dans", p.target, [["catalogue", "Le catalogue des formations"], ["blog", "Le blog"], ["site", "Le site (articles et pages)"]], function (v) { change(function () { var x = byId(it.id).props; x.target = v; if (v !== "site") delete x.suggest; }); }, { disabled: disabled }));
         box.appendChild(selectField("Affichage", p.skin === "overlay" ? "overlay" : "classic", [["classic", "Champ de recherche dans la page"], ["overlay", "Loupe qui ouvre la recherche en plein écran"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "overlay") x.skin = "overlay"; else delete x.skin; }); }, { disabled: disabled }));
         if (p.target === "site") box.appendChild(checkField("Suggestions pendant la frappe", p.suggest === true, function (v) { change(function () { var x = byId(it.id).props; if (v) x.suggest = true; else delete x.suggest; }); }, { disabled: disabled, hint: "Jusqu'à 6 articles ou pages du site, dès 2 caractères saisis." }));
+        if (grp) box = grp("Champ et bouton");
         box.appendChild(textField("Texte d'exemple dans le champ", p.placeholder, set("placeholder"), { max: 80, disabled: disabled }));
-        box.appendChild(textField("Texte du bouton", p.button, set("button"), { max: 30, disabled: disabled }));
+        box.appendChild(selectField("Bouton de recherche", p.buttonType || "text", [["text", "Texte (« Rechercher »)"], ["icon", "Loupe seule"], ["inline", "Loupe dans le champ (minimal)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "text") delete x.buttonType; else x.buttonType = v; }); }, { disabled: disabled }));
+        box.appendChild(textField(p.buttonType ? "Nom du bouton (lu par les lecteurs d'écran)" : "Texte du bouton", p.button, set("button"), { max: 30, disabled: disabled }));
         break;
       case "account":
+        if (grp) box = grp("Présentation");
+        box.appendChild(selectField("Présentation du lien", p.look || "text", [["text", "Texte seul"], ["icon-text", "Icône et texte"], ["icon", "Icône seule"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "text") delete x.look; else x.look = v; }); }, { disabled: disabled }));
+        if (grp) box = grp("Textes des liens");
         box.appendChild(textField("Lien pour un visiteur non connecté", p.login, set("login"), { max: 40, disabled: disabled }));
         box.appendChild(textField("Lien pour un visiteur connecté", p.account, set("account"), { max: 40, disabled: disabled }));
         box.appendChild(selectField("Affichage pour un visiteur connecté", p.skin === "menu" ? "menu" : "links", [["links", "Lien « Mon compte »"], ["menu", "Menu déroulant (compte, panier, déconnexion)"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "menu") x.skin = "menu"; else delete x.skin; }); }, { disabled: disabled }));

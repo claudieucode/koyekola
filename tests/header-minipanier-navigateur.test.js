@@ -34,6 +34,19 @@ describe("Header Builder L5 : mini-panier en tiroir (navigateur)", { skip: SKIP 
     await context.close();
   });
 
+  test("variantes : icône « sac », nombre entre parenthèses, total à côté de l'icône, tiroir à gauche", async () => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withCart({ label: "Panier", showCount: true, skin: "drawer", icon: "bag", countStyle: "text", showTotal: true, drawerSide: "left" }));
+    const { context, page } = await visitAs(student);
+    const open = page.locator(".lp-site-header .kw-mc-open");
+    assert.match(await open.locator(".kw-mc-count").innerText(), /^\(1\)$/, "nombre entre parenthèses");
+    assert.match(await open.locator(".kw-mc-total").innerText(), /35,00/, "total réel du panier");
+    assert.match(await open.locator("svg.kw-mc-icon").innerHTML(), /M6 2 3 6/, "icône sac");
+    await open.click(); const dlg = page.locator(".kw-cart-drawer"); await page.waitForTimeout(400);
+    assert.ok((await dlg.boundingBox()).x < 2, "tiroir à gauche");
+    await context.close();
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withCart({ label: "Panier", showCount: true, skin: "drawer" })); // retour au réglage de départ pour les tests suivants
+  });
+
   test("clavier et fermeture : Échap, bouton Fermer et fond referment ; le focus revient au bouton du panier", async () => {
     const { context, page } = await visitAs(student);
     const open = page.locator(".lp-site-header .kw-mc-open"), dlg = page.locator(".kw-cart-drawer");

@@ -634,6 +634,9 @@ const NODE_TYPES = {
       const pc = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(p.pointerColor || "").trim()) ? String(p.pointerColor).trim().toLowerCase() : "";
       if (pc) out.pointerColor = pc;
     }
+    // Sous-menus : indicateur du bouton (chevron par défaut, plus, angle, aucun) et animation d'ouverture (fondu, glissement)
+    if (["plus", "angle", "none"].includes(p.indicator)) out.indicator = p.indicator;
+    if (["fade", "slide"].includes(p.submenuAnim)) out.submenuAnim = p.submenuAnim;
     // Largeur d'écran (px) en dessous de laquelle le menu se replie derrière le bouton : 767 par défaut (non enregistré), de 320 à 1920
     if (out.mobileToggle) { const bp = Number(p.menuBreakpoint); if (Number.isInteger(bp) && bp >= 320 && bp <= 1920 && bp !== 767) out.menuBreakpoint = bp; }
     // Méga-menu : « identifiant de l'élément du menu → identifiant du composant (panneau) », pour les rubriques de premier niveau d'un menu du CMS. Seuls des entiers positifs ;
@@ -777,11 +780,11 @@ const NODE_TYPES = {
   // skin « overlay » (Header Builder) : une loupe qui ouvre la recherche en plein écran ; suggest : suggestions pendant la frappe (cible « site » : articles et pages publiés du site, mêmes règles que /recherche)
   search: { label: "Recherche", category: "dynamic", props: (p) => {
     const target = oneOf("blog", "catalogue", "site")(p.target) || "catalogue";
-    return { target, placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher", ...(p.skin === "overlay" ? { skin: "overlay" } : {}), ...(p.suggest === true && target === "site" ? { suggest: true } : {}) };
+    return { target, placeholder: line(p.placeholder, 80) || "Rechercher…", button: line(p.button, 30) || "Rechercher", ...(p.skin === "overlay" ? { skin: "overlay" } : {}), ...(p.suggest === true && target === "site" ? { suggest: true } : {}), ...(["icon", "inline"].includes(p.buttonType) ? { buttonType: p.buttonType } : {}) };
   } },
   // skin « menu » (Header Builder) : un visiteur connecté voit un menu déroulant (Mon compte, Panier, Se déconnecter) ; un visiteur non connecté garde les liens habituels
   account: { label: "Compte du visiteur", category: "dynamic", props: (p) => ({
-    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier", ...(p.skin === "menu" ? { skin: "menu" } : {}),
+    login: line(p.login, 40) || "Se connecter", account: line(p.account, 40) || "Mon compte", showCart: p.showCart !== false, cart: line(p.cart, 30) || "Panier", ...(p.skin === "menu" ? { skin: "menu" } : {}), ...(["icon-text", "icon"].includes(p.look) ? { look: p.look } : {}),
   }) },
   dyntext: { label: "Texte dynamique", category: "dynamic", props: (p, at) => {
     const source = oneOf("firstName", "today", "year", "pageTitle", "courseCount", "postCount")(p.source);
