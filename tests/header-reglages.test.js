@@ -20,7 +20,7 @@ describe("Réglages d'en-tête : validation", () => {
   });
   test("aucun champ libre : seules les clés du schéma ressortent", () => {
     const n = hs.normalize({ mode: "sticky", html: "<script>", css: "x{}", onclick: "evil()" });
-    assert.deepEqual(Object.keys(n).sort(), ["fx", "hideOnScroll", "mode", "offset", "shrink", "stickOn", "threshold", "v", "zIndex"]);
+    assert.deepEqual(Object.keys(n).sort(), ["edge", "fx", "hideOnScroll", "mode", "offset", "reserve", "shrink", "stickOn", "threshold", "v", "zIndex"]);
   });
 });
 
@@ -94,5 +94,31 @@ describe("État de style « Après défilement » (grammaire)", () => {
   test("état « Menu ouvert » : règle préfixée par l'en-tête dont le menu est ouvert", () => {
     const sec = { id: "s2", type: "layout", children: [{ id: "nodebb2", type: "container", props: {}, styles: {}, states: { menuOpen: { backgroundColor: "#0000ff" } }, children: [] }] };
     assert.match(nodes.pageCss([sec]), /\.lp-site-header\.is-menu-open \.kw-n-nodebb2\{[^}]*#0000ff/i);
+  });
+});
+
+describe("Header Builder : barre en bas et point de rupture du menu", () => {
+  const nodes = require("../src/marketing/pages/nodes");
+  test("bord « bas » : seulement avec un en-tête collé ou fixé ; hauteur réservée bornée", () => {
+    assert.equal(hs.normalize({ mode: "sticky", edge: "bottom" }).edge, "bottom");
+    assert.equal(hs.normalize({ mode: "static", edge: "bottom" }).edge, "top", "un en-tête ordinaire ne peut pas être en bas");
+    assert.equal(hs.normalize({ mode: "fixed", edge: "bottom", reserve: 9999 }).reserve, 200);
+    assert.equal(hs.normalize({ mode: "fixed", edge: "bottom", reserve: 1 }).reserve, 32);
+    assert.equal(hs.normalize({ mode: "sticky", edge: "n'importe quoi" }).edge, "top");
+  });
+  test("bord « bas » : classe et variable de hauteur publiées ; rien pour le haut", () => {
+    const sec = { header: { mode: "sticky", edge: "bottom", reserve: 90 } };
+    assert.match(hs.classes(sec), /kw-theme-bottom/);
+    assert.match(hs.dataAttrs(sec).style, /--kw-hdr-h:90px/);
+    assert.doesNotMatch(hs.classes({ header: { mode: "sticky" } }), /bottom/);
+  });
+  const menu = (props) => ({ id: require("../src/marketing/pages/sections").newSectionId(), type: "layout", children: [{ id: "mnu0001aa", type: "menu", props: { source: "manual", items: [{ label: "A", url: "/a" }], mobileToggle: true, ...props } }] });
+  test("menu : point de rupture borné ; 767 (défaut) non enregistré ; ignoré sans bouton « Menu »", () => {
+    const CTX = { organizationId: 1, db: { prepare: () => ({ get: () => null, all: () => [] }) } };
+    const find = (props) => { const out = require("../src/marketing/pages/sections").normalizeSections(CTX, [menu(props)]); return out[0].children[0].props; };
+    assert.equal(find({ menuBreakpoint: 1024 }).menuBreakpoint, 1024);
+    assert.equal(find({ menuBreakpoint: 767 }).menuBreakpoint, undefined);
+    assert.equal(find({ menuBreakpoint: 99999 }).menuBreakpoint, undefined);
+    assert.equal(find({ menuBreakpoint: 1024, mobileToggle: false }).menuBreakpoint, undefined);
   });
 });

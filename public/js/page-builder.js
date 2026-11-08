@@ -2301,6 +2301,7 @@ function selectField(label, value, options, onChange, opts) {
         box.appendChild(checkField("Liens les uns sous les autres", p.vertical, function (v) { setProp(it.id, "vertical", v); }, { disabled: disabled }));
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
         if (p.mobileToggle) {
+          box.appendChild(numberField("Replier le menu sous cette largeur d'écran (px)", p.menuBreakpoint || 767, { min: 320, max: 1920, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { var x = byId(it.id).props; if (n === 767) delete x.menuBreakpoint; else x.menuBreakpoint = n; }); }, "767 par défaut. Montez à 1024 pour que le bouton « Menu » apparaisse aussi sur tablette ; 1920 pour l'avoir partout."));
           box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
           if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
         }
@@ -7826,12 +7827,12 @@ function selectField(label, value, options, onChange, opts) {
   function isHeaderDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "header" || Boolean(t && t.type === "header"); }
   function headerSection() { var s = content.sections && content.sections[0]; return s && s.type === "layout" ? s : null; }
   function headerNow() {
-    var dflt = { mode: "static", fx: "", threshold: 8, offset: 0, zIndex: 60, stickOn: ["desktop", "tablet", "mobile"], shrink: { height: 32 }, hideOnScroll: { enabled: false, tolerance: 8 } };
+    var dflt = { mode: "static", fx: "", threshold: 8, offset: 0, zIndex: 60, stickOn: ["desktop", "tablet", "mobile"], shrink: { height: 32 }, hideOnScroll: { enabled: false, tolerance: 8 }, edge: "top", reserve: 72 };
     var s = headerSection(); if (!s) return dflt;
     if (s.header && typeof s.header === "object") {
       var hd = s.header;
       return { mode: hd.mode || "static", fx: hd.fx || "", threshold: hd.threshold === undefined ? 8 : hd.threshold, offset: hd.offset || 0, zIndex: hd.zIndex || 60,
-        stickOn: Array.isArray(hd.stickOn) && hd.stickOn.length ? hd.stickOn : dflt.stickOn, shrink: { height: hd.shrink && hd.shrink.height ? hd.shrink.height : 32 }, hideOnScroll: { enabled: Boolean(hd.hideOnScroll && hd.hideOnScroll.enabled), tolerance: hd.hideOnScroll && hd.hideOnScroll.tolerance !== undefined ? hd.hideOnScroll.tolerance : 8 } };
+        stickOn: Array.isArray(hd.stickOn) && hd.stickOn.length ? hd.stickOn : dflt.stickOn, shrink: { height: hd.shrink && hd.shrink.height ? hd.shrink.height : 32 }, hideOnScroll: { enabled: Boolean(hd.hideOnScroll && hd.hideOnScroll.enabled), tolerance: hd.hideOnScroll && hd.hideOnScroll.tolerance !== undefined ? hd.hideOnScroll.tolerance : 8 }, edge: hd.edge === "bottom" ? "bottom" : "top", reserve: hd.reserve || 72 };
     }
     var first = s.children && s.children[0], pos = first && first.styles && first.styles.desktop ? first.styles.desktop.position : "";
     var fx = first && first.props && /^(shrink|solid|both|hide)$/.test(first.props.headerFx || "") ? first.props.headerFx : "";
@@ -7886,6 +7887,8 @@ function selectField(label, value, options, onChange, opts) {
         }, { disabled: dis }));
       });
       box.appendChild(h("p", { class: "pb-hint", text: "Sur les autres appareils, l'en-tête redevient ordinaire." }));
+      box.appendChild(selectField("Bord de l'écran", d.edge, [["top", "En haut"], ["bottom", "En bas (barre fixée au bas de l'écran)"]], function (v) { setHeader({ edge: v }, "edge"); }, { disabled: dis }));
+      if (d.edge === "bottom") box.appendChild(numberField("Hauteur réservée dans la page (px)", d.reserve, { min: 32, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ reserve: n }, "reserve"); }, "Place gardée à l'emplacement de l'en-tête pour que le contenu ne saute pas. Mettez la hauteur réelle de votre barre."));
       box.appendChild(numberField("Décalage depuis le haut (px)", d.offset, { min: 0, max: 200, step: 1, integer: true, disabled: dis }, function (n) { if (n === null) return false; setHeader({ offset: n }, "offset"); }, "Distance entre le haut de l'écran et l'en-tête (ex. sous une barre fixe)."));
     }
     if (live) {

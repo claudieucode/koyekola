@@ -267,7 +267,7 @@
     var list = nav.querySelector(".kw-menu-list");
     var b = document.createElement("button"); b.type = "button"; b.className = "kw-menu-burger"; b.setAttribute("aria-expanded", "false"); b.setAttribute("aria-controls", list.id);
     b.innerHTML = '<span aria-hidden="true"></span><span class="kw-menu-burger-label">Menu</span>';
-    var side = nav.getAttribute("data-kw-menu-drawer"), head = nav.closest(".lp-site-header"), small = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+    var side = nav.getAttribute("data-kw-menu-drawer"), head = nav.closest(".lp-site-header"), small = window.matchMedia ? window.matchMedia("(max-width: " + (Number(nav.getAttribute("data-kw-menu-bp")) || 767) + "px)") : null;
     var panel = null, backdrop = null, locked = null;
     var focusables = function () { return Array.prototype.filter.call(panel.querySelectorAll("a[href], button:not([disabled])"), function (e) { return e.offsetParent !== null; }); };
     var setOpen = function (on) {
@@ -298,7 +298,8 @@
     // 22.8 — clavier et lecteurs d'écran : Échap referme le menu et rend le focus au bouton ; Tab hors du menu le referme (jamais de menu resté ouvert hors de vue)
     nav.addEventListener("keydown", function (e) { if (e.key === "Escape" && nav.classList.contains("is-open")) { setOpen(false); b.focus(); } });
     nav.addEventListener("focusout", function (e) { if (!side && nav.classList.contains("is-open") && e.relatedTarget && !nav.contains(e.relatedTarget)) setOpen(false); });
-    if (small && small.addEventListener) small.addEventListener("change", function (e) { if (!e.matches && b.getAttribute("aria-expanded") === "true") setOpen(false); }); // retour sur grand écran : le menu redevient celui de l'en-tête
+    var collapse = function () { nav.classList.toggle("is-collapsed", !small || small.matches); }; collapse(); // repli selon la largeur d'écran choisie (767 px par défaut)
+    if (small && small.addEventListener) small.addEventListener("change", function (e) { collapse(); if (!e.matches && b.getAttribute("aria-expanded") === "true") setOpen(false); }); // retour sur grand écran : le menu redevient celui de l'en-tête
     nav.insertBefore(b, list);
     nav.classList.add("is-enhanced");
   });

@@ -11,6 +11,7 @@
 // - stickOn   : appareils sur lesquels l'en-tête colle : desktop, tablet, mobile
 // - shrink    : { height } hauteur (px) de la rangée après réduction (24 à 120)
 // - hideOnScroll : { enabled, tolerance } masqué quand on descend, réapparaît quand on remonte
+// - edge      : "top" (par défaut) ou "bottom" : barre collée en BAS de l'écran (collé / fixé seulement) ; reserve = hauteur (px, 32 à 200) réservée à sa place dans la page : aucun saut de contenu
 //
 // Aucun HTML, CSS ni JS libre : tout est validé ici. Compatibilité : sans `section.header`, l'ancien format (premier enfant) est lu à l'identique.
 // Un seul lecteur pour le rendu de page (_sections.ejs) et le rendu des parties globales (themeRender.partMode).
@@ -37,6 +38,7 @@ function normalize(raw, { legacy = false } = {}) {
     v: 1, mode, fx: mode === "static" ? "" : fx,
     threshold: int(raw.threshold, 0, 1000, 8), offset: int(raw.offset, 0, 200, 0), zIndex: int(raw.zIndex, 1, 100, 60),
     stickOn: stickOn.length ? stickOn : DEVICES.slice(), shrink, hideOnScroll: hide,
+    edge: raw.edge === "bottom" && (mode === "sticky" || mode === "fixed") ? "bottom" : "top", reserve: int(raw.reserve, 32, 200, 72),
   };
 }
 
@@ -61,7 +63,7 @@ function classes(section) {
   const h = resolve(section);
   const base = h.mode === "sticky" ? " kw-theme-sticky" : h.mode === "overlay" ? " kw-theme-overlay" : h.mode === "fixed" ? " kw-theme-fixed" : "";
   const off = h.mode === "sticky" || h.mode === "fixed" ? DEVICES.filter((d) => !h.stickOn.includes(d)).map((d) => ` kw-hdr-no-${d}`).join("") : "";
-  return base + off + (h.fx && h.mode !== "static" ? ` kw-theme-fx-${h.fx}` : "");
+  return base + off + (h.edge === "bottom" ? " kw-theme-bottom" : "") + (h.fx && h.mode !== "static" ? ` kw-theme-fx-${h.fx}` : "");
 }
 
 // Données publiques lues par le script du visiteur (data-kw-*) et variables CSS : seulement des nombres entiers bornés et des mots d'une liste fermée.
@@ -80,6 +82,7 @@ function dataAttrs(section) {
   const vars = [];
   if (h.offset) vars.push(`--kw-hdr-top:${h.offset}px`);
   if (h.zIndex !== 60) vars.push(`--kw-hdr-z:${h.zIndex}`);
+  if (h.edge === "bottom") vars.push(`--kw-hdr-h:${h.reserve}px`);
   if (h.shrink.height !== 32) vars.push(`--kw-hdr-shrink:${h.shrink.height}px`);
   if (vars.length) a.style = vars.join(";");
   return a;

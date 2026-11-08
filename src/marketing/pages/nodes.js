@@ -613,6 +613,8 @@ const NODE_TYPES = {
     const out = { items, label: line(p.label, 60) || "Menu", vertical: p.vertical === true, mobileToggle: p.mobileToggle === true };
     // Sur mobile : liste dépliée sous le bouton (par défaut) ou tiroir latéral (Header Builder) ; le tiroir suppose le bouton « Menu »
     if (out.mobileToggle && p.mobileMode === "drawer") { out.mobileMode = "drawer"; out.drawerSide = p.drawerSide === "left" ? "left" : "right"; }
+    // Largeur d'écran (px) en dessous de laquelle le menu se replie derrière le bouton : 767 par défaut (non enregistré), de 320 à 1920
+    if (out.mobileToggle) { const bp = Number(p.menuBreakpoint); if (Number.isInteger(bp) && bp >= 320 && bp <= 1920 && bp !== 767) out.menuBreakpoint = bp; }
     // Méga-menu : « identifiant de l'élément du menu → identifiant du composant (panneau) », pour les rubriques de premier niveau d'un menu du CMS. Seuls des entiers positifs ;
     // le composant doit appartenir au MÊME site (vérifié à l'affichage et à l'enregistrement du panneau).
     if (source !== "manual" && p.mega && typeof p.mega === "object" && !Array.isArray(p.mega)) {
