@@ -61,17 +61,16 @@ describe("isolation des filtres d'un conteneur (CSS serveur, sans navigateur)", 
       if (k !== "blur") assert.doesNotMatch(beforeRules(css, ID("c1")).join(""), /clip-path/, "sans flou, aucun recadrage");
     }
   });
-  test("(c) écrans et états : filtre seulement sur mobile, fond ordinateur, survol, après défilement", () => {
+  test("(c) écrans et états : filtre seulement sur mobile, fond ordinateur, survol (l'état « après défilement » a été retiré du moteur)", () => {
     const css = nodes.pageCss(sectionOf([kid("c1", "container", {}, {
       styles: { desktop: { backgroundColor: "#111111", borderRadius: "8px" }, tablet: { backgroundColor: "#222222" }, mobile: { filter: { blur: 4 }, borderRadius: "0px" } },
-      states: { hover: { backgroundColor: "#333333", filter: { blur: 1 } }, scrolled: { backgroundColor: "#444444" } },
+      states: { hover: { backgroundColor: "#333333", filter: { blur: 1 } } },
     })]));
     const id = ID("c1");
     assert.match(css, new RegExp(`\\.kw-n-${id}::before\\{background-color:#111111;clip-path:inset\\(8px round 8px\\)\\}`), "le fond ordinateur est déjà sur ::before");
     assert.match(css, new RegExp(`@media \\(max-width: 1023px\\)\\{\\.kw-n-${id}::before\\{background-color:#222222\\}\\}`));
     assert.match(css, new RegExp(`@media \\(max-width: 767px\\)\\{[^]*\\.kw-n-${id}::before\\{filter:blur\\(4px\\);clip-path:inset\\(8px round 0px\\)\\}`));
     assert.match(css, new RegExp(`\\.kw-n-${id}:hover::before\\{background-color:#333333;filter:blur\\(1px\\)\\}`));
-    assert.match(css, new RegExp(`\\.lp-site-header\\.is-scrolled \\.kw-n-${id}::before\\{background-color:#444444\\}`));
     assert.doesNotMatch(css, new RegExp(`\\.kw-n-${id}::before:hover`));
     assert.doesNotMatch(nodeRulesBody(css, id), /filter|background/);
   });

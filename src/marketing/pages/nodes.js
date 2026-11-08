@@ -2155,7 +2155,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       stateRules(sel, set.states, false, rules, false);
     }
   };
-  const add = (id, styles, states, band = false, calm = false) => {
+  const add = (id, styles, states, band = false, calm = false, type = "") => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
     const split = filteredBackground(type, styles, states);
@@ -2165,10 +2165,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
         if (!d) continue;
         (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`);
       }
-      for (const state of STATES) {
-        const d = states && states[state.key] ? declarations(states[state.key], band) : "";
-        if (d) rules.base.push(stateRule(state, sel, d));
-      }
+      stateRules(sel, states, band, rules, calm);
       return;
     }
     // Fond filtré : le conteneur garde tout SAUF fond et filtre ; ::before (derrière les contenus) porte le fond et le filtre, sur chaque écran et chaque état
@@ -2190,7 +2187,18 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (dn) bucket.push(`${sel}{${dn}}`);
       if (dp) bucket.push(`${sel}::before{${dp}}`);
     }
-    stateRules(sel, states, band, rules, calm);
+    // États (survol, focus, clic) par écran : le conteneur garde tout SAUF fond et filtre ; le fond et le filtre de chaque état vont sur ::before
+    if (states) {
+      const ownStates = {};
+      for (const [k, set] of Object.entries(states)) if (set && typeof set === "object") ownStates[k] = onlyKeys(set, own);
+      stateRules(sel, ownStates, band, rules, calm);
+      for (const sc of STATE_SCOPES) {
+        const set = states[sc.key];
+        if (!set) continue;
+        const dp = [declarations(onlyKeys(set, bgOnly)), ...extra(set)].filter(Boolean).join(";");
+        if (dp) (sc.bp.media ? rules.media[sc.bp.key] : rules.base).push(`${sel}${sc.state.sel}::before{${dp}}`);
+      }
+    }
   };
   // Un conteneur centre sa propre largeur par des marges automatiques (landing.css : :where(.kw-container)). Dans une disposition EN LIGNE ou EN GRILLE
   // d'un parent, ces marges se partageraient l'espace libre et prendraient le pas sur « Répartition » et « Écart » : c'est le PARENT qui doit répartir
@@ -2213,12 +2221,12 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
   };
   const seenIds = new Set(); // les copies d'un modèle de boucle partagent leur identifiant : règles écrites une seule fois
   for (const s of sections || []) {
-    add(s.id, s.styles, s.states, false, s.type);
+    add(s.id, s.styles, s.states, false, false, s.type);
     if (s.type === "layout") rowMarginRules(s.id, "layout", s.styles, s.children, true);
     if (s.type === "layout") walk(s.children, (n) => {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
-      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), Boolean(n.motion && n.motion.alwaysMotion));
+      add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), Boolean(n.motion && n.motion.alwaysMotion), n.type);
     addParts(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
