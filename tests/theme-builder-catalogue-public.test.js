@@ -76,7 +76,7 @@ describe("Bibliothèque de modèles du Theme Builder : de la bibliothèque au si
     for (const p of ["/", "/blog", "/blog/article-a", "/introuvable-xyz"]) {
       const r = await hostReq(srv, "a.test", p); assert.ok([200, 404].includes(r.status), `${p} → ${r.status}`);
       // pages du Page Builder (accueil) : les parties sont dans la page même ; pages de la plateforme : dans leur zone « partie globale »
-      if (p === "/") { assert.match(r.text, /kw-sitelogo/, "accueil : en-tête du modèle"); continue; }
+      if (p === "/") { assert.match(r.text, /lp-site-header/, "accueil : en-tête du modèle"); /* repère commun à tous les en-têtes (le modèle tech-01 n'a plus de logo, il affiche le titre du site) */ continue; }
       assert.match(r.text, /kw-theme-header/, `${p} : en-tête`); assert.match(r.text, /kw-theme-footer/, `${p} : pied de page`);
       assert.doesNotMatch(r.text, /class="site-header"/, `${p} : ancien en-tête`);
     }

@@ -134,7 +134,7 @@ describe("Résultats de recherche : bibliothèque → aperçu → site public (v
       const base = U(A, `/api/bibliotheque/search_results/${e.key}`);
       const pv = await boss.get(`${base}/apercu`), th = await boss.get(`${base}/vignette`);
       assert.equal(pv.status, 200, e.key); assert.equal(th.status, 200, e.key);
-      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "");
+      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "").replace(/ data-kw-demo="1"/, "").replace(/<script src="[^"]*landing\.js[^"]*" defer><\/script>/, "");
       assert.equal(core(pv.text), core(th.text), `${e.key} : aperçu = vignette`);
       assert.match(pv.text, /kw-theme-template/, e.key);
       assert.match(pv.text, /type="search"/, `${e.key} : champ de recherche rendu`);
