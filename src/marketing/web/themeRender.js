@@ -47,7 +47,13 @@ function wrapHtml(res, vm, siteOk, body, cls) {
   const tpl = cls.includes("kw-theme-template") ? ".kw-theme-template .kw-ai-title { font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.5rem); line-height: 1.15; } .kw-theme-template .kw-ai-desc { font-size: 1.05rem; line-height: 1.55; }" : "";
   const css = [faces, bleed, tpl, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, band, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
   const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
-  return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}"><style>${css}</style><div class="lp-main">${body}</div></div>`;
+  // Motion Studio : les modèles rendus hors du Page Builder (404, articles, archives…) peuvent contenir des widgets de mouvement ; sans leur feuille de style et leur runtime ils s'afficheraient bruts. Additif :
+  // rien n'est ajouté tant que le modèle n'utilise aucun widget de mouvement.
+  const A = (path) => (res.locals.asset ? res.locals.asset(path) : path);
+  const ms = vm && vm.motionStudio;
+  const motionCss = ms && ms.css ? `<link rel="stylesheet" href="${A("/css/motion-studio.css")}">` : "";
+  const motionJs = ms && Array.isArray(ms.modules) ? `<script type="application/json" id="kw-ms-modules">${JSON.stringify(Object.fromEntries(ms.modules.map((m) => [m, A("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c")}</script>${ms.scenes ? `<script type="application/json" id="kw-ms-scenes">${JSON.stringify(ms.scenes).replace(/</g, "\\u003c")}</script>` : ""}<script src="${A("/js/kw-motion-studio.js")}" defer></script>` : "";
+  return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}">${motionCss}<style>${css}</style><div class="lp-main">${body}</div>${motionJs}</div>`;
 }
 const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, page.site_id) : null; return site && site.status === "active" ? site : null; };
 // Comportement d'une partie globale, lu dans sa première bande : « collant » (position: sticky) ou « superposé » (position: absolute) ; la bande est dans le <div> de la partie, qui ne peut coller que si c'est lui qui porte la position

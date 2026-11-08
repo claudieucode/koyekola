@@ -1,0 +1,494 @@
+{
+ "page-blanche": {
+  "a": [
+   "machine"
+  ]
+ },
+ "trait-unique": {
+  "a": [
+   "aide"
+  ]
+ },
+ "marge-laterale": {
+  "a": [
+   "machine",
+   "icones"
+  ]
+ },
+ "point-final": {
+  "a": [
+   "icones"
+  ]
+ },
+ "index-sobre": {
+  "a": [
+   "recents",
+   "machine"
+  ]
+ },
+ "silence": {
+  "a": [
+   "aide"
+  ]
+ },
+ "typographie-eclatee": {
+  "a": [
+   "icones"
+  ]
+ },
+ "geometrie-bauhaus": {
+  "a": [
+   "machine"
+  ]
+ },
+ "superposition": {
+  "a": [
+   "boutique"
+  ]
+ },
+ "aquarelle": {
+  "a": [
+   "compte",
+   "dessin"
+  ],
+  "n": "degrade"
+ },
+ "constructivisme": {
+  "a": [
+   "recents",
+   "bascule"
+  ],
+  "n": "code"
+ },
+ "mosaique": {
+  "a": [
+   "formations",
+   "aide"
+  ],
+  "n": "anime"
+ },
+ "glitch": {
+  "a": [
+   "lus"
+  ]
+ },
+ "fenetre-systeme": {
+  "a": [
+   "aimant"
+  ]
+ },
+ "grille-neon": {
+  "a": [
+   "aimant"
+  ]
+ },
+ "boot-bios": {
+  "a": [
+   "categories"
+  ]
+ },
+ "circuit-imprime": {
+  "a": [
+   "liens",
+   "relief"
+  ]
+ },
+ "matrice": {
+  "a": [
+   "liens",
+   "icones"
+  ]
+ },
+ "astronaute-perdu": {
+  "a": [
+   "formations"
+  ]
+ },
+ "chemin-interrompu": {
+  "a": [
+   "recherche",
+   "icones"
+  ],
+  "n": "degrade"
+ },
+ "desert": {
+  "a": [
+   "machine"
+  ]
+ },
+ "monstre-gentil": {
+  "a": [
+   "aimant"
+  ]
+ },
+ "foret-enchantee": {
+  "a": [
+   "machine"
+  ],
+  "n": "pale"
+ },
+ "ocean": {
+  "a": [
+   "menu",
+   "liens"
+  ],
+  "n": "objet"
+ },
+ "labyrinthe": {
+  "a": [
+   "relief"
+  ]
+ },
+ "plein-ecran": {
+  "a": [
+   "aimant",
+   "icones"
+  ]
+ },
+ "texte-sur-photo": {
+  "a": [
+   "categories",
+   "icones"
+  ]
+ },
+ "deux-colonnes-photo": {
+  "a": [
+   "bascule",
+   "menu"
+  ],
+  "n": "contour"
+ },
+ "mur-de-couvertures": {
+  "a": [
+   "dessin"
+  ],
+  "n": "contour"
+ },
+ "portrait": {
+  "a": [
+   "icones"
+  ],
+  "n": "pixel"
+ },
+ "recherche-produits": {
+  "a": [
+   "aide",
+   "machine"
+  ]
+ },
+ "rayons": {
+  "a": [
+   "relief"
+  ],
+  "n": "code"
+ },
+ "produits-populaires": {
+  "a": [
+   "bascule",
+   "dessin"
+  ]
+ },
+ "promotions": {
+  "a": [
+   "articles",
+   "aimant"
+  ]
+ },
+ "panier-perdu": {
+  "a": [
+   "aide"
+  ]
+ },
+ "etiquette-de-prix": {
+  "a": [
+   "faq"
+  ]
+ },
+ "suggestions-pour-vous": {
+  "a": [],
+  "n": "degrade"
+ },
+ "interface-produit": {
+  "a": [
+   "liens",
+   "icones"
+  ]
+ },
+ "assistance": {
+  "a": [
+   "categories",
+   "contact"
+  ],
+  "n": "degrade"
+ },
+ "navigation-produit": {
+  "a": [
+   "articles"
+  ]
+ },
+ "palette-de-commande": {
+  "a": [
+   "formations",
+   "aimant"
+  ]
+ },
+ "tableau-de-bord-vide": {
+  "a": [
+   "compte",
+   "dessin"
+  ]
+ },
+ "journal-des-versions": {
+  "a": [
+   "relief"
+  ]
+ },
+ "une-de-magazine": {
+  "a": [
+   "dessin"
+  ]
+ },
+ "classement": {
+  "a": [
+   "dessin"
+  ]
+ },
+ "index-alphabetique": {
+  "a": [
+   "abonnement",
+   "machine"
+  ],
+  "n": "contour"
+ },
+ "recherche-d-archives": {
+  "a": [
+   "formations"
+  ]
+ },
+ "derniers-articles": {
+  "a": [
+   "machine"
+  ]
+ },
+ "edito": {
+  "a": [
+   "boutique",
+   "liens"
+  ],
+  "n": "code"
+ },
+ "corporate-sobre": {
+  "a": [
+   "recherche",
+   "aide"
+  ]
+ },
+ "institutionnel": {
+  "a": [],
+  "n": "contour"
+ },
+ "cabinet": {
+  "a": [
+   "icones"
+  ]
+ },
+ "services-financiers": {
+  "a": [
+   "aimant"
+  ],
+  "n": "anime"
+ },
+ "organisation-internationale": {
+  "a": [
+   "formations",
+   "icones"
+  ]
+ },
+ "plateforme-lms": {
+  "a": [
+   "recherche",
+   "icones"
+  ],
+  "n": "contour"
+ },
+ "cours-populaires": {
+  "a": [
+   "icones",
+   "degrade"
+  ]
+ },
+ "recherche-de-cours": {
+  "a": [
+   "machine",
+   "dessin"
+  ]
+ },
+ "ressources-pedagogiques": {
+  "a": [
+   "machine",
+   "aimant"
+  ],
+  "n": "objet"
+ },
+ "salle-de-classe": {
+  "a": [
+   "recents",
+   "faq"
+  ]
+ },
+ "aide-aux-etudiants": {
+  "a": [
+   "boutique",
+   "menu"
+  ],
+  "n": "objet"
+ },
+ "groupes": {
+  "a": [
+   "faq"
+  ]
+ },
+ "annuaire-de-membres": {
+  "a": [
+   "aide"
+  ]
+ },
+ "cafe-de-la-communaute": {
+  "a": [
+   "formations",
+   "liens"
+  ],
+  "n": "objet"
+ },
+ "suggestions-de-contenus": {
+  "a": [
+   "dessin"
+  ],
+  "n": "code"
+ },
+ "cta-principal": {
+  "a": [
+   "recherche"
+  ],
+  "n": "anime"
+ },
+ "newsletter": {
+  "a": [
+   "formations",
+   "relief"
+  ],
+  "n": "objet"
+ },
+ "offre-du-moment": {
+  "a": [
+   "icones"
+  ]
+ },
+ "formulaire-de-contact": {
+  "a": [
+   "recherche",
+   "aimant"
+  ]
+ },
+ "services-en-colonnes": {
+  "a": [
+   "ruban"
+  ]
+ },
+ "cartes-a-retourner": {
+  "a": [
+   "degrade"
+  ]
+ },
+ "les-trois-portes": {
+  "a": [
+   "icones"
+  ]
+ },
+ "chasse-au-tresor": {
+  "a": [
+   "formations"
+  ]
+ },
+ "parallaxe": {
+  "a": [
+   "formations",
+   "dessin"
+  ]
+ },
+ "aimant": {
+  "a": [
+   "compte"
+  ]
+ },
+ "recit-en-trois-actes": {
+  "a": [
+   "boutique",
+   "aimant"
+  ]
+ },
+ "carte-tactile": {
+  "a": [
+   "boutique",
+   "icones"
+  ]
+ },
+ "maison-de-couture": {
+  "a": [
+   "bascule"
+  ]
+ },
+ "galerie-d-art": {
+  "a": [
+   "bascule"
+  ],
+  "n": "objet"
+ },
+ "monochrome": {
+  "a": [
+   "menu"
+  ]
+ },
+ "architectural": {
+  "a": [
+   "dessin"
+  ]
+ },
+ "carton-d-invitation": {
+  "a": [],
+  "n": "contour"
+ },
+ "texte-monumental": {
+  "a": [
+   "formations",
+   "faq"
+  ]
+ },
+ "chiffres-en-mouvement": {
+  "a": [
+   "icones"
+  ]
+ },
+ "interface-narrative": {
+  "a": [
+   "recherche"
+  ],
+  "n": "pale"
+ },
+ "plans-multiples": {
+  "a": [
+   "categories"
+  ]
+ },
+ "inverse": {
+  "a": [
+   "ruban"
+  ]
+ },
+ "archive-des-erreurs": {
+  "a": [
+   "articles",
+   "recents"
+  ]
+ }
+}
