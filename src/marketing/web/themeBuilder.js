@@ -34,13 +34,14 @@ module.exports = () => {
   const originKey = (section) => { const first = section && Array.isArray(section.children) ? section.children[0] : null; return first && first.props && typeof first.props.libraryKey === "string" ? first.props.libraryKey : ""; };
   const stampKey = (section, key) => { const sec = JSON.parse(JSON.stringify(section)); const first = sec && Array.isArray(sec.children) ? sec.children[0] : null; if (first && first.type === "container") { first.props = { ...(first.props || {}), libraryKey: key }; } return sec; };
   const originOf = (ctx, t, doc) => {
+    if (t.type === "footer" && t.sourceKind === "component") { try { const o = require("../../themeBuilder/revisions").originOfTemplate(ctx, t); return o ? { type: "footer", key: o.key, name: o.name } : null; } catch { return null; } }
     if (t.type !== "header" || t.sourceKind !== "component") return null;
     const key = originKey(doc); if (!key) return null;
     const m = Catalog.find("header", key); return m ? { type: "header", key, name: m.name } : null;
   };
   const card = (ctx, t, conflictIds, light = false) => {
     const base = { ...t, docRev: docRev(ctx, t), describe: TB.conditions.describe(t.conditions), editUrl: editUrl(t), previewUrl: previewUrl(t), previewNeedsPage: t.sourceKind !== "page", hasConflict: conflictIds.has(t.id), active: t.status === "published" };
-    if (light) return { ...base, origin: t.type === "header" ? originOf(ctx, t, docOf(ctx, t)) : null };
+    if (light) return { ...base, origin: t.type === "header" || t.type === "footer" ? originOf(ctx, t, t.type === "header" ? docOf(ctx, t) : null) : null };
     const doc = docOf(ctx, t), th = thumbnail(doc);
     return { ...base, thumb: th.svg, elements: th.elements, documentMissing: !doc, origin: originOf(ctx, t, doc) };
   };
@@ -120,13 +121,14 @@ module.exports = () => {
   router.post(`${T}/depublier`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.unpublish(ctx, id, tid(req)))));
   router.post(`${T}/archiver`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.archive(ctx, id, tid(req)))));
   router.post(`${T}/restaurer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.restore(ctx, id, tid(req)))));
-  router.post(`${T}/dupliquer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.store.duplicate(ctx, id, tid(req)))));
+  router.post(`${T}/dupliquer`, need("forms.write"), run((ctx, id, req) => one(ctx, id, TB.portable.duplicateTemplate(ctx, id, tid(req)))));
   router.post(`${T}/supprimer`, need("forms.write"), need("pages.delete"), run((ctx, id, req) => TB.store.remove(ctx, id, tid(req))));
   // « Revenir au modèle initial » : un en-tête installé depuis la bibliothèque retrouve exactement la composition d'origine (copie de travail du SEUL document de ce modèle ; rien n'est publié).
   // L'état avant le retour est gardé comme version (« Versions » › Restaurer) : l'opération est annulable.
   router.post(`${T}/revenir-au-modele`, need("forms.write"), run((ctx, id, req) => {
     const t = TB.store.get(ctx, id, tid(req));
     if (t.status === "archived") throw new MarketingError("conflict", "Ce modèle est archivé : restaurez-le avant de le modifier.");
+    if (t.type === "footer") { const r = require("../../themeBuilder/revisions").revertToOrigin(ctx, id, t.id); return { ...one(ctx, id, r.template), version: r.revisionId, original: r.original }; } // pied : brouillon recréé depuis le catalogue, révision de sécurité avant
     if (t.type !== "header" || t.sourceKind !== "component") throw new MarketingError("invalid_field", "Seul un en-tête installé depuis la bibliothèque peut revenir à son modèle initial.");
     const key = originKey(docOf(ctx, t));
     if (!key) throw new MarketingError("invalid_field", "Cet en-tête n'a pas été installé depuis la bibliothèque : le modèle d'origine n'est pas connu.");
@@ -143,10 +145,23 @@ module.exports = () => {
   router.post(`${T}/versions/:n(\\d+)/restaurer`, need("forms.write"), run((ctx, id, req) => { const r = TB.store.restoreVersion(ctx, id, tid(req), Number(req.params.n)); return { ...one(ctx, id, r), conditionsRestored: r.conditionsRestored }; }));
   router.get(`${T}/instances`, need("forms.read"), run((ctx, id, req) => instances(ctx, id, tid(req))));
   router.get(`${T}/export.json`, need("forms.read"), (req, res, next) => {
-    try { const d = TB.portable.exportTemplate(req.mk.ctx, sid(req), tid(req)); res.set({ "Cache-Control": "no-store", "Content-Disposition": `attachment; filename="modele-${tid(req)}.json"` }).type("application/json").send(JSON.stringify(d, null, 2)); }
+    try { const d = TB.portable.exportTemplate(req.mk.ctx, sid(req), tid(req), { conditions: req.query.conditions === "1" }); res.set({ "Cache-Control": "no-store", "Content-Disposition": `attachment; filename="modele-${tid(req)}.json"` }).type("application/json").send(JSON.stringify(d, null, 2)); }
     catch (e) { if (e instanceof MarketingError) return res.status(STATUS[e.code] || 400).json({ ok: false, error: e.message }); next(e); }
   });
-  router.post(`${A}/importer`, need("forms.write"), run((ctx, id, req) => { const t = TB.portable.importTemplate(ctx, id, body(req).payload); return { template: card(ctx, t, new Set()) }; }));
+  // Pieds de page : export de plusieurs pieds en une archive (?ids=1,2 ou tous), aperçu d'un fichier AVANT import (aucune écriture), import (un ou plusieurs, toujours en brouillon)
+  router.get(`${A}/modeles/export-lot.json`, need("forms.read"), (req, res, next) => {
+    try {
+      const ids = String(req.query.ids || "").split(",").map((x) => Number(x)).filter((n) => Number.isInteger(n) && n > 0).slice(0, 60);
+      const d = TB.portable.exportFooters(req.mk.ctx, sid(req), ids, { conditions: req.query.conditions === "1" });
+      res.set({ "Cache-Control": "no-store", "Content-Disposition": 'attachment; filename="pieds-de-page.json"' }).type("application/json").send(JSON.stringify(d, null, 2));
+    } catch (e) { if (e instanceof MarketingError) return res.status(STATUS[e.code] || 400).json({ ok: false, error: e.message }); next(e); }
+  });
+  router.post(`${A}/importer-apercu`, need("forms.write"), run((ctx, id, req) => ({ preview: TB.portable.previewImport(ctx, id, body(req).payload) })));
+  router.post(`${A}/importer`, need("forms.write"), run((ctx, id, req) => {
+    const payload = body(req).payload;
+    if (payload && typeof payload === "object" && /^kolakisa-footer-/.test(String(payload.format || ""))) { const r = TB.portable.importPackage(ctx, id, payload); const cards = r.templates.map((t) => card(ctx, t, new Set())); return { template: cards[0], templates: cards, warnings: r.warnings }; }
+    const t = TB.portable.importTemplate(ctx, id, payload); return { template: card(ctx, t, new Set()) };
+  }));
   router.post(`${A}/importer-ancien`, need("forms.write"), run((ctx, id) => TB.legacy.importLegacy(ctx, id)));
   // Contenus réels proposés pour prévisualiser un modèle (« Aperçu avec ») : articles publiés (le plus récent d'abord). L'aperçu s'ouvre avec ?contenu=<id> sur les routes d'aperçu existantes.
   router.get(`${A}/contenus-apercu`, need("forms.read"), run((ctx, id, req) => {

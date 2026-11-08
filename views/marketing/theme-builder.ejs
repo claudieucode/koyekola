@@ -21,6 +21,7 @@
           <% } %><button class="btn btn-outline" type="button" id="tb-lib-open">Bibliothèque de modèles</button>
           <% if (perms.write) { %>
           <label class="btn btn-outline" for="tb-import">Importer<input id="tb-import" type="file" accept="application/json,.json" hidden></label>
+          <a class="btn btn-outline" id="tb-export-footers" href="<%= base %>/api/modeles/export-lot.json" title="Télécharger tous les pieds de page de ce site dans un seul fichier (sans les conditions)" download>Exporter les pieds</a>
           <button class="btn btn-outline" type="button" id="tb-legacy" title="Reprendre l'en-tête, le pied de page et les modèles de thème déjà configurés pour ce site">Récupérer l'existant</button><% } %>
         </div>
       </div>

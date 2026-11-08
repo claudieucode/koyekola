@@ -147,6 +147,7 @@ function publish(ctx, siteId, id, { revision = null, replace = false } = {}) {
     const n = (ctx.db.prepare("SELECT COALESCE(MAX(number), 0) m FROM mk_tb_versions WHERE template_id = ?").get(t.id).m) + 1;
     ctx.db.prepare("INSERT INTO mk_tb_versions (template_id, number, name, conditions, snapshot, created_by) VALUES (?, ?, ?, ?, ?, ?)").run(t.id, n, t.name, JSON.stringify(t.conditions), JSON.stringify(snapshotOf(ctx, t)), ctx.userId ?? null);
     ctx.db.prepare("DELETE FROM mk_tb_versions WHERE template_id = ? AND number <= ?").run(t.id, n - 30);
+    if (t.type === "footer" && t.sourceKind === "component") { const c = P().getComponent(ctx, t.sourceId); if (c) require("./revisions").onPublished(ctx, t.sourceId, c.section); } // révision « publication » du pied
     ctx.db.prepare("UPDATE mk_tb_templates SET status = 'published', published_at = datetime('now') WHERE id = ? AND site_id IS ?").run(t.id, siteId); touch(ctx, siteId, t.id);
     return { template: get(ctx, siteId, id), version: n, conflicts, replaced: replaced.map((o) => ({ id: o.id, name: o.name })) };
   });

@@ -813,6 +813,7 @@ function saveComponentDraft(ctx, id, section, { revision } = {}) {
   const s = componentSection(ctx, section);
   checkWidgetRights(ctx, [c.section], [s]);
   ctx.db.prepare("UPDATE mk_web_components SET draft = ?, revision = revision + 1, updated_at = datetime('now') WHERE id = ?").run(JSON.stringify(s), c.id);
+  try { require("../../themeBuilder/revisions").onDraftSaved(ctx, c.id, s); } catch { /* historique des révisions du pied : jamais bloquant */ }
   return getComponent(ctx, c.id);
 }
 // Mise à jour explicite : la copie de travail devient la version diffusée (les instances liées l'affichent), numéro de version + 1

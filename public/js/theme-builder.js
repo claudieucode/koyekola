@@ -100,11 +100,11 @@
     if (canWrite && t.status !== "archived") {
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
-      item("Archiver", () => act(t, "archiver", "Modèle archivé."));
+      item("Archiver", () => { if (t.type === "footer" && t.status === "published" && !confirm(`Archiver « ${t.name} » ?\n\nCe pied s'affiche actuellement : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.\nIl ne sera plus affiché sur le site. Vous pourrez le restaurer depuis les archives.`)) return; act(t, "archiver", "Modèle archivé (récupérable dans les archives)."); });
       if (t.origin) item("Revenir au modèle initial", () => revertOrigin(t));
     }
     if (canWrite && t.status === "archived") { item("Restaurer", () => act(t, "restaurer", "Modèle restauré en brouillon.")); if (canRemove) item("Supprimer définitivement", () => remove(t)); }
-    item("Exporter (JSON)", () => { location.href = `${base}/api/modeles/${t.id}/export.json`; }); item("Versions", () => versions(t)); item("Où est-il utilisé ?", () => where(t));
+    item("Exporter (JSON)", () => { location.href = `${base}/api/modeles/${t.id}/export.json`; }); if (t.type === "footer") item("Exporter avec les conditions", () => { location.href = `${base}/api/modeles/${t.id}/export.json?conditions=1`; }); item("Versions", () => versions(t)); if (t.type === "footer" && t.sourceKind === "component") item("Historique des révisions", () => revisions(t)); item("Où est-il utilisé ?", () => where(t));
     wrap.append(btn, ul); return wrap;
   }
   function infoBtn(name, fn) { const b = el("button", "tb-info"); b.type = "button"; b.setAttribute("aria-label", `Informations sur ${name}`); b.append(svgOf(ICONS.info)); b.firstChild.setAttribute("width", "18"); b.firstChild.setAttribute("height", "18"); b.addEventListener("click", fn); return b; }
@@ -279,11 +279,12 @@
   });
   // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
   async function revertOrigin(t) {
-    if (!t.origin || !confirm(`Revenir au modèle initial « ${t.origin.name} » ?\n\nL'en-tête « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé dans « Versions » : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
-    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle initial « ${r.original.name} » (brouillon). Pour annuler : Versions › Restaurer la version ${r.version}.`, "ok"); await refresh(); }
+    const foot = t.type === "footer", what = foot ? "Le pied de page" : "L'en-tête";
+    if (!t.origin || !confirm(`Revenir au modèle ${foot ? "d'origine" : "initial"} « ${t.origin.name} » ?\n\n${what} « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé automatiquement dans ${foot ? "« Historique des révisions »" : "« Versions »"} : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
+    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle d'origine « ${r.original.name} » (brouillon).${foot ? " Pour annuler : Historique des révisions › Restaurer." : ` Pour annuler : Versions › Restaurer la version ${r.version}.`}`, "ok"); await refresh(); }
     catch (e) { status(e.message, "err"); }
   }
-  async function remove(t) { if (!confirm(`Supprimer définitivement « ${t.name} » ? Le document (page ou composant) reste dans vos pages.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
+  async function remove(t) { const where = t.describe ? `\n\nCe modèle s'affichait : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.` : ""; if (!confirm(`Supprimer définitivement « ${t.name} » ?${where}\n\nLe document (page ou composant) et son historique de révisions restent conservés dans vos composants.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
   // Publication d'un pied : « Où afficher ce pied ? » (tout le site / conditions personnalisées), résumé, conflits expliqués AVANT publication, test d'adresse
   let pubT = null, pubPlan = null, pubTimer = 0, pubSeq = 0;
   const scopeOf = () => { const r = document.querySelector('input[name="tb-scope"]:checked'); return r ? r.value : ""; };
@@ -433,7 +434,18 @@
   });
   $("tb-import")?.addEventListener("change", async (e) => {
     const f = e.target.files[0]; if (!f) return; e.target.value = "";
-    try { if (f.size > 2000000) throw new Error("Fichier trop volumineux."); const payload = JSON.parse(await f.text()); await post("/importer", { payload }); status("Modèle importé en brouillon.", "ok"); await refresh(); }
+    try {
+      if (f.size > 2000000) throw new Error("Fichier trop volumineux (2 Mo au plus).");
+      const payload = JSON.parse(await f.text());
+      let warn = [];
+      if (payload && typeof payload.format === "string" && payload.format.startsWith("kolakisa-footer-")) { // pied de page : aperçu avant import
+        const pv = (await post("/importer-apercu", { payload })).preview;
+        const lines = pv.items.map((i) => `• ${i.finalName} : ${i.elements} élément(s)`);
+        if (!window.confirm(`Importer ${pv.items.length} pied(s) de page en BROUILLON (rien ne sera publié) ?\n\n${lines.join("\n")}${pv.warnings.length ? `\n\nAvertissements :\n- ${pv.warnings.join("\n- ")}` : ""}`)) return;
+        warn = pv.warnings;
+      }
+      await post("/importer", { payload }); status(`Modèle importé en brouillon.${warn.length ? ` ${warn.length} avertissement(s).` : ""}`, "ok"); await refresh();
+    }
     catch (err) { status(err instanceof SyntaxError ? "Ce fichier n'est pas un JSON valide." : err.message, "err"); }
   });
   $("tb-legacy")?.addEventListener("click", async () => {
@@ -445,6 +457,34 @@
   function info(title, build) { $("tb-dlg-info-h").textContent = title; const box = $("tb-info"); box.textContent = ""; build(box); openDlg("tb-dlg-info"); }
   async function versions(t) {
     try { const r = await api(`/modeles/${t.id}/versions`); info(`Versions — ${t.name}`, (box) => { if (!r.versions.length) box.append(el("p", "sw-muted", "Aucune version publiée pour l'instant.")); const ul = el("ul"); for (const v of r.versions) { const li = el("li"); li.append(document.createTextNode(`Version ${v.number} · ${dates(v.createdAt)} · ${v.describe.include}${v.describe.exclude ? ` (sauf ${v.describe.exclude})` : ""} `)); if (canWrite) { const b = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); b.type = "button"; b.addEventListener("click", async () => { try { const rr = await post(`/modeles/${t.id}/versions/${v.number}/restaurer`); closeDlg($("tb-dlg-info")); status(`Version ${v.number} : contenu restauré en brouillon de travail (rien n'est changé en ligne avant la publication).${rr.conditionsRestored ? "" : " Les conditions en ligne n'ont pas été modifiées."}`, "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }); li.append(b); } ul.append(li); } box.append(ul); }); }
+    catch (e) { status(e.message, "err"); }
+  }
+  // ---- historique des révisions du pied (liste paginée, aperçu, comparaison, restauration en brouillon)
+  async function revisions(t) {
+    const kinds = { draft: "Brouillon", publish: "Publication", safety: "Sécurité", restore: "Restauration" };
+    let rows = [], next = null, picked = [];
+    const draw = (box) => {
+      box.textContent = "";
+      box.append(el("p", "sw-muted", "Chaque enregistrement du brouillon et chaque publication est gardé ici (50 au plus ; les plus anciens disparaissent, jamais la dernière publication). Restaurer crée un nouveau brouillon : la version en ligne ne change qu'à la prochaine publication."));
+      if (!rows.length) box.append(el("p", "", "Aucune révision pour l'instant."));
+      const ul = el("ul");
+      for (const r of rows) {
+        const li = el("li"); const cb = el("input"); cb.type = "checkbox"; cb.checked = picked.includes(r.id); cb.setAttribute("aria-label", `Choisir la révision du ${dates(r.createdAt)} pour comparer`);
+        cb.addEventListener("change", () => { picked = cb.checked ? [...picked, r.id].slice(-2) : picked.filter((x) => x !== r.id); draw(box); });
+        li.append(cb, document.createTextNode(` ${kinds[r.kind] || r.kind} · ${dates(r.createdAt)}${r.by ? ` · ${r.by}` : ""} · ${r.widgets} élément(s) · ${r.summary}${r.isCurrentDraftContent ? " · (= contenu actuel)" : ""} `));
+        const pv = el("button", "btn btn-sm btn-outline", "Aperçu"); pv.type = "button";
+        pv.addEventListener("click", async () => { try { const d = await api(`/modeles/${t.id}/revisions/${r.id}/apercu`); const out = el("div"); out.append(el("b", "", `Aperçu — ${kinds[r.kind] || r.kind} du ${dates(r.createdAt)}`)); const th = new DOMParser().parseFromString(d.thumb || "", "image/svg+xml").documentElement; if (th && th.nodeName === "svg") { th.setAttribute("style", "max-width:240px;display:block"); out.append(document.importNode(th, true)); } out.append(el("p", "sw-muted", Object.entries(d.types).map(([k, n]) => `${n} × ${k}`).join(", ") || "Vide")); const old = box.querySelector("[data-rev-out]"); if (old) old.remove(); out.dataset.revOut = "1"; box.append(out); } catch (e) { status(e.message, "err"); } });
+        li.append(pv);
+        if (canWrite && t.status !== "archived") { const rs = el("button", "btn btn-sm btn-outline", "Restaurer en brouillon"); rs.type = "button"; rs.addEventListener("click", async () => { if (!confirm(`Restaurer cette révision comme nouveau brouillon ?\n\nLe brouillon actuel est d'abord gardé dans l'historique. La version en ligne ne change pas tant que vous ne publiez pas.`)) return; try { await post(`/modeles/${t.id}/revisions/${r.id}/restaurer`); closeDlg($("tb-dlg-info")); status("Révision restaurée en brouillon (rien n'est changé en ligne avant la publication).", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }); li.append(rs); }
+        ul.append(li);
+      }
+      box.append(ul);
+      if (next) { const more = el("button", "btn btn-sm btn-outline", "Voir les plus anciennes"); more.type = "button"; more.addEventListener("click", async () => { try { const d = await api(`/modeles/${t.id}/revisions?avant=${next}`); rows = rows.concat(d.revisions); next = d.next; draw(box); } catch (e) { status(e.message, "err"); } }); box.append(more); }
+      const cmp = el("button", "btn btn-sm btn-primary", "Comparer les 2 révisions cochées"); cmp.type = "button"; cmp.disabled = picked.length !== 2;
+      cmp.addEventListener("click", async () => { try { const [a, b] = picked.slice().sort((x, y) => x - y); const d = (await api(`/modeles/${t.id}/revisions/comparer?a=${a}&b=${b}`)).comparison; const out = el("p", "", d.identical ? "Ces deux révisions sont identiques." : `Entre la plus ancienne et la plus récente : ${d.added} élément(s) ajouté(s), ${d.removed} retiré(s), ${d.modified} modifié(s).`); const old = box.querySelector("[data-rev-cmp]"); if (old) old.remove(); out.dataset.revCmp = "1"; box.append(out); } catch (e) { status(e.message, "err"); } });
+      box.append(cmp);
+    };
+    try { const d = await api(`/modeles/${t.id}/revisions`); rows = d.revisions; next = d.next; info(`Historique des révisions — ${t.name}`, draw); }
     catch (e) { status(e.message, "err"); }
   }
   async function where(t) {

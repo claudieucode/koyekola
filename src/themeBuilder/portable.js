@@ -17,8 +17,10 @@ function portableConditions(c) {
   }).filter((x) => !(x.kind === "child_of" && !x.parent));
   return { conditions: { include: side(c.include || []), exclude: side(c.exclude || []) }, stripped };
 }
-function exportTemplate(ctx, siteId, id) {
+const FP = () => require("./footerPortable");
+function exportTemplate(ctx, siteId, id, opts = {}) {
   const t = store.get(ctx, siteId, id);
+  if (t.type === "footer") return FP().exportFooter(ctx, siteId, id, opts); // pied : format dédié (voir docs/footer-builder/FOOTER_IMPORT_EXPORT.md)
   const { conditions, stripped } = portableConditions(t.conditions);
   let document;
   if (t.sourceKind === "page") document = { kind: "page", data: P().exportPage(ctx, t.sourceId) };
@@ -27,6 +29,7 @@ function exportTemplate(ctx, siteId, id) {
 }
 function importTemplate(ctx, siteId, payload) {
   store.site(ctx, siteId);
+  if (payload && typeof payload === "object" && /^kolakisa-footer-/.test(String(payload.format || ""))) { const r = FP().importFooters(ctx, siteId, payload); return r.templates[0]; }
   if (!payload || typeof payload !== "object" || payload.format !== FORMAT) throw bad(`Fichier non reconnu : exportez un modèle depuis le Theme Builder (format ${FORMAT}).`);
   if (JSON.stringify(payload).length > MAX_BYTES) throw bad("Fichier trop volumineux.");
   const tpl = payload.template || {}, doc = payload.document || {};
@@ -39,4 +42,4 @@ function importTemplate(ctx, siteId, payload) {
   else { if (!doc.section || typeof doc.section !== "object") throw bad("Document manquant."); created = P().createComponent(ctx, { name: store.docName(ctx, siteId, "component", String(tpl.name || "Import").slice(0, 60)), section: doc.section, siteId, kind: "standard" }); }
   return store.create(ctx, siteId, { type: tpl.type, name: tpl.name || "Modèle importé", conditions: cond, sourceKind: doc.kind, sourceId: created.id });
 }
-module.exports = { exportTemplate, importTemplate, FORMAT };
+module.exports = { exportTemplate, importTemplate, FORMAT, exportFooters: (...a) => FP().exportFooters(...a), previewImport: (...a) => FP().preview(...a), importPackage: (...a) => FP().importFooters(...a), duplicateTemplate: (ctx, siteId, id) => FP().duplicateFooter(ctx, siteId, id) };

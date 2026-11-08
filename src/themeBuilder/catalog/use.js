@@ -24,7 +24,9 @@ function useTemplate(ctx, siteId, type, key, { name, conditions } = {}) {
     let created;
     if (doc.kind === "component") created = P().createComponent(ctx, { name: store.docName(ctx, siteId, "component", label), section: JSON.parse(JSON.stringify(doc.section)), siteId, kind: "standard" });
     else created = P().createPage(ctx, { name: store.docName(ctx, siteId, "page", label), siteId, kind: "page", sections: JSON.parse(JSON.stringify(doc.sections)) });
-    return store.create(ctx, siteId, { type, name: label, conditions: conditions || {}, sourceKind: doc.kind, sourceId: created.id });
+    const tpl = store.create(ctx, siteId, { type, name: label, conditions: conditions || {}, sourceKind: doc.kind, sourceId: created.id });
+    if (type === "footer") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ? WHERE id = ? AND organization_id = ?").run(meta.key, tpl.id, ctx.organizationId); // mémoire du modèle d'origine (« Revenir au modèle d'origine »)
+    return tpl;
   });
 }
 module.exports = { useTemplate, siteFormId };
