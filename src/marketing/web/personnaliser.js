@@ -177,6 +177,17 @@ module.exports = () => {
       res.json(menuState(t, m));
     } catch (e) { return menuError(res, e); }
   });
+  // ---------- Widgets : lecture de l'état (l'enregistrement passe par la route existante /site-web/widgets/enregistrer : même validation, même contrôle de version) ----------
+  router.get("/site-web/personnaliser/widgets", need("appearance.read"), (req, res) => {
+    const t = target(req, res, { json: true }); if (!t) return;
+    res.set("Cache-Control", "no-store");
+    const state = widgets.get(t.siteId);
+    res.json({
+      revision: state.revision, layout: state.layout, zones: widgetCatalog.ZONES, categories: widgetCatalog.CATEGORIES, blocks: widgetCatalog.publicCatalog(),
+      menus: navigation.listMenus({ siteId: t.siteId }).filter((m) => m.status === "published").map((m) => ({ id: m.id, name: m.name })),
+      canEdit: req.mk.can("appearance.publish") && !t.readOnly,
+    });
+  });
   // Comportement de l'en-tête du site (mode, effets, décalage, empilement, masquage au défilement, appareils) : mêmes règles de validation que le Theme Builder (headerSettings.normalize),
   // même chemin d'enregistrement (brouillon du composant puis mise à jour), site vérifié par le serveur, jamais un composant partagé.
   router.post("/site-web/personnaliser/entete", need("forms.write"), (req, res) => {

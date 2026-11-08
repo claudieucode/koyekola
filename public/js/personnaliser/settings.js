@@ -520,13 +520,92 @@
     }
     list();
   }
+  // Widgets : composition directe des zones (ajout, ordre, retrait, réglages de chaque bloc). Le catalogue de blocs et la validation sont ceux du serveur ; l'enregistrement est TOUT-OU-RIEN avec contrôle de version.
   function widgetsView(body) {
-    body.appendChild(h("p", { class: "kwc-hint", text: "Les widgets se composent dans l'écran Widgets. Voici l'état des zones de ce site." }));
-    var ul = h("ul", { class: "kwc-menulist" });
-    boot.zones.forEach(function (z) { ul.appendChild(h("li", null, [h("strong", { text: z.label }), h("small", { text: z.count + " widget" + (z.count > 1 ? "s" : "") + " · " + z.where })])); });
-    body.appendChild(ul);
-    body.appendChild(h("a", { class: "kwc-btn kwc-btn-primary", href: boot.links.widgets, target: "_blank", rel: "noopener", text: "Modifier les widgets" }));
-    body.appendChild(h("button", { type: "button", class: "kwc-btn", text: "Actualiser l'aperçu", onclick: function () { K.preview.softReload(); } }));
+    var holder = h("div", { class: "kwc-fields" }); body.appendChild(holder);
+    holder.appendChild(h("p", { class: "kwc-hint", text: "Chargement des widgets…" }));
+    getJson(boot.base + "/widgets").then(function (st) { drawWidgets(holder, st); }, function (e) { holder.textContent = ""; holder.appendChild(h("p", { class: "kwc-empty-note", text: e.message })); });
+  }
+  function drawWidgets(holder, st) {
+    var layout = JSON.parse(JSON.stringify(st.layout)), revision = st.revision, changed = false, openId = null;
+    var def = {}; st.blocks.forEach(function (b) { def[b.key] = b; });
+    var can = st.canEdit;
+    function newId() { var a = "abcdefghijklmnopqrstuvwxyz0123456789", o = ""; for (var k = 0; k < 12; k++) o += a.charAt(Math.floor(Math.random() * a.length)); return o; }
+    function summary(b) { var s = b.settings || {}; var t = s.title || s.text || s.label || s.heading || ""; return String(t).replace(/\s+/g, " ").slice(0, 40); }
+    function mark() { changed = true; draw(); }
+    function field(b, f) {
+      var v = b.settings[f.name];
+      var wrap = h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: f.label })])]);
+      var el;
+      if (f.type === "textarea" || f.type === "code" || f.type === "lines") {
+        el = h("textarea", { class: "kwc-input", rows: f.type === "textarea" ? 4 : 5, disabled: !can }); el.value = Array.isArray(v) ? v.join("\n") : (v == null ? "" : String(v));
+        el.addEventListener("input", function () { b.settings[f.name] = f.type === "lines" ? el.value.split("\n") : el.value; changed = true; saveBtn.disabled = !can; });
+      } else if (f.type === "select") {
+        el = h("select", { class: "kwc-input", disabled: !can }, f.options.map(function (o) { return h("option", { value: o[0], text: o[1], selected: String(o[0]) === String(v) }); }));
+        el.addEventListener("change", function () { var o = f.options.filter(function (x) { return String(x[0]) === el.value; })[0]; b.settings[f.name] = typeof o[0] === "number" ? Number(el.value) : el.value; changed = true; saveBtn.disabled = !can; });
+      } else if (f.type === "menu") {
+        el = h("select", { class: "kwc-input", disabled: !can }, [h("option", { value: "", text: "— Aucun —" })].concat(st.menus.map(function (m) { return h("option", { value: m.id, text: m.name, selected: String(m.id) === String(v) }); })));
+        el.addEventListener("change", function () { b.settings[f.name] = el.value === "" ? 0 : Number(el.value); changed = true; saveBtn.disabled = !can; });
+      } else if (f.type === "checkbox") {
+        el = h("input", { type: "checkbox", checked: !!v, disabled: !can });
+        el.addEventListener("change", function () { b.settings[f.name] = el.checked; changed = true; saveBtn.disabled = !can; });
+        wrap = h("div", { class: "kwc-field" }, [h("label", { class: "kwc-check" }, [el, h("span", { text: " " + f.label })])]);
+        if (f.help) wrap.appendChild(h("small", { class: "kwc-help", text: f.help }));
+        return wrap;
+      } else {
+        el = h("input", { class: "kwc-input", type: f.type === "number" ? "number" : "text", value: v == null ? "" : v, min: f.min, max: f.max, maxlength: f.type === "number" ? null : f.max, disabled: !can });
+        el.addEventListener("input", function () { b.settings[f.name] = f.type === "number" ? (el.value === "" ? "" : Number(el.value)) : el.value; changed = true; saveBtn.disabled = !can; });
+      }
+      wrap.appendChild(el);
+      if (f.help) wrap.appendChild(h("small", { class: "kwc-help", text: f.help }));
+      return wrap;
+    }
+    var saveBtn = h("button", { type: "button", class: "kwc-btn kwc-btn-primary", text: "Enregistrer et publier les widgets", disabled: true });
+    saveBtn.addEventListener("click", function () {
+      saveBtn.disabled = true;
+      post("/marketing/site-web/widgets/enregistrer", { layout: layout, revision: revision }).then(function (r) { layout = JSON.parse(JSON.stringify(r.layout)); revision = r.revision; changed = false; toast("Widgets enregistrés.", "ok"); K.preview.softReload(); draw(); },
+        function (e) { toast(e.message, "error"); saveBtn.disabled = !can; });
+    });
+    function draw() {
+      holder.textContent = "";
+      holder.appendChild(h("p", { class: "kwc-hint", text: can ? "Ajoutez, ordonnez et réglez les widgets de chaque zone, puis enregistrez : le site public est mis à jour." : "Vous pouvez consulter les widgets ; leur modification demande le droit de publication de l'apparence." }));
+      st.zones.forEach(function (z) {
+        var list = layout.zones[z.key] || (layout.zones[z.key] = []);
+        var det = h("details", { class: "kwc-group", open: true }, [h("summary", { class: "kwc-group-title", text: z.label + " (" + list.length + ")" })]);
+        det.appendChild(h("small", { class: "kwc-help", text: z.where + " — " + z.description }));
+        var ul = h("ul", { class: "kwc-menuitems" });
+        list.forEach(function (b, idx) {
+          var d = def[b.type] || { label: b.type, fields: [] };
+          var line = h("div", { class: "kwc-widgetline" }, [h("strong", { text: d.label }), h("small", { text: summary(b) })]);
+          var tools = h("span", { class: "kwc-menutools" }, [
+            h("button", { type: "button", class: "kwc-btn", text: openId === b.id ? "Fermer" : "Modifier", "aria-expanded": openId === b.id ? "true" : "false", onclick: function () { openId = openId === b.id ? null : b.id; draw(); } }),
+            h("button", { type: "button", class: "kwc-btn", title: "Monter", "aria-label": "Monter « " + d.label + " »", text: "↑", disabled: !can || idx === 0, onclick: function () { list.splice(idx - 1, 0, list.splice(idx, 1)[0]); mark(); } }),
+            h("button", { type: "button", class: "kwc-btn", title: "Descendre", "aria-label": "Descendre « " + d.label + " »", text: "↓", disabled: !can || idx === list.length - 1, onclick: function () { list.splice(idx + 1, 0, list.splice(idx, 1)[0]); mark(); } }),
+            h("button", { type: "button", class: "kwc-btn", title: "Retirer", "aria-label": "Retirer « " + d.label + " »", text: "✕", disabled: !can, onclick: function () { list.splice(idx, 1); if (openId === b.id) openId = null; mark(); } }),
+          ]);
+          var li = h("li", { class: "kwc-menuitem" }, [line, tools]);
+          if (openId === b.id) d.fields.forEach(function (f) { li.appendChild(field(b, f)); });
+          ul.appendChild(li);
+        });
+        if (!list.length) ul.appendChild(h("li", null, [h("small", { text: "Cette zone est vide." })]));
+        det.appendChild(ul);
+        holder.appendChild(det);
+      });
+      if (can) {
+        var zoneSel = h("select", { class: "kwc-input", "aria-label": "Zone" }, st.zones.map(function (z) { return h("option", { value: z.key, text: z.label }); }));
+        var typeSel = h("select", { class: "kwc-input", "aria-label": "Type de widget" }, st.categories.map(function (c) {
+          var og = h("optgroup", { label: c.label }); st.blocks.filter(function (b) { return b.category === c.key; }).forEach(function (b) { og.appendChild(h("option", { value: b.key, text: b.label })); }); return og;
+        }));
+        holder.appendChild(h("div", { class: "kwc-field" }, [h("div", { class: "kwc-field-head" }, [h("label", { text: "Ajouter un widget" })]), zoneSel, typeSel,
+          h("button", { type: "button", class: "kwc-btn", text: "Ajouter à la zone", onclick: function () {
+            var d = def[typeSel.value]; if (!d) return; var list = layout.zones[zoneSel.value] || (layout.zones[zoneSel.value] = []);
+            var b = { id: newId(), type: d.key, settings: JSON.parse(JSON.stringify(d.defaults || {})) }; list.push(b); openId = b.id; mark();
+          } })]));
+        saveBtn.disabled = !changed; holder.appendChild(saveBtn);
+      }
+      holder.appendChild(h("a", { class: "kwc-btn", href: boot.links.widgets, target: "_blank", rel: "noopener", text: "Ouvrir l'écran Widgets complet (aperçu de chaque bloc)" }));
+    }
+    draw();
   }
   function homeView(body) {
     if (boot.principal) { body.appendChild(note("La page d'accueil du site principal est celle de Kolakisa : elle se modifie dans Pages.", boot.links.pages, "Ouvrir les pages")); return; }

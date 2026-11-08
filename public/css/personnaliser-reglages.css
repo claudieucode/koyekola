@@ -164,3 +164,9 @@ html[data-kola-theme="dark"] .kwc-btn-primary { color: #04121d; }
 .kwc-menutools { display: flex; gap: 6px; }
 .kwc-menutools .kwc-btn { min-width: 36px; min-height: 32px; padding: 0 8px; }
 .kwc-menuitem small { color: var(--kwc-muted); }
+
+/* Widgets composés dans le panneau : nom du bloc et résumé sur deux lignes, textareas à la largeur du panneau */
+.kwc-widgetline { display: grid; gap: 2px; }
+.kwc-widgetline small { color: var(--kwc-muted); overflow-wrap: anywhere; }
+.kwc-menuitem textarea.kwc-input { width: 100%; box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--kwc-line); border-radius: var(--kwc-r); background: var(--kwc-surface); color: inherit; font: inherit; resize: vertical; }
+.kwc-menuitem select.kwc-input { width: 100%; box-sizing: border-box; min-height: 36px; }
