@@ -48,8 +48,11 @@
           <form class="tb-tools tb-cat-tools" id="tb-cat-tools" role="search" aria-label="Filtrer les modèles prédéfinis">
             <label class="sw-field tb-search"><span class="tb-fl">Recherche</span><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input type="search" id="tb-cat-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
             <label class="sw-field"><span class="tb-fl">Identité</span><select id="tb-cat-skin"><option value="">Toutes les identités</option></select></label>
-            <label class="sw-field"><span class="tb-fl">Mise en page</span><select id="tb-cat-layout"><option value="">Toutes les mises en page</option></select></label>
+            <label class="sw-field"><span class="tb-fl" id="tb-cat-layout-l">Mise en page</span><select id="tb-cat-layout"><option value="">Toutes les mises en page</option></select></label>
+            <label class="sw-field tb-sortf" hidden><span class="tb-fl">Trier par</span><select id="tb-cat-sort"></select></label>
+            <button type="button" class="btn btn-outline tb-favf" id="tb-cat-fav" aria-pressed="false" hidden><span aria-hidden="true">&#9733;</span> Favoris <span class="tb-favn" id="tb-cat-favn"></span></button>
           </form>
+          <p class="tb-famd sw-muted" id="tb-cat-famd" hidden></p>
           <p class="tb-cat-status" id="tb-cat-status" role="status" hidden></p>
           <div class="tb-cards tb-cat-cards" id="tb-cat-cards" aria-busy="false"></div>
           <div class="tb-lib-pager tb-cat-pager" id="tb-cat-pager" hidden><button class="btn btn-sm btn-outline" type="button" id="tb-cat-prev">Précédent</button><span id="tb-cat-page"></span><button class="btn btn-sm btn-outline" type="button" id="tb-cat-next">Suivant</button></div>
@@ -75,12 +78,15 @@
       <label class="sw-field"><span class="tb-fl">Type</span><select id="tb-lib-type"></select></label>
       <label class="sw-field tb-search"><span class="tb-fl">Recherche</span><svg class="tb-bi" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg><input type="search" id="tb-lib-q" maxlength="80" placeholder="Nom, style, usage…" autocomplete="off"></label>
       <label class="sw-field"><span class="tb-fl">Identité</span><select id="tb-lib-skin"><option value="">Toutes</option></select></label>
-      <label class="sw-field"><span class="tb-fl">Mise en page</span><select id="tb-lib-layout"><option value="">Toutes</option></select></label>
+      <label class="sw-field"><span class="tb-fl" id="tb-lib-layout-l">Mise en page</span><select id="tb-lib-layout"><option value="">Toutes</option></select></label>
+      <label class="sw-field tb-sortf" hidden><span class="tb-fl">Trier par</span><select id="tb-lib-sort"></select></label>
+      <button type="button" class="btn btn-outline tb-favf" id="tb-lib-fav" aria-pressed="false" hidden><span aria-hidden="true">&#9733;</span> Favoris <span class="tb-favn" id="tb-lib-favn"></span></button>
       <div class="tb-views" role="group" aria-label="Mode d'affichage">
         <button type="button" data-lview="grid" aria-pressed="true" aria-label="Grille" title="Grille"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.2"/></svg></button>
         <button type="button" data-lview="list" aria-pressed="false" aria-label="Liste" title="Liste"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"/></svg></button>
       </div>
     </form>
+    <p class="tb-famd sw-muted" id="tb-lib-famd" hidden></p>
     <div class="tb-status" id="tb-lib-status" role="status" aria-live="polite"></div>
     <div class="tb-lib-body"><div class="tb-cards" id="tb-lib-cards" data-view="grid" aria-live="polite"></div></div>
     <nav class="tb-lib-pager" aria-label="Pagination de la bibliothèque"><button class="btn btn-outline btn-sm" type="button" id="tb-lib-prev">Précédent</button><span id="tb-lib-page" aria-live="polite"></span><button class="btn btn-outline btn-sm" type="button" id="tb-lib-next">Suivant</button></nav>

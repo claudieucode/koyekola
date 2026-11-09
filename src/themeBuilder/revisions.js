@@ -148,10 +148,12 @@ function restore(ctx, siteId, id, rid) {
 }
 // « Revenir au modèle d'origine » : recrée le brouillon depuis le catalogue (révision de sécurité avant). Le public ne change pas avant « Publier ».
 function originOf(ctx, t) {
-  const r = ctx.db.prepare("SELECT origin_key FROM mk_tb_templates WHERE id = ? AND organization_id = ?").get(t.id, ctx.organizationId);
+  const r = ctx.db.prepare("SELECT origin_key, origin_version FROM mk_tb_templates WHERE id = ? AND organization_id = ?").get(t.id, ctx.organizationId);
   if (!r || !r.origin_key) return null;
+  // L'identifiant d'origine peut être un ANCIEN identifiant : find() suit les alias jusqu'au modèle qui le remplace. version = version de composition du modèle d'origine à l'installation (null = inconnue) ;
+  // currentVersion = version actuelle du modèle dans la bibliothèque (celle que « Revenir au modèle d'origine » restaurerait).
   const Catalog = require("./catalog"), m = Catalog.find("footer", r.origin_key);
-  return m ? { key: r.origin_key, name: m.name } : null;
+  return m ? { key: m.key, name: m.name, version: Number.isInteger(r.origin_version) ? r.origin_version : null, currentVersion: Number.isInteger(m.version) ? m.version : 1, ...(m.key !== r.origin_key ? { renamedFrom: r.origin_key } : {}) } : null;
 }
 function revertToOrigin(ctx, siteId, id) {
   const t = footerTemplate(ctx, siteId, id);
@@ -159,8 +161,10 @@ function revertToOrigin(ctx, siteId, id) {
   const Catalog = require("./catalog"), { siteFormId } = require("./catalog/use");
   const fresh = Catalog.build("footer", o.key, { formId: siteFormId(ctx, siteId) });
   if (!fresh || fresh.kind !== "component") throw bad("Le modèle d'origine est introuvable.", "not_found");
-  const rid = setDraft(ctx, t, JSON.parse(JSON.stringify(fresh.section)), "restore", `Retour au modèle d'origine « ${o.name} »`);
-  return { template: store.get(ctx, siteId, id), revisionId: rid, original: o, published: false };
+  const rid = setDraft(ctx, t, JSON.parse(JSON.stringify(fresh.section)), "restore", `Retour au modèle d'origine « ${o.name} » (version ${o.currentVersion})`);
+  // Le pied a retrouvé la composition ACTUELLE du modèle : on met à jour l'identifiant (ancien alias → identifiant actuel) et la version d'origine mémorisés
+  ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, origin_version = ? WHERE id = ? AND organization_id = ?").run(o.key, o.currentVersion, t.id, ctx.organizationId);
+  return { template: store.get(ctx, siteId, id), revisionId: rid, original: { ...o, version: o.currentVersion, installedVersion: o.version }, published: false };
 }
 function origin(ctx, siteId, id) { return originOf(ctx, footerTemplate(ctx, siteId, id)); }
 

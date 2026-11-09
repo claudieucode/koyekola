@@ -147,7 +147,8 @@ describe("Pied de page — révisions sur serveur réel", () => {
   });
 
   test("retour au modèle d'origine : bouton visible, brouillon recréé depuis le catalogue, sécurité avant, rien publié", async () => {
-    const key = Catalog.entries("footer").find((e) => e.layoutId === "quatre-colonnes-liens").key;
+    const key = "ft-corporate-01-grande-marque-volets"; // un modèle de la bibliothèque actuelle (les anciens identifiants ne sont plus listés)
+    assert.ok(Catalog.entries("footer").some((e) => e.key === key));
     const used = json(await post(U(S1, "/api/bibliotheque/utiliser"), { type: "footer", key })).template;
     assert.equal(used.origin.key, key, "la fiche annonce le modèle d'origine");
     const light = json(await boss.get(U(S1, "/api/modeles?leger=1"))).templates.find((x) => x.id === used.id);

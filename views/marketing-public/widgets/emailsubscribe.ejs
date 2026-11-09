@@ -7,12 +7,17 @@
   <% } else { %>
     <% if (p.intro) { %><p class="kw-emailsub-intro"><%= p.intro %></p><% } %>
     <% if (ws && ws.error) { %><p class="lp-error" role="alert"><%= ws.error %></p><% } %>
-    <form class="kw-emailsub-form" method="post" action="/p/<%= typeof page !== "undefined" && page ? page.slug : "" %>/inscription" novalidate><input type="hidden" name="tz" data-tz><input type="hidden" name="w" value="<%= n.id %>">
-      <%- include("../_signup-fields", { form: d.form, fieldCatalog: {}, propertyDefs: [], values: ws && ws.values ? ws.values : {}, prefix: "w" + n.id, autofocus: false }) %>
+    <% const hasPage = typeof page !== "undefined" && page && page.slug; %><form class="kw-emailsub-form" method="post" action="<%= hasPage ? "/p/" + page.slug + "/inscription" : "/p/_pied/inscription" %>" novalidate><input type="hidden" name="tz" data-tz><% if (!hasPage) { %><input type="hidden" name="back" value="<%= typeof kwBack !== "undefined" ? kwBack : "/" %>"><% } %><input type="hidden" name="w" value="<%= n.id %>">
+      <%- include("../_signup-fields", { form: d.form, fieldCatalog: d.all ? d.fieldCatalog : {}, propertyDefs: d.all ? d.propertyDefs : [], values: ws && ws.values ? ws.values : {}, prefix: "w" + n.id, autofocus: false }) %>
       <button type="submit" class="kw-button kw-btn-primary kw-emailsub-submit"<%= inPreview ? " disabled" : "" %>><%= p.button %></button>
     </form>
   <% } %>
 </div></div>
-<% } else if (isBuilder) { %>
-<div class="<%= cls %> kw-biz-empty"<%- attrs %>><p class="kw-biz-hint">Abonnement par e-mail : aucun formulaire d’inscription publié (dont seul l’e-mail est obligatoire) n’a été trouvé pour ce site. Publiez-en un dans Audience → Formulaires d’inscription.</p></div>
+<% } else if (p.showWhenMissing || isBuilder) { const contact = p.fields === "all"; %>
+<%# État « non configuré » EXPLICITE : jamais de faux champ ni de faux bouton. Visiteur : phrase simple, sans jargon. Éditeur : en plus, où le régler. %>
+<div class="<%= cls %> kw-emailsub-missing<%= p.showWhenMissing ? "" : " kw-biz-empty" %>"<%- attrs %> data-kw-state="not-configured">
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <p class="kw-emailsub-missing-text" role="status"><%= p.missingText || (contact ? "Formulaire de contact non configuré pour le moment." : "Inscription par e-mail non configurée pour le moment.") %></p>
+  <% if (isBuilder) { %><p class="kw-biz-hint"><%= contact ? "Formulaire de contact : aucun formulaire publié n’a été trouvé pour ce site." : "Abonnement par e-mail : aucun formulaire d’inscription publié (dont seul l’e-mail est obligatoire) n’a été trouvé pour ce site." %> Publiez-en un dans Audience → Formulaires d’inscription : ce bloc s’activera tout seul.</p><% } %>
+</div>
 <% } %>

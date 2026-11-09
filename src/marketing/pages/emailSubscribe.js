@@ -19,7 +19,11 @@ function formFor(ctx, page, props) {
     if (id) found = forms.getForm(ctx, id);
     else {
       const rows = ctx.db.prepare("SELECT id FROM mk_forms WHERE organization_id = ? AND site_id IS ? AND status = 'published' ORDER BY id DESC LIMIT 25").all(ctx.organizationId, siteId);
-      for (const r of rows) { const f = forms.getForm(ctx, r.id); if (emailOnly(f)) { found = f; break; } }
+      if (props && props.fields === "all") {
+        // Mode « formulaire de contact » : n'importe quel formulaire publié du site (tous ses champs sont affichés) ; on préfère celui dont le nom parle de contact / message
+        const list = rows.map((r) => forms.getForm(ctx, r.id));
+        found = list.find((f) => /contact|message|[ée]crire|question|demande/i.test(f.name || "")) || list[0] || null;
+      } else for (const r of rows) { const f = forms.getForm(ctx, r.id); if (emailOnly(f)) { found = f; break; } }
     }
   } catch { found = null; }
   // Jamais le formulaire d'un autre site, jamais un brouillon

@@ -9,6 +9,7 @@ const { MarketingError } = require("../errors");
 const siteModules = require("../siteModules");
 const Catalog = require("../../themeBuilder/catalog");
 const { useTemplate, siteFormId } = require("../../themeBuilder/catalog/use");
+const Favoris = require("../../themeBuilder/favoris");
 
 const STATUS = { not_found: 404, forbidden: 403, module_disabled: 403, conflict: 409, invalid_field: 422, duplicate: 409 };
 const P = () => require("../pages");
@@ -34,7 +35,7 @@ module.exports = () => {
   const originKey = (section) => { const first = section && Array.isArray(section.children) ? section.children[0] : null; return first && first.props && typeof first.props.libraryKey === "string" ? first.props.libraryKey : ""; };
   const stampKey = (section, key) => { const sec = JSON.parse(JSON.stringify(section)); const first = sec && Array.isArray(sec.children) ? sec.children[0] : null; if (first && first.type === "container") { first.props = { ...(first.props || {}), libraryKey: key }; } return sec; };
   const originOf = (ctx, t, doc) => {
-    if (t.type === "footer" && t.sourceKind === "component") { try { const o = require("../../themeBuilder/revisions").originOfTemplate(ctx, t); return o ? { type: "footer", key: o.key, name: o.name } : null; } catch { return null; } }
+    if (t.type === "footer" && t.sourceKind === "component") { try { const o = require("../../themeBuilder/revisions").originOfTemplate(ctx, t); return o ? { type: "footer", key: o.key, name: o.name, version: o.version, currentVersion: o.currentVersion } : null; } catch { return null; } }
     if (t.type !== "header" || t.sourceKind !== "component") return null;
     const key = originKey(doc); if (!key) return null;
     const m = Catalog.find("header", key); return m ? { type: "header", key, name: m.name } : null;
@@ -194,8 +195,16 @@ module.exports = () => {
     const type = String(req.query.type || "");
     if (!type) return { types: Catalog.stats().map((t) => { const o = libType(ctx, id, t.type); return { ...t, available: !o.off, reason: o.reason }; }) };
     const o = libType(ctx, id, type), q = req.query;
-    return { type, available: !o.off, reason: o.reason, ...Catalog.list(type, { q: String(q.q || "").slice(0, 80), tag: String(q.etiquette || "").slice(0, 40), skin: String(q.identite || "").slice(0, 20), layout: String(q.mise || "").slice(0, 40), page: q.page, limit: q.limite }) };
+    // Pied de page seulement (catalogue « triable ») : tri, filtre « Favoris » et étoile par carte ; les autres types répondent exactement comme avant
+    const fav = Favoris.TYPES.includes(type) && Number.isInteger(ctx.userId) ? Favoris.keys(ctx, id, type) : null;
+    const res = Catalog.list(type, { q: String(q.q || "").slice(0, 80), tag: String(q.etiquette || "").slice(0, 40), skin: String(q.identite || "").slice(0, 20), layout: String(q.mise || "").slice(0, 40), page: q.page, limit: q.limite, tri: String(q.tri || "").slice(0, 20), favorites: fav, favOnly: String(q.favoris || "") === "1" });
+    if (fav) { res.items = res.items.map((m) => ({ ...m, favorite: fav.has(m.key) })); res.favorites = { enabled: true, count: fav.size }; }
+    return { type, available: !o.off, reason: o.reason, ...res };
   }));
+  // Favoris (par utilisateur ET par site) : même droit que consulter la bibliothèque (forms.read) ; un identifiant inconnu est refusé, un ancien identifiant est suivi jusqu'à son remplaçant
+  router.get(`${LIB}/favoris`, need("forms.read"), run((ctx, id, req) => ({ type: String(req.query.type || "footer"), keys: [...Favoris.keys(ctx, id, String(req.query.type || "footer"))] })));
+  router.post(`${LIB}/favoris`, need("forms.read"), run((ctx, id, req) => { const b = body(req); return Favoris.add(ctx, id, String(b.type || ""), String(b.key || "")); }));
+  router.delete(`${LIB}/favoris/:type/:key([a-z0-9.-]{3,80})`, need("forms.read"), run((ctx, id, req) => Favoris.remove(ctx, id, req.params.type, req.params.key)));
   router.get(`${LIB}/${keyOf}/miniature`, need("forms.read"), run((ctx, id, req) => {
     TB.store.site(ctx, id); libType(ctx, id, req.params.type);
     const doc = Catalog.thumbDoc(req.params.type, req.params.key, { formId: siteFormId(ctx, id) });

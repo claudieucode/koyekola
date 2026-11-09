@@ -1,0 +1,10 @@
+<%# Liens de la boutique (src/marketing/pages/widgets/footer.js). Variables : p, d (state ok|empty|off, items[{label,url}], missingTerms), cls, attrs, isBuilder. Vrais liens /boutique/… ; état explicite si la boutique n'est pas ouverte. %>
+<div class="<%= cls %>"<%- attrs %>>
+  <% if (p.title) { %><p class="kw-biz-title"><%= p.title %></p><% } %>
+  <% if (d && d.state === "ok") { %>
+  <ul class="kw-biz-list kw-shoplinks-list"><% d.items.forEach((it) => { %><li class="kw-biz-item"><a class="kw-biz-link" href="<%= it.url %>"><%= it.label %></a></li><% }) %></ul>
+  <% } else { %>
+  <p class="kw-shopcats-empty" role="status" data-kw-state="<%= d && d.state === "off" ? "shop-off" : "empty" %>"><%= p.empty || "La boutique n'est pas encore ouverte." %></p>
+  <% } %>
+  <% if (isBuilder) { %><p class="kw-biz-hint"><%= d && d.state === "off" ? (d.reason === "closed" ? "La boutique n’est pas ouverte pour ce site : ouvrez-la dans Boutique → Réglages." : "Le module Commerce n’est pas activé pour ce site : activez-le dans les modules du site.") : (d && d.missingTerms ? "« Livraison et retours » n’apparaît pas tant que la page des conditions de vente n’est pas renseignée (Paramètres → Données de l’entreprise)." : "") %></p><% } %>
+</div>

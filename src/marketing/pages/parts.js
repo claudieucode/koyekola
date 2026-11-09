@@ -513,7 +513,20 @@ const PARTS = {
     icon: part("Flèche", ".kw-btt-icon", ICON),
     text: part("Texte", ".kw-btt-text", TEXT),
   },
+  shopcategories: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Lignes", ".kw-biz-item", { ...LAYOUT, ...TEXT }),
+    link: part("Liens", ".kw-biz-link", LINK, ["hover", "focus"]),
+    empty: part("Message vide", ".kw-shopcats-empty", TEXT),
+  },
+  shoplinks: {
+    title: part("Titre", ".kw-biz-title", TEXT),
+    item: part("Lignes", ".kw-biz-item", { ...LAYOUT, ...TEXT }),
+    link: part("Liens", ".kw-biz-link", LINK, ["hover", "focus"]),
+    empty: part("Message vide", ".kw-shopcats-empty", TEXT),
+  },
   emailsubscribe: {
+    missing: part("Message « non configuré »", ".kw-emailsub-missing-text", TEXT),
     title: part("Titre", ".kw-biz-title", TEXT),
     intro: part("Introduction", ".kw-emailsub-intro", TEXT),
     input: part("Champ e-mail", ".kw-emailsub-form input[type=email]", { ...TEXT_BG, size: ["width", "height"] }, ["hover", "focus"]),

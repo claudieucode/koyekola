@@ -66,10 +66,13 @@ module.exports = ({ db }) => {
     });
   };
   // Widget « Formulaire » de la page (dans une section libre) : son formulaire, ou null
-  const widgetOf = (page, id) => {
+  const widgetOf = (page, id, req) => {
     if (!/^[a-z0-9]{6,20}$/.test(String(id || ""))) return null;
     let found = null;
-    for (const s of page.sections) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
+    // Les widgets du PIED (ou de l'en-tête) du site, comme la lettre d'information ou le formulaire de contact d'un pied de page, font partie de la page affichée : on les cherche aussi dans les parties du site
+    let secs = page.sections;
+    if (req) { try { secs = pages.withSiteParts(ctxOf(req), { ...page, visitor: visitorContext(db, req.mkPages.organizationId, req) }, pages.resolveSections(ctxOf(req), page.sections), { themeBuilder: true }); } catch { secs = page.sections; } }
+    for (const s of secs) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
     if (!found) return null;
     try { const fctx = { db, organizationId: page.organization_id }; const f = found.type === "emailsubscribe" ? require("../pages/emailSubscribe").formFor(fctx, page, found.props) : forms.getForm(fctx, Number(found.props.formId)); return f && sameSite(page, f) ? f : null; } catch { return null; }
   };
@@ -88,8 +91,8 @@ module.exports = ({ db }) => {
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const { page, test, visitor, consent } = forVisitor(req, published);
     if (!page) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
-    const widget = req.query.w && widgetOf(page, req.query.w) ? String(req.query.w) : null;
-    const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : ((widget ? widgetOf(page, widget) : loadForm(page)) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
+    const widget = req.query.w && widgetOf(page, req.query.w, req) ? String(req.query.w) : null;
+    const thanks = req.query.inscrit === "1" ? (req.query.confirmer === "1" ? PENDING_TEXT : ((widget ? widgetOf(page, widget, req) : loadForm(page)) || {}).thankYouText || "Merci, votre inscription est enregistrée.") : null;
     // Retour sur la page après sa propre inscription : pas une nouvelle visite. Arrivée sur l'étape suivante d'un tunnel
     // (remerciement…) : c'est bien une visite de cette page.
     const selfReturn = thanks && (widget || page.sections.some((s) => s.type === "form"));
@@ -134,13 +137,70 @@ module.exports = ({ db }) => {
     res.redirect(link.url);
   });
 
+  // ── Envoi depuis le PIED (ou l'en-tête) du site sur une page qui n'est PAS une page du Page Builder (blog, 404, boutique, compte client…) ──
+  // Aucune page porteuse : l'adresse d'envoi ne dépend plus d'une page. Le widget est cherché dans les parties du SITE de la requête (domaine, ou site principal) : jamais un widget d'un autre site.
+  // Mêmes protections que l'envoi d'une page (piège, jeton, limite par IP, consentement) ; le retour se fait sur la page d'origine avec un message (?kwi=…&w=…).
+  const safeBack = (v) => { const t = String(v || ""); return /^\/(?!\/)[^\\\x00-\x1f]{0,400}$/.test(t) ? t : "/"; };
+  const backWith = (back, code, widget) => { const u = new URL(back, "http://x.invalid"); u.searchParams.delete("kwi"); u.searchParams.delete("w"); if (code) u.searchParams.set("kwi", code); if (widget) u.searchParams.set("w", widget); return `${u.pathname}${u.search}${widget ? `#kw-f-${widget}` : ""}`; };
+  const siteWidgetForm = (req, siteId, id) => {
+    if (!/^[a-z0-9]{6,20}$/.test(String(id || ""))) return null;
+    const ctx = ctxOf(req);
+    const sections = [];
+    try { const p = pages.siteParts(ctx, siteId); for (const w of ["header", "footer"]) if (p[w]) sections.push(p[w]); } catch { /* ignoré */ }
+    try {
+      const tb = require("../../themeBuilder/store").list(ctx, siteId, { status: "published" }).filter((t) => (t.type === "footer" || t.type === "header") && t.sourceKind === "component");
+      for (const t of tb) { const part = pages.partSection(ctx, t.sourceId, t.type); if (part) sections.push(part); }
+    } catch { /* ignoré */ }
+    let found = null;
+    for (const s of sections) if (s && s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
+    if (!found) return null;
+    try {
+      const pseudo = { site_id: siteId, organization_id: req.mkPages.organizationId };
+      const fctx = { db, organizationId: pseudo.organization_id };
+      const f = found.type === "emailsubscribe" ? require("../pages/emailSubscribe").formFor(fctx, pseudo, found.props) : forms.getForm(fctx, Number(found.props.formId));
+      return f && sameSite(pseudo, f) ? f : null;
+    } catch { return null; }
+  };
+  router.post("/p/_pied/inscription", formUpload, (req, res, next) => {
+    if (req.kwSite && !Number.isInteger(req.kwSite.id)) return res.status(404).render("error", { message: "Cette page n'existe pas." });
+    const siteId = req.kwSite ? req.kwSite.id : null;
+    const widget = req.body && /^[a-z0-9]{6,20}$/.test(String(req.body.w || "")) ? String(req.body.w) : null;
+    const back = safeBack(req.body && req.body.back);
+    const go = (code) => res.redirect(303, backWith(back, code, widget));
+    const form = widget ? siteWidgetForm(req, siteId, widget) : null;
+    if (!form || form.status !== "published") return go("indispo");
+    if (String(req.body.website || "").trim() || !antispam.check(req.body.ft)) return go("ok"); // robot : faux succès silencieux
+    if (req.uploadError) return go("indispo");
+    if (limiter.isLimited(req.ip)) return go("trop");
+    if (!req.body.consent) return go("consent");
+    limiter.hit(req.ip);
+    try {
+      const ctx = ctxOf(req);
+      const path = back.split("?")[0];
+      const result = forms.submitForm(ctx, form.id, { ...req.body, ip: req.ip, file: req.file, page: path });
+      if (!result.ok) return go(result.reason === "invalid_email" ? "email" : "indispo");
+      if (result.contact && !result.withheld && consentedVisitor(req)) {
+        try {
+          visitorsLib.recordFormSubmit(db, req.mkPages.organizationId, { visitorId: consentedVisitor(req), contactId: result.contact.id, path, formName: form.name });
+          funnelEvents.replayVisitor({ ...ctx, userId: null, audit: false }, consentedVisitor(req), result.contact.id);
+        } catch (error) { console.error("[KOLAKISA] Pied de page (suivi du visiteur) :", error.message); }
+      }
+      if (result.pending) {
+        const base = String(process.env.SITE_URL || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+        sendSubscriptionConfirmation(db, { to: result.email, formName: form.name, url: `${base}/f/confirmer/${result.token}` });
+        return go("confirmer");
+      }
+      go("ok");
+    } catch (error) { next(error); }
+  });
+
   router.post("/p/:slug/inscription", formUpload, (req, res, next) => {
     const published = landing.getPublishedPage(db, req.params.slug, { standalone: true });
     if (!published) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const { page, test, visitor } = forVisitor(req, published);
     // Widget « Formulaire » (w = son identifiant) ou section d'inscription de la page : même circuit, même protections
     const widget = req.body && req.body.w ? String(req.body.w) : null;
-    const form = widget ? widgetOf(page, widget) : loadForm(page);
+    const form = widget ? widgetOf(page, widget, req) : loadForm(page);
     const back = widget ? `w=${widget}#kw-f-${widget}` : "#inscription";
     const at = (q) => `/p/${page.slug}?${q}${widget ? "&" + back : back}`;
     if (!form || form.status !== "published") return show(req, res, page, { status: 400, error: "L'inscription n'est pas disponible pour le moment.", widget: form ? widget : null });

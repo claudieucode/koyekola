@@ -747,11 +747,22 @@
   });
 })();
 
-// Accordéon à volets libres (conteneur en mode « accordéon ») : chaque volet = un conteneur enfant ; bouton-titre, aria-expanded, clavier (Entrée / Espace natifs, Début / Fin / flèches)
+// Accordéon à volets libres (conteneur en mode « accordéon ») : chaque volet = un conteneur enfant ; bouton-titre, aria-expanded, clavier (Entrée / Espace natifs, Début / Fin / flèches).
+// data-kw-acc-mobile : les volets n'existent que sur mobile (≤ 767 px) ; sur ordinateur et tablette le contenu s'affiche normalement (titre de colonne), et sans JavaScript il reste entièrement lisible.
 (function () {
-  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-nacc]"), function (box, k) {
-    var panels = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains("kw-nacc-panel"); });
-    if (!panels.length || box.classList.contains("is-enhanced")) return;
+  var mq = window.matchMedia ? window.matchMedia("(max-width: 767px)") : null;
+  // Un volet qui ne contient que son titre (widgets de données sans donnée : menu, coordonnées, horaires d'un site qui n'en a pas encore) ne fait pas de volet : pas de bouton qui ouvre du vide, le volet reste masqué sur mobile
+  function hasBody(panel) {
+    var c = panel.cloneNode(true);
+    Array.prototype.forEach.call(c.querySelectorAll(".kw-heading, style, script"), function (x) { x.parentNode.removeChild(x); });
+    return c.textContent.replace(/\s+/g, "") !== "" || Boolean(c.querySelector("a[href], img, input, select, textarea, button, iframe, video, canvas, form"));
+  }
+  function enhance(box, k) {
+    var all = Array.prototype.filter.call(box.children, function (c) { return c.classList.contains("kw-nacc-panel"); });
+    var panels = all.filter(hasBody);
+    if (!all.length || box.classList.contains("is-enhanced")) return;
+    all.forEach(function (panel) { if (panels.indexOf(panel) < 0) { panel.hidden = true; panel.setAttribute("data-kw-empty", ""); } });
+    if (!panels.length) { box.classList.add("is-enhanced"); return; }
     var single = box.hasAttribute("data-kw-acc-single"), start = box.getAttribute("data-kw-acc-start") || "first", heads = [];
     panels.forEach(function (panel, i) {
       var id = "kw-nacc-" + k + "-" + i, b = document.createElement("button");
@@ -770,6 +781,21 @@
     });
     if (single && start === "all") heads.forEach(function (_, j) { set(j, j === 0); });
     box.classList.add("is-enhanced");
+  }
+  // Retire les boutons et rend tous les volets visibles (passage de mobile à ordinateur)
+  function restore(box) {
+    if (!box.classList.contains("is-enhanced")) return;
+    Array.prototype.slice.call(box.children).forEach(function (c) {
+      if (c.classList.contains("kw-nacc-head")) box.removeChild(c);
+      else if (c.classList.contains("kw-nacc-panel")) { c.hidden = false; c.removeAttribute("data-kw-empty"); c.removeAttribute("role"); c.removeAttribute("aria-labelledby"); c.removeAttribute("id"); }
+    });
+    box.classList.remove("is-enhanced");
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("[data-kw-nacc]"), function (box, k) {
+    if (!box.hasAttribute("data-kw-acc-mobile")) { enhance(box, k); return; }
+    var apply = function () { if (!mq || mq.matches) enhance(box, k); else restore(box); };
+    apply();
+    if (mq) { if (mq.addEventListener) mq.addEventListener("change", apply); else if (mq.addListener) mq.addListener(apply); }
   });
 })();
 

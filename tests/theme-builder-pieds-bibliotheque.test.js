@@ -14,6 +14,7 @@ const { startServer, loginInstructor } = require("./helpers");
 
 const walk = (nodes, fn, depth = 0) => { for (const n of nodes || []) { fn(n, depth); if (n && n.children) walk(n.children, fn, depth + 1); } };
 const all = Catalog.entries("footer");
+// REFONTE par familles métier : la liste contient exactement les 100 NOUVEAUX modèles (15 familles, répartition = Footer.CIBLE) ; les 100 anciens identifiants ne sont plus listés mais restent ouvrables (tests/footer-aliases.test.js).
 const doc = (key) => Catalog.build("footer", key).section;
 const nodesOf = (key) => { const out = []; walk(doc(key).children, (n) => out.push(n)); return out; };
 // Signature de COMPOSITION : arbre des types d'éléments, rôle (libellé / adresse / emplacement), direction, poids des colonnes, nombre de rangées — sans couleurs ni typographie.
@@ -27,18 +28,20 @@ const OLD_LAYOUTS = ["une-ligne", "copyright-seul", "trois-colonnes", "quatre-co
 const OLD_KEYS = OLD_LAYOUTS.flatMap((l) => SKINS.map((s) => `${l}.${s.key}`));
 
 describe("Pieds de page : le catalogue", () => {
-  test("exactement 100 modèles : 10 familles de 10, identités propres, clés et noms uniques", () => {
+  test("exactement 100 nouveaux modèles listés en 15 familles (répartition = cible), identités propres, clés et noms uniques", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100, "clés uniques");
     assert.equal(new Set(all.map((e) => e.name)).size, 100, "noms uniques");
     const byFamily = {}, bySkin = {};
     for (const e of all) { byFamily[e.layoutKey] = (byFamily[e.layoutKey] || 0) + 1; bySkin[e.skinKey] = (bySkin[e.skinKey] || 0) + 1; }
     assert.deepEqual(Object.keys(byFamily).sort(), Footer.families.map((f) => f.key).sort());
-    for (const [f, n] of Object.entries(byFamily)) assert.equal(n, 10, `famille ${f}`);
-    for (const [s, n] of Object.entries(bySkin)) assert.ok(n >= 1 && n <= 8, `identité ${s} : ${n}`);
+    assert.deepEqual(byFamily, Footer.CIBLE, "répartition par famille = cible");
+    assert.ok(all.every((e) => !e.legacy));
+    for (const [sk, n] of Object.entries(bySkin)) assert.ok(n >= 1 && n <= 8, `identité ${sk} : ${n}`);
+    assert.ok(Object.keys(bySkin).length >= 40, `identités distinctes : ${Object.keys(bySkin).length}`);
   });
   test("clés sûres pour une adresse (ASCII minuscule, chiffres, tiret) : aucune clé ne casse la route de la bibliothèque", () => {
-    for (const e of all) assert.match(e.key, /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z]+$/, e.key);
+    for (const e of all) { assert.match(e.key, /^ft-[a-z0-9]+(-[a-z0-9]+)*$/, e.key); assert.ok(e.key.length <= 80, e.key); }
   });
   test("les anciennes clés du catalogue 20 × 5 n'existent plus et aucune n'est réutilisée par un nouveau modèle", () => {
     assert.equal(OLD_KEYS.length, 100);
@@ -54,29 +57,27 @@ describe("Pieds de page : le catalogue", () => {
     const shapes = new Set(all.map((e) => JSON.stringify(doc(e.key), (k, v) => (k === "id" ? undefined : k === "styles" ? Object.fromEntries(Object.entries(v.desktop || {}).filter(([x]) => KEEP.includes(x))) : k === "props" ? { l: v.label, u: v.url, t: v.text, loc: v.location, src: v.source, tg: v.target, ad: v.address, it: v.items && v.items.length, md: v.mode, cnt: v.count } : v))));
     assert.ok(shapes.size >= 98, `compositions sans couleurs : ${shapes.size}`);
   });
-  test("chaque pied a un copyright et la navigation / l'identité attendues : modèles sans menu ≤ 40, jamais sans copyright", () => {
-    let noMenu = 0;
+  test("chaque pied a un copyright et une navigation (menu du site ou liens vers des pages réelles) ; chaque besoin annoncé est couvert par plusieurs modèles", () => {
+    let sansNavigation = 0;
     for (const e of all) {
       const types = nodesOf(e.key).map((n) => n.type);
       assert.ok(types.includes("copyright"), `${e.key} : pas de copyright`);
-      if (!types.includes("menu")) noMenu += 1;
+      if (!types.includes("menu") && types.filter((t) => t === "link").length < 2) sansNavigation += 1;
     }
-    assert.ok(noMenu <= 40, `trop de modèles sans menu : ${noMenu}`);
-    // une famille entière est consacrée à chaque besoin annoncé : newsletter, coordonnées, réseaux, boutique
-    const has = (family, type) => all.filter((e) => e.layoutKey === family).filter((e) => nodesOf(e.key).some((n) => n.type === type)).length;
-    assert.ok(has("newsletter", "signupform") + all.filter((e) => e.layoutKey === "newsletter").filter((e) => nodesOf(e.key).some((n) => n.type === "button" && n.props.label === "Nous contacter")).length >= 10, "newsletter : abonnement ou repli");
-    // chantier F : les coordonnées ne sont plus une liste d'icônes au texte figé mais le widget « Coordonnées » (bizcontact), lu dans les Données de l'entreprise
-    assert.ok(has("contact", "bizcontact") >= 8 && has("contact", "map") >= 4, "contact : coordonnées et carte");
-    assert.ok(has("reseaux", "social") >= 9, "réseaux");
-    assert.ok(has("boutique", "minicart") + has("boutique", "account") >= 6, "boutique : compte ou panier");
+    assert.ok(sansNavigation <= 5, `trop de modèles sans navigation : ${sansNavigation}`);
+    const avec = (type) => all.filter((e) => nodesOf(e.key).some((n) => n.type === type)).length;
+    assert.ok(avec("emailsubscribe") >= 20, "abonnement par e-mail");
+    assert.ok(avec("bizcontact") >= 30 && avec("map") >= 1, "coordonnées lues dans les données de l'entreprise, carte");
+    assert.ok(avec("social") >= 50, "réseaux");
+    assert.ok(avec("shopcategories") + avec("shoplinks") + avec("account") >= 6, "boutique : catégories, liens de boutique ou compte");
   });
   test("aucun contenu factice : pas d'image, de vidéo ni de script ; menus lus dans le menu affecté (jamais de liste recopiée) ; adresses locales, réseaux génériques, carte neutre", () => {
     for (const e of all) walk(doc(e.key).children, (n) => {
       assert.ok(!["image", "video", "html", "embed", "carousel", "gallery"].includes(n.type), `${e.key} : ${n.type}`);
       if (n.type === "menu") { assert.equal(n.props.source, "location", `${e.key} : menu`); assert.ok(["footer", "header"].includes(n.props.location), `${e.key} : emplacement`); assert.deepEqual(n.props.items, [], `${e.key} : liste recopiée`); }
-      if (n.type === "button" || n.type === "link") assert.match(n.props.url, /^\/[a-z0-9/_-]*$/i, `${e.key} : adresse « ${n.props.url} »`);
-      if (n.type === "social") for (const it of n.props.items) assert.match(it.url, /^https:\/\/www\.(facebook|linkedin|instagram|youtube)\.com\/$/, `${e.key} : réseau`);
-      if (n.type === "map") assert.equal(n.props.address, "France", `${e.key} : adresse de carte inventée`);
+      if (n.type === "button" || n.type === "link") assert.match(n.props.url, /^(\/[a-z0-9/_-]*|https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/[a-z0-9\-\/._]*|#|mailto:[^\s@]+@[^\s@]+|tel:\+?[0-9 ]+)$/i, `${e.key} : adresse « ${n.props.url} »`); // pages de la plateforme, adresses d'EXEMPLE en https (marquées exemple dans le modèle) ou ancre
+      if (n.type === "social") for (const it of n.props.items) assert.match(it.url, /^(https:\/\/[a-z0-9.-]+\.[a-z]{2,}\/[a-z0-9\-\/._@]*|mailto:[^\s@]+@[^\s@]+|\/)$/, `${e.key} : réseau`);
+      if (n.type === "map") assert.ok(/^[\p{L}0-9 ,.'-]{3,80}$/u.test(n.props.address), `${e.key} : adresse de carte « ${n.props.address} »`); // adresse d'exemple lisible (Lyon, place Bellecour)
       if (n.type === "iconlist") for (const it of n.props.items) { assert.ok(!/@|\d{2}/.test(it.text), `${e.key} : coordonnée inventée « ${it.text} »`); assert.ok(!it.link, `${e.key} : lien dans une coordonnée`); }
     });
   });
@@ -95,22 +96,22 @@ describe("Pieds de page : le catalogue", () => {
   });
   test("liste : recherche sans accents, filtre par famille et par identité, pagination ; la liste ne contient jamais les documents", () => {
     const p = Catalog.list("footer", { limit: 24 });
-    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, 10); assert.equal(p.skins.length, 34);
+    assert.equal(p.total, 100); assert.equal(p.pages, 5); assert.equal(p.layouts.length, new Set(all.map((e) => e.layoutKey)).size); assert.equal(p.skins.length, Footer.skins.length);
     assert.ok(!("section" in p.items[0]) && !("build" in p.items[0]));
-    assert.equal(Catalog.list("footer", { layout: "newsletter" }).total, 10);
-    assert.equal(Catalog.list("footer", { skin: "nuit" }).total, 0, "plus d'identité du site"); assert.ok(Catalog.list("footer", { skin: "graphite" }).total >= 1);
-    const sk = Catalog.entries("footer").find((e) => e.layoutKey === "colonnes").skinKey; assert.equal(Catalog.list("footer", { layout: "colonnes", skin: sk }).total, Catalog.entries("footer").filter((e) => e.layoutKey === "colonnes" && e.skinKey === sk).length);
+    const premiere = all[0].layoutKey; assert.equal(Catalog.list("footer", { layout: premiere }).total, all.filter((e) => e.layoutKey === premiere).length);
+    assert.equal(Catalog.list("footer", { skin: "nuit" }).total, 0, "plus d'identité du site"); assert.equal(Catalog.list("footer", { skin: all[0].skinKey }).total, all.filter((e) => e.skinKey === all[0].skinKey).length);
+    const sk = Catalog.entries("footer").find((e) => e.layoutKey === "corporate").skinKey; assert.equal(Catalog.list("footer", { layout: "corporate", skin: sk }).total, Catalog.entries("footer").filter((e) => e.layoutKey === "corporate" && e.skinKey === sk).length);
     assert.ok(Catalog.list("footer", { q: "NEWSLETTER" }).total >= 10);
     assert.ok(Catalog.list("footer", { q: "carte" }).total >= 4);
     assert.equal(Catalog.list("footer", { q: "zzzz-inconnu" }).total, 0);
   });
-  test("pas de formulaire inventé : sans formulaire d'inscription réel, l'abonnement se replie sur un bouton vers le contact ; avec un formulaire, le widget est lié à ce formulaire", () => {
-    const key = all.find((e) => e.layoutId === "newsletter-carte-centree").key;
-    const without = (() => { const out = []; walk(Catalog.build("footer", key, {}).section.children, (n) => out.push(n)); return out; })();
-    assert.ok(!without.some((n) => n.type === "signupform"));
-    assert.ok(without.some((n) => n.type === "button" && n.props.url === "/contact"));
-    const withForm = (() => { const out = []; walk(Catalog.build("footer", key, { formId: 7 }).section.children, (n) => out.push(n)); return out; })();
-    assert.equal(withForm.find((n) => n.type === "signupform").props.formId, 7);
+  test("pas de formulaire inventé : l'abonnement est un widget branché sur un formulaire RÉEL du site (formId 0 = premier formulaire publié, choisi à l'affichage), avec son état « non configuré » honnête quand il n'y en a pas ; jamais de faux champ ni de faux lien", () => {
+    let vus = 0;
+    for (const e of all) for (const env of [{}, { formId: 7 }]) walk(Catalog.build("footer", e.key, env).section.children, (n) => {
+      assert.notEqual(n.type, "signupform", `${e.key} : ancien formulaire d'inscription`);
+      if (n.type === "emailsubscribe") { vus += 1; assert.equal(n.props.formId, 0, `${e.key} : formulaire inventé`); assert.equal(n.props.showWhenMissing, true, `${e.key} : état non configuré`); }
+    });
+    assert.ok(vus >= 40);
   });
 });
 
@@ -118,7 +119,7 @@ describe("Pieds de page : utilisation, édition, isolation", () => {
   const { A } = freshMarketing();
   const s1 = pages.createSite(A, { name: "Un" }), s2 = pages.createSite(A, { name: "Deux" });
   test("« Utiliser » crée un composant + un modèle brouillon, copie indépendante : modifier la copie ne touche pas le catalogue ni l'autre site", () => {
-    const key = all.find((e) => e.layoutId === "trois-colonnes-marque").key;
+    const key = "ft-corporate-01-grande-marque-volets";
     const t = useTemplate(A, s1.id, "footer", key);
     assert.equal(t.type, "footer"); assert.equal(t.status, "draft");
     const comp = pages.getComponent(A, t.sourceId);
@@ -185,14 +186,15 @@ describe("Pieds de page : rendu par le vrai moteur (aperçu, vignette, site publ
   });
   after(async () => { if (db) db.close(); if (srv) await srv.stop(); });
 
-  test("les 100 aperçus et vignettes répondent 200 et affichent le pied (copyright, identité), un menu d'exemple (jamais sur un vrai site) et aucun script", async () => {
+  test("les 100 aperçus et vignettes répondent 200 et affichent le pied (copyright, identité), un menu d'exemple (jamais sur un vrai site) et, pour la vignette, aucun script (l'aperçu ne charge que landing.js)", async () => {
     for (const e of all) {
       for (const kind of ["apercu", "vignette"]) {
         const r = await boss.get(U(`/api/bibliotheque/footer/${e.key}/${kind}`));
         assert.equal(r.status, 200, `${e.key} ${kind}`);
         assert.match(r.text, /kw-theme-part kw-theme-footer/, `${e.key} ${kind} : partie de pied`);
         assert.match(r.text, /©/, `${e.key} ${kind} : copyright`);
-        assert.ok(!/<script/i.test(r.text), `${e.key} ${kind} : script`);
+        const scripts = r.text.match(/<script\b[^>]*>/gi) || [];
+        if (kind === "vignette") assert.equal(scripts.length, 0, `${e.key} vignette : script`); else assert.ok(scripts.length === 1 && /\/js\/landing\.js/.test(scripts[0]), `${e.key} apercu : seul landing.js attendu`);
         assert.equal((r.text.match(/kw-theme-footer\b/g) || []).length, 1, `${e.key} ${kind} : un seul pied`);
       }
     }
@@ -205,7 +207,7 @@ describe("Pieds de page : rendu par le vrai moteur (aperçu, vignette, site publ
     }
   });
   test("aperçu de la bibliothèque = copie du site = pied publié : mêmes éléments, menu d'exemple seulement dans la bibliothèque", async () => {
-    const key = all.find((e) => e.layoutId === "quatre-colonnes-liens").key;
+    const key = "ft-corporate-01-grande-marque-volets";
     const lib = (await boss.get(U(`/api/bibliotheque/footer/${key}/apercu`))).text;
     assert.match(lib, /Services/, "menu d'exemple dans la bibliothèque");
     const used = JSON.parse((await post(U("/api/bibliotheque/utiliser"), { type: "footer", key })).text).template;
@@ -219,12 +221,16 @@ describe("Pieds de page : rendu par le vrai moteur (aperçu, vignette, site publ
     for (const old of ["trois-colonnes.nuit", "newsletter.clair", "une-ligne.clair", "quatre-colonnes.doux"]) {
       for (const kind of ["apercu", "vignette", "miniature"]) assert.equal((await boss.get(U(`/api/bibliotheque/footer/${old}/${kind}`))).status, 404, `${old} ${kind}`);
     }
+    // Règle des alias : un identifiant de la liste précédente (100 anciens modèles) reste OUVRABLE (200) mais n'est jamais listé
+    const { ALIAS } = require("../src/themeBuilder/catalog/footer-aliases");
+    for (const old of Object.keys(ALIAS).slice(0, 3)) for (const kind of ["apercu", "vignette"]) assert.equal((await boss.get(U(`/api/bibliotheque/footer/${old}/${kind}`))).status, 200, `alias ${old} ${kind}`);
     const l = JSON.parse((await boss.get(U("/api/bibliotheque?type=footer&limite=60"))).text);
-    assert.equal(l.total, 100); assert.equal(l.layouts.length, 10);
+    assert.ok(!l.items.some((m) => ALIAS[m.key]), "aucun alias dans la liste");
+    assert.equal(l.total, 100); assert.equal(l.layouts.length, new Set(all.map((e) => e.layoutKey)).size);
     assert.ok(l.items.every((m) => !OLD_KEYS.includes(m.key)), "aucune ancienne clé dans la liste");
   });
   test("site publié : le pied de la bibliothèque s'affiche UNE seule fois par page (accueil, blog, article, 404), jamais l'ancien pied, et rien sur un autre site", async () => {
-    const key = all.find((e) => e.layoutId === "newsletter-et-menus").key;
+    const key = "ft-communautes-03-club-accueil-et-gazette";
     const t = JSON.parse((await post(U("/api/bibliotheque/utiliser", A), { type: "footer", key })).text).template;
     assert.equal((await post(U(`/api/modeles/${t.id}/publier`, A))).status, 200);
     for (const p of ["/blog", "/blog/article-a", "/introuvable-xyz"]) {

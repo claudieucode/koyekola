@@ -109,7 +109,7 @@
     wrap.append(btn, ul); return wrap;
   }
   function infoBtn(name, fn) { const b = el("button", "tb-info"); b.type = "button"; b.setAttribute("aria-label", `Informations sur ${name}`); b.append(svgOf(ICONS.info)); b.firstChild.setAttribute("width", "18"); b.firstChild.setAttribute("height", "18"); b.addEventListener("click", fn); return b; }
-  function details(t) { info(`Détails — ${t.name}`, (box) => { const p = (k, v) => { const x = el("p"); x.append(el("b", "", `${k} : `), document.createTextNode(v)); box.append(x); }; p("Type", t.typeLabel); p("État", ST[t.status]); p("S'affiche", t.describe.include); if (t.describe.exclude) p("Sauf", t.describe.exclude); p("Modifié", dates(t.updatedAt)); if (t.origin) p("Modèle d'origine", `${t.origin.name} (bibliothèque)`); }); }
+  function details(t) { info(`Détails — ${t.name}`, (box) => { const p = (k, v) => { const x = el("p"); x.append(el("b", "", `${k} : `), document.createTextNode(v)); box.append(x); }; p("Type", t.typeLabel); p("État", ST[t.status]); p("S'affiche", t.describe.include); if (t.describe.exclude) p("Sauf", t.describe.exclude); p("Modifié", dates(t.updatedAt)); if (t.origin) p("Modèle d'origine", `${t.origin.name} (bibliothèque${t.origin.version ? `, version ${t.origin.version}` : ""})`); }); }
   // Carte « structure type » : un type sans modèle. Pointillés + libellé explicite : ce n'est PAS l'aperçu d'un modèle existant.
   function ghost(t) {
     const c = el("article", "tb-tcard"); c.dataset.type = t.key; const ch = el("div", "tb-ch"); const chip = el("span", "tb-chip"); chip.append(icon(t.key)); ch.append(chip, el("h3", "", t.label), infoBtn(t.label, () => info(t.label, (box) => box.append(el("p", "", LEAD[t.key] || ""), el("p", "sw-muted", "Aucun modèle n'existe pour cette partie : la structure ci-dessous est un exemple, pas un aperçu de votre site.")))));
@@ -284,8 +284,8 @@
   // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
   async function revertOrigin(t) {
     const foot = t.type === "footer", what = foot ? "Le pied de page" : "L'en-tête";
-    if (!t.origin || !confirm(`Revenir au modèle ${foot ? "d'origine" : "initial"} « ${t.origin.name} » ?\n\n${what} « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé automatiquement dans ${foot ? "« Historique des révisions »" : "« Versions »"} : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
-    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle d'origine « ${r.original.name} » (brouillon).${foot ? " Pour annuler : Historique des révisions › Restaurer." : ` Pour annuler : Versions › Restaurer la version ${r.version}.`}`, "ok"); await refresh(); }
+    if (!t.origin || !confirm(`Revenir au modèle ${foot ? "d'origine" : "initial"} « ${t.origin.name} »${foot && t.origin.currentVersion ? ` (version ${t.origin.currentVersion}${t.origin.version && t.origin.version !== t.origin.currentVersion ? `, vous aviez installé la version ${t.origin.version}` : ""})` : ""} ?\n\n${what} « ${t.name} » retrouve la composition d'origine de la bibliothèque (contenu, couleurs, polices et réglages remis à zéro dans sa copie de travail). L'état actuel est gardé automatiquement dans ${foot ? "« Historique des révisions »" : "« Versions »"} : vous pourrez l'annuler. Rien n'est publié ; vos autres modèles et vos autres sites ne changent pas.`)) return;
+    try { const r = await post(`/modeles/${t.id}/revenir-au-modele`); status(`« ${t.name} » est revenu au modèle d'origine « ${r.original.name} »${r.original.version ? ` (version ${r.original.version})` : ""} (brouillon).${foot ? " Pour annuler : Historique des révisions › Restaurer." : ` Pour annuler : Versions › Restaurer la version ${r.version}.`}`, "ok"); await refresh(); }
     catch (e) { status(e.message, "err"); }
   }
   async function remove(t) { const where = t.describe ? `\n\nCe modèle s'affichait : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.` : ""; if (!confirm(`Supprimer définitivement « ${t.name} » ?${where}\n\nLe document (page ou composant) et son historique de révisions restent conservés dans vos composants.`)) return; try { await post(`/modeles/${t.id}/supprimer`); status("Modèle supprimé.", "ok"); await refresh(); } catch (e) { status(e.message, "err"); } }
@@ -528,10 +528,39 @@
   for (const b of document.querySelectorAll(".tb-devices button")) b.addEventListener("click", () => setDevice(b.dataset.dev));
 
   // ---- bibliothèque de modèles (100 par type) : liste paginée côté serveur (métadonnées seulement), miniature et aperçu chargés à la demande, « Utiliser » = copie indépendante en brouillon
-  const L = { type: "", q: "", skin: "", layout: "", page: 1, lview: "grid", info: null, busy: false };
+  const L = { type: "", q: "", skin: "", layout: "", page: 1, lview: "grid", info: null, busy: false, tri: "", fav: false };
+  // Tri de la bibliothèque (Pied de page) conservé d'une visite à l'autre ; les autres types ne l'utilisent pas
+  const SORTKEY = "kola.themeBuilder.libSort"; L.tri = store.get(SORTKEY) || "";
   const libThumbs = new Map();
   const libStatus = (m, k) => { const s = $("tb-lib-status"); s.textContent = m || ""; s.dataset.k = k || ""; s.dataset.show = m ? "1" : "0"; };
-  const libQuery = () => { const p = new URLSearchParams({ type: L.type, page: String(L.page), limite: "24" }); if (L.q) p.set("q", L.q); if (L.skin) p.set("identite", L.skin); if (L.layout) p.set("mise", L.layout); return p.toString(); };
+  const libQuery = () => { const p = new URLSearchParams({ type: L.type, page: String(L.page), limite: "24" }); if (L.q) p.set("q", L.q); if (L.skin) p.set("identite", L.skin); if (L.layout) p.set("mise", L.layout); if (L.tri) p.set("tri", L.tri); if (L.fav) p.set("favoris", "1"); return p.toString(); };
+  // Outils propres au Pied de page : 15 familles métier avec compte, tri, filtre « Favoris ». Pour un autre type (réponse sans « familles »), tout reste comme avant.
+  function footTools(px, S, r, reload) {
+    const sel = $(`tb-${px}-layout`), lab = $(`tb-${px}-layout-l`), sortF = $(`tb-${px}-sort`), fav = $(`tb-${px}-fav`), desc = $(`tb-${px}-famd`), isFam = Array.isArray(r.familles);
+    sortF.closest("label").hidden = !r.sorts; fav.hidden = !(r.favorites && r.favorites.enabled);
+    if (!isFam) { lab.textContent = "Mise en page"; desc.hidden = true; return; }
+    lab.textContent = "Famille";
+    const keep = S.layout; sel.textContent = ""; const o0 = el("option", "", "Toutes les familles"); o0.value = ""; sel.append(o0);
+    for (const f of r.familles) { const o = el("option", "", `${f.label} (${f.count})`); o.value = f.key; sel.append(o); }
+    sel.dataset.type = "footer"; sel.value = [...sel.options].some((o) => o.value === keep) ? keep : ""; S.layout = sel.value;
+    const f = r.familles.find((x) => x.key === S.layout); desc.hidden = !f; desc.textContent = f ? `${f.label} : ${f.description || "Famille de pieds de page."} ${f.count} modèle${f.count > 1 ? "s" : ""}.` : "";
+    if (!sortF.options.length || sortF.dataset.ok !== "1") { for (const s of r.sorts) { const o = el("option", "", s.label); o.value = s.key; sortF.append(o); } sortF.dataset.ok = "1"; }
+    sortF.value = S.tri; fav.setAttribute("aria-pressed", String(S.fav)); $(`tb-${px}-favn`).textContent = `(${r.favorites ? r.favorites.count : 0})`; fav.dataset.n = String(r.favorites ? r.favorites.count : 0);
+  }
+  // Étoile « favori » : un vrai bouton (aria-pressed + libellé), cible de 44 px ; l'état est enregistré pour CET utilisateur et CE site
+  function starFor(m, type, reload, S, px) {
+    const b = el("button", "tb-star", "\u2605"); b.type = "button";
+    const lab = () => { b.setAttribute("aria-pressed", String(Boolean(m.favorite))); b.setAttribute("aria-label", m.favorite ? `Retirer « ${m.name} » des favoris` : `Ajouter « ${m.name} » aux favoris`); b.title = m.favorite ? "Retirer des favoris" : "Ajouter aux favoris"; };
+    lab();
+    b.addEventListener("click", async () => {
+      if (b.dataset.busy === "1") return; b.dataset.busy = "1"; b.setAttribute("aria-busy", "true"); const want = !m.favorite; /* pas de « disabled » : un bouton désactivé perdrait le focus clavier */
+      try { if (want) await post("/bibliotheque/favoris", { type, key: m.key }); else await api(`/bibliotheque/favoris/${type}/${m.key}`, { method: "DELETE" }); m.favorite = want; lab();
+        const fb = $(`tb-${px}-fav`), n = Math.max(0, (Number(fb.dataset.n) || 0) + (want ? 1 : -1)); fb.dataset.n = String(n); $(`tb-${px}-favn`).textContent = `(${n})`;
+        if (S.fav || S.tri === "favoris") { await reload(); const again = $(`tb-${px === "lib" ? "lib" : "cat"}-cards`).querySelector(`[data-key="${m.key}"] .tb-star`); if (again) again.focus(); } } /* sinon la carte reste en place : le focus clavier ne bouge pas */
+      catch (e) { (type === L.type ? libStatus : catSay)(e.message || "Favori non enregistré.", "err"); } finally { b.dataset.busy = "0"; b.removeAttribute("aria-busy"); }
+    });
+    return b;
+  }
   async function libLoad() {
     const seq = (L.seq = (L.seq || 0) + 1); $("tb-lib-cards").setAttribute("aria-busy", "true");
     try {
@@ -539,6 +568,7 @@
       const r = await api(`/bibliotheque?${libQuery()}`); if (seq !== L.seq) return; L.info = r;
       const fill = (id, list, all) => { const s = $(id), v = s.value; if (s.options.length <= 1 || s.dataset.type !== L.type) { s.textContent = ""; const o = el("option", "", all); o.value = ""; s.append(o); for (const x of list) { const op = el("option", "", x.label); op.value = x.key; s.append(op); } s.dataset.type = L.type; s.value = v && [...s.options].some((o) => o.value === v) ? v : ""; } };
       fill("tb-lib-skin", r.skins, "Toutes"); fill("tb-lib-layout", r.layouts, "Toutes");
+      footTools("lib", L, r, libLoad);
       libDraw(r);
     } catch (e) { libStatus(e.message, "err"); } finally { $("tb-lib-cards").setAttribute("aria-busy", "false"); }
   }
@@ -547,14 +577,14 @@
     $("tb-lib-sub").textContent = `${r.total} modèle${r.total > 1 ? "s" : ""} · page ${r.page} sur ${r.pages}`;
     $("tb-lib-page").textContent = `Page ${r.page} / ${r.pages}`; $("tb-lib-prev").disabled = r.page <= 1; $("tb-lib-next").disabled = r.page >= r.pages;
     if (!r.available) libStatus(r.reason || "Ce type n'est pas disponible pour ce site.", "err"); else libStatus("");
-    if (!r.items.length) { box.append(el("p", "sw-muted", "Aucun modèle ne correspond à cette recherche.")); return; }
-    for (const m of r.items) box.append(libCard(m, r.available));
+    if (!r.items.length) { box.append(el("p", "sw-muted", L.fav ? "Aucun favori pour cette sélection. Cliquez sur l'étoile d'une carte pour en ajouter." : "Aucun modèle ne correspond à cette recherche.")); return; }
+    for (const m of r.items) box.append(libCard(m, r.available, L.type, libStatus, libLoad));
   }
-  function libCard(m, available, type = L.type, say = libStatus) {
+  function libCard(m, available, type = L.type, say = libStatus, reload = libLoad) {
     const c = el("article", "tb-card tb-libcard"); c.dataset.key = m.key;
-    const ch = el("div", "tb-ch"); ch.append(el("h3", "", m.name)); c.append(ch);
+    const ch = el("div", "tb-ch"); ch.append(el("h3", "", m.name)); if (m.favorite !== undefined) ch.append(starFor(m, type, reload, reload === libLoad ? L : C, reload === libLoad ? "lib" : "cat")); c.append(ch);
     const th = el("div", "tb-thumb"); th.setAttribute("aria-hidden", "true"); th.dataset.skin = m.skinKey; c.append(th);
-    const body = el("div", "tb-body"); body.append(el("p", "tb-type", m.layoutLabel + " · " + m.skinLabel), el("p", "sw-muted tb-card-d", m.desc)); const tags = el("p", "tb-tags"); for (const t of m.tags.slice(0, 4)) tags.append(el("span", "tb-tag", t)); body.append(tags);
+    const body = el("div", "tb-body"); const ty = el("p", "tb-type", m.layoutLabel + " · " + m.skinLabel); if (m.version !== undefined) ty.append(" · ", el("span", "tb-ver", `version ${m.version}`)); body.append(ty, el("p", "sw-muted tb-card-d", m.desc)); const tags = el("p", "tb-tags"); for (const t of m.tags.slice(0, 4)) tags.append(el("span", "tb-tag", t)); body.append(tags);
     const act = el("div", "tb-actions");
     const pv = el("button", "btn btn-sm btn-outline", "Prévisualiser"); pv.type = "button"; pv.setAttribute("aria-label", `Prévisualiser « ${m.name} »`); pv.addEventListener("click", () => libPreview(m, type));
     act.append(pv);
@@ -580,12 +610,12 @@
   function libPreview(m, type = L.type) {
     // même fenêtre d'aperçu que les modèles du site : le document du catalogue est rendu par le moteur public (aucune écriture)
     preview({ name: m.name, typeLabel: (data.types.find((t) => t.key === type) || {}).label || "", status: "draft", previewUrl: `${base}/api/bibliotheque/${type}/${m.key}/apercu`, editUrl: "#", previewNeedsPage: false, catalog: true });
-    $("tb-prev-sub").textContent = "Modèle de la bibliothèque · données d'exemple"; $("tb-prev-edit").hidden = true;
+    $("tb-prev-sub").textContent = `Modèle de la bibliothèque${m.version !== undefined ? ` · version ${m.version}` : ""} · données d'exemple`; $("tb-prev-edit").hidden = true;
   }
 
   // ---- catalogue DIRECT dans chaque catégorie : les 100 modèles prédéfinis du type courant, sans passer par la bibliothèque globale.
   // Même API, mêmes cartes, mêmes aperçus que la bibliothèque ; « Utiliser » crée une copie indépendante en brouillon (rien n'est publié).
-  const C = { type: "", q: "", skin: "", layout: "", page: 1, seq: 0, ready: "" };
+  const C = { type: "", q: "", skin: "", layout: "", page: 1, seq: 0, ready: "", tri: store.get(SORTKEY) || "", fav: false };
   const catSay = (m, k) => { const s = $("tb-cat-status"); s.textContent = m || ""; s.dataset.k = k || ""; s.hidden = !m; };
   const hasCatalog = (t) => Boolean(t) && t.catalog > 0;
   function catSync() {
@@ -598,16 +628,17 @@
   }
   async function catLoad() {
     const type = C.type, seq = ++C.seq, box = $("tb-cat-cards"); box.setAttribute("aria-busy", "true");
-    const p = new URLSearchParams({ type, page: String(C.page), limite: "24" }); if (C.q) p.set("q", C.q); if (C.skin) p.set("identite", C.skin); if (C.layout) p.set("mise", C.layout);
+    const p = new URLSearchParams({ type, page: String(C.page), limite: "24" }); if (C.q) p.set("q", C.q); if (C.skin) p.set("identite", C.skin); if (C.layout) p.set("mise", C.layout); if (C.tri) p.set("tri", C.tri); if (C.fav) p.set("favoris", "1");
     try {
       const r = await api(`/bibliotheque?${p}`); if (seq !== C.seq || type !== C.type) return;
       const fill = (id, list, all, cur2) => { const s = $(id); if (s.dataset.type !== type) { s.textContent = ""; const o = el("option", "", all); o.value = ""; s.append(o); for (const x of list) { const op = el("option", "", x.label); op.value = x.key; s.append(op); } s.dataset.type = type; s.value = cur2; } };
       fill("tb-cat-skin", r.skins, "Toutes les identités", C.skin); fill("tb-cat-layout", r.layouts, "Toutes les mises en page", C.layout);
+      footTools("cat", C, r, catLoad);
       $("tb-cat-count").textContent = `${r.total} modèle${r.total > 1 ? "s" : ""}`;
       $("tb-cat-page").textContent = `Page ${r.page} sur ${r.pages}`; $("tb-cat-prev").disabled = r.page <= 1; $("tb-cat-next").disabled = r.page >= r.pages; $("tb-cat-pager").hidden = r.pages <= 1;
       if (!r.available) catSay(r.reason || "Ce type n'est pas disponible pour ce site.", "err"); else catSay("");
-      box.textContent = ""; if (!r.items.length) { box.append(el("p", "sw-muted", "Aucun modèle ne correspond à cette recherche.")); }
-      for (const m of r.items) box.append(libCard(m, r.available, type, catSay));
+      box.textContent = ""; if (!r.items.length) { box.append(el("p", "sw-muted", C.fav ? "Aucun favori pour cette sélection. Cliquez sur l'étoile d'une carte pour en ajouter." : "Aucun modèle ne correspond à cette recherche.")); }
+      for (const m of r.items) box.append(libCard(m, r.available, type, catSay, catLoad));
     } catch (e) { if (seq === C.seq) catSay(e.message || "Chargement impossible.", "err"); } finally { if (seq === C.seq) box.setAttribute("aria-busy", "false"); }
   }
   $("tb-cat-q").addEventListener("input", () => { clearTimeout(catLoad.t); catLoad.t = setTimeout(() => { C.q = $("tb-cat-q").value; C.page = 1; catLoad(); }, 250); });
@@ -616,6 +647,10 @@
   $("tb-cat-prev").addEventListener("click", () => { if (C.page > 1) { C.page -= 1; catLoad(); } });
   $("tb-cat-next").addEventListener("click", () => { C.page += 1; catLoad(); });
   $("tb-cat-tools").addEventListener("submit", (e) => e.preventDefault());
+  $("tb-cat-sort").addEventListener("change", () => { C.tri = $("tb-cat-sort").value; L.tri = C.tri; store.set(SORTKEY, C.tri); C.page = 1; catLoad(); });
+  $("tb-cat-fav").addEventListener("click", () => { C.fav = !C.fav; C.page = 1; catLoad(); });
+  $("tb-lib-sort").addEventListener("change", () => { L.tri = $("tb-lib-sort").value; C.tri = L.tri; store.set(SORTKEY, L.tri); L.page = 1; libLoad(); });
+  $("tb-lib-fav").addEventListener("click", () => { L.fav = !L.fav; L.page = 1; libLoad(); });
   // Retour : confirmation seulement si une fenêtre contient une saisie non enregistrée ; sinon navigation directe vers l'écran d'origine (adresse fournie par le serveur, jamais l'historique)
   $("tb-exit")?.addEventListener("click", (e) => { const dirty = [...document.querySelectorAll("dialog[open]")].some((d) => d.dataset.dirty === "1"); if (dirty && !confirm("Des modifications ne sont pas enregistrées. Quitter le Theme Builder ?")) e.preventDefault(); });
   const libOpen = () => { openDlg("tb-lib"); if (!L.info) libLoad(); };

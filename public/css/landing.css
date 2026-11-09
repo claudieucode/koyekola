@@ -1312,6 +1312,16 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-nacc-head:focus-visible { outline: 2px solid var(--lp-accent, #0277b6); outline-offset: 2px; border-radius: 4px; }
 .kw-nacc-panel[hidden] { display: none; }
 .kw-nacc-panel { padding: 12px 4px 18px; }
+/* Accordéon seulement sur mobile (pieds de page denses) : disposition normale au-dessus de 767 px ; titre de colonne visible sans JavaScript ; boutons-titres de 44 px minimum */
+.kw-nacc[data-kw-acc-mobile] > .kw-nacc-panel { padding: 0; }
+.kw-nacc[data-kw-acc-mobile] > .kw-nacc-panel::before { margin-top: 0; }
+.kw-nacc[data-kw-acc-mobile] > .kw-nacc-head { min-height: 44px; }
+@media (max-width: 767px) {
+  .kw-nacc[data-kw-acc-mobile].is-enhanced { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 0; }
+  .kw-nacc[data-kw-acc-mobile].is-enhanced > .kw-nacc-head { width: 100%; box-sizing: border-box; border-bottom-color: currentColor; }
+  .kw-nacc[data-kw-acc-mobile].is-enhanced > .kw-nacc-panel { width: 100%; box-sizing: border-box; min-width: 0; flex: 0 0 auto; padding: 12px 4px 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .kw-nacc-head, .kw-nacc-panel { transition: none; animation: none; } }
 .lp-builder [data-kw-mode="accordion"]::before { content: "Accordéon : chaque conteneur enfant devient un volet (titre = son nom)"; }
 
 /* Témoignage : photo au-dessus / à gauche / à droite */
@@ -1765,7 +1775,18 @@ html.kw-noscroll { overflow: hidden; }
 .kw-emailsub-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .kw-emailsub-form .field-group { flex: 1 1 200px; margin: 0; } .kw-emailsub-form .checkbox-row { flex: 1 1 100%; font-size: .85em; }
 .kw-emailsub-submit { flex: none; }
+.kw-emailsub-missing-text { margin: 0; font-size: .9rem; } .kw-emailsub-missing:not(.kw-biz-empty) { padding: 4px 0; }
 .kw-emailsub { min-width: 0; } .kw-biz-name { font-weight: 700; } .kw-bizcontact.is-stack .kw-biz-list, .kw-bizlegal.is-stack .kw-biz-list { flex-direction: column; }
+
+/* Pied de page : la flèche de sous-menu est une cible tactile de 44 px sur mobile (aucun changement ailleurs). */
+@media (max-width: 767px) { footer .kw-sub-toggle { width: 44px; height: 44px; } }
+
+/* Pied de page du Theme Builder : mêmes règles sur TOUTES les pages (pages du Page Builder, blog, 404, boutique, aperçu de la bibliothèque), pour que l'aperçu et le site publié soient identiques. */
+[data-kw-footer] .lp-foot { opacity: .9; padding: 12px 20px 16px; border-top: 1px solid rgba(127, 127, 127, .25); }
+[data-kw-footer] .lp-foot a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+[data-kw-footer] .kw-node:has(> p.kw-heading:only-child) { display: none; } /* colonne ou carte réduite à son titre (widget de données sans donnée) : masquée */
+[data-kw-footer] .kw-search input { min-height: 44px; flex: 1 1 120px; } /* le bouton reste à côté du champ dans une colonne étroite */
+[data-kw-footer] .kw-search input::placeholder { color: currentColor; opacity: .75; }
 
 /* Mini-panier : nombre d'articles entre parenthèses, total, tiroir à gauche */
 .kw-mc-count.is-text { min-width: 0; padding: 0; background: none; color: inherit; font-size: inherit; font-weight: 600; line-height: inherit; border-radius: 0; }
