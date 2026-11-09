@@ -15,7 +15,9 @@
     "test": "node --test --test-concurrency=1 \"tests/*.test.js\"",
     "test-email": "node scripts/test-email.js",
     "audit:medias": "node scripts/audit-medias.js",
-    "quality:lab": "TEST_START_TIMEOUT_MS=400000 node tests/quality-lab/lab.js"
+    "quality:lab": "TEST_START_TIMEOUT_MS=400000 node tests/quality-lab/lab.js",
+    "controle": "node scripts/controle-rapide.js",
+    "sante": "node scripts/sante-site.js"
   },
   "engines": {
     "node": ">=22.12.0"
