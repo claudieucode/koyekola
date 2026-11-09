@@ -50,7 +50,7 @@ function assemble({ familles = FAMILLES_CLES.map(charger), legacy = ancien, alia
     if (m.addedAt !== undefined && !(/^\d{4}-\d{2}-\d{2}$/.test(String(m.addedAt)) && !Number.isNaN(Date.parse(m.addedAt)))) throw new Error(`Pied de page : addedAt de « ${m.id} » invalide (AAAA-MM-JJ attendu).`);
     const resp = m.responsive || {};
     const rows = m.structure.rows.map((r) => ({ ...r, ...(resp.tablet || r.tablet ? { tablet: { ...(resp.tablet || {}), ...(r.tablet || {}) } } : {}), ...(resp.mobile || r.mobile ? { mobile: { ...(resp.mobile || {}), ...(r.mobile || {}) } } : {}) }));
-    nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, version: m.version ?? VERSION_DEFAUT, addedAt: m.addedAt ?? AJOUT_DEFAUT, model: m, build: (k, env) => [wrap(k.S, rows, env)] });
+    nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, version: m.version ?? VERSION_DEFAUT, addedAt: m.addedAt ?? AJOUT_DEFAUT, model: m, ...(m.ftMode === "solo" ? { ftMode: "solo" } : {}), build: (k, env) => [wrap(k.S, rows, env)] });
   }
   // anciens : rattachés à une famille ; listés seulement si leur famille n'est pas construite et qu'ils ne sont pas redirigés
   const tous = legacy.layouts.map((l) => {

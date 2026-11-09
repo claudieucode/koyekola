@@ -806,6 +806,26 @@ function updateComponent(ctx, id, { name, section, global, siteId, revision } = 
   audit(ctx, "component.updated", "component", c.id, {});
   return getComponent(ctx, c.id);
 }
+// Apparence d'un pied de page (ftMode / ftVars) : réglage du DOCUMENT, modifié seulement par setFooterAppearance ; l'éditeur visuel enregistre ses éléments sans le connaître : on le reprend du document courant
+function keepFooterAppearance(component, section) {
+  const cur = component && (component.draft || component.section);
+  if (!cur || !section || typeof section !== "object" || section.ftMode !== undefined || (cur.ftMode !== "solo" && cur.ftMode !== "site")) return section;
+  return { ...section, ftMode: cur.ftMode, ...(cur.ftVars ? { ftVars: cur.ftVars } : {}) };
+}
+// Change l'apparence d'un pied (legacy | solo | site) DANS SA COPIE DE TRAVAIL (rien n'est diffusé avant la publication). Vers « solo » : les variables du site sont figées dans le pied
+// (tokens = jetons du site à figer) pour que son aspect ne change pas au moment de la bascule ; ensuite il ne lit plus jamais le site.
+function setFooterAppearance(ctx, id, mode, { tokens = null, freeze = true, extraVars = {} } = {}) {
+  const FF = require("./footerFrontier");
+  if (!FF.MODES.includes(mode)) throw bad("Apparence du pied inconnue (ancien comportement, indépendante ou suit la charte du site).");
+  const c = getComponent(ctx, id);
+  if (!c) throw new MarketingError("not_found", "Composant introuvable.");
+  const base = JSON.parse(JSON.stringify(c.draft || c.section));
+  const had = base.ftMode === "solo" && base.ftVars ? base.ftVars : null; /* déjà indépendant : redemander « indépendant » ne refige jamais la charte (et n'efface rien) */
+  delete base.ftMode; delete base.ftVars;
+  if (mode === "solo") { base.ftMode = "solo"; if (had) base.ftVars = had; else if (freeze && tokens) base.ftVars = FF.normalizeVars(FF.varsFromTokens(tokens, extraVars)); }
+  else if (mode === "site") base.ftMode = "site";
+  return saveComponentDraft(ctx, id, base);
+}
 // Copie de travail : modifiée dans l'éditeur du composant, SANS effet sur les pages tant que la mise à jour n'est pas demandée
 function saveComponentDraft(ctx, id, section, { revision } = {}) {
   const c = getComponent(ctx, id);
@@ -1202,7 +1222,7 @@ module.exports = {
   getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
-  listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
+  listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, keepFooterAppearance, setFooterAppearance, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,
   siteParts, withSiteParts, partSection, partBleeds, componentRole, setSiteParts, setPageHeader, createHeaderVariant, headerOverview, HEADER_MODES, listPageTemplates, gabaritSections, recentPages, getPageTemplate, savePageTemplate, deletePageTemplate, exportPage, importPage, EXPORT_FORMAT,
   normalizeSeo, normalizeTheme, TYPES,
 };

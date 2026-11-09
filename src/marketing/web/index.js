@@ -85,6 +85,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./performance")()); // Programme 22.9 : tableau de bord de performance des pages publiées
   admin.use(require("./responsiveStudio")()); // Programme 22.8 : diagnostic et corrections responsive (brouillons seulement)
   admin.use(require("./themeBuilder")()); // Programme 23.1 : Theme Builder par site (modèles, conditions, résolution)
+  admin.use(require("./footerAppearance")()); // Pied de page : apparence indépendante / charte du site / ancien comportement (frontière de pied)
   admin.use(require("./footerRevisions")()); // Pied de page, chantier E : historique des révisions, aperçu, comparaison, restauration en brouillon
   admin.use(require("./contentIntel")()); // Programme 22.6 : intelligence éditoriale et qualité SEO (analyse, propositions ; brouillons seulement)
   admin.use(require("./aiBuilder")()); // Programme 21.8 : interface « Assistant IA » de création de site (orchestre 21.3 à 21.6, aucune logique de moteur)

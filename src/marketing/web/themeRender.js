@@ -35,9 +35,13 @@ function postScope(post, { contentHtml = "", minutes = null, author = "", toc = 
 }
 
 // Habillage d'un modèle rendu hors Page Builder : jetons du site, feuille des pages, CSS généré (jetons → thème → éléments → personnalisé) ; même code pour les modèles de page ET les parties globales
-function wrapHtml(res, vm, siteOk, body, cls) {
+// opts.noSite : aperçu de la bibliothèque — ni jetons, ni thème, ni polices, ni CSS du site (le modèle se montre tel qu'il est)
+function wrapHtml(res, vm, siteOk, body, cls, opts = {}) {
   // Source de vérité unique : si l'apparence du site (Apparence → Styles) est publiée, ses jetons habillent aussi les modèles de thème
-  const main = require("../../services/appearance").publishedTokens();
+  const main = opts.noSite ? null : require("../../services/appearance").publishedTokens();
+  const FF = require("../pages/footerFrontier");
+  // Pied indépendant (« solo ») : pas de colonne de contenu (.lp-main), pas de jetons du site sur l'enveloppe ; la racine <footer data-kw-ft> porte ses propres variables
+  const soloFoot = cls.includes("kw-theme-footer") && ((vm && vm.sections) || []).some((x) => x && x.ft && x.ft.mode === "solo");
   // Polices : celles du site ET celles que les éléments du modèle posent eux-mêmes (identité propre d'un modèle : « font.<famille> » dans ses styles) ; sans cela le navigateur retomberait sur la police du site
   const faces = require("../../utils/fontLibrary").faceCssFor(tokens.tokensToCss(main || (siteOk && siteOk.tokens) || {}) + "\n" + (((main || (siteOk && siteOk.tokens) || {}).global) ? require("../pages/globalStyles").globalCss((main || siteOk.tokens).global, "site") : "") + "\n" + String(vm.nodeCss || ""), { siteId: main ? null : siteOk ? siteOk.id : undefined });
   // Partie globale (en-tête, pied) : même colonne de contenu que les pages du site (réglage de largeur du site, comme dans le Page Builder) ; la feuille de la plateforme ne doit pas changer l'aspect des liens non stylés
@@ -45,15 +49,18 @@ function wrapHtml(res, vm, siteOk, body, cls) {
   // Gabarits de contenu : titre et description d'archive à une échelle de page (le titre de niveau 1 du thème est pensé pour un bandeau d'accueil)
   const bleed = cls.includes("kw-theme-bleed") ? ".kw-theme-bleed > .lp-main { max-width: none; padding-left: 0; padding-right: 0; }" : "";
   const tpl = cls.includes("kw-theme-template") ? ".kw-theme-template .kw-ai-title { font-size: clamp(1.7rem, 1.2rem + 1.8vw, 2.5rem); line-height: 1.15; } .kw-theme-template .kw-ai-desc { font-size: 1.05rem; line-height: 1.55; }" : "";
-  const css = [faces, bleed, tpl, main ? require("../pages/themeCss").themeCss(main) : siteOk && siteOk.assets.theme, band, vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
-  const style = siteOk || main ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
+  // Chaque feuille « du site » passe par l'exclusion du pied indépendant (siteOk.assets.* et vm.customCss l'ont reçue à leur émission)
+  const css = [faces, bleed, tpl, main ? FF.excludeFooter(require("../pages/themeCss").themeCss(main)) : siteOk && siteOk.assets.theme, FF.excludeFooter(band), vm.nodeCss, siteOk && siteOk.assets.custom, vm.customCss].filter(Boolean).join("\n").replace(/</g, "");
+  const style = !soloFoot && (siteOk || main) ? ` style="${tokens.tokensToCss(main || siteOk.tokens).replace(/"/g, "&quot;")} --lp-accent: var(--kw-primary)"` : "";
   // Motion Studio : les modèles rendus hors du Page Builder (404, articles, archives…) peuvent contenir des widgets de mouvement ; sans leur feuille de style et leur runtime ils s'afficheraient bruts. Additif :
   // rien n'est ajouté tant que le modèle n'utilise aucun widget de mouvement.
   const A = (path) => (res.locals.asset ? res.locals.asset(path) : path);
   const ms = vm && vm.motionStudio;
   const motionCss = ms && ms.css ? `<link rel="stylesheet" href="${A("/css/motion-studio.css")}">` : "";
   const motionJs = ms && Array.isArray(ms.modules) ? `<script type="application/json" id="kw-ms-modules">${JSON.stringify(Object.fromEntries(ms.modules.map((m) => [m, A("/js/motion-studio/" + m + ".js")]))).replace(/</g, "\\u003c")}</script>${ms.scenes ? `<script type="application/json" id="kw-ms-scenes">${JSON.stringify(ms.scenes).replace(/</g, "\\u003c")}</script>` : ""}<script src="${A("/js/kw-motion-studio.js")}" defer></script>` : "";
-  return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}><link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}">${motionCss}<style>${css}</style><div class="lp-main">${body}</div>${motionJs}</div>`;
+  const landingCss = `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/landing.css") : "/css/landing.css"}">`;
+  if (soloFoot) return `<div class="${cls} lp-site">${landingCss}${motionCss}<style>${css}</style>${body}${motionJs}</div>`;
+  return `<div class="${cls}${siteOk || main ? " lp-site" : ""}"${style}>${landingCss}${motionCss}<style>${css}</style><div class="lp-main">${body}</div>${motionJs}</div>`;
 }
 const siteOf = (ctx, page) => { const site = page.site_id ? pages.getSite(ctx, page.site_id) : null; return site && site.status === "active" ? site : null; };
 // Comportement d'une partie globale, lu dans sa première bande : « collant » (position: sticky) ou « superposé » (position: absolute) ; la bande est dans le <div> de la partie, qui ne peut coller que si c'est lui qui porte la position
@@ -61,10 +68,10 @@ function partMode(section) { return headerSettings.classes(section); }
 // Un modèle fait de bandes pleine largeur (conteneurs « pleine largeur ») doit pouvoir toucher les bords : sa zone n'est alors plus limitée à la colonne de texte du site. Sans bande pleine largeur, rien ne change.
 const bleedOf = (sections) => ((sections || []).some((s) => s && s.type === "layout" && (s.children || []).some((c) => c && c.props && (c.props.full === true || c.props.band === true))) ? " kw-theme-bleed" : "");
 // Rend le modèle de vue `vm` avec les éléments du Page Builder (callback : html | null). Un callback passé à res.render ne passe jamais par themeLayout (rendu de fragment).
-function renderVm(res, vm, siteOk, cls, done) {
-  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false, legalSite: siteOk || null }, (err, body) => {
+function renderVm(res, vm, siteOk, cls, done, opts = {}) {
+  res.render("marketing-public/_sections", { page: vm, form: null, preview: true, thanks: null, error: null, values: {}, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], builder: false, legalSite: (opts.legalSite !== undefined ? opts.legalSite : siteOk) || null }, (err, body) => {
     if (err) return done(null);
-    try { done(wrapHtml(res, vm, siteOk, body, cls)); } catch { done(null); }
+    try { done(wrapHtml(res, vm, siteOk, body, cls, opts)); } catch { done(null); }
   });
 }
 // Site dont on cherche les modèles : celui du domaine de la requête (req.kwSite) sauf indication contraire de la route ; null = site principal (modèles à site_id NULL)
@@ -202,7 +209,7 @@ const SAMPLE_NOTE = 'nav[data-kw-sample]::after{content:"(menu d\'exemple)";disp
 const FSMENU_CLOSED = ".kw-ms-fm .kw-ms-fm-panel{display:none}.kw-ms-fm .kw-ms-fm-toggle[hidden]{display:inline-flex}";
 // done(html | null). doc : résultat de catalog.build()
 // thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
-function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false }, done) {
+function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false, withTheme = false }, done) {
   try {
     const marketing = req.app.locals.marketing, db = require("../../config/database");
     if (!marketing || !marketing.ready) return done(null);
@@ -213,16 +220,19 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     if (type === "header" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "parthead", sitePart: "header" } : x));
     const visitor = visitorContext(db, marketing.organizationId, req);
     // Pied : même marquage que sur le site publié (balise <footer> posée par la vue + ligne légale du site), pour que l'aperçu et la mesure se fassent dans les conditions réelles
-    if (type === "footer" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "partfoot", sitePart: "footer" } : x));
+    // Aperçu de la BIBLIOTHÈQUE : le pied se montre en mode indépendant (« solo ») et SANS le thème du site (ni ses jetons, polices, CSS) : c'est le vrai design du modèle. `withTheme` (« voir avec mon thème ») : le site habille l'aperçu, avec le mode propre du modèle.
+    const isoFoot = type === "footer" && Boolean(section) && !withTheme;
+    const themedSite = type === "footer" && withTheme ? siteOf(ctx, { site_id: siteId }) : null, themedPack = themedSite && themedSite.assets && themedSite.assets.pack && themedSite.assets.pack.link ? themedSite.assets.pack : null; /* « voir avec mon thème » : la feuille du thème actif aussi */
+    if (type === "footer" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "partfoot", sitePart: "footer", ...(isoFoot ? { ftMode: "solo" } : {}) } : x));
     const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" ? { demoShop: true } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
-    renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
+    renderVm(res, vm, isoFoot ? null : siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
       // En-tête : contexte de page NEUTRE sous l'en-tête (dégradé CSS sans image ni texte qui paraisse réel) pour juger un en-tête superposé, transparent ou en verre ; mêmes éléments dans la vignette (plus court)
       const demoNote = type === "product_archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des produits d\'exemple : votre boutique affichera ses vrais produits.</p>' : "";
       const body = demoNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
-      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "footer" && sampleMenu ? SAMPLE_NOTE : ""}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${type === "footer" ? ' class="lp-body lp-site"' : ""}${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
-    });
+      done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${themedPack ? themedPack.link : ""}${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "footer" && sampleMenu ? SAMPLE_NOTE : ""}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${type === "footer" ? ' class="lp-body lp-site"' : ""}${themedPack ? themedPack.attr : ""}${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
+    }, isoFoot ? { noSite: true, legalSite: siteOf(ctx, { site_id: siteId }) } : {});
   } catch { done(null); }
 }
 

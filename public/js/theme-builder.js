@@ -102,6 +102,7 @@
       item("Renommer", () => rename(t)); item("Dupliquer", () => act(t, "dupliquer", "Modèle dupliqué (brouillon)."));
       if (t.status === "published") item("Dépublier", () => act(t, "depublier", "Modèle dépublié."));
       item("Archiver", () => { if (t.type === "footer" && t.status === "published" && !confirm(`Archiver « ${t.name} » ?\n\nCe pied s'affiche actuellement : ${t.describe.include}${t.describe.exclude ? ` (sauf ${t.describe.exclude})` : ""}.\nIl ne sera plus affiché sur le site. Vous pourrez le restaurer depuis les archives.`)) return; act(t, "archiver", "Modèle archivé (récupérable dans les archives)."); });
+      if (t.type === "footer" && t.sourceKind === "component") item("Apparence du pied…", () => appearance(t));
       if (t.origin) item("Revenir au modèle initial", () => revertOrigin(t));
     }
     if (canWrite && t.status === "archived") { item("Restaurer", () => act(t, "restaurer", "Modèle restauré en brouillon.")); if (canRemove) item("Supprimer définitivement", () => remove(t)); }
@@ -281,6 +282,26 @@
     e.preventDefault(); const t = renaming; if (!t) return;
     try { await post(`/modeles/${t.id}/renommer`, { name: $("tb-ren-name").value }); closeDlg($("tb-dlg-ren")); status("Modèle renommé.", "ok"); await refresh(); } catch (err) { status(err.message, "err"); closeDlg($("tb-dlg-ren")); }
   });
+  // « Apparence du pied » (frontière de pied) : indépendante du site · suit la charte du site · ancien comportement. Enregistré dans la copie de travail (rien n'est publié) ; l'aperçu « après » montre cette copie.
+  async function appearance(t) {
+    try {
+      const d = await api(`/modeles/${t.id}/apparence-pied`);
+      info(`Apparence du pied — ${t.name}`, (box) => {
+        box.append(el("p", "", "Choisissez comment ce pied de page s'habille. Le choix est enregistré dans la copie de travail : rien ne change sur le site avant de publier."));
+        const form = el("form"); let chosen = d.mode;
+        for (const o of d.options) {
+          const lab = el("label"), r = el("input"); r.type = "radio"; r.name = "tb-apparence"; r.value = o.key; r.checked = o.key === d.mode; r.addEventListener("change", () => { chosen = o.key; });
+          lab.append(r, el("b", "", ` ${o.label}`), el("br"), el("span", "sw-muted", o.help)); lab.style.display = "block"; lab.style.margin = "10px 0"; form.append(lab);
+        }
+        const save = el("button", "btn btn-sm", "Enregistrer dans la copie de travail"); save.type = "submit";
+        form.append(save);
+        form.addEventListener("submit", async (e) => { e.preventDefault(); try { const r = await post(`/modeles/${t.id}/apparence-pied`, { mode: chosen }); closeDlg($("tb-dlg-info")); status(`Apparence du pied enregistrée (${(d.options.find((o) => o.key === r.mode) || {}).label || r.mode}) dans la copie de travail. Voir l'aperçu de la copie de travail, puis publier pour l'appliquer au site.`, "ok"); await refresh(); } catch (err) { status(err.message, "err"); } });
+        box.append(form);
+        const a = el("a", "btn btn-sm btn-outline", "Voir l'aperçu de la copie de travail (après)"); a.href = d.previewUrl; a.target = "_blank"; a.rel = "noopener"; box.append(el("p", "")); box.lastChild.append(a);
+        box.append(el("p", "sw-muted", `Actuellement en ligne : ${(d.options.find((o) => o.key === d.publishedMode) || {}).label || d.publishedMode}.`));
+      });
+    } catch (e) { status(e.message, "err"); }
+  }
   // « Revenir au modèle initial » : la copie de travail de CET en-tête retrouve la composition de la bibliothèque (confirmation d'abord ; l'état précédent reste dans « Versions »)
   async function revertOrigin(t) {
     const foot = t.type === "footer", what = foot ? "Le pied de page" : "L'en-tête";

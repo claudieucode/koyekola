@@ -302,12 +302,14 @@ function verifiedCustomCode(c) {
 }
 
 // Tout ce que le gabarit public affiche pour un site, calculé une fois (valeurs déjà validées)
+const FF = () => require("./footerFrontier");
 function siteAssets(tokens, settings, themeCss) {
   let custom = "";
   try { custom = normalizeSiteCss(settings.customCss, { strict: false }); } catch { custom = ""; }
   return {
-    theme: [themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings))].filter(Boolean).join("\n").replace(/</g, ""),
-    custom: custom.replace(/</g, ""),
+    // Frontière de pied : le CSS « du site » (thème, réglages globaux, classes, CSS personnalisé) reçoit l'exclusion du pied indépendant (spécificité 0 : rien ne change pour les autres éléments)
+    theme: FF().excludeFooter([themeCss(tokens), layoutCss(settings), require("./nodes").classCss(settings.classes, breakpointsOf(settings))].filter(Boolean).join("\n")).replace(/</g, ""),
+    custom: FF().excludeFooter(custom).replace(/</g, ""),
     code: verifiedCustomCode(settings.customCode),
     transition: transitionCss(settings),
     pack: require("../themes/packs").headHtml(tokens && tokens.pack),

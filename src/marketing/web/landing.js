@@ -498,7 +498,7 @@ module.exports = () => {
       const content = pages.normalizeContent(ctx, page, (req.body && req.body.content) || {});
       // Canevas de l'éditeur d'un en-tête / pied de page du Theme Builder : même largeur que sur le site publié (bandes pleine largeur)
       let tbPart = false; try { const t = c.site_id ? require("../../themeBuilder").store.byDocument(ctx, "component", c.id) : null; tbPart = Boolean(t && ["header", "footer", "sidebar"].includes(t.type)); } catch { tbPart = false; }
-      const sections = pages.resolveSections(ctx, content.sections).map((x) => (tbPart && pages.partBleeds(x) ? { ...x, bleed: true } : x));
+      const sections = pages.resolveSections(ctx, content.sections).map((x) => pages.keepFooterAppearance(c, tbPart && pages.partBleeds(x) ? { ...x, bleed: true } : x));
       res.set("Cache-Control", "no-store");
       res.render("marketing-public/landing", { page: landing.viewModel(ctx, { ...page, ...content, sections }), site: c.site_id ? pages.getSite(ctx, c.site_id) : null, tokensToCss, form: null, fieldCatalog: forms.FIELD_CATALOG, propertyDefs: [], renderMarkdown, error: null, values: {}, thanks: null, preview: true, previewLabel: null, builder: true });
     } catch (error) { jsonError(res, next, error); }
@@ -561,7 +561,7 @@ module.exports = () => {
       // Palier 12 : sans numéro de révision, une copie périmée écraserait en silence une modification plus récente (comme pour les pages : refus net)
       const asked = Number(req.body && req.body.revision);
       if (!Number.isInteger(asked)) throw new MarketingError("invalid_field", "Révision manquante : rechargez l'éditeur du composant avant d'enregistrer.");
-      pages.saveComponentDraft(ctx, c.id, content.sections[0], { revision: asked });
+      pages.saveComponentDraft(ctx, c.id, pages.keepFooterAppearance(c, content.sections[0]), { revision: asked });
       res.set("Cache-Control", "no-store").json({ revision: pages.getComponent(ctx, c.id).revision, savedAt: new Date().toISOString(), draft: true });
     } catch (error) { jsonError(res, next, error); }
   });

@@ -29,11 +29,13 @@ function load() {
       const css = readOpt(path.join(dir, "style.css")), js = readOpt(path.join(dir, "motion.js"));
       if (!css.trim()) throw new Error("style.css manquant ou vide");
       // Isolation par construction : toute règle du thème est préfixée par body[data-kw-pack="<clé>"] au chargement ; html, :root, @import et les noms d'animation non préfixés sont refusés
+      // Frontière de pied : la feuille SERVIE du thème ne peut jamais atteindre un pied indépendant (exclusion à spécificité 0)
       const scoped = scopeCss(BASE + "\n" + css, spec.key);
+      const served = require("../../pages/footerFrontier").excludeFooter(scoped); // feuille réellement servie (css = feuille confinée du thème, telle qu'écrite : c'est elle qu'on audite)
       const version = String(spec.version || "1.0.0");
-      const hash = crypto.createHash("sha1").update(scoped).update(js).digest("hex").slice(0, 10);
+      const hash = crypto.createHash("sha1").update(served).update(js).digest("hex").slice(0, 10);
       addStandardOptions(spec, css, js);
-      packs.set(spec.key, { spec, css: scoped, js, hash, version });
+      packs.set(spec.key, { spec, css: scoped, served, js, hash, version });
     } catch (e) { problems.push({ key: entry.name, message: String(e.message).slice(0, 300) }); }
   }
   cache = { packs, problems };
