@@ -1,44 +1,36 @@
-// Catalogue « Fiche produit » : 20 mises en page × 5 identités visuelles = 100 modèles. Tout vient des données réelles de la boutique : étiquettes {{product.*}}, widget d'achat (shopbuy),
-// grille de produits (shopgrid). Aucun faux prix, avis ou stock ; les textes de réassurance sont des consignes éditables, sans promesse chiffrée.
-const L = (key, label, tags, desc, build) => ({ key, label, tags, desc, build });
-const MAXW = { maxWidth: "1180px", width: "100%", marginLeft: "auto", marginRight: "auto" };
-const wrap = (k, ch, st = {}) => k.section([k.col(ch, { ...MAXW, gap: k.S.gap })], st);
-const title = (k, st = {}) => k.H("{{product.title}}", "1", st);
-const price = (k, st = {}) => k.row([k.T("<p>{{product.price}}</p>", { fontSize: "28px", fontWeight: "700", color: k.S.accent, margin: "0px" }), k.T("<p>{{product.regular_price}}</p>", { fontSize: "18px", color: k.S.mute, textDecoration: "line-through", margin: "0px" })], { gap: "14px", ...st });
-const shortD = (k, st = {}) => k.T("<p>{{product.short_description}}</p>", { fontSize: "17px", ...st });
-const longD = (k, st = {}) => k.T("<p>{{product.description}}</p>", st);
-const buy = (k, st = {}) => k.W("shopbuy", { label: "Ajouter au panier", showQuantity: true, showPrice: true, showStock: true }, st);
-const meta = (k, st = {}) => k.row([k.T("<p>Référence : {{product.sku}}</p>", { fontSize: "14px", color: k.S.mute, margin: "0px" }), k.T("<p>{{product.availability}}</p>", { fontSize: "14px", color: k.S.mute, margin: "0px" }), k.T("<p>{{product.category}}</p>", { fontSize: "14px", color: k.S.mute, margin: "0px" })], { gap: "18px", ...st });
-const crumb = (k, st = {}) => k.W("breadcrumb", { items: [{ label: "Accueil", url: "/" }, { label: "Boutique", url: "/boutique" }, { label: "Ce produit" }], separator: "chevron" }, { color: k.S.mute, fontSize: "14px", ...st });
-const ICONS = [{ text: "Paiement à la commande, selon les moyens activés par la boutique", icon: "check" }, { text: "Livraison ou retrait : précisez ici vos conditions", icon: "check" }, { text: "Une question avant d'acheter ? Contactez-nous", icon: "check" }];
-const trust = (k, st = {}, inline = false) => k.W("iconlist", { items: ICONS, iconColor: k.S.accent, ...(inline ? { inline: true } : {}) }, { color: k.S.fg, ...st });
-const related = (k, source = "featured", count = 3, cols = "3", head = "Vous aimerez aussi") => k.col([k.H(head, "2"), k.W("shopgrid", { source, count, columns: cols, orderby: source === "featured" ? "featured" : "newest", showPrice: true, showImage: true })]);
-const two = (a, b, st = {}) => ({ type: "grid", children: [a, b], styles: { desktop: { display: "grid", columns: 2, gap: "40px", alignItems: "start", ...st }, tablet: { columns: 1 }, mobile: { columns: 1 } } });
-const info = (k, extra = []) => k.col([crumb(k), title(k), price(k), shortD(k), buy(k), ...extra], { gap: "16px" });
-const faq = (k, mode) => k.W(mode, mode === "tabs"
-  ? { items: [{ title: "Description", text: "{{product.description}}" }, { title: "Livraison et retours", text: "Indiquez ici vos délais, zones de livraison et conditions de retour." }] }
-  : { items: [{ q: "Description", a: "{{product.description}}" }, { q: "Livraison et retours", a: "Indiquez ici vos délais, zones de livraison et conditions de retour." }, { q: "Une question ?", a: "Écrivez-nous depuis la page Contact, nous vous répondrons." }], openFirst: true, icon: "chevron" }, { color: k.S.fg });
-const spec = (k) => k.card([k.L("Fiche technique"), k.T("<p>Référence : {{product.sku}}</p>", { margin: "0px" }), k.T("<p>Disponibilité : {{product.availability}}</p>", { margin: "0px" }), k.T("<p>Catégorie : {{product.category}}</p>", { margin: "0px" })], { gap: "8px" });
+// Catalogue « Fiche produit » : 100 modèles RÉELLEMENT différents (10 familles de 10), chacun avec sa propre identité graphique à valeurs fixes (palette + 2 polices de la bibliothèque locale + forme),
+// jamais les jetons du site. Chaque modèle est défini par 4 axes (galerie · informations · contenu · achat, voir single_product/concepts.js), jamais deux fois le même quadruplet, puis par ses propres
+// briques (single_product/A.js … J.js). Tout vient des données réelles de la boutique : étiquettes {{product.*}}, widgets shopgallery / shopbuy / shopreviews / shopspecs / shopgrid.
+// Aucun faux prix, avis, stock ni image : les textes de réassurance, livraison, retours, entretien… sont des consignes éditables (« Indiquez ici… »).
+// Audit : scripts/audit-fiche-produit.js.
+const CONCEPTS = require("./single_product/concepts");
+const { SKINS } = require("./single_product/skins");
+const { compose } = require("./single_product/compose");
+const SPECS = Object.assign({}, ...["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((f) => require(`./single_product/${f}`)));
 
-module.exports = { type: "single_product", kind: "page", layouts: [
-  L("image-gauche", "Image à gauche", ["classique", "image", "achat"], "Grande image à gauche, titre, prix et achat à droite, description dessous.", (k) => [wrap(k, [two(k.img("product.image"), info(k, [meta(k)])), k.divider(), longD(k)])]),
-  L("image-droite", "Image à droite", ["classique", "image", "achat"], "Informations et achat à gauche, image à droite.", (k) => [wrap(k, [two(info(k, [meta(k)]), k.img("product.image")), k.divider(), longD(k)])]),
-  L("achat-collant", "Colonne d'achat collante", ["collant", "sticky", "achat"], "L'achat reste visible pendant la lecture de la description.", (k) => [wrap(k, [two(k.col([k.img("product.image"), k.H("Description", "2"), longD(k)]), k.col([crumb(k), title(k), price(k), shortD(k), buy(k), meta(k)], { position: "sticky", top: "24px", gap: "16px" }))])]),
-  L("onglets", "Onglets", ["onglets", "description", "informations"], "Fiche haute, puis onglets description et livraison.", (k) => [wrap(k, [two(k.img("product.image"), info(k)), faq(k, "tabs")])]),
-  L("accordeon", "Accordéon", ["accordéon", "informations", "compact"], "Informations repliables sous l'achat.", (k) => [wrap(k, [two(k.img("product.image"), k.col([crumb(k), title(k), price(k), buy(k), faq(k, "accordion")], { gap: "16px" }))])]),
-  L("galerie-centree", "Colonne centrale", ["centré", "galerie", "épuré"], "Image, titre, prix et achat centrés sur une seule colonne.", (k) => [k.section([k.col([crumb(k, { alignSelf: "center" }), k.img("product.image", { maxWidth: "620px", alignSelf: "center" }), title(k, { textAlign: "center" }), price(k, { justifyContent: "center" }), shortD(k, { textAlign: "center" }), buy(k), trust(k)], { maxWidth: "640px", width: "100%", marginLeft: "auto", marginRight: "auto", gap: "18px" })])]),
-  L("pleine-largeur", "Image pleine largeur", ["pleine largeur", "visuel", "immersif"], "Visuel très large en ouverture, puis achat et description en deux colonnes.", (k) => [k.band([k.img("product.image", { maxHeight: "520px", borderRadius: "0px" })], { padding: "0px", paddingLeft: "0px", paddingRight: "0px" }), wrap(k, [title(k), two(k.col([shortD(k), longD(k)]), k.card([price(k), buy(k), meta(k)], { position: "sticky", top: "24px" }))])]),
-  L("minimal", "Minimal", ["minimaliste", "sobre", "rapide"], "Le strict nécessaire : titre, prix, achat, petite image.", (k) => [k.section([k.col([title(k), price(k), buy(k), k.img("product.image", { maxWidth: "360px" })], { maxWidth: "560px", width: "100%", marginLeft: "auto", marginRight: "auto", gap: "18px" })])]),
-  L("editorial", "Éditorial", ["éditorial", "magazine", "lecture"], "Catégorie, grand titre centré, image large, texte en colonne étroite.", (k) => [k.section([k.col([k.L("{{product.category}}", { textAlign: "center" }), title(k, { textAlign: "center", fontSize: "48px" }), shortD(k, { textAlign: "center" }), k.img("product.image", { maxHeight: "560px" }), k.col([longD(k), k.card([price(k), buy(k)])], { maxWidth: "680px", width: "100%", marginLeft: "auto", marginRight: "auto", gap: "24px" })], { ...MAXW, gap: "28px" })])]),
-  L("carte-achat", "Carte d'achat", ["carte", "encadré", "achat"], "Image à gauche, achat dans une carte encadrée à droite.", (k) => [wrap(k, [crumb(k), two(k.img("product.image"), k.card([title(k), price(k), shortD(k), buy(k), meta(k)], { gap: "16px" })), longD(k)])]),
-  L("avec-associes", "Produits associés", ["associés", "vente croisée", "vedette"], "Fiche classique suivie des produits mis en avant.", (k) => [wrap(k, [two(k.img("product.image"), info(k)), longD(k), related(k, "featured", 4, "4")])]),
-  L("avec-promos", "Promotions en bas", ["promotions", "vente croisée", "grille"], "Fiche suivie des produits en promotion.", (k) => [wrap(k, [two(k.img("product.image"), info(k)), longD(k), related(k, "sale", 3, "3", "Nos promotions")])]),
-  L("reassurance", "Réassurance", ["réassurance", "confiance", "liste"], "Fiche suivie d'une bande de réassurance en ligne.", (k) => [wrap(k, [two(k.img("product.image"), info(k)), k.card([trust(k, {}, true)]), longD(k)])]),
-  L("bandeau-titre", "Bandeau de titre", ["bandeau", "en-tête", "prix"], "Bandeau en haut avec fil d'Ariane, titre et prix ; image et achat dessous.", (k) => [k.band([k.inner([k.col([crumb(k), title(k)], { gap: "8px" }), price(k)], { alignItems: "flex-end" })], { backgroundColor: k.S.alt }), wrap(k, [two(k.img("product.image"), k.col([shortD(k), buy(k), meta(k), trust(k)], { gap: "16px" })), longD(k)])]),
-  L("trois-colonnes", "Trois colonnes", ["trois colonnes", "dense", "description"], "Description, image et achat côte à côte.", (k) => [wrap(k, [crumb(k), k.grid(3, [k.col([k.H("À propos", "2"), shortD(k), longD(k)]), k.img("product.image"), k.col([title(k, { fontSize: "30px" }), price(k), buy(k), meta(k)], { gap: "14px" })], { alignItems: "start" })])]),
-  L("fiche-technique", "Fiche technique", ["technique", "détails", "informations"], "Fiche classique avec bloc référence, disponibilité et catégorie.", (k) => [wrap(k, [two(k.img("product.image"), info(k)), two(k.col([k.H("Description", "2"), longD(k)]), spec(k))])]),
-  L("image-collante", "Image collante", ["collant", "sticky", "image"], "L'image reste en place, le texte défile à droite.", (k) => [wrap(k, [two(k.col([k.img("product.image")], { position: "sticky", top: "24px" }), k.col([crumb(k), title(k), price(k), shortD(k), buy(k), longD(k), trust(k)], { gap: "18px" })), related(k, "all", 3)])]),
-  L("barre-achat", "Barre d'achat collée", ["collant", "mobile", "achat"], "Fiche complète et barre d'achat qui reste en bas de l'écran.", (k) => [wrap(k, [crumb(k), two(k.img("product.image"), k.col([title(k), price(k), shortD(k), meta(k), longD(k)], { gap: "16px" }))]), k.band([k.inner([k.T("<p>{{product.price}}</p>", { fontWeight: "700", margin: "0px" }), buy(k)])], { position: "sticky", bottom: "0px", zIndex: 30, borderTopWidth: "1px", borderBottomWidth: "0px" })]),
-  L("vitrine", "Vitrine", ["vitrine", "héros", "associés"], "Bandeau héros image + achat, puis description et produits de la boutique.", (k) => [k.band([k.inner([k.grid(2, [k.img("product.image"), k.col([k.L("{{product.category}}"), title(k), price(k), shortD(k), buy(k)], { gap: "16px" })], { alignItems: "center", width: "100%" })])], { backgroundColor: k.S.alt, paddingTop: "48px", paddingBottom: "48px" }), wrap(k, [longD(k), related(k, "all", 3, "3", "Dans la boutique")])]),
-  L("liste-compacte", "Fiche compacte", ["compact", "liste", "promotions"], "Petite image à côté des infos, accordéon et promotions en deux colonnes.", (k) => [wrap(k, [crumb(k), k.row([k.img("product.image", { maxWidth: "280px" }, null, null), info(k)], { alignItems: "flex-start", flexWrap: "nowrap", gap: "28px" }), faq(k, "accordion"), related(k, "sale", 2, "2", "En promotion")])]),
-] };
+const FAMILIES = [
+  { key: "galeries", label: "Galeries et classiques" }, { key: "mode", label: "Mode et chaussures" }, { key: "luxe", label: "Luxe, bijoux et montres" }, { key: "beaute", label: "Beauté et bien-être" },
+  { key: "tech", label: "Technologie" }, { key: "maison", label: "Maison" }, { key: "alimentaire", label: "Alimentaire et artisanat" }, { key: "sport", label: "Sport, auto, enfants et pro" },
+  { key: "numerique", label: "Numérique et formation" }, { key: "specialises", label: "Spécialisés" },
+];
+const FAM = Object.fromEntries(FAMILIES.map((f, i) => ["ABCDEFGHIJ"[i], f]));
+const AX = {
+  gal: { V: "vignettes verticales", H: "vignettes horizontales", S: "images empilées", G: "grille de deux colonnes", M: "mosaïque", C: "carrousel", Z: "image unique avec zoom", F: "visuel plein écran", T: "volet image fixe", N: "petite image" },
+  inf: { R: "informations à droite", L: "informations à gauche", K: "colonne d'achat collante", Ctr: "informations centrées", C3: "trois colonnes", O: "informations sur l'image", B: "bandeau de titre" },
+  cont: { TAB: "onglets", ACC: "accordéons", SEC: "sections ancrées", EDI: "texte éditorial", SPEC: "tableau technique", FLAT: "description simple" },
+  ach: { IN: "achat dans la fiche", CARD: "carte d'achat", BAR: "barre d'achat collée", DRAW: "panneau d'achat latéral", STK: "achat collant", CFG: "zone de personnalisation" },
+};
+const DARK = (s) => { const m = /^#(..)(..)(..)$/.exec(s.bg); return m ? (parseInt(m[1], 16) * 299 + parseInt(m[2], 16) * 587 + parseInt(m[3], 16) * 114) / 1000 < 90 : false; };
+
+const LAYOUTS = CONCEPTS.map((c) => {
+  const skin = SKINS.find((s) => s.key === c.id.toLowerCase()), sp = SPECS[c.id], fam = FAM[c.id[0]];
+  if (!skin || !sp) throw new Error(`Fiche produit : modèle ${c.id} incomplet (identité ou réglages manquants).`);
+  return {
+    key: c.id.toLowerCase(), family: fam.key, skin: skin.key, label: c.nom, axes: { gal: c.gal, inf: c.inf, cont: c.cont, ach: c.ach },
+    tags: [fam.label.toLowerCase(), c.secteur.toLowerCase(), AX.gal[c.gal], AX.cont[c.cont], AX.ach[c.ach], DARK(skin) ? "sombre" : "clair"],
+    desc: `${c.sig}. Galerie : ${AX.gal[c.gal]} ; ${AX.inf[c.inf]} ; contenu en ${AX.cont[c.cont]} ; ${AX.ach[c.ach]}.`,
+    build: (k) => compose(k, c, sp),
+  };
+});
+
+module.exports = { type: "single_product", kind: "page", flat: true, ownSkins: true, families: FAMILIES, layouts: LAYOUTS, skins: SKINS };

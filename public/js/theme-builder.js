@@ -588,7 +588,16 @@
     const act = el("div", "tb-actions");
     const pv = el("button", "btn btn-sm btn-outline", "Prévisualiser"); pv.type = "button"; pv.setAttribute("aria-label", `Prévisualiser « ${m.name} »`); pv.addEventListener("click", () => libPreview(m, type));
     act.append(pv);
-    if (canWrite) { const us = el("button", "btn btn-sm btn-primary", "Utiliser ce modèle"); us.type = "button"; us.disabled = !available; us.setAttribute("aria-label", `Utiliser « ${m.name} »`); us.addEventListener("click", () => libUse(m, us, act, type, say)); act.append(us); }
+    if (canWrite) {
+      // Fiche produit : identité graphique du modèle (indépendante par défaut, héritée du site ou hybride) choisie à l'insertion ; modifiable ensuite sans perte
+      let idSel = null;
+      if (type === "single_product") {
+        idSel = el("select", "tb-id-select"); idSel.setAttribute("aria-label", `Identité graphique de « ${m.name} »`);
+        [["own", "Identité propre au modèle"], ["site", "Hérite de la charte du site"], ["hybrid", "Modèle + couleur de marque du site"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; idSel.append(o); });
+        act.append(idSel);
+      }
+      const us = el("button", "btn btn-sm btn-primary", "Utiliser ce modèle"); us.type = "button"; us.disabled = !available; us.setAttribute("aria-label", `Utiliser « ${m.name} »`); us.addEventListener("click", () => libUse(m, us, act, type, say, idSel ? idSel.value : "")); act.append(us);
+    }
     body.append(act); c.append(body); libLazyThumb(th, m, type); return c;
   }
   const libIo = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { libIo.unobserve(e.target); e.target.__go(); } }, { rootMargin: "200px" }) : null;
@@ -598,10 +607,10 @@
     th.__go = async () => { try { await frameThumb(th, `${base}/api/bibliotheque/${type}/${m.key}/vignette`, type, `l:${base}:${key}`); return; } catch { /* repli : miniature filaire */ } try { let svg = libThumbs.get(key); if (!svg) { const r = await api(`/bibliotheque/${type}/${m.key}/miniature`); svg = r.thumb; libThumbs.set(key, svg); } th.textContent = ""; th.append(svgOf(svg)); } catch { /* miniature facultative */ } };
     if (libIo) libIo.observe(th); else th.__go();
   }
-  async function libUse(m, btn, act, type = L.type, say = libStatus) {
+  async function libUse(m, btn, act, type = L.type, say = libStatus, identity = "") {
     if (L.busy) return; L.busy = true; btn.disabled = true; btn.textContent = "Création…";
     try {
-      const r = await post("/bibliotheque/utiliser", { type, key: m.key });
+      const r = await post("/bibliotheque/utiliser", { type, key: m.key, ...(identity ? { identity } : {}) });
       say(`« ${m.name} » ajouté à votre site en brouillon.`, "ok");
       btn.textContent = "Ajouté ✓"; const ed = el("a", "btn btn-sm btn-outline", "Modifier"); ed.href = r.template.editUrl; ed.setAttribute("aria-label", `Modifier « ${m.name} »`); act.append(ed);
       await refresh();

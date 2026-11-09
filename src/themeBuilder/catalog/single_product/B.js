@@ -1,0 +1,13 @@
+// Famille B · Mode et chaussures
+module.exports = {
+  B01: { sec: ["Matières et entretien", "Indiquez ici la composition et les conseils de lavage."], note: ["Guide des tailles", "Indiquez ici vos correspondances de tailles (tour de poitrine, tour de taille, longueur)."], info: "c t p q b d m", sig: ["table", "care"], var: "buttons" },
+  B02: { sec: ["Coloris", "Indiquez ici les coloris proposés et leur nom."], note: ["Coloris disponibles", "Choisissez le coloris dans la fiche d'achat : l'image suit votre choix."], info: "e t p b q m", sig: ["faq"], var: "swatches", gx: "u" },
+  B03: { sec: ["La tenue", "Indiquez ici les pièces de la tenue et comment les porter."], note: ["Associer avec", "Indiquez ici les pièces à associer à celle-ci."], info: "t p q b n", sig: ["benefits", "rel:3"], var: "swatches", relHead: "À associer avec cette pièce", sum: true },
+  B04: { sec: ["L'histoire de la collection", "Indiquez ici l'inspiration et la manière dont la collection est née."], note: ["Notes de la créatrice", "Indiquez ici un mot de la créatrice ou du créateur."], info: "e T q d p b", sig: ["story", "faq", "iconrow"], label: "Ajouter à ma garde-robe" },
+  B05: { sec: ["Le drop", "Indiquez ici la date et les conditions du lancement."], note: ["Infos du lancement", "Indiquez ici les quantités annoncées, la limite par client et la date."], info: "g t p m b d R", sig: ["warn", "iconrow"], var: "buttons", label: "Réserver ma paire" },
+  B06: { sec: ["Matière et coutures", "Indiquez ici le cuir, la doublure et les finitions."], note: ["Détails de fabrication", "Indiquez ici les coutures, la quincaillerie et les dimensions."], info: "e t q p b M", sig: ["care", "specs"], zoom: true },
+  B07: { sec: ["La capsule", "Indiquez ici le thème de la capsule et les pièces qui la composent."], note: ["Autres pièces de la capsule", "Indiquez ici les pièces de la capsule."], info: "c e t p b q m", sig: ["steps", "rel:3"], var: "swatches", relHead: "Dans la même capsule" },
+  B08: { sec: ["Pointures", "Indiquez ici les pointures proposées et la taille des modèles."], note: ["Choisir sa pointure", "Indiquez ici comment mesurer son pied et choisir sa pointure."], info: "t p q d b m", sig: ["table", "ship"], var: "buttons", ttl: "38px" },
+  B09: { sec: ["Tailles par âge", "Indiquez ici les tailles selon l'âge de l'enfant."], note: ["Entretien facile", "Indiquez ici le lavage et la durée d'usage."], info: "g t p b q r", sig: ["benefits", "care"], var: "swatches", gx: "g" },
+  B10: { sec: ["Douceur et maintien", "Indiquez ici la matière, le maintien et les tailles."], note: ["Discrétion", "Indiquez ici votre emballage et votre mode d'envoi."], info: "e t q p m", sig: ["faq", "ship"], var: "buttons", label: "Ajouter discrètement" },
+};

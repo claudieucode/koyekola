@@ -1,0 +1,10 @@
+<%# Caractéristiques du produit (widgets/shop.js) : uniquement des données réelles ; les lignes vides n'apparaissent pas. %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Boutique fermée.</p></section><% } %>
+<% } else if (!d || d.product === null || !(d.rows || []).length) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Caractéristiques : aucune donnée à afficher pour ce produit.</p></section><% } %>
+<% } else { %>
+<section class="<%= cls %> kw-psp"<%- attrs %>>
+  <% if (d.demo) { %><p class="kw-pb-demo" role="note">Données d'exemple (aperçu de la bibliothèque)</p><% } %>
+  <% if (p.title) { %><h3 class="kw-psp-title"><%= p.title %></h3><% } %>
+  <dl class="kw-psp-list"><% d.rows.forEach((r) => { %><div class="kw-psp-row"><dt><%= r[0] %></dt><dd><%= r[1] %></dd></div><% }) %></dl>
+</section>
+<% } %>

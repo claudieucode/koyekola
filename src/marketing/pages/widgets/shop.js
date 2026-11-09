@@ -36,6 +36,11 @@ function demoCatalog(q) {
 }
 const DEMO_CATEGORIES = DEMO_CATS.map((name, i) => ({ slug: `categorie-${["a", "b", "c"][i]}`, name }));
 
+
+// Produit d'EXEMPLE pour l'aperçu de la bibliothèque (page.demoShop posé par themeRender.previewDoc) : annoncé comme tel dans l'aperçu, jamais lu sur un site publié.
+const demoProduct = () => ({ id: -1, slug: "exemple", name: "Produit d'exemple", short_description: "Description courte du produit d'exemple.", description: "", sku: "REF-EXEMPLE", image_url: "", gallery: [], tags: ["exemple"], categories: [{ name: "Catégorie", slug: "categorie-a" }], attributes: [], variants: [], isVariable: true, inStock: true, onSale: true, priceFromCents: 4900, regularFromCents: 5900, priceLabel: view.money(4900, "eur"), regularLabel: view.money(5900, "eur"), weight_grams: null, demo: true });
+const demoVariants = () => [{ id: -11, options: { Taille: "S", Couleur: "Sable" }, price: view.money(4900, "eur"), regular: "", out: false, low: false, image: "" }, { id: -12, options: { Taille: "M", Couleur: "Sable" }, price: view.money(4900, "eur"), regular: "", out: false, low: false, image: "" }, { id: -13, options: { Taille: "M", Couleur: "Nuit" }, price: view.money(5400, "eur"), regular: "", out: true, low: false, image: "" }];
+
 module.exports = [
   {
     type: "shopgrid", label: "Grille de produits", group: "commerce", icon: "grid", version: 1, style: "box", status: "operational", dependencies: DEP,
@@ -43,7 +48,7 @@ module.exports = [
     keywords: "produits grille catalogue boutique archive categorie promotions vedette shop product grid archive",
     schema: [
       { key: "title", kind: "text", label: "Titre (facultatif)", max: 80, default: "" },
-      { key: "source", kind: "select", label: "Produits à afficher", options: [["all", "Tous les produits"], ["featured", "Produits mis en avant"], ["sale", "Produits en promotion"], ["category", "Une catégorie (adresse ci-dessous)"], ["archive", "Suit la page (catégorie ?categorie= et recherche ?q=)"]], default: "all" },
+      { key: "source", kind: "select", label: "Produits à afficher", options: [["all", "Tous les produits"], ["featured", "Produits mis en avant"], ["sale", "Produits en promotion"], ["category", "Une catégorie (adresse ci-dessous)"], ["related", "Produits liés au produit de la page (même catégorie)"], ["archive", "Suit la page (catégorie ?categorie= et recherche ?q=)"]], default: "all" },
       { key: "category", kind: "text", label: "Adresse de la catégorie (source « Une catégorie »)", max: 80, default: "" },
       { key: "count", kind: "number", label: "Nombre de produits", min: 1, max: 24, integer: true, default: 6 },
       { key: "columns", kind: "select", label: "Colonnes (ordinateur)", options: [["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]], default: "3" },
@@ -85,6 +90,15 @@ module.exports = [
         if (p.onlySale) q.onSale = true;
         if (p.onlyFeatured) q.featured = true;
       }
+      if (p.source === "related") {
+        if (env.page && env.page.demoShop === true) { const r = demoCatalog({ perPage: p.count, sort: p.orderby }); return { items: r.items, total: r.total, base: "/boutique", demo: true, pager: null, related: true }; }
+        const shr = shopOf(ctx, env);
+        if (shr.closed) return { closed: shr.closed, items: [] };
+        const curp = env.scope && env.scope.product;
+        const base = curp && curp.id ? catalog.productById(shr.s, curp.id) : null;
+        const rel = base ? catalog.relatedProducts(shr.s, base, p.count) : [];
+        return { items: rel.map((x) => ({ ...x, priceLabel: view.money(x.priceFromCents, shr.settings.currency), regularLabel: view.money(x.regularFromCents, shr.settings.currency) })), total: rel.length, base: "/boutique", pager: null, related: true };
+      }
       const pager = (r) => {
         const keep = new URLSearchParams();
         for (const k of ["categorie", "q", "etiquette", "min", "max", "stock", "promo", "vedette", "tri"]) if (typeof query[k] === "string" && query[k] !== "") keep.set(k, query[k].slice(0, 80));
@@ -107,14 +121,27 @@ module.exports = [
       { key: "label", kind: "text", label: "Texte du bouton", max: 40, required: true, default: "Ajouter au panier" },
       bool("showQuantity", "Afficher la quantité", true), bool("showPrice", "Afficher le prix", true), bool("showStock", "Afficher la disponibilité", true),
       { key: "outLabel", kind: "text", label: "Message en rupture de stock", max: 80, default: "Rupture de stock" },
+      { key: "variantStyle", kind: "select", label: "Choix de la variante", options: [["select", "Liste déroulante"], ["buttons", "Boutons (tailles, formats)"], ["swatches", "Pastilles (couleurs, matières)"]], default: "select" },
+      bool("showBuyNow", "Bouton « Acheter maintenant » (ajoute au panier puis ouvre la commande)", false),
+      { key: "buyNowLabel", kind: "text", label: "Texte du bouton d'achat immédiat", max: 40, default: "Acheter maintenant" },
     ],
     data(ctx, p, env) {
+      const demo = env.page && env.page.demoShop === true;
+      if (demo) return { product: demoProduct(), back: "/boutique", demo: true, variantData: demoVariants(), buy: {} };
       const sh = shopOf(ctx, env);
       if (sh.closed) return { closed: sh.closed };
       const cur = env.scope && env.scope.product;
       const product = p.product ? catalog.publicProduct(sh.s, p.product) : cur && cur.id ? catalog.productById(sh.s, cur.id) : null;
       if (!product || product.status !== "published") return { product: null };
-      return { product: { ...product, priceLabel: view.money(product.priceFromCents, sh.settings.currency), regularLabel: view.money(product.regularFromCents, sh.settings.currency) }, back: `/boutique/produit/${product.slug}` };
+      const money = (c) => view.money(c, sh.settings.currency);
+      // Données de variantes envoyées au navigateur POUR L'AFFICHAGE seulement (prix, image, disponibilité) : le serveur recalcule tout à l'ajout au panier
+      const variantData = product.isVariable ? product.variants.map((v) => {
+        const pr = catalog.priceOf(product, v), left = catalog.stockOf(product, v);
+        return { id: v.id, options: v.options, price: money(pr.unitCents), regular: pr.onSale ? money(pr.regularCents) : "", out: left !== null && left <= 0, low: left !== null && left > 0 && left <= 5, image: v.image_url || "" };
+      }) : [];
+      // Gate, âge, personnalisation, abonnement : calculés par la route de la fiche (même source que le formulaire natif) ; absents hors fiche (le formulaire reste alors un simple ajout)
+      const buy = p.product ? {} : (env.scope && env.scope.buy) || {};
+      return { product: { ...product, priceLabel: money(product.priceFromCents), regularLabel: money(product.regularFromCents) }, back: `/boutique/produit/${product.slug}`, variantData, buy };
     },
   },
   {
@@ -156,6 +183,77 @@ module.exports = [
       const sh = shopOf(ctx, env);
       if (sh.closed) return { closed: sh.closed };
       return { categories: catalog.listCategories(sh.s).map((c) => ({ slug: c.slug, name: c.name })), query };
+    },
+  },
+  {
+    type: "shopgallery", label: "Galerie du produit", group: "commerce", icon: "image", version: 1, style: "box", status: "operational", dependencies: DEP,
+    description: "Images du produit de la page : miniatures, zoom clavier et tactile, image de la variante choisie",
+    keywords: "galerie produit images miniatures zoom carrousel photo boutique product gallery",
+    schema: [
+      { key: "layout", kind: "select", label: "Présentation", options: [["thumbs-left", "Miniatures à gauche"], ["thumbs-bottom", "Miniatures dessous"], ["stack", "Images empilées"], ["grid", "Grille de 2 colonnes"], ["mosaic", "Mosaïque"], ["carousel", "Carrousel"], ["single", "Image unique"], ["hero", "Grand visuel"]], default: "thumbs-left" },
+      bool("zoom", "Zoom au clic (agrandissement plein écran)", true),
+      { key: "ratio", kind: "select", label: "Format des images", options: [["1/1", "Carré"], ["4/5", "Portrait 4:5"], ["3/4", "Portrait 3:4"], ["16/9", "Large 16:9"], ["auto", "Format d'origine"]], default: "1/1" },
+      bool("showBadge", "Pastille « Promo » / « Rupture de stock »", false),
+      { key: "badgeLabel", kind: "text", label: "Texte de la pastille de promotion", max: 20, default: "Promo" },
+    ],
+    data(ctx, p, env) {
+      if (env.page && env.page.demoShop === true) return { demo: true, images: [], name: "Produit d'exemple", onSale: true, inStock: true };
+      const sh = shopOf(ctx, env);
+      if (sh.closed) return { closed: sh.closed };
+      const cur = env.scope && env.scope.product;
+      const product = cur && cur.id ? catalog.productById(sh.s, cur.id) : null;
+      if (!product || product.status !== "published") return { product: null };
+      const seen = new Set();
+      const images = [product.image_url, ...product.gallery].filter((u) => typeof u === "string" && u && !seen.has(u) && seen.add(u));
+      return { images, name: product.name, onSale: product.onSale, inStock: product.inStock };
+    },
+  },
+  {
+    type: "shopreviews", label: "Avis clients du produit", group: "commerce", icon: "star", version: 1, style: "box", status: "operational", dependencies: DEP,
+    description: "Note moyenne et derniers avis publiés du produit de la page (acheteurs vérifiés, jamais d'avis d'exemple)",
+    keywords: "avis clients notes etoiles evaluations produit boutique reviews rating",
+    schema: [
+      { key: "title", kind: "text", label: "Titre", max: 80, default: "Avis clients" },
+      { key: "count", kind: "number", label: "Nombre d'avis affichés", min: 1, max: 20, integer: true, default: 5 },
+      bool("showSummary", "Afficher la note moyenne", true),
+      { key: "empty", kind: "text", label: "Message s'il n'y a aucun avis", max: 200, default: "Aucun avis pour le moment. Seuls les clients ayant acheté ce produit peuvent en laisser un." },
+    ],
+    data(ctx, p, env) {
+      if (env.page && env.page.demoShop === true) return { demo: true, count: 0, average: null, items: [] };
+      const r = env.scope && env.scope.reviews;
+      if (!r) return { count: 0, average: null, items: [] };
+      return { count: r.count || 0, average: r.average, items: (r.items || []).slice(0, p.count).map((x) => ({ rating: x.rating, title: x.title, body: x.body, author: x.author_name, date: String(x.created_at || "").slice(0, 10) })) };
+    },
+  },
+  {
+    type: "shopspecs", label: "Caractéristiques du produit", group: "commerce", icon: "list", version: 1, style: "box", status: "operational", dependencies: DEP,
+    description: "Données réelles du produit : référence, catégories, poids, dimensions, disponibilité, options",
+    keywords: "caracteristiques specifications fiche technique sku dimensions poids attributs produit boutique specs",
+    schema: [
+      { key: "title", kind: "text", label: "Titre", max: 80, default: "Caractéristiques" },
+      bool("showSku", "Référence (SKU)", true), bool("showCategories", "Catégories", true), bool("showTags", "Étiquettes", false), bool("showWeight", "Poids", true), bool("showDimensions", "Dimensions", true),
+      bool("showStock", "Disponibilité", true), bool("showAttributes", "Options des variantes (tailles, couleurs…)", true),
+    ],
+    data(ctx, p, env) {
+      if (env.page && env.page.demoShop === true) return { demo: true, rows: [["Référence", "REF-EXEMPLE"], ["Catégories", "Catégorie"], ["Disponibilité", "En stock"]] };
+      const sh = shopOf(ctx, env);
+      if (sh.closed) return { closed: sh.closed };
+      const cur = env.scope && env.scope.product;
+      const pr = cur && cur.id ? catalog.productById(sh.s, cur.id) : null;
+      if (!pr || pr.status !== "published") return { product: null };
+      const rows = [];
+      if (p.showSku && pr.sku) rows.push(["Référence", pr.sku]);
+      if (p.showCategories && pr.categories.length) rows.push(["Catégories", pr.categories.map((c) => c.name).join(", ")]);
+      if (p.showTags && pr.tags.length) rows.push(["Étiquettes", pr.tags.join(", ")]);
+      if (p.showWeight && pr.weight_grams) rows.push(["Poids", pr.weight_grams >= 1000 ? `${String(+(pr.weight_grams / 1000).toFixed(2)).replace(".", ",")} kg` : `${pr.weight_grams} g`]);
+      if (p.showDimensions && pr.length_mm && pr.width_mm && pr.height_mm) rows.push(["Dimensions", `${+(pr.length_mm / 10).toFixed(1)} × ${+(pr.width_mm / 10).toFixed(1)} × ${+(pr.height_mm / 10).toFixed(1)} cm`.replaceAll(".", ",")]);
+      if (p.showAttributes && pr.isVariable) {
+        const by = new Map();
+        for (const v of pr.variants) for (const [k, val] of Object.entries(v.options || {})) { if (!by.has(k)) by.set(k, new Set()); by.get(k).add(val); }
+        for (const [k, set] of by) rows.push([k, [...set].join(", ")]);
+      }
+      if (p.showStock) rows.push(["Disponibilité", pr.inStock ? "En stock" : "Rupture de stock"]);
+      return { rows };
     },
   },
 ];
