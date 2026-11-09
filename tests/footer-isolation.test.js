@@ -3,16 +3,19 @@
 // → boutons / champs / rayons / espacements → 4 thèmes (maille, noir, sape, volt) → rechargement et republication. Un pied « solo » ne doit changer d'AUCUNE propriété visible (390 et 1280 px),
 // ne doit pas déformer l'en-tête ni le contenu, et garder sa largeur. Le mode « legacy » reste le comportement historique ; le mode « site » suit la charte.
 // FOOTER_ISO_ALL=1 : les 100 modèles (états réduits) au lieu d'un modèle par famille.
+// FOOTER_ISO_V2=1 : les modèles de la NOUVELLE bibliothèque (ids ft2-…, mode d'essai FOOTER_V2_APERCU activé aussi pour le serveur) au lieu de la bibliothèque actuelle ; les témoins « legacy » et « site » sont passés.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
 const Chrome = require("./helpers-chrome-cdp");
 const H = require("./helpers-footer-isolation");
+if (process.env.FOOTER_ISO_V2 === "1") process.env.FOOTER_V2_APERCU = "1"; // avant de charger le catalogue (et hérité par le serveur de test)
 const Catalog = require("../src/themeBuilder/catalog");
 
 const ALL = process.env.FOOTER_ISO_ALL === "1";
-const entries = Catalog.entries("footer");
+const ISO_V2 = process.env.FOOTER_ISO_V2 === "1";
+const entries = Catalog.entries("footer").filter((e) => !ISO_V2 || e.v2);
 const ONE_PER_FAMILY = [...new Map(entries.map((m) => [m.layoutKey, m.key])).values()];
 const KEYS = (ALL ? entries.map((m) => m.key) : ONE_PER_FAMILY).slice(0, Number(process.env.FOOTER_ISO_N) || 1000);
 const LEGACY_KEYS = ONE_PER_FAMILY.slice(0, 6);
@@ -86,7 +89,7 @@ describe("Pied indépendant (frontière de pied) : scénario en 10 étapes", { s
     assert.ok(stats.comparisons >= KEYS.length * (STATE_LIST.length * WIDTHS.length), "comparaisons effectivement faites");
   });
 
-  test("témoin : le MÊME relevé détecte les déformations d'un pied « legacy » (le test est sensible) et le comportement historique est conservé", { skip: ALL }, async () => {
+  test("témoin : le MÊME relevé détecte les déformations d'un pied « legacy » (le test est sensible) et le comportement historique est conservé", { skip: ALL || ISO_V2 }, async () => {
     await resetTokens();
     let changed = 0;
     for (const key of LEGACY_KEYS) {
@@ -107,7 +110,7 @@ describe("Pied indépendant (frontière de pied) : scénario en 10 étapes", { s
     assert.ok(changed > 100, `un pied legacy est toujours déformé par le site (comportement historique conservé) : ${changed} propriétés`);
   });
 
-  test("site : le pied suit la charte du site (polices, échelle de texte, thèmes le modifient) tout en étant posé après </main>", { skip: ALL }, async () => {
+  test("site : le pied suit la charte du site (polices, échelle de texte, thèmes le modifient) tout en étant posé après </main>", { skip: ALL || ISO_V2 }, async () => {
     await resetTokens();
     const key = ONE_PER_FAMILY[0];
     const tpl = await A.footer(key, "site");

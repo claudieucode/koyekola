@@ -149,7 +149,8 @@ function rootVars(section) {
 }
 const rootStyle = (section) => Object.entries(rootVars(section)).map(([k, v]) => `${k}:${v}`).join(";");
 // Polices : les @font-face des familles du pied sont fournis avec la page (la feuille des polices lit du CSS ; on lui donne les variables)
-const fontCss = (section) => `:root{${rootStyle(section)}}`;
+// (les familles déclarées par les jetons --ft-font / --ft-font-head sont citées en `font-family:` pour que leurs @font-face soient livrés même si seul un widget partagé les utilise)
+const fontCss = (section) => { const v = rootVars(section); return `:root{${rootStyle(section)}}${["--ft-font", "--ft-font-head"].filter((k) => v[k]).map((k) => `.ft{font-family:${v[k]}}`).join("")}`; };
 // Attributs de la racine <footer> pour une section : { mode, attrs }
 function rootInfo(section) {
   const mode = modeOf(section);

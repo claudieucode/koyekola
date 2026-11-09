@@ -12,6 +12,8 @@ const { wrap } = require("./footer/moteur");
 const Kit = require("./footer/kit-conception");
 const Aliases = require("./footer-aliases");
 const { IDENT, IDENT2 } = require("./identities");
+const V2 = require("./footer/v2");
+const AliasV2 = require("./footer/v2/aliases-v2");
 
 // VERSION de composition d'un modèle (entier >= 1, 1 par défaut quand le modèle n'en déclare pas) et date d'ajout (AAAA-MM-JJ). Voir docs/footer-builder/FOOTER_BIBLIOTHEQUE_INTERFACE.md.
 const VERSION_DEFAUT = 1;
@@ -80,4 +82,36 @@ function assemble({ familles = FAMILLES_CLES.map(charger), legacy = ancien, alia
     familles: [...parCle.values()].map((f) => familleDe(f.key)), nouveaux: nouveaux.length, anciensListes: listes.length };
 }
 
-module.exports = { ...assemble(), assemble, VERSION_DEFAUT, AJOUT_DEFAUT, FAMILLES_CLES, CIBLE, familleAncien };
+// ── Bibliothèque v2 (docs/footer-v2/) : RÈGLE DE TRANSITION SÛRE ───────────────────────────────────────────────────────────────────────────────────────────────────────
+//  · tant que les 14 familles v2 ne sont pas TOUTES construites (100 modèles) : la liste reste EXACTEMENT celle d'aujourd'hui (aucun modèle v2 listé) ;
+//  · dès qu'elles le sont : la liste ne contient QUE les 100 modèles v2 ; les 100 modèles actuels (et, au-delà, les anciens identifiants) restent OUVRABLES (masqués) et leurs alias peuvent pointer vers la v2 (footer/v2/aliases-v2.js) ;
+//  · jamais de mélange, jamais de liste vide. Exception de TEST seulement : FOOTER_V2_APERCU=1 AJOUTE les modèles v2 déjà écrits à la liste actuelle pour pouvoir les voir et les essayer dans la bibliothèque (jamais en production).
+// integrerV2(base, v2, { apercu, aliasV2 }) : pure et testable (les tests simulent 14 familles construites).
+function integrerV2(base, v2 = V2, { apercu = false, aliasV2 = AliasV2 } = {}) {
+  if (v2.toutesConstruites) {
+    const actuelsId = base.layouts.filter((l) => !l.legacy).map((l) => l.fullKey);
+    const alias = { ...base.aliases }; for (const id of actuelsId) if (!Object.hasOwn(alias, id)) alias[id] = id; // un modèle actuel masqué reste ouvrable par son identifiant
+    for (const [ancien, cible] of Object.entries(aliasV2)) {
+      if (!v2.nouveaux.some((n) => n.fullKey === cible)) throw new Error(`Pied v2 : l'alias « ${ancien} » vise « ${cible} », qui n'existe pas.`);
+      alias[ancien] = cible;
+    }
+    // un ancien identifiant (déjà aliasé vers un modèle actuel) suit la chaîne jusqu'à la v2 si le modèle actuel est lui-même redirigé
+    const resolveAlias = (cle) => {
+      if (!Object.hasOwn(alias, cle)) return null;
+      let cur = cle;
+      for (let i = 0; i < 10 && Object.hasOwn(alias, cur) && alias[cur] !== cur; i++) cur = alias[cur];
+      return cur;
+    };
+    const familles = v2.familles, utiles = new Set(v2.nouveaux.map((n) => n.family));
+    return { ...base, layouts: v2.nouveaux, hiddenLayouts: [...base.layouts, ...base.hiddenLayouts], families: familles.filter((f) => utiles.has(f.key)), hiddenFamilies: [...base.familles, ...base.hiddenFamilies.filter((f) => !base.familles.some((g) => g.key === f.key))],
+      familles, skins: [...base.skins, ...v2.skins], aliases: alias, resolveAlias, nouveaux: v2.nouveaux.length, anciensListes: 0, v2: { mode: "v2", total: v2.nouveaux.length } };
+  }
+  if (apercu && v2.nouveaux.length) {
+    const avec = new Set(v2.nouveaux.map((n) => n.family)), liste = v2.familles.filter((f) => avec.has(f.key));
+    return { ...base, layouts: [...base.layouts, ...v2.nouveaux], families: [...base.families, ...liste], hiddenFamilies: [...base.hiddenFamilies, ...v2.familles.filter((f) => !avec.has(f.key))],
+      familles: [...base.familles, ...liste], skins: [...base.skins, ...v2.skins], nouveaux: base.nouveaux + v2.nouveaux.length, v2: { mode: "apercu", total: v2.nouveaux.length } };
+  }
+  return { ...base, v2: { mode: "actuel", total: 0 } };
+}
+
+module.exports = { ...integrerV2(assemble(), V2, { apercu: process.env.FOOTER_V2_APERCU === "1" }), assemble, integrerV2, VERSION_DEFAUT, AJOUT_DEFAUT, FAMILLES_CLES, CIBLE, familleAncien };

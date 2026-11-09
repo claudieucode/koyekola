@@ -25,7 +25,7 @@ function flatEntries(type, d, layouts) {
   const fam = new Map(d.families.concat(d.hiddenFamilies || []).map((f) => [f.key, f]));
   return layouts.map((l) => {
     const s = identities(d).find((x) => x.key === l.skin), f = fam.get(l.family);
-    return { key: l.fullKey || `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key], build: l.build, ...(l.legacy ? { legacy: true } : {}), ...(l.ftMode === "solo" ? { ftMode: "solo" } : {}), ...(l.version !== undefined ? { version: l.version, addedAt: l.addedAt ?? null } : {}) };
+    return { key: l.fullKey || `${l.key}.${l.keySkin || s.key}`, type, layoutKey: f.key, layoutId: l.key, skinKey: s.key, name: l.label, layoutLabel: f.label, skinLabel: s.label, desc: l.desc, tags: [...l.tags, s.key], build: l.build, ...(l.legacy ? { legacy: true } : {}), ...(l.ftMode === "solo" ? { ftMode: "solo", ...(l.ftVars ? { ftVars: l.ftVars } : {}) } : {}), ...(l.v2 ? { v2: true } : {}), ...(l.racine ? { racine: l.racine } : {}), ...(l.version !== undefined ? { version: l.version, addedAt: l.addedAt ?? null } : {}) };
   });
 }
 const META = new Map();
@@ -129,7 +129,8 @@ function build(type, key, env = {}) {
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   // Frontière de pied : un modèle de la NOUVELLE bibliothèque se déclare indépendant (ftMode: "solo") et s'insère ainsi ; les modèles actuels ne déclarent rien = ancien comportement
-  if (type === "footer" && out.section && meta.ftMode === "solo") out.section.ftMode = "solo";
+  // Un modèle v2 déclare aussi ses jetons --ft-* (palette, polices, rayons) : ils sont posés sur la racine du pied pour les widgets partagés (jamais ceux du site)
+  if (type === "footer" && out.section && meta.ftMode === "solo") { out.section.ftMode = "solo"; if (meta.ftVars) out.section.ftVars = { ...meta.ftVars }; if (meta.racine) out.section.styles = JSON.parse(JSON.stringify(meta.racine)); }
   if (CACHE.size > 300) CACHE.clear();
   CACHE.set(ck, out);
   return out;

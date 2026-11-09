@@ -1772,6 +1772,9 @@ html.kw-noscroll { overflow: hidden; }
 
 /* Abonnement par e-mail : champ e-mail + bouton (les champs viennent du formulaire d'inscription réel) */
 .kw-emailsub-intro { margin: 0 0 8px; }
+/* Piège à robots du formulaire d'abonnement : hors écran (la règle existait seulement pour .lp-signup et .kw-signup : le champ « Ne pas remplir » apparaissait dans les pieds de page) */
+.kw-emailsub-form .req-mark { color: var(--ft-req, #b42318); } /* astérisque « obligatoire » : lisible sur le fond du pied (jeton --ft-req du modèle ; rouge d'origine sinon) */
+.kw-emailsub-form .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .kw-emailsub-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .kw-emailsub-form .field-group { flex: 1 1 200px; margin: 0; } .kw-emailsub-form .checkbox-row { flex: 1 1 100%; font-size: .85em; }
 .kw-emailsub-submit { flex: none; }
