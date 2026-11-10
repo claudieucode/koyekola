@@ -103,12 +103,12 @@ describe("Archives : 100 modèles distincts, indépendants du site, structurés 
     }
     assert.equal(pal.size, 100, "100 palettes différentes");
   });
-  test("modes d'identité : « site » remplace les valeurs fixes par les jetons du site, « hybride » garde l'identité et affiche le nom réel du site, « propre » est le mode par défaut", () => {
+  test("modes d'identité : « site » remplace les valeurs fixes par les jetons du site, « hybride » garde les fonds et textes du modèle et prend la couleur de marque du site, « propre » est le mode par défaut", () => {
     for (const e of all) {
       assert.equal(JSON.stringify(docOf(e.key)), JSON.stringify(docOf(e.key, "own")), `${e.key} : propre = défaut`);
       const site = JSON.stringify(docOf(e.key, "site")); assert.match(site, /token:background/, `${e.key} : mode site`);
       const s = Archive.skins.find((x) => x.key === e.skinKey); assert.ok(!site.includes(`"backgroundColor":"${s.bg}"`), `${e.key} : fond fixe remplacé`);
-      const hy = JSON.stringify(docOf(e.key, "hybrid")); assert.match(hy, /sitetitle/, `${e.key} : nom du site`); assert.doesNotMatch(hy, /token:/, `${e.key} : hybride = identité propre`);
+      const hy = JSON.stringify(docOf(e.key, "hybrid")); assert.match(hy, /token:primary/, `${e.key} : couleur de marque du site`); assert.doesNotMatch(hy, /token:background/, `${e.key} : hybride = fonds du modèle`);
     }
     assert.equal(Catalog.build("archive", all[0].key, { identity: "invalide" }).name, all[0].name, "mode inconnu = propre");
   });

@@ -1,4 +1,4 @@
-// Identité graphique d'un modèle Fiche produit : changer de mode (indépendante / héritée du site / hybride) sans détruire les personnalisations.
+// Identité graphique d'un modèle Fiche produit ou Archive : changer de mode (indépendante / héritée du site / hybride) sans détruire les personnalisations.
 // Le modèle d'origine est reconstruit dans l'ancien et le nouveau mode ; seules les valeurs que l'utilisateur n'a PAS modifiées sont converties (voir catalog/identityModes.js).
 // L'état avant conversion est conservé dans l'historique de la page : l'opération s'annule en restaurant ce point. Rien n'est publié : la conversion agit sur le brouillon.
 const { MarketingError } = require("../marketing/errors");
@@ -9,14 +9,14 @@ const Modes = require("./catalog/identityModes");
 const { siteFormId } = require("./catalog/use");
 
 const P = () => require("../marketing/pages");
-const TYPES = ["single_product", "single_page"];
+const TYPES = ["single_product", "single_page", "archive"];
 const bad = (m, code = "invalid_field") => new MarketingError(code, m);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
 function switchMode(ctx, siteId, templateId, mode) {
   if (!Modes.MODES.includes(mode)) throw bad("Mode d'identité inconnu.");
   const t = store.get(ctx, siteId, templateId);
-  if (!TYPES.includes(t.type) || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit » et « Page individuelle » installés depuis la bibliothèque.");
+  if (!TYPES.includes(t.type) || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit » et « Page individuelle » et « Archive » installés depuis la bibliothèque.");
   if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le modifier.", "conflict");
   const row = ctx.db.prepare("SELECT origin_key, identity_mode FROM mk_tb_templates WHERE id = ? AND organization_id = ? AND site_id IS ?").get(t.id, ctx.organizationId, siteId);
   if (!row || !row.origin_key) throw bad("Ce modèle n'a pas été installé depuis la bibliothèque : son identité d'origine n'est pas connue.");

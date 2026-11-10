@@ -19,7 +19,7 @@ function entries() {
       desc: `${c.usage[0].toUpperCase()}${c.usage.slice(1)} — ${c.part}.`,
       tags: [c.fam.toLowerCase(), c.comp, `${c.cols} col.`, c.barre === "0" ? "sans barre latérale" : c.barre === "G" ? "barre à gauche" : c.barre === "D" ? "barre à droite" : "filtres en haut", c.tete, SKINS[c.n - 1].mood === "dark" ? "sombre" : "clair"],
       concept: c.n,
-      build: (k, env = {}) => build(Object.assign(k, { hybrid: env.identity === "hybrid" })),
+      build: (k) => build(k),
     };
   });
 }

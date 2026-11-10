@@ -41,7 +41,7 @@ check("mode propre : 0 police hors bibliothèque", fonts === 0, String(fonts));
 check("contrastes AA sur les 100 identités", bad === 0, String(bad));
 check("100 palettes différentes", new Set(Archive.skins.map((s) => [s.bg, s.fg, s.accent].join())).size === 100);
 check("mode « site » : jetons du site présents sur 100/100", all.every((e) => /token:background/.test(JSON.stringify(doc(e.key, "site")))));
-check("mode « hybride » : nom du site sur 100/100 et 0 jeton", all.every((e) => { const j = JSON.stringify(doc(e.key, "hybrid")); return /sitetitle/.test(j) && !/token:/.test(j); }));
+check("mode « hybride » : couleur de marque du site (token:primary) sur 100/100, fonds fixes", all.every((e) => { const j = JSON.stringify(doc(e.key, "hybrid")); return /token:primary/.test(j) && !/token:background/.test(j); }));
 
 let failed = 0;
 for (const c of checks) { if (!c.ok) failed += 1; console.log(`${c.ok ? "OK  " : "ÉCHEC"}  ${c.label}${c.detail ? ` : ${c.detail}` : ""}`); }

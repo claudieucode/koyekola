@@ -26,7 +26,7 @@ function useTemplate(ctx, siteId, type, key, { name, conditions, identity } = {}
     if (doc.kind === "component") created = P().createComponent(ctx, { name: store.docName(ctx, siteId, "component", label), section: JSON.parse(JSON.stringify(doc.section)), siteId, kind: "standard" });
     else created = P().createPage(ctx, { name: store.docName(ctx, siteId, "page", label), siteId, kind: "page", sections: JSON.parse(JSON.stringify(doc.sections)) });
     const tpl = store.create(ctx, siteId, { type, name: label, conditions: conditions || {}, sourceKind: doc.kind, sourceId: created.id });
-    if (type === "single_product" || type === "single_page") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, identity_mode = ? WHERE id = ? AND organization_id = ?").run(meta.key, mode, tpl.id, ctx.organizationId); // modèle d'origine + mode d'identité (conversion ultérieure sans perte)
+    if (["single_product", "single_page", "archive"].includes(type)) ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, identity_mode = ? WHERE id = ? AND organization_id = ?").run(meta.key, mode, tpl.id, ctx.organizationId); // modèle d'origine + mode d'identité (conversion ultérieure sans perte)
     if (type === "footer") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, origin_version = ? WHERE id = ? AND organization_id = ?").run(meta.key, Number.isInteger(meta.version) ? meta.version : null, tpl.id, ctx.organizationId); // mémoire du modèle d'origine ET de sa version de composition (« Revenir au modèle d'origine »)
     return tpl;
   });
