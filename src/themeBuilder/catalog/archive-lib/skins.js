@@ -35,12 +35,16 @@ const SHAPES = [
 
 function skinOf(c) {
   const [headName, bodyName] = c.fonts.split(" + ");
-  const dark = lum(c.bg) < 0.25, accent = safeAccent(c.acc, c.bg, c.ink);
-  const shape = SHAPES[(c.n * 3 + c.fam.length) % SHAPES.length];
+  const t = c.t || {}, dark = lum(c.bg) < 0.25, accent = safeAccent(c.acc, c.bg, c.ink);
+  // « Second » de la maison = fond des cartes si le texte y reste lisible (AA), sinon fond calculé
+  const alt = c.second && ratio(c.ink, c.second) >= 4.5 ? c.second : (dark ? mix(c.bg, "#ffffff", 0.08) : mix(c.bg, c.ink, 0.06));
+  const sharp = t.rad === "0px";
+  const shape = { radius: t.rad || "8px", btnRadius: sharp ? "0px" : t.rad === "28px" || t.rad === "24px" ? "999px" : t.rad || "8px", shadow: t.card === "ombre" ? "md" : "none", weight: "700", caps: "none", track: "0px",
+    bw: t.card === "cadre" || t.card === "plat" ? "1px" : "0px", pad: t.card === "plat" ? "14px" : "18px", gap: t.head === "typo" || t.head === "marge" ? "36px" : t.card === "aplat" || t.card === "ombre" ? "24px" : "28px", btn: t.card === "cadre" || sharp ? "outline" : "solid", rule: t.card === "plat" ? "single" : "none" };
   return {
     key: c.key, label: c.nom, mood: dark ? "dark" : "light",
     bg: c.bg, fg: c.ink, accent, onAccent: readable(accent),
-    mute: safeMute(c.ink, c.bg, dark ? mix(c.bg, "#ffffff", 0.08) : mix(c.bg, c.ink, 0.06), dark), alt: dark ? mix(c.bg, "#ffffff", 0.08) : mix(c.bg, c.ink, 0.06), line: mix(c.bg, c.ink, dark ? 0.28 : 0.2),
+    mute: safeMute(c.ink, c.bg, alt, dark), alt, line: mix(c.bg, c.ink, dark ? 0.28 : 0.2),
     ink: c.ink, onInk: c.bg,
     font: fontId(bodyName), head: fontId(headName),
     ...shape,

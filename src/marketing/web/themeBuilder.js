@@ -222,7 +222,7 @@ module.exports = () => {
       TB.store.site(req.mk.ctx, sid(req)); libType(req.mk.ctx, sid(req), req.params.type);
       const doc = Catalog.build(req.params.type, req.params.key, { formId: siteFormId(req.mk.ctx, sid(req)), identity: String(req.query.identite || "") });
       if (!doc) return res.status(404).type("text").send("Modèle introuvable.");
-      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb, sampleMenu: true, withTheme: String(req.query.theme || "") === "1" }, (html) => {
+      require("./themeRender").previewDoc(req, res, { siteId: sid(req), type: req.params.type, doc, thumb, sampleMenu: true, withTheme: String(req.query.theme || "") === "1", demoKey: req.params.key }, (html) => {
         if (html === null) return res.status(500).type("text").send("Aperçu indisponible.");
         res.set({ "Cache-Control": thumb ? "private, max-age=120" : "no-store", "X-Content-Type-Options": "nosniff" }).type("html").send(html);
       });

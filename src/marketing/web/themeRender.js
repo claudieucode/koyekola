@@ -79,7 +79,7 @@ const siteIdOf = (req, siteId) => (siteId !== undefined ? siteId : req.kwSite &&
 
 // done(html | null)
 // type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
-function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, query = {}, siteId } = {}, done) {
+function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, date = "", query = {}, siteId } = {}, done) {
   let finished = false;
   const end = (html) => { if (!finished) { finished = true; done(html); } };
   try {
@@ -87,7 +87,7 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     if (!marketing || !marketing.ready) return end(null);
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const opts = { category, categories, tag, tags, postId, authorId };
+    const opts = { category, categories, tag, tags, postId, authorId, date };
     // Theme Builder (23.1) : modèles du site de la requête, toutes familles. Le contexte de la page est mémorisé pour l'en-tête et le pied de page (themeLayout)
     const tbSite = siteIdOf(req, siteId);
     const TB = require("../../themeBuilder/render");
@@ -209,7 +209,7 @@ const SAMPLE_NOTE = 'nav[data-kw-sample]::after{content:"(menu d\'exemple)";disp
 const FSMENU_CLOSED = ".kw-ms-fm .kw-ms-fm-panel{display:none}.kw-ms-fm .kw-ms-fm-toggle[hidden]{display:inline-flex}";
 // done(html | null). doc : résultat de catalog.build()
 // thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
-function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false, withTheme = false }, done) {
+function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false, withTheme = false, demoKey = "" }, done) {
   try {
     const marketing = req.app.locals.marketing, db = require("../../config/database");
     if (!marketing || !marketing.ready) return done(null);
@@ -228,7 +228,7 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     const isoFoot = type === "footer" && Boolean(section) && !withTheme;
     const themedSite = type === "footer" && withTheme ? siteOf(ctx, { site_id: siteId }) : null, themedPack = themedSite && themedSite.assets && themedSite.assets.pack && themedSite.assets.pack.link ? themedSite.assets.pack : null; /* « voir avec mon thème » : la feuille du thème actif aussi */
     if (type === "footer" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "partfoot", sitePart: "footer", ...(isoFoot ? { ftMode: "solo" } : {}) } : x));
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: demoScope(catalogScope(db, ctx, type)), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}), ...(type === "archive" ? { demoPosts: true } : {}) } : {}) });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: demoScope(catalogScope(db, ctx, type)), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}), ...(type === "archive" ? { demoPosts: ((c) => (c ? c.maison : true))(require("../../themeBuilder/catalog/archive-lib/concepts").find((c) => c.key === demoKey)) } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, isoFoot ? null : siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);

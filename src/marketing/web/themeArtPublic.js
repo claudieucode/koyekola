@@ -13,7 +13,9 @@ module.exports = () => {
     const id = `${req.params.key}/${req.params.slot}`;
     let out = memo.get(id);
     if (!out) {
-      const r = KEY.test(req.params.key) ? (library.artFor(req.params.key, req.params.slot) || packArtFor(req.params.key, req.params.slot)) : null;
+      // Aperçus de la bibliothèque Archive : illustrations d'exemple générées aux couleurs de la maison du modèle (jamais utilisées par un site publié)
+      const demo = /^apercu-(m\d{2})$/.exec(req.params.key), demoN = /-(\d{1,2})$/.exec(req.params.slot);
+      const r = demo ? ((svg) => (svg ? { svg } : null))(require("../../themeBuilder/catalog/archive-lib/demoArt").svgFor(demo[1], demoN ? Number(demoN[1]) : 1)) : KEY.test(req.params.key) ? (library.artFor(req.params.key, req.params.slot) || packArtFor(req.params.key, req.params.slot)) : null;
       if (!r) return res.status(404).type("text/plain").send("Introuvable");
       out = { svg: r.svg, etag: `"${crypto.createHash("sha1").update(r.svg).digest("hex").slice(0, 20)}"` };
       if (memo.size > 3000) memo.clear();

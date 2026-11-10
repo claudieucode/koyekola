@@ -282,17 +282,17 @@ const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instr
 const TRI = { recent: ["date", "desc"], ancien: ["date", "asc"], alpha: ["title", "asc"], "alpha-inverse": ["title", "desc"], "prix-croissant": ["price", "asc"], "prix-decroissant": ["price", "desc"] };
 // Aperçu de la BIBLIOTHÈQUE uniquement (page.demoPosts posé par themeRender.previewDoc) : articles d'EXEMPLE, annoncés comme tels. Jamais sur un site publié.
 const DEMO_CATS = ["Actualités", "Conseils", "Dossiers", "Coulisses"];
-// Pas d'image d'exemple : le projet ne sert aucun visuel libre de droits pour l'aperçu ; un article sans image n'en montre pas.
-function demoPostsResult(loop) {
+// Images d'exemple : illustrations abstraites générées aux couleurs de la maison du modèle (themeArtPublic) ; sans maison connue, un article sans image n'en montre pas.
+function demoPostsResult(loop, maison) {
   const all = Array.from({ length: 12 }, (_, i) => ({ id: null, authorId: null, title: `Titre de l'article d'exemple ${i + 1}`, url: "/blog", slug: `exemple-${i + 1}`, excerpt: "Le résumé de l'article s'affichera ici : quelques lignes pour donner envie de lire la suite.",
-    image: "", imageAlt: "", date: Date.now() - i * 3 * 86400000, modified: Date.now() - i * 86400000, category: DEMO_CATS[i % DEMO_CATS.length], categoryUrl: "/blog", tags: ["exemple"],
+    image: maison ? `/themes-art/apercu-${String(maison).toLowerCase()}/card-${(i % 12) + 1}.svg` : "", imageAlt: "", date: Date.now() - i * 3 * 86400000, modified: Date.now() - i * 86400000, category: DEMO_CATS[i % DEMO_CATS.length], categoryUrl: "/blog", tags: ["exemple"],
     author: "Auteur", authorView: null, minutes: 3 + (i % 6), views: 900 - i * 37, commentsCount: i % 5, commentsOpen: true }));
   if (loop.orderby === "views") all.sort((a, b) => b.views - a.views);
   const off = Math.max(0, Number(loop.offset) || 0), n = Math.max(1, Math.min(Number(loop.count) || 6, 48));
   return { items: all.slice(off, off + n), total: all.length, pageNo: 1, pages: 1 };
 }
 function loopQuery(ctx, loop, id, visitor, scope, page) {
-  if (page && page.demoPosts === true && loop.source === "posts") return demoPostsResult(loop);
+  if (page && page.demoPosts && loop.source === "posts") return demoPostsResult(loop, typeof page.demoPosts === "string" ? page.demoPosts : "");
   const q = (visitor && visitor.query) || {};
   const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
   // Aperçu de la bibliothèque (jamais le site publié) : résultats de démonstration clairement fictifs

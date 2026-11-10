@@ -19,7 +19,8 @@ function entries() {
       desc: `${c.usage[0].toUpperCase()}${c.usage.slice(1)} — ${c.part}.`,
       tags: [c.fam.toLowerCase(), c.comp, `${c.cols} col.`, c.barre === "0" ? "sans barre latérale" : c.barre === "G" ? "barre à gauche" : c.barre === "D" ? "barre à droite" : "filtres en haut", c.tete, SKINS[c.n - 1].mood === "dark" ? "sombre" : "clair"],
       concept: c.n,
-      build: (k) => build(k),
+      // Racine d'identité : chaque élément de premier niveau porte data-kw-own ; repère stable de la racine d'identité du modèle (mesures des tests navigateur)
+      build: (k) => build(k).map((n) => ({ ...n, attrs: [{ name: "data-kw-own", value: "1" }, ...(n.attrs || [])] })),
     };
   });
 }

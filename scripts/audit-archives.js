@@ -19,7 +19,8 @@ check("noms uniques", new Set(all.map((e) => e.name)).size === 100);
 check("25 familles de 4", new Set(all.map((e) => e.layoutKey)).size === 25);
 check("100 documents différents", new Set(all.map((e) => JSON.stringify(doc(e.key), (k, v) => (k === "id" ? undefined : v)))).size === 100);
 check("100 structures d'éléments différentes", new Set(all.map((e) => tree(doc(e.key).sections[0]))).size === 100);
-check("100 signatures de réglages différentes", new Set(concepts.map((c) => [c.comp, c.cols, c.img, c.barre, c.tete, c.nav, c.filtre].join("|"))).size === 100);
+check("100 signatures de réglages différentes (maison, composition, barre, navigation, filtre)", new Set(concepts.map((c) => [c.maison, c.comp, c.barre, c.nav, c.filtre].join("|"))).size === 100);
+check("25 maisons, 25 palettes, 4 compositions différentes par maison", new Set(concepts.map((c) => c.maison)).size === 25 && [...new Set(concepts.map((c) => c.maison))].every((m) => new Set(concepts.filter((c) => c.maison === m).map((c) => c.comp)).size === 4));
 const pairs1 = (() => { const ax = ["comp", "cols", "img", "barre", "tete", "nav", "filtre"]; let n = 0; for (let i = 0; i < concepts.length; i += 1) for (let j = i + 1; j < concepts.length; j += 1) if (ax.filter((a) => concepts[i][a] !== concepts[j][a]).length <= 1) n += 1; return n; })();
 check("paires de concepts ne différant que d'un réglage (information)", true, String(pairs1));
 const depth = (n) => 1 + Math.max(0, ...(n.children || []).map(depth)), count = (n) => 1 + (n.children || []).reduce((a, c) => a + count(c), 0);
@@ -39,7 +40,7 @@ for (const e of all) {
 check("mode propre : 0 modèle avec jeton du site", tokens === 0, String(tokens));
 check("mode propre : 0 police hors bibliothèque", fonts === 0, String(fonts));
 check("contrastes AA sur les 100 identités", bad === 0, String(bad));
-check("100 palettes différentes", new Set(Archive.skins.map((s) => [s.bg, s.fg, s.accent].join())).size === 100);
+check("25 palettes différentes (une par maison)", new Set(Archive.skins.map((s) => [s.bg, s.fg, s.accent].join())).size === 25);
 check("mode « site » : jetons du site présents sur 100/100", all.every((e) => /token:background/.test(JSON.stringify(doc(e.key, "site")))));
 check("mode « hybride » : couleur de marque du site (token:primary) sur 100/100, fonds fixes", all.every((e) => { const j = JSON.stringify(doc(e.key, "hybrid")); return /token:primary/.test(j) && !/token:background/.test(j); }));
 
