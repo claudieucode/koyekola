@@ -42,4 +42,6 @@ function convertNodes(cur, from, to) {
   }
   return n;
 }
-module.exports = { MODES, skinFor, siteSkin, hybridSkin, convertNodes };
+// Catalogues dont les modèles portent leur identité propre et proposent les trois modes
+const TYPES = new Set(["single_product", "single_page", "single_post"]);
+module.exports = { TYPES, MODES, skinFor, siteSkin, hybridSkin, convertNodes };

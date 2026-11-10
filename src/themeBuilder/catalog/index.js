@@ -4,7 +4,7 @@
 // · use()   — « Utiliser ce modèle » : crée la copie INDÉPENDANTE du site (composant ou page), puis le modèle du Theme Builder (brouillon). Modifier la copie ne change jamais le catalogue.
 const { SKINS, skinOf, kit, layout, withIds } = require("./kit");
 const Modes = require("./identityModes");
-const MODE_TYPES = new Set(["single_product", "single_page"]); // catalogues dont les modèles portent leur identité propre ET proposent les modes indépendant / hérité / hybride
+const MODE_TYPES = Modes.TYPES; // catalogues dont les modèles portent leur identité propre ET proposent les modes indépendant / hérité / hybride
 const Types = require("../types");
 
 const FILES = ["header", "footer", "single_page", "single_post", "archive", "search_results", "not_found", "single_product", "product_archive"];
@@ -128,7 +128,7 @@ function build(type, key, env = {}) {
   const d = def(type), S = Modes.skinFor(identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey), mode);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
   const children = withIds(buildFn(kit(S), env));
-  if (type === "single_post") { legibleLinks(children, null); require("./single_post/apply").apply(children, S); } // identité propre : voir single_post/apply.js
+  if (type === "single_post") { legibleLinks(children, null); const A = require("./single_post/apply"); A.apply(children, S); A.isolate(children, S); A.responsiveGrids(children); } // identité propre : voir single_post/apply.js
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
   if (CACHE.size > 300) CACHE.clear();

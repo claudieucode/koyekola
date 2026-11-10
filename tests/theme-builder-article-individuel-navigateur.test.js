@@ -18,13 +18,25 @@ const KEYS = Catalog.entries("single_post").map((e) => e.key).filter((k) => !onl
 const VIEWPORTS = [["desktop", 1440, 900], ["tablet", 820, 1100], ["mobile", 390, 800]];
 const BODY = "PARAGRAPHE-UN-ZQ ouvre l'article avec une première phrase assez longue pour vérifier la largeur de lecture et le retour à la ligne sur mobile.\n\n## Premier intertitre de l'article\n\nUn texte courant, avec un [lien interne](/blog) et du **texte en gras**.\n\n- Premier point de la liste\n- Deuxième point de la liste\n\n> Une citation mise en valeur dans le corps de l'article.\n\n### Un sous-titre\n\nDernier paragraphe, FIN-ARTICLE-ZQ."; // le contenu des articles est du Markdown
 
+// Image à la une de contrôle (dégradé, générée ici, ignorée par git) : sans elle, les modèles à grande image ne sont pas réellement contrôlés
+const COVER = (() => {
+  const zlib = require("zlib"), path = require("path"), W = 1200, H = 800, dir = path.join(__dirname, "..", "uploads", "thumbnails"), file = path.join(dir, "qa-cover.png");
+  const crcT = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k = 0; k < 8; k += 1) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; });
+  const crc = (b) => { let c = 0xffffffff; for (const x of b) c = crcT[(c ^ x) & 255] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
+  const chunk = (t, d) => { const l = Buffer.alloc(4); l.writeUInt32BE(d.length); const td = Buffer.concat([Buffer.from(t), d]), c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([l, td, c]); };
+  const raw = Buffer.alloc((W * 3 + 1) * H); for (let y = 0; y < H; y += 1) { raw[y * (W * 3 + 1)] = 0; for (let x = 0; x < W; x += 1) { const o = y * (W * 3 + 1) + 1 + x * 3; raw[o] = 60 + Math.round(150 * x / W); raw[o + 1] = 90 + Math.round(90 * y / H); raw[o + 2] = 160 - Math.round(70 * x / W); } }
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(W, 0); ihdr.writeUInt32BE(H, 4); ihdr[8] = 8; ihdr[9] = 2;
+  fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", zlib.deflateSync(raw)), chunk("IEND", Buffer.alloc(0))]));
+  return "/uploads/thumbnails/qa-cover.png";
+})();
+
 describe("Article individuel : rendu navigateur des 100 modèles (3 largeurs)", { skip: SKIP }, () => {
   let srv, boss, browser, db, site;
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "", ALLOW_INDEXING: "1" });
     boss = await loginInstructor(srv); db = srv.db();
     site = Number((await boss.post("/marketing/site-web/sites", { name: "Site Articles" })).location.match(/sites\/(\d+)/)[1]);
-    const id = Number(db.prepare("INSERT INTO posts (slug, title, content, excerpt, published, status, published_at) VALUES ('article-riche', 'TITRE-RICHE-ZQ : un titre d article un peu long pour tester les retours à la ligne', ?, 'Résumé de l article riche.', 1, 'published', datetime('now'))").run(BODY).lastInsertRowid);
+    const id = Number(db.prepare("INSERT INTO posts (slug, title, content, excerpt, cover_path, published, status, published_at) VALUES ('article-riche', 'TITRE-RICHE-ZQ : un titre d article un peu long pour tester les retours à la ligne', ?, 'Résumé de l article riche.', ?, 1, 'published', datetime('now'))").run(BODY, COVER).lastInsertRowid);
     const org = db.prepare("SELECT id FROM mk_organizations").get().id;
     db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id, address) VALUES ('post', ?, ?, ?, 'article-riche')").run(id, org, site);
     browser = await chromium.launch({ executablePath: CHROME, headless: true });
