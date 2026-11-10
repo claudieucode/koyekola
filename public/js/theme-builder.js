@@ -75,11 +75,11 @@
   const ordered = () => { const o = (t) => (t.key === "sidebar" ? 1 : t.key === "custom" ? 2 : 0); return [...data.types].sort((a, b) => o(a) - o(b)); };
   function drawTypes() {
     const ul = $("tb-types"); ul.textContent = "";
-    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); const dot0 = el("span", "tb-dot"); dot0.dataset.live = "0"; dot0.setAttribute("aria-hidden", "true"); b0.append(icon("all"), el("span", "tb-lbl", "Toutes les parties"), el("span", "tb-count", String(data.total)), dot0); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
+    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.dataset.k = "all"; b0.title = "Toutes les parties"; b0.setAttribute("aria-current", String(cur === "")); const dot0 = el("span", "tb-dot"); dot0.dataset.live = "0"; dot0.setAttribute("aria-hidden", "true"); b0.append(icon("all"), el("span", "tb-lbl", "Toutes les parties"), el("span", "tb-count", String(data.total)), dot0); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
     let g = "";
     for (const t of ordered()) {
       if (!g) { g = "x"; ul.append(el("li", "tb-grp", "Parties du site")); }
-      const li = el("li"), b = el("button"); b.type = "button"; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
+      const li = el("li"), b = el("button"); b.type = "button"; b.dataset.k = t.key; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
       const dot = el("span", "tb-dot"); dot.dataset.live = t.live ? "1" : "0"; dot.setAttribute("aria-hidden", "true");
       const cn = el("span", "tb-count", String(t.count)); if (!t.count) cn.dataset.z = "1"; b.title = t.label; b.append(icon(t.key), el("span", "tb-lbl", t.label), cn, dot);
       if (t.live) b.setAttribute("aria-label", `${t.label} : ${t.count} modèle(s), ${t.live} publié(s)`);
