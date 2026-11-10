@@ -36,6 +36,8 @@ function convertNodes(cur, from, to) {
     n += swapValues(c.styles, f.styles, t.styles);
     n += swapValues(c.parts, f.parts, t.parts);
     n += swapValues(c.props, f.props, t.props);
+    // CSS de portée de l'identité (variables --kw-* du modèle) : converti seulement s'il est encore celui d'origine
+    if ((typeof f.css === "string" || typeof t.css === "string") && c.css === f.css) { if (t.css === undefined) delete c.css; else c.css = t.css; n++; }
     if (Array.isArray(c.children) && Array.isArray(f.children) && Array.isArray(t.children)) n += convertNodes(c.children, f.children, t.children);
   }
   return n;

@@ -15,14 +15,21 @@ const ID = ([key, label, mood, bg, fg, mute, alt, accent, onAccent, line, font, 
 // Portée de l'identité : les variables --kw-* (celles que lisent TOUS les composants : icônes, minuteries, cartes, boutons…) sont redéfinies sur la racine de chaque section du modèle avec les valeurs FIXES de son identité.
 // Le site n'est donc jamais lu à l'intérieur du modèle. Pour le laisser suivre la charte du site, il suffit de retirer ce CSS de portée (réglage « CSS » de la racine) ; l'identité reste décrite dans le catalogue.
 const { stackOf } = require("../../../../utils/fontLibrary");
-const scopeCss = (S) => [
-  `--kw-primary:${S.accent}`, `--lp-accent:${S.accent}`, `--lp-on-accent:${S.onAccent}`, `--lp-text:${S.fg}`, `--lp-bg:${S.bg}`, `--lp-div:${S.line}`, `--kw-secondary:${S.fg}`, `--kw-accent:${S.accent}`, `--kw-background:${S.bg}`, `--kw-surface:${S.alt}`, `--kw-text:${S.fg}`, `--kw-muted:${S.mute}`,
-  "--kw-success:#15803d", "--kw-warning:#a16207", "--kw-error:#b91c1c", `--kw-on-primary:${S.onAccent}`, `--kw-on-accent:${S.onAccent}`,
-  `--kw-font-heading:${stackOf(S.head)}`, `--kw-font-body:${stackOf(S.font)}`, `--kw-font-button:${stackOf(S.font)}`, `--kw-font-link:${stackOf(S.font)}`,
-  `--kw-radius-button:${S.btnRadius}`, `--kw-radius-card:${S.radius}`, `--kw-radius-field:${S.btnRadius}`, `--kw-radius-md:${S.radius}`, `--kw-radius-lg:${S.radius}`,
-  `--kw-border:${S.bw === "0px" ? "0px" : S.bw} solid ${S.line}`,
-].join(";");
-const scoped = (k, node) => { node.css = scopeCss(k.S); return node; };
+const ACCENT_VARS = /^--(kw-primary|kw-accent|kw-on-primary|kw-on-accent|lp-accent|lp-on-accent):/;
+// Mode « indépendant » (par défaut) : toutes les variables ; « hérité » (couleurs en jetons du site) : aucune, le site s'applique ; « hybride » (accent en jeton) : tout sauf la couleur de marque
+const scopeCss = (S) => {
+  if (String(S.bg).startsWith("token:")) return "";
+  const decl = [
+    `--kw-primary:${S.accent}`, `--lp-accent:${S.accent}`, `--lp-on-accent:${S.onAccent}`, `--lp-text:${S.fg}`, `--lp-bg:${S.bg}`, `--lp-div:${S.line}`, `--kw-secondary:${S.fg}`, `--kw-accent:${S.accent}`, `--kw-background:${S.bg}`, `--kw-surface:${S.alt}`, `--kw-text:${S.fg}`, `--kw-muted:${S.mute}`,
+    "--kw-success:#15803d", "--kw-warning:#a16207", "--kw-error:#b91c1c", `--kw-on-primary:${S.onAccent}`, `--kw-on-accent:${S.onAccent}`,
+    `--kw-font-heading:${stackOf(S.head)}`, `--kw-font-body:${stackOf(S.font)}`, `--kw-font-button:${stackOf(S.font)}`, `--kw-font-link:${stackOf(S.font)}`,
+    `--kw-radius-button:${S.btnRadius}`, `--kw-radius-card:${S.radius}`, `--kw-radius-field:${S.btnRadius}`, `--kw-radius-md:${S.radius}`, `--kw-radius-lg:${S.radius}`,
+    `--kw-border:${S.bw === "0px" ? "0px" : S.bw} solid ${S.line}`,
+  ];
+  return (String(S.accent).startsWith("token:") ? decl.filter((d) => !ACCENT_VARS.test(d)) : decl).join(";");
+};
+// La portée d'identité est posée UNE fois, sur la racine du modèle (catalog.js) ; sect / band ne la répètent pas.
+const scoped = (k, node) => node;
 // Couleurs dérivées d'une direction artistique (fond, texte, accent) : texte discret, fond alterné, filet, texte sur accent ; l'accent est rapproché du texte jusqu'à rester visible sur le fond
 const hx = (n) => `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("")}`;
 const rgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
@@ -37,7 +44,7 @@ const ID2 = ([n, , m, label, bg0, fg0, ac0, head, font]) => {
   t = 0; while (ratio(fg, bg) < 7.2 && t < 1) { t += 0.05; bg = mix(bg0, dark ? "#000000" : "#ffffff", t); }
   let mute = mix(fg, bg, 0.28); t = 0.28; while (ratio(mute, bg) < 4.6 && t > 0) { t -= 0.04; mute = mix(fg, bg, Math.max(t, 0)); }
   const alt = mix(bg, fg, 0.07), line = mix(bg, fg, 0.18);
-  let accent = ac0; t = 0; while (ratio(accent, bg) < 3.2 && ratio(accent, alt) < 3.2 && t < 1) { t += 0.1; accent = mix(ac0, fg, t); }
+  let accent = ac0; t = 0; while (ratio(accent, bg) < 3.6 && ratio(accent, alt) < 3.6 && t < 1) { t += 0.1; accent = mix(ac0, fg, t); }
   const onAccent = ratio("#ffffff", accent) >= ratio("#111111", accent) ? "#ffffff" : "#111111";
   let acc2 = accent; t = 0; while (ratio(onAccent, acc2) < 4.6 && t < 1) { t += 0.1; acc2 = mix(accent, onAccent === "#ffffff" ? "#000000" : "#ffffff", t); }
   return ID([`c${n}`, label, MOOD[m], bg, fg, mute, alt, acc2, onAccent, line, font, head]);
@@ -58,12 +65,12 @@ const desc = (k, st = {}) => k.dyn("post.excerpt", { fontSize: "19px", color: k.
 const sect = (k, kids, max = "1100px", st = {}) => scoped(k, k.section(kids, { ...NARROW(max), fontFamily: k.S.font, ...st }));
 const band = (k, kids, st = {}) => scoped(k, k.band([k.inner(kids, { justifyContent: "center" })], { fontFamily: k.S.font, ...st }));
 const head = (k, t, sub) => [k.H(t, "2", { fontFamily: k.S.head }), ...(sub ? [k.T(p(sub), { color: k.S.mute })] : [])];
-const box = (k, icon, title, text) => W(k, "iconbox", { icon, title, text: p(text), titleLevel: "3", position: "top", size: "32" });
+const box = (k, icon, title, text) => W(k, "iconbox", { icon, title, text, titleLevel: "3", position: "top", size: "32" });
 const boxes = (k, n, rows) => k.grid(n, rows.map(([i, t, x]) => box(k, i, t, x)));
 const cards = (k, n, rows) => k.grid(n, rows.map(([i, t, x]) => k.card([box(k, i, t, x)])));
-const steps = (k, rows) => W(k, "timeline", { items: rows.map(([d, t, x]) => ({ date: d, title: t, text: p(x) })) });
+const steps = (k, rows) => W(k, "timeline", { items: rows.map(([d, t, x]) => ({ date: d, title: t, text: x })) });
 const faq = (k, n = 4) => W(k, "accordion", { items: Array.from({ length: n }, (_, i) => ({ q: `[Question ${i + 1} : écrivez-la comme votre public la formule]`, a: "[Rédigez la réponse : elle doit venir de vous, avec vos propres mots.]" })) });
-const tabs = (k, titles) => W(k, "tabs", { items: titles.map((t) => ({ title: t, text: p("[Décrivez ce point en deux ou trois phrases.]") })) });
+const tabs = (k, titles) => W(k, "tabs", { items: titles.map((t) => ({ title: t, text: "[Décrivez ce point en deux ou trois phrases.]" })) });
 const person = (k, role) => W(k, "profilecard", { name: "[Nom et prénom]", role, bio: "[Deux phrases de présentation, rédigées avec la personne.]", align: "center" });
 const plan = (k, name, hl) => W(k, "pricing", { title: name, price: "[Prix à renseigner]", period: "[période]", description: "[À qui s'adresse cette offre]", features: ["[Avantage 1]", "[Avantage 2]", "[Avantage 3]"], buttonLabel: "Choisir", link: "/contact", highlighted: Boolean(hl) });
 const quote = (k) => W(k, "testimonial", { text: "[Citation réelle d'une personne, publiée avec son accord.]", name: "[Nom de la personne]", role: "[Fonction, organisation]" });
@@ -74,8 +81,13 @@ const map = (k, h = 320) => W(k, "map", { address: "[Adresse ou lieu à renseign
 // formulaire RÉEL du site s'il existe ; sinon un encart de contact (aucune fausse saisie)
 const form = (k, env, heading, intro, button) => (env && env.formId ? W(k, "signupform", { formId: env.formId, heading, intro, button }, { width: "100%" }) : contactCard(k, heading));
 const cta = (k, title, text, label = "Nous écrire") => W(k, "cta", { skin: "classic", title, titleTag: "h2", text: `[${text}]`, buttonLabel: label, link: "/contact", align: "center" });
-const counter = (k, label) => W(k, "counter", { value: 0, label: `[${label}]`, suffix: "", prefix: "", duration: 1500 });
-// Emplacement de visuel : une carte à hauteur réservée dont la consigne dit quoi y placer ; l'auteur la remplace par son image, sa galerie ou sa vidéo (aucune image factice n'est jamais fournie)
-const slot = (k, label = "Visuel", height = 220) => k.card([k.T(p(`[${label} : remplacez cette zone par votre contenu]`), { color: k.S.mute, textAlign: "center" })], { minHeight: `${height}px`, justifyContent: "center", alignItems: "center", width: "100%" });
-const marquee = (k, words) => W(k, "marquee", { items: words.map((text) => ({ text })), speed: "normal", direction: "left", separator: "•", pauseHover: true, label: "Informations défilantes" });
-module.exports = { slot, dir, ID2, scopeCss, scoped, ID, L, W, TITLE, p, NARROW, SOC, px, own, H1, content, desc, sect, band, head, box, boxes, cards, steps, faq, tabs, person, plan, quote, note, toc, contactCard, map, form, cta, counter, marquee };
+const counter = (k, label) => k.col([k.H("[Chiffre]", "3", { fontFamily: k.S.head, fontSize: "40px", color: k.S.accent }), k.T(p(`[${label}]`), { color: k.S.mute, fontSize: "14px" })], { gap: "2px" });
+// Visuel vectoriel original (art.js) aux couleurs de l'identité du modèle ; l'auteur peut le remplacer par sa propre image (c'est un widget HTML ordinaire). Graine = clé du modèle.
+const art = require("./art");
+const hash = (s) => { let a = 7; for (const c of String(s)) a = (a * 33 + c.charCodeAt(0)) >>> 0; return a; };
+const visual = (k, label = "visuel", height = 260, kind, tiles = 1) => { const n = (k._n = (k._n || 0) + 1), seed = `${k.key || ""}:${label}:${n}`; return W(k, "html", { html: art.svg(kind || art.NAMES[hash(seed) % art.NAMES.length], k.S, seed, tiles) }, { width: "100%", height: px(height), overflow: "hidden", borderRadius: k.S.radius }); };
+const slot = (k, label = "Visuel", height = 220, tiles = 1) => visual(k, label, height, undefined, tiles);
+// étiquette sobre (sans majuscules espacées ni décoration)
+const lab = (k, t, st = {}) => k.T(p(t), { fontSize: "14px", fontWeight: "600", color: k.S.mute, ...st });
+const marquee = (k, words) => W(k, "marquee", { items: words.map((text) => ({ text })), speed: "normal", direction: "left", separator: "•", pauseHover: true, label: "Informations défilantes" }, { backgroundColor: k.S.alt, color: k.S.fg, boxShadow: "none", paddingTop: "14px", paddingBottom: "14px" });
+module.exports = { visual, lab, slot, dir, ID2, scopeCss, scoped, ID, L, W, TITLE, p, NARROW, SOC, px, own, H1, content, desc, sect, band, head, box, boxes, cards, steps, faq, tabs, person, plan, quote, note, toc, contactCard, map, form, cta, counter, marquee };

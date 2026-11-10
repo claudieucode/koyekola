@@ -1,9 +1,9 @@
 // Groupe 2 — À propos (11-14) et Services (15-20) : chaque modèle a la direction artistique de son numéro (directions.js).
 const h = require("./h");
-const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, tabs, quote, person, cta, counter, marquee, form, slot } = h;
+const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, tabs, quote, person, cta, counter, marquee, form, slot, lab } = h;
 module.exports = [
   L(dir(11), "apropos-equipe", "Équipe", ["à propos", "équipe", "profils"], "Ouverture courte, grille de profils à renseigner et invitation à rejoindre l'équipe : la page qui met des visages sur une organisation.", (k) => [
-    sect(k, [k.L("[Qui travaille ici]"), H1(k, 46), desc(k)], "820px"),
+    sect(k, [lab(k, "[Qui travaille ici]"), H1(k, 46), desc(k)], "820px"),
     sect(k, [content(k), k.grid(4, [person(k, "[Rôle]"), person(k, "[Rôle]"), person(k, "[Rôle]"), person(k, "[Rôle]")]), k.grid(4, [person(k, "[Rôle]"), person(k, "[Rôle]"), person(k, "[Rôle]"), person(k, "[Rôle]")])], "1180px"),
     band(k, [k.col([k.H("Rejoignez-nous", "2", { textAlign: "center", fontFamily: k.S.head }), k.row([k.B("Voir les postes", "/contact")], { justifyContent: "center" })])], { backgroundColor: k.S.alt })]),
   L(dir(12), "apropos-valeurs", "Valeurs", ["à propos", "valeurs", "cartes"], "Quatre valeurs en cartes autour d'une citation : la culture d'une organisation en un coup d'œil.", (k) => [
@@ -16,16 +16,16 @@ module.exports = [
   L(dir(15), "services-catalogue", "Catalogue de prestations", ["services", "catalogue", "cartes"], "Ouverture, six prestations en cartes et liste de prix à renseigner : le catalogue d'une entreprise de services.", (k) => [
     sect(k, [H1(k, 46), desc(k), content(k), cards(k, 3, [["layers", "[Prestation 1]", "[En une ligne.]"], ["zap", "[Prestation 2]", "[En une ligne.]"], ["shield", "[Prestation 3]", "[En une ligne.]"]]), cards(k, 3, [["star", "[Prestation 4]", "[En une ligne.]"], ["clock", "[Prestation 5]", "[En une ligne.]"], ["heart", "[Prestation 6]", "[En une ligne.]"]]), W(k, "pricelist", { items: [{ title: "[Prestation]", price: "[Prix]", text: "" }, { title: "[Prestation]", price: "[Prix]", text: "" }] })], "1100px")]),
   L(dir(16), "services-premium", "Services premium", ["services", "premium", "plein écran"], "Une prestation par grande bande, alternance d'arrière-plans et appel à l'action final : un positionnement haut de gamme.", (k) => [
-    band(k, [k.col([k.L("[Votre positionnement]"), H1(k, 60), desc(k)], { maxWidth: "820px" })], { paddingTop: "88px", paddingBottom: "88px" }),
+    band(k, [k.col([lab(k, "[Votre positionnement]"), H1(k, 60), desc(k)], { maxWidth: "820px" })], { paddingTop: "88px", paddingBottom: "88px" }),
     sect(k, [content(k)], "820px"),
     band(k, [k.grid(2, [k.col([k.H("[Prestation 1]", "2", { fontFamily: k.S.head }), k.T(p("[Décrivez-la.]"))]), k.col([k.H("[Prestation 2]", "2", { fontFamily: k.S.head }), k.T(p("[Décrivez-la.]"))])])], { backgroundColor: k.S.alt, paddingTop: "72px", paddingBottom: "72px" }),
     sect(k, [cta(k, "Demander un rendez-vous", "Une phrase d'invitation.")], "760px")]),
   L(dir(17), "services-b2b", "Services B2B", ["services", "b2b", "processus"], "Tableau des offres, processus en trois étapes et références clients : la page de vente d'un prestataire aux entreprises.", (k) => [
     sect(k, [H1(k, 44), desc(k), content(k), W(k, "table", { headers: ["[Offre]", "[Pour qui]", "[Délai]"], rows: [["[Offre 1]", "[Cible]", "[Durée]"], ["[Offre 2]", "[Cible]", "[Durée]"]] }), ...head(k, "Notre processus"), steps(k, [["1", "[Étape 1]", "[Ce qui se passe.]"], ["2", "[Étape 2]", "[Ce qui se passe.]"], ["3", "[Étape 3]", "[Ce qui se passe.]"]]), marquee(k, ["[Client 1]", "[Client 2]", "[Client 3]"])], "1040px")]),
   L(dir(18), "services-creatifs", "Services créatifs", ["services", "créatif", "galerie"], "Galerie de réalisations en tête, puis disciplines proposées : la page d'un studio.", (k) => [
-    sect(k, [H1(k, 52), slot(k, "Galerie de visuels", 260), content(k), boxes(k, 3, [["palette", "[Discipline 1]", "[En une ligne.]"], ["image", "[Discipline 2]", "[En une ligne.]"], ["video", "[Discipline 3]", "[En une ligne.]"]])], "1180px")]),
+    sect(k, [H1(k, 52), slot(k, "Galerie de visuels", 260, 3), content(k), boxes(k, 3, [["palette", "[Discipline 1]", "[En une ligne.]"], ["image", "[Discipline 2]", "[En une ligne.]"], ["video", "[Discipline 3]", "[En une ligne.]"]])], "1180px")]),
   L(dir(19), "services-numeriques", "Services numériques", ["services", "numérique", "onglets"], "Onglets par domaine (conseil, développement, hébergement) dans un bandeau latéral et formulaire de contact en pied : la page d'une société numérique.", (k, env) => [
-    sect(k, [k.grid(2, [k.col([k.L("[Votre expertise]"), H1(k, 44), desc(k)], { gap: "14px", position: "sticky", top: "24px" }, null, { position: "static" }), k.col([tabs(k, ["[Conseil]", "[Développement]", "[Hébergement]"]), content(k)], { gap: "20px" })], { gridTemplate: "1fr 2fr", alignItems: "start" })], "1100px"),
+    sect(k, [k.grid(2, [k.col([lab(k, "[Votre expertise]"), H1(k, 44), desc(k)], { gap: "14px", position: "sticky", top: "24px" }, null, { position: "static" }), k.col([tabs(k, ["[Conseil]", "[Développement]", "[Hébergement]"]), content(k)], { gap: "20px" })], { gridTemplate: "1fr 2fr", alignItems: "start" })], "1100px"),
     band(k, [k.col([form(k, env, "Parlons de votre projet", "Décrivez votre besoin.", "Envoyer")], { maxWidth: "720px" })], { backgroundColor: k.S.alt })]),
   L(dir(20), "services-conseil", "Conseil et accompagnement", ["services", "conseil", "méthode"], "Méthode en quatre étapes à gauche, rendez-vous à droite : la page d'un cabinet de conseil.", (k) => [
     sect(k, [H1(k, 46), k.grid(2, [k.col([desc(k), steps(k, [["1", "[Diagnostic]", "[En une phrase.]"], ["2", "[Plan]", "[En une phrase.]"], ["3", "[Mise en œuvre]", "[En une phrase.]"], ["4", "[Suivi]", "[En une phrase.]"]]), content(k)], { gap: "20px" }), k.card([k.H("Prendre rendez-vous", "3", { fontFamily: k.S.head }), k.T(p("[Indiquez comment réserver un échange.]")), k.B("Nous écrire", "/contact")], { position: "sticky", top: "24px" }, null, { position: "static" })], { gridTemplate: "2fr 1fr", alignItems: "start" })], "1100px")]),
