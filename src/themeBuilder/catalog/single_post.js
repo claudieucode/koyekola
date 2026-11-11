@@ -1,23 +1,23 @@
-// Catalogue « Article individuel » v2 : 100 COMPOSITIONS éditoriales distinctes en 12 familles (voie B, voir docs/theme-builder/single-post/100_TEMPLATES_DIVERSITY_PLAN.md).
-// Le modèle est rendu AUTOUR d'un article réel : titre {{post.title}} + contenu (postcontent) toujours présents ; image par étiquette dynamique ({{post.image}}), jamais d'image factice, aucun lien inventé.
-// Les mises en page sont rangées par fichiers de famille (single_post/v2/fNN.js) ; l'audit scripts/audit-article-individuel.js contrôle distinction, grammaire, responsive et contenu dynamique.
-const FAMILIES = [
-  ["minimaliste", "Blogs minimalistes"], ["magazine", "Magazines professionnels"], ["journal", "Journaux numériques"], ["blog-pro", "Blogs personnels et professionnels"],
-  ["technologie", "Technologie et logiciels"], ["education", "Éducation et formation"], ["photographie", "Photographie et création"], ["business", "Business et corporate"],
-  ["voyage", "Voyage et lifestyle"], ["sante", "Santé, sport et bien-être"], ["formats", "Formats éditoriaux avancés"], ["creatif", "Expériences visuelles et créatives"],
-];
-// famille de chaque mise en page : par tranches de chaque fichier (l'ordre du fichier est celui des familles)
-const SPLITS = [
-  ["f01", [["minimaliste", 8]]], ["f02", [["magazine", 10]]], ["f03", [["journal", 10]]], ["f04", [["blog-pro", 10]]], ["f05", [["technologie", 8]]], ["f06", [["education", 8]]],
-  ["f07", [["photographie", 8], ["business", 8]]], ["f09", [["voyage", 6], ["sante", 6], ["formats", 8]]], ["f12", [["creatif", 10]]],
-];
-// Identités PROPRES (valeurs fixes) : plus aucune couleur ni police ne vient de la charte du site (voir single_post/identities.js et docs/theme-builder/single-post/IDENTITE_GRAPHIQUE_INDEPENDANTE.md).
-const Own = require("./single_post/identities");
-const assign = Own.assigner();
-const layouts = [];
-for (const [file, parts] of SPLITS) {
-  const list = require(`./single_post/v2/${file}`); let i = 0;
-  for (const [family, n] of parts) for (let j = 0; j < n; j += 1, i += 1) layouts.push({ ...list[i], family, ...assign(list[i].skin) });
-  if (i !== list.length) throw new Error(`single_post/v2/${file} : ${list.length} mises en page, ${i} classées dans une famille`);
-}
-module.exports = { type: "single_post", kind: "page", flat: true, ownSkins: true, skins: Own.ALL, families: FAMILIES.map(([key, label]) => ({ key, label })), layouts };
+// Catalogue « Article individuel » v3 : 100 créations, chacune avec SA PROPRE identité graphique (couleurs et polices en valeurs FIXES, jamais la charte du site) et SA composition.
+// Source : v3/concepts.js (fiches de conception) × v3/archetypes.js (32 structures de composition) ; voir docs/theme-builder/single-post/refonte-v3/.
+// Le modèle est rendu AUTOUR d'un article réel : {{post.title}} + postcontent toujours présents, image par étiquette dynamique ({{post.image}}), jamais d'image factice ni de lien inventé.
+// Les trois modes d'identité (propre / suit le site / hybride) passent par catalog/identityModes.js, comme la Fiche produit.
+const { R, ARCH } = require("./single_post/v3/concepts");
+const { skinOf } = require("./single_post/v3/skin");
+const ARCHETYPES = require("./single_post/v3/archetypes");
+const { context } = require("./single_post/v3/h");
+const VARIANTES = (() => { try { return require("./single_post/v3/variantes.json"); } catch { return []; } })(); // voir scripts/assigner-variantes-article.js
+
+const fold = (v) => String(v || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const slug = (v) => fold(v).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+const concepts = R.map((r, i) => ({ id: r[0], name: r[1], dir: r[2], sector: r[3], arch: r[4], title: r[5], hero: r[6], cols: r[7], readW: r[8], metaNote: r[9], authorNote: r[10], side: r[11], widgets: r[12], features: r[13], palette: r[14], fonts: r[15], sig: r[16], v: VARIANTES[i] || [0, 0, 0] }));
+const families = [...new Set(concepts.map((c) => c.dir))].map((label) => ({ key: slug(label), label }));
+const skins = concepts.map((c) => skinOf(c));
+const layouts = concepts.map((c, i) => ({
+  key: slug(c.name), label: c.name, family: slug(c.dir), skin: skins[i].key, keySkin: skins[i].key,
+  tags: [slug(c.sector), ...c.features.slice(0, 2).map(slug), slug(ARCH[c.arch][0])].filter(Boolean),
+  desc: c.sig, concept: c,
+  build: (k) => ARCHETYPES[c.arch](context(k, c)),
+}));
+if (new Set(layouts.map((l) => l.key)).size !== layouts.length) throw new Error("Article individuel v3 : noms de mises en page en double");
+module.exports = { type: "single_post", kind: "page", flat: true, ownSkins: true, skins, families, layouts };

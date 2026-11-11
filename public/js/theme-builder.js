@@ -591,7 +591,7 @@
     if (canWrite) {
       // Fiche produit : identité graphique du modèle (indépendante par défaut, héritée du site ou hybride) choisie à l'insertion ; modifiable ensuite sans perte
       let idSel = null;
-      if (type === "single_product") {
+      if (type === "single_product" || type === "single_post") {
         idSel = el("select", "tb-id-select"); idSel.setAttribute("aria-label", `Identité graphique de « ${m.name} »`);
         [["own", "Identité propre au modèle"], ["site", "Hérite de la charte du site"], ["hybrid", "Modèle + couleur de marque du site"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; idSel.append(o); });
         act.append(idSel);

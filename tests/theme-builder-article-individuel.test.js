@@ -8,7 +8,7 @@ const { startServer, loginInstructor } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
 
 // forme d'un document : types d'éléments, textes et nombre d'enfants (la copie du site est normalisée par le moteur : valeurs par défaut ajoutées, identifiants posés)
-const outline = (n) => JSON.stringify(n, (k, v) => (["id", "styles", "motionAttr", "parts", "anchor"].includes(k) ? undefined : k === "props" ? (v && (v.text || v.html || v.src) ? { text: v.text, html: v.html, src: v.src } : undefined) : v));
+const outline = (n) => JSON.stringify(n, (k, v) => (["id", "styles", "motionAttr", "parts", "anchor", "css"].includes(k) ? undefined : k === "props" ? (v && (v.text || v.html || v.src) ? { text: v.text, html: v.html, src: v.src } : undefined) : v));
 const strip = (n) => JSON.stringify(n, (k, v) => (k === "id" ? undefined : v));
 const hostReq = (srv, host, path) => {
   const u = new URL(srv.base);
@@ -26,8 +26,7 @@ describe("Article individuel : la bibliothèque (code)", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100); assert.equal(new Set(all.map((e) => e.name)).size, 100);
     assert.equal(new Set(all.map((e) => e.layoutId)).size, 100, "100 compositions, pas 20 × 5"); assert.ok(Catalog.list("single_post", { limit: 60 }).layouts.length >= 12, "filtre par familles");
-    const old = ["classique", "etroit", "heros-plein", "lateral", "lateral-gauche", "magazine", "editorial", "carte", "auteur-en-tete", "partage-flottant", "fil-ariane", "resume", "suite", "abonnement", "grand-titre", "discussion"];
-    for (const o of old) assert.ok(all.filter((e) => e.layoutId === o).length <= 1, `${o} : l'ancien produit mises en page × identités ne doit plus exister`);
+    assert.ok(all.every((e) => /^[a-z0-9-]+\.ai-\d{3}$/.test(e.key)), "clés v3 : nom.ai-NNN");
   });
   test("liste, recherche sans accents et filtres par identité cohérents (la somme des identités fait 100)", () => {
     // identités PROPRES (valeurs fixes, voir single_post/identities.js) : plus aucune des cinq identités du site
@@ -104,11 +103,12 @@ describe("Article individuel : de la bibliothèque au site public (100 modèles,
     assert.match(b.text, /CORPS-UNIQUE-B/);
   });
   test("fonctionnalités liées à l'article courant : le sommaire liste les intertitres de l'article, le partage vise l'adresse de l'article", async () => {
-    for (const key of ["sommaire-fixe.editorial", "blog-createur.doux"]) {
+    const has = (t) => Catalog.entries("single_post").find((e) => JSON.stringify(Catalog.build("single_post", e.key).sections).includes(`"type":"${t}"`)).key;
+    for (const key of [has("toc"), has("sharebuttons")]) {
       const t = JSON.parse((await post(U(A, "/api/bibliotheque/utiliser"), { type: "single_post", key })).text).template;
       assert.equal((await post(U(A, `/api/modeles/${t.id}/publier`))).status, 200);
       const r = await hostReq(srv, "a.test", "/blog/article-a"); assert.equal(r.status, 200);
-      if (key.startsWith("sommaire")) {
+      if (/"type":"toc"/.test(JSON.stringify(Catalog.build("single_post", key).sections))) {
         const nav = (r.text.match(/<nav[^>]*kw-toc[\s\S]*?<\/nav>/) || [""])[0];
         assert.match(nav, /Intertitre-A/, "sommaire : intertitre de l'article"); assert.match(nav, /Sous-intertitre-A/);
         const href = nav.match(/href="#([^"]+)"/)[1]; assert.ok(r.text.includes(`id="${href}"`), "l'ancre du sommaire existe dans l'article");

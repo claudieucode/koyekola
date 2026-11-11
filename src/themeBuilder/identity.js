@@ -15,16 +15,16 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 function switchMode(ctx, siteId, templateId, mode) {
   if (!Modes.MODES.includes(mode)) throw bad("Mode d'identité inconnu.");
   const t = store.get(ctx, siteId, templateId);
-  if (t.type !== "single_product" || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit » installés depuis la bibliothèque.");
+  if (!Modes.TYPES.has(t.type) || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit » et « Article individuel » installés depuis la bibliothèque.");
   if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le modifier.", "conflict");
   const row = ctx.db.prepare("SELECT origin_key, identity_mode FROM mk_tb_templates WHERE id = ? AND organization_id = ? AND site_id IS ?").get(t.id, ctx.organizationId, siteId);
   if (!row || !row.origin_key) throw bad("Ce modèle n'a pas été installé depuis la bibliothèque : son identité d'origine n'est pas connue.");
-  if (!Catalog.find("single_product", row.origin_key)) throw bad("Le modèle d'origine n'existe plus dans la bibliothèque.", "not_found");
+  if (!Catalog.find(t.type, row.origin_key)) throw bad("Le modèle d'origine n'existe plus dans la bibliothèque.", "not_found");
   const from = Modes.MODES.includes(row.identity_mode) ? row.identity_mode : "own";
   if (from === mode) return { template: store.get(ctx, siteId, t.id), mode, changed: 0, version: null };
   const env = { formId: siteFormId(ctx, siteId) };
-  const before = Catalog.build("single_product", row.origin_key, { ...env, identity: from });
-  const after = Catalog.build("single_product", row.origin_key, { ...env, identity: mode });
+  const before = Catalog.build(t.type, row.origin_key, { ...env, identity: from });
+  const after = Catalog.build(t.type, row.origin_key, { ...env, identity: mode });
   return transaction(ctx.db, () => {
     const page = P().getPage(ctx, t.sourceId);
     if (!page) throw bad("Le document du modèle est introuvable.", "not_found");
