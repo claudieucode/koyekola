@@ -25,6 +25,7 @@ const scopeCss = (S) => {
     `--kw-font-heading:${stackOf(S.head)}`, `--kw-font-body:${stackOf(S.font)}`, `--kw-font-button:${stackOf(S.font)}`, `--kw-font-link:${stackOf(S.font)}`,
     `--kw-radius-button:${S.btnRadius}`, `--kw-radius-card:${S.radius}`, `--kw-radius-field:${S.btnRadius}`, `--kw-radius-md:${S.radius}`, `--kw-radius-lg:${S.radius}`,
     `--kw-border:${S.bw === "0px" ? "0px" : S.bw} solid ${S.line}`,
+    `--kw-field-bg:${S.bg}`, `--kw-field-color:${S.fg}`, `--kw-field-border:${S.mute}`, `--kw-field-placeholder:${S.mute}`,
   ];
   return (String(S.accent).startsWith("token:") ? decl.filter((d) => !ACCENT_VARS.test(d)) : decl).join(";");
 };

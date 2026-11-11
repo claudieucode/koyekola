@@ -212,9 +212,13 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     // En-tête : rendu comme une partie du site (sitePart) pour que le défilement, le logo alternatif et l'identité du site agissent comme sur la page publiée
     if (type === "header" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "parthead", sitePart: "header" } : x));
     const visitor = visitorContext(db, marketing.organizationId, req);
+    // Bibliothèque « Résultats de recherche » : terme et résultats de DÉMONSTRATION (aperçu seulement, jamais le site publié) ; ?q=… et ?etat=vide permettent d'essayer le terme et l'état « aucun résultat »
+    if (type === "search_results" && sampleMenu) { const qy = (req.query && typeof req.query === "object") ? req.query : {}; visitor.demoResults = true; visitor.query = { ...qy, q: typeof qy.q === "string" && qy.q.trim() ? qy.q : (qy.etat === "vide" ? "mot-introuvable" : "exemple") }; }
+    // Titre et nombre de l'aperçu « Résultats de recherche » : suivent le terme d'essai (?q=) et l'état « aucun résultat » (?etat=vide)
+    const demoScope = (sc) => { if (!(type === "search_results" && sampleMenu && sc && sc.archive)) return sc; const qy = visitor.query || {}; return { ...sc, archive: { ...sc.archive, title: `Résultats pour « ${String(qy.q || "exemple").slice(0, 80)} »`, count: qy.etat === "vide" ? 0 : 24, search: qy.q || "exemple" } }; };
     // Pied : même marquage que sur le site publié (balise <footer> posée par la vue + ligne légale du site), pour que l'aperçu et la mesure se fassent dans les conditions réelles
     if (type === "footer" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "partfoot", sitePart: "footer" } : x));
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: catalogScope(db, ctx, type), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}) } : {}) });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: demoScope(catalogScope(db, ctx, type)), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);

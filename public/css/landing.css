@@ -972,9 +972,10 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 @media (max-width: 560px) { .kw-posts-list .kw-post-card { flex-direction: column; } .kw-posts-list .kw-post-card img { width: 100%; } }
 /* Recherche */
 .kw-search { display: flex; gap: 8px; min-width: 0; flex-wrap: wrap; }
-.kw-search button { font-family: inherit; font-size: inherit; letter-spacing: inherit; text-transform: inherit; line-height: inherit; } /* un bouton natif n'hérite pas de la typographie : la typographie réglée sur la recherche l'atteint */
+.kw-search button { white-space: nowrap; font-family: inherit; font-size: inherit; letter-spacing: inherit; text-transform: inherit; line-height: inherit; } /* un bouton natif n'hérite pas de la typographie : la typographie réglée sur la recherche l'atteint */
 :where(.kw-search) input { color: inherit; }
-.kw-search input { flex: 1 1 200px; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid rgba(16, 34, 47, .25); border-radius: 8px; font: inherit; }
+.kw-search input { flex: 1 1 200px; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid var(--kw-field-border, rgba(16, 34, 47, .25)); border-radius: var(--kw-radius-field, 8px); font: inherit; background: var(--kw-field-bg, #fff); color: var(--kw-field-color, inherit); }
+.kw-search input::placeholder { color: var(--kw-field-placeholder, #6b7280); opacity: 1; }
 /* Compte du visiteur */
 .kw-account { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
 .kw-account a { color: inherit; font-weight: 600; }
@@ -995,10 +996,10 @@ body:not([data-kw-builder]) .kw-ix-hidden { display: none !important; }
 .kw-loop-item { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .kw-loop-empty { grid-column: 1 / -1; }
 .kw-loop-pages { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 16px; margin-top: 8px; }
-.kw-loop-pages a { padding: 6px 12px; border: 1px solid currentColor; border-radius: 8px; text-decoration: none; }
+.kw-loop-pages a { padding: 6px 12px; border: 1px solid currentColor; border-radius: 8px; text-decoration: none; color: inherit; }
 /* Filtre par catégorie */
 .kw-catfilter ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.kw-catfilter a { display: inline-block; padding: 6px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; font-size: .9rem; }
+.kw-catfilter a { display: inline-block; padding: 6px 14px; border: 1px solid currentColor; border-radius: 999px; text-decoration: none; font-size: .9rem; color: inherit; }
 .kw-catfilter a[aria-current="true"] { background: var(--kw-primary, #0277b6); border-color: var(--kw-primary, #0277b6); color: var(--kw-on-primary, #fff); }
 .kw-catfilter-n { opacity: .7; }
 /* Modèle « Article du blog » : emplacement du texte dans l'éditeur */
@@ -1882,3 +1883,15 @@ html.kw-pgal-lock { overflow: hidden; }
 .kw-psp-row dt { font-weight: 600; }
 .kw-psp-row dd { margin: 0; }
 @media (prefers-reduced-motion: no-preference) { .kw-pgal-thumb, .kw-pb-choice { transition: opacity .12s, box-shadow .12s; } }
+
+/* Recherche : tri et nombre de résultats (widgets searchsort et searchcount). Valeurs héritées du modèle ; aucun style de charte imposé. */
+.kw-searchsort { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.kw-ss-label { font-size: 14px; opacity: 0.75; }
+.kw-ss-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.kw-ss-link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid currentColor; border-radius: 999px; font-size: 14px; text-decoration: none; color: inherit; opacity: 0.8; }
+.kw-ss-link:hover { opacity: 1; }
+.kw-ss-link.is-active { opacity: 1; font-weight: 700; background: color-mix(in srgb, currentColor 14%, transparent); }
+.kw-ss-text .kw-ss-link { border: 0; border-radius: 0; padding: 0 4px; }
+.kw-ss-select { min-height: 40px; padding: 0 12px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; }
+.kw-searchcount { margin: 0; font-size: 15px; }
+.kw-sc-n { font-weight: 700; }

@@ -15,6 +15,21 @@ const SOURCES = new Map();
 const line = (v, max) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, "").trim().slice(0, max);
 const ms = (v) => { const t = Date.parse(`${String(v || "").replace(" ", "T")}Z`); return Number.isFinite(t) ? t : null; };
 const likeEsc = (v) => String(v).replace(/[\\%_]/g, (c) => `\\${c}`);
+// Recherche tolérante : TOUS les mots saisis doivent figurer (dans n'importe quel champ), sans tenir compte des majuscules ni des accents.
+// Les champs courts (titre, extrait, nom…) sont comparés « pliés » (accents retirés côté SQL) ; les champs longs (contenu) le sont avec les mots tels que saisis (coût borné sur les gros sites).
+const fold = (t) => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/œ/gi, "oe").toLowerCase();
+const ACCENTS = [["àáâãä", "a"], ["ç", "c"], ["èéêë", "e"], ["ìíîï", "i"], ["ñ", "n"], ["òóôõö", "o"], ["ùúûü", "u"], ["ýÿ", "y"]];
+const foldSql = (col) => { let e = col; for (const [chars, to] of ACCENTS) for (const c of [...chars, ...chars.toUpperCase()]) e = `REPLACE(${e}, '${c}', '${to}')`; return `LOWER(REPLACE(REPLACE(${e}, 'œ', 'oe'), 'Œ', 'oe'))`; };
+function searchWhere(search, folded, raw = []) {
+  const words = String(search || "").replace(/\s+/g, " ").trim().slice(0, 100).split(" ").filter(Boolean).slice(0, 6);
+  const where = [], args = [];
+  for (const w of words) {
+    const f = `%${likeEsc(fold(w))}%`, r = `%${likeEsc(w.toLowerCase())}%`;
+    where.push(`(${[...folded.map((c) => `${foldSql(c)} LIKE ? ESCAPE '\\'`), ...raw.map((c) => `LOWER(${c}) LIKE ? ESCAPE '\\'`)].join(" OR ")})`);
+    args.push(...folded.map(() => f), ...raw.map(() => r));
+  }
+  return { sql: where.join(" AND "), args };
+}
 const ids = (v) => [...new Set((Array.isArray(v) ? v : []).map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 100);
 const names = (v, max = 20) => [...new Set((Array.isArray(v) ? v : []).map((x) => line(x, 80)).filter(Boolean))].slice(0, max);
 const ymd = (v) => { const s = String(v || "").trim(); return /^\d{4}-\d{2}-\d{2}$/.test(s) && Number.isFinite(Date.parse(`${s}T00:00:00Z`)) ? s : ""; };
@@ -84,6 +99,7 @@ function catalog() {
 const safeImage = (p, base = "") => {
   const s = String(p || "");
   if (/^\/uploads\/[A-Za-z0-9_\/.-]{1,200}$/.test(s) && !s.includes("..")) return `${base}${s}`;
+  if (/^\/img\/apercu-demo\/[a-z0-9-]{1,20}\.svg$/.test(s)) return `${base}${s}`; // images vectorielles de l'aperçu de la bibliothèque (demoResults.js)
   return /^https:\/\/[^\s"'<>]{3,400}$/i.test(s) ? s : "";
 };
 // Adresse d'une catégorie / étiquette : celle du moteur de taxonomies (adresses configurables), sinon l'adresse par défaut du blog
@@ -123,13 +139,13 @@ function postWhere(ctx, q, env) {
   else if (ar && ar.type === "tag") { where.push("(',' || REPLACE(LOWER(p.tags), ', ', ',') || ',') LIKE ? ESCAPE '\\'"); args.push(`%,${likeEsc(String(ar.name).toLowerCase())},%`); }
   if (ar && ar.type === "author") { where.push("p.author_id = ?"); args.push(Number.isInteger(ar.id) ? ar.id : -1); }
   // Recherche saisie sur la page de l'archive (?q=…) : la liste « suit l'archive » la respecte aussi
-  if (ar && ar.search && !q.search) { const like = `%${likeEsc(String(ar.search).slice(0, 100))}%`; where.push("(p.title LIKE ? ESCAPE '\\' OR p.excerpt LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
+  if (ar && ar.search && !q.search) { const sw = searchWhere(ar.search, ["p.title", "p.excerpt"], ["p.content"]); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
   if (q.dateAfter) { where.push("p.published_at >= ?"); args.push(`${q.dateAfter} 00:00:00`); }
   if (q.dateBefore) { where.push("p.published_at < ?"); args.push(`${q.dateBefore} 23:59:59`); }
   if (q.withinDays) { where.push("p.published_at >= ?"); args.push(new Date(Date.now() - q.withinDays * 86400000).toISOString().slice(0, 19).replace("T", " ")); }
   if (q.year) { where.push("strftime('%Y', p.published_at) = ?"); args.push(String(q.year)); }
   if (q.month) { where.push("strftime('%m', p.published_at) = ?"); args.push(String(q.month).padStart(2, "0")); }
-  if (q.search) { const like = `%${likeEsc(q.search)}%`; where.push("(p.title LIKE ? ESCAPE '\\' OR p.excerpt LIKE ? ESCAPE '\\' OR p.content LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
+  if (q.search) { const sw = searchWhere(q.search, ["p.title", "p.excerpt"], ["p.content"]); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
   if (q.related && cur) {
     const parts = [];
     if (q.related !== "tags" && cur.category) { parts.push("p.category = ? COLLATE NOCASE"); args.push(cur.category); }
@@ -175,7 +191,7 @@ registerQuerySource("courses", {
     if (exclude.length) { where.push(`c.id NOT IN (${exclude.map(() => "?").join(",")})`); args.push(...exclude); }
     if (q.categories) { where.push(`(${q.categories.map(() => "c.category = ? COLLATE NOCASE").join(" OR ")})`); args.push(...q.categories); }
     if (q.author) { const a = q.author === "current" ? (env.scope.author && env.scope.author.id) : q.author; where.push("c.instructor_id = ?"); args.push(Number.isInteger(a) ? a : -1); }
-    if (q.search) { const like = `%${likeEsc(q.search)}%`; where.push("(c.title LIKE ? ESCAPE '\\' OR c.subtitle LIKE ? ESCAPE '\\')"); args.push(like, like); }
+    if (q.search) { const sw = searchWhere(q.search, ["c.title", "c.subtitle"], ["c.description"]); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
     const order = { date: "c.created_at", title: "c.title COLLATE NOCASE", price: "c.price_cents", random: "RANDOM()", id: "c.id" }[q.orderby];
     const total = ctx.db.prepare(`SELECT COUNT(*) n FROM courses c WHERE ${where.join(" AND ")}`).get(...args).n;
     const rows = ctx.db.prepare(`SELECT c.id, c.title, c.slug, c.subtitle, c.price_cents, c.thumbnail_path, c.category, c.description FROM courses c WHERE ${where.join(" AND ")} ORDER BY ${order} ${q.order === "asc" ? "ASC" : "DESC"}, c.id DESC LIMIT ? OFFSET ?`).all(...args, q.count, q.offset);
@@ -216,7 +232,7 @@ registerQuerySource("products", {
       where.push("p.id <> ?", "EXISTS (SELECT 1 FROM mk_shop_product_categories pc JOIN mk_shop_product_categories me ON me.category_id = pc.category_id AND me.product_id = ? WHERE pc.product_id = p.id)");
       args.push(cur.id, cur.id);
     } else if (q.related) where.push("0");
-    if (q.search) { const like = `%${likeEsc(q.search)}%`; where.push("(p.name LIKE ? ESCAPE '\\' OR p.short_description LIKE ? ESCAPE '\\')"); args.push(like, like); }
+    if (q.search) { const sw = searchWhere(q.search, ["p.name", "p.short_description"], []); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
     const order = { date: "p.created_at", title: "p.name COLLATE NOCASE", price: "p.price_cents", random: "RANDOM()", id: "p.id" }[q.orderby];
     const total = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_shop_products p WHERE ${where.join(" AND ")}`).get(...args).n;
     const rows = ctx.db.prepare(`SELECT p.* FROM mk_shop_products p WHERE ${where.join(" AND ")} ORDER BY ${order} ${q.order === "asc" ? "ASC" : "DESC"}, p.id DESC LIMIT ? OFFSET ?`).all(...args, q.count, q.offset);
@@ -235,7 +251,7 @@ registerQuerySource("pages", {
     if (q.include) { where.push(`id IN (${q.include.map(() => "?").join(",")})`); args.push(...q.include); }
     const exclude = [...(q.exclude || []), ...(q.excludeCurrent && page && Number.isInteger(page.id) ? [page.id] : [])];
     if (exclude.length) { where.push(`id NOT IN (${exclude.map(() => "?").join(",")})`); args.push(...exclude); }
-    if (q.search) { where.push("name LIKE ? ESCAPE '\\'"); args.push(`%${likeEsc(q.search)}%`); }
+    if (q.search) { const sw = searchWhere(q.search, ["name", "title", "description"], []); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
     const order = { date: "COALESCE(published_at, created_at)", modified: "updated_at", title: "name COLLATE NOCASE", id: "id" }[q.orderby];
     const total = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_landing_pages WHERE ${where.join(" AND ")}`).get(...args).n;
     const rows = ctx.db.prepare(`SELECT id, name, slug, published_at, updated_at FROM mk_landing_pages WHERE ${where.join(" AND ")} ORDER BY ${order} ${q.order === "asc" ? "ASC" : "DESC"}, id DESC LIMIT ? OFFSET ?`).all(...args, q.count, q.offset);
@@ -303,4 +319,4 @@ function neighbours(ctx, cur, { sameCategory = false, baseUrl = "" } = {}) {
   try { return { previous: pick("prev"), next: pick("next") }; } catch { return { previous: null, next: null }; }
 }
 
-module.exports = { termUrl, neighbours, registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };
+module.exports = { searchWhere, fold, termUrl, neighbours, registerQuerySource, normalizeQuery, runQuery, catalog, SOURCES, PAGINATIONS, MAX_COUNT, authorView, safeImage, csv };

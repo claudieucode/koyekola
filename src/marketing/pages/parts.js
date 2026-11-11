@@ -596,6 +596,7 @@ function scan(sections, groupOf) {
 // Widgets volontairement SANS parties : leur racine EST l'unique élément visible (ou leurs enfants sont de vrais nœuds stylables), donc le style de la racine
 // couvre tout. Chaque entrée est justifiée ; un nouveau widget doit déclarer des parties OU figurer ici (test de couverture : widgets-parts-couverture.test.js).
 const ROOT_ONLY = {
+  searchcount: "texte unique (compteur de résultats) : la racine suffit", searchsort: "liste de liens de tri : la racine suffit, couleurs héritées",
   sidebar: "la racine est l'enveloppe de la zone : les blocs affichés gardent leurs propres styles (widgets.css), réglés dans Apparence → Widgets",
   container: "conteneur : ses enfants sont de vrais nœuds", columns: "conteneur : enfants = nœuds", column: "conteneur : enfants = nœuds", grid: "conteneur : enfants = nœuds",
   stack: "conteneur : enfants = nœuds", group: "conteneur : enfants = nœuds",

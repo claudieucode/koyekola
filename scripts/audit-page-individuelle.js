@@ -11,7 +11,8 @@ try { require("../src/marketing/migrate"); } catch { /* facultatif */ }
 const sections = require("../src/marketing/pages/sections"), nodes = require("../src/marketing/pages/nodes");
 const Catalog = require("../src/themeBuilder/catalog"), fonts = require("../src/utils/fontLibrary");
 const ctx = { db, organizationId: 1, settings: { get: () => "[]", set() {} } };
-const entries = Catalog.entries("single_page"), issues = [];
+const TYPE = process.env.TYPE || "single_page";
+const entries = Catalog.entries(TYPE), issues = [];
 const bad = (e, m) => issues.push({ ref: e.key, problem: m });
 const lum = (hex) => { const n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
 const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
@@ -34,13 +35,13 @@ function signature(list) {
 const jaccard = (a, b) => { let i = 0, u = 0; for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k) || 0, y = b.get(k) || 0; i += Math.min(x, y); u += Math.max(x, y); } return u ? i / u : 1; };
 if (entries.length !== TARGET) issues.push({ ref: "single_page:*", problem: `${entries.length} modèles au lieu de ${TARGET}` });
 const names = new Set(), keys = new Set(), sigs = new Map(), skinsSeen = new Map();
-const ARTICLE = ["posts", "postmeta", "postnav", "postcomments", "archiveinfo", "authorbox", "shopbuy"];
+const ARTICLE = TYPE === "single_page" ? ["posts", "postmeta", "postnav", "postcomments", "archiveinfo", "authorbox", "shopbuy"] : [];
 const FAKE = /€|\$\d|\d{2}\s?%|@[a-z0-9-]+\.[a-z]{2,}|\+33|https?:\/\/(?!www\.(facebook|linkedin)\.com\/)|lorem ipsum|<script|javascript:/i;
 for (const e of entries) {
   if (keys.has(e.key)) bad(e, "clé en double"); keys.add(e.key);
   if (names.has(e.name)) bad(e, "nom en double"); names.add(e.name);
   if (!e.desc || e.desc.length < 30) bad(e, "description trop courte");
-  let doc; try { doc = Catalog.build("single_page", e.key, {}); } catch (err) { bad(e, `construction impossible : ${err.message}`); continue; }
+  let doc; try { doc = Catalog.build(TYPE, e.key, {}); } catch (err) { bad(e, `construction impossible : ${err.message}`); continue; }
   const list = doc.sections, json = JSON.stringify(list);
   try { const norm = sections.normalizeSections(ctx, JSON.parse(json).map((s) => ({ ...s, id: s.id || sections.newSectionId() }))); if (!norm.length) bad(e, "rejeté par le moteur"); } catch (err) { bad(e, `rejeté par le moteur : ${String(err.message).slice(0, 140)}`); }
   // identité : aucune référence au site
@@ -49,20 +50,24 @@ for (const e of entries) {
   for (const f of fams) { if (!/^font\./.test(f)) bad(e, `police du site ou système « ${f} »`); else if (!fonts.byId(f)) bad(e, `police absente de la bibliothèque : ${f}`); }
   if (fams.size > 2) bad(e, `${fams.size} polices (2 au plus)`);
   const S = (Catalog.SKINS && null) || null;
-  let h1 = 0, content = 0, n = 0, abs = 0, grids = 0, badGrids = 0;
+  let h1 = 0, content = 0, n = 0, abs = 0, grids = 0, badGrids = 0, ai = 0, se = 0, loops = 0, noUrl = 0, noEmpty = 0, deco = 0;
   walkAll(list, (x) => {
     n += 1; if (x.type === "heading" && x.props && x.props.level === "1") { h1 += 1; if (x.props.text !== "{{post.title}}") bad(e, "H1 qui n'est pas le titre de la page"); }
+    if (x.type === "archiveinfo" && x.props && x.props.tag === "h1") ai += 1; if (x.type === "search") { se += 1; if (!x.props || x.props.target !== "blog") bad(e, "champ de recherche qui ne mène pas à la page de résultats (target blog)"); }
+    if (x.type === "grid" && x.props && x.props.loop) { loops += 1; if (!x.props.loop.urlFilter) noUrl += 1; if (!x.props.loop.empty) noEmpty += 1; }
+    if (TYPE !== "single_page" && x.type === "heading" && x.props && x.props.level === "1") h1 += 1;
     if (x.type === "postcontent") content += 1; if (ARTICLE.includes(x.type)) bad(e, `élément d'article « ${x.type} »`);
     const d = (x.styles && x.styles.desktop) || {}; if (/absolute|fixed/.test(String(d.position || ""))) abs += 1;
     if (x.type === "grid") { grids += 1; const t = (x.styles && x.styles.tablet) || {}, m = (x.styles && x.styles.mobile) || {}; if (Number(t.columns) > 2 || Number(m.columns) !== 1) badGrids += 1; }
-    if (x.type === "image" && !/^\{\{post\.image\}\}$/.test(String((x.props || {}).src))) bad(e, "image factice");
+    if (x.type === "image" && !/^\{\{(post|product|course)\.image\}\}$/.test(String((x.props || {}).src))) bad(e, "image factice");
   });
   const props = []; walkAll(list, (x) => { if (x.props) props.push(JSON.stringify(x.props)); });
   if (FAKE.test(props.join("\n"))) bad(e, "contenu inventé (prix, e-mail, téléphone, lien externe, chiffre)");
-  if (h1 !== 1) bad(e, `${h1} H1 (attendu : 1)`); if (content !== 1) bad(e, `${content} postcontent (attendu : 1)`);
+  if (TYPE === "single_page") { if (h1 !== 1) bad(e, `${h1} H1 (attendu : 1)`); if (content !== 1) bad(e, `${content} postcontent (attendu : 1)`); }
+  else { if (ai !== 1 || h1 > 0) bad(e, `titre : ${ai} archiveinfo h1 et ${h1} autres H1 (attendu : 1 et 0)`); if (se < 1) bad(e, "aucun champ de recherche"); if (loops < 1) bad(e, "aucune boucle de résultats"); if (noUrl) bad(e, `${noUrl} boucle(s) non filtrée(s) par l'adresse (urlFilter)`); if (noEmpty) bad(e, `${noEmpty} boucle(s) sans état « aucun résultat »`); if (content) bad(e, "postcontent dans une page de résultats"); }
   if (n > nodes.MAX_NODES) bad(e, `trop d'éléments (${n})`); if (abs) bad(e, "position absolue ou fixe"); if (badGrids) bad(e, `${badGrids} grille(s) mal repliée(s)`);
   // contraste de l'identité (texte/fond, texte discret/fond, texte sur accent/accent)
-  const skin = Catalog.entries("single_page") && require("../src/themeBuilder/catalog/single_page").skins ? require("../src/themeBuilder/catalog/single_page").skins.find((s) => s.key === e.skinKey) : null;
+  const skin = Catalog.entries("single_page") && require(`../src/themeBuilder/catalog/${TYPE}`).skins ? require(`../src/themeBuilder/catalog/${TYPE}`).skins.find((s) => s.key === e.skinKey) : null;
   if (skin) {
     if (ratio(skin.fg, skin.bg) < 7) bad(e, `contraste texte/fond ${ratio(skin.fg, skin.bg).toFixed(1)} (7 au moins)`);
     if (ratio(skin.mute, skin.bg) < 4.5) bad(e, `contraste texte discret/fond ${ratio(skin.mute, skin.bg).toFixed(1)} (4,5 au moins)`);

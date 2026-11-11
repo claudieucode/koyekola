@@ -8,6 +8,7 @@ const { startServer, loginInstructor } = require(path.join(REPO, "tests/helpers"
 const { TEST_KEY } = require(path.join(REPO, "tests/marketing-helpers"));
 const { chromium } = require("playwright-core");
 const CHROME = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const TYPE = process.env.TYPE || "single_page";
 const ONLY = process.env.ONLY ? process.env.ONLY.split(",") : null;
 const T1 = { colors: { primary: "#ff0000", secondary: "#00aa00", accent: "#0000ff", background: "#ffff00", surface: "#00ffff", text: "#ff00ff", muted: "#880000", success: "#008800", warning: "#888800", error: "#000088" }, fonts: { heading: "georgia", body: "georgia", button: "georgia", link: "georgia" }, radius: { sm: 0, md: 0, lg: 0, button: 0, field: 0, card: 0 } };
 const T2 = { colors: { primary: "#111111", secondary: "#222222", accent: "#333333", background: "#444444", surface: "#555555", text: "#666666", muted: "#777777", success: "#999999", warning: "#aaaaaa", error: "#bbbbbb" }, fonts: { heading: "mono", body: "mono", button: "mono", link: "mono" }, radius: { sm: 40, md: 40, lg: 40, button: 40, field: 40, card: 40 } };
@@ -34,11 +35,11 @@ const snap = (props) => {
   await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
   const page = await ctx.newPage();
   const Catalog = require(path.join(REPO, "src/themeBuilder/catalog"));
-  const keys = Catalog.entries("single_page").map((e) => e.key).filter((k) => !ONLY || ONLY.some((o) => k.startsWith(o)));
+  const keys = Catalog.entries(TYPE).map((e) => e.key).filter((k) => !ONLY || ONLY.some((o) => k.startsWith(o)));
   const out = [];
   const render = async (tokens, key) => {
     db.prepare("UPDATE mk_sites SET tokens = ? WHERE id = ?").run(JSON.stringify(tokens), site);
-    await page.goto(`${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/single_page/${key}/apercu`, { waitUntil: "load", timeout: 60000 });
+    await page.goto(`${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/${TYPE}/${key}/apercu`, { waitUntil: "load", timeout: 60000 });
     await page.waitForTimeout(500);
     return page.evaluate(snap, PROPS);
   };

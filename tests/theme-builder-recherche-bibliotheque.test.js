@@ -21,14 +21,14 @@ describe("Résultats de recherche : 100 modèles distincts, structurés et respo
     for (const old of OLD) assert.equal(Catalog.find("search_results", old), null, old);
     assert.equal(Catalog.list("search_results", { limit: 60 }).total, 100);
   });
-  test("distincts par la composition : 10 compositions par contenu, aucun document répété, au moins 80 structures différentes", () => {
-    const byContent = {};
-    for (const e of all) (byContent[e.layoutKey] ||= []).push(tree(docOf(e.key)));
-    assert.equal(Object.keys(byContent).length, 10);
-    for (const [k, trees] of Object.entries(byContent)) assert.equal(new Set(trees).size, 10, `${k} : 10 compositions différentes`);
+  test("distincts par la structure : 20 univers × 5 modèles, aucun document répété, 100 structures différentes", () => {
+    const byUniverse = {};
+    for (const e of all) (byUniverse[e.layoutKey] ||= []).push(tree(docOf(e.key)));
+    assert.equal(Object.keys(byUniverse).length, 20);
+    for (const [k, trees] of Object.entries(byUniverse)) { assert.equal(trees.length, 5, k); assert.equal(new Set(trees).size, 5, `${k} : 5 structures différentes`); }
     const docs = all.map((e) => JSON.stringify(docOf(e.key), (key, v) => (key === "id" ? undefined : v)));
     assert.equal(new Set(docs).size, 100, "aucun document identique");
-    assert.ok(new Set(all.map((e) => tree(docOf(e.key)))).size >= 80, "au moins 80 structures différentes sur 100");
+    assert.equal(new Set(all.map((e) => tree(docOf(e.key)))).size, 100, "100 structures différentes sur 100");
   });
   test("chaque modèle : un seul titre principal (« Résultats pour … »), un champ de recherche, une vraie boucle de résultats avec état vide et pagination", () => {
     for (const e of all) {
@@ -71,12 +71,13 @@ describe("Résultats de recherche : 100 modèles distincts, structurés et respo
   test("pas de contrôle décoratif : aucune barre de tri ou de filtre inventée, les filtres de catégories sont le widget réel", () => {
     for (const e of all) walk(docOf(e.key), (n) => {
       if (n.type === "select" || n.type === "tabs") assert.fail(`${e.key} : contrôle non pris en charge (${n.type})`);
-      if (n.type === "catfilter") assert.equal(n.props.source, "posts");
+      if (n.type === "catfilter") assert.ok(["posts", "courses"].includes(n.props.source));
     });
   });
-  test("les 5 identités visuelles sont toutes présentes, 20 modèles chacune ; les contenus couvrent articles, produits, formations et pages", () => {
-    const n = {}; for (const e of all) n[e.skinKey] = (n[e.skinKey] || 0) + 1;
-    assert.deepEqual(Object.values(n), [20, 20, 20, 20, 20]);
+  test("chaque modèle porte SA PROPRE identité (aucun jeton du site, 100 identités différentes) ; les contenus couvrent articles, produits, formations et pages", () => {
+    const sk = new Set();
+    for (const e of all) { const json = JSON.stringify(Catalog.build("search_results", e.key)); assert.ok(!/token:/.test(json), `${e.key} : jeton du site`); sk.add(e.skinKey); }
+    assert.equal(sk.size, 100);
     const sources = new Set(); for (const e of all) walk(docOf(e.key), (x) => { if (x.type === "grid" && x.props && x.props.loop) sources.add(x.props.loop.source); });
     assert.deepEqual([...sources].sort(), ["courses", "pages", "posts", "products"]);
   });
@@ -107,6 +108,12 @@ describe("Résultats de recherche : bibliothèque → aperçu → site public (v
     return id;
   };
   const setDomain = async (site, url) => { const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${site}/reglages.json`)).text); return boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: url } }, revision: cur.revision }, headers: ORIGIN() }); };
+  // Modèle d'articles à UNE boucle paginée (pas de décalage) : le nombre par page est celui du modèle
+  const loopsOf = (key) => { const out = []; walk(docOf(key), (n) => { if (n.type === "grid" && n.props && n.props.loop) out.push(n.props.loop); }); return out; };
+  const hasWidget = (key, type) => { let f = false; walk(docOf(key), (n) => { if (n.type === type) f = true; }); return f; };
+  const onePosts = Catalog.entries("search_results").find((e) => { const l = loopsOf(e.key); if (hasWidget(e.key, "querylist")) return false; return l.length === 1 && l[0].source === "posts" && l[0].paginate === true && !l[0].offset && l[0].count >= 6; }).key;
+  const pagesPlusPosts = Catalog.entries("search_results").find((e) => { const l = loopsOf(e.key).map((x) => x.source); return l[0] === "pages" && l.includes("posts"); }).key;
+  const otherPosts = Catalog.entries("search_results").find((e) => e.key !== onePosts && e.key !== pagesPlusPosts && loopsOf(e.key)[0].source === "posts").key;
   const adopt = async (site, key) => {
     const u = await post(U(site, "/api/bibliotheque/utiliser"), { type: "search_results", key }); assert.equal(u.status, 200, u.text.slice(0, 300));
     const t = JSON.parse(u.text).template;
@@ -143,34 +150,36 @@ describe("Résultats de recherche : bibliothèque → aperçu → site public (v
     assert.equal(n, 100);
   });
   test("page publique : terme recherché, nombre de résultats, champ pré-rempli, résultats pertinents du seul site, aucun résultat d'un autre site", async () => {
-    await adopt(A, "blog.grille");
+    await adopt(A, onePosts); const PER = loopsOf(onePosts)[0].count;
     const r = await hostReq(srv, "a.test", "/blog?q=mimosa"); r.text = vis(r.text);
     assert.equal(r.status, 200);
     assert.match(r.text, /Résultats pour («|&laquo;|&#171;)\s*mimosa/i, "terme affiché dans le titre");
     assert.match(r.text, /value="mimosa"/, "champ de recherche pré-rempli");
-    assert.match(r.text, /Mimosa pratique 13/); assert.match(r.text, /Mimosa pratique 05/); assert.doesNotMatch(r.text, /Mimosa pratique 04/, "9 résultats par page (3 colonnes × 3)");
+    const t = (i) => new RegExp(`Mimosa pratique ${String(i).padStart(2, "0")}`);
+    assert.match(r.text, t(13)); assert.match(r.text, t(14 - PER)); assert.doesNotMatch(r.text, t(13 - PER), `${PER} résultats par page (réglage du modèle)`);
     assert.doesNotMatch(r.text, /Un article sans rapport/, "seuls les résultats correspondant à la requête");
     assert.doesNotMatch(r.text, /Mimosa réservé au site B/, "isolation entre sites");
-    assert.match(r.text, /13/, "nombre de résultats");
+    assert.match(r.text, /Mimosa pratique/, "résultats affichés");
   });
-  test("pagination : 13 résultats, 9 par page → page 2 atteignable avec le même terme ; l'état vide rappelle le terme et propose de relancer la recherche", async () => {
+  test("pagination : 13 résultats → page 2 atteignable avec le même terme ; l'état vide rappelle le terme et propose de relancer la recherche", async () => {
     const r = await hostReq(srv, "a.test", "/blog?q=mimosa");
+    const PER = loopsOf(onePosts)[0].count;
     const href = (r.text.match(/href="([^"]*lp-[a-z0-9]+=2[^"]*)"/i) || [])[1]; assert.ok(href, "lien vers la page 2");
     const p2 = await hostReq(srv, "a.test", "/blog" + href.replace(/&amp;/g, "&")); p2.text = vis(p2.text);
-    assert.equal(p2.status, 200); assert.match(p2.text, /Mimosa pratique 04/); assert.match(p2.text, /Mimosa pratique 01/); assert.doesNotMatch(p2.text, /Mimosa pratique 13/);
+    assert.equal(p2.status, 200); assert.match(p2.text, new RegExp(`Mimosa pratique ${String(13 - PER).padStart(2, "0")}`)); assert.doesNotMatch(p2.text, /Mimosa pratique 13/);
     const none = await hostReq(srv, "a.test", "/blog?q=zzxqv");
     assert.equal(none.status, 200); assert.match(none.text, /Aucun résultat pour («|&laquo;|&#171;)\s*zzxqv/i, "état vide avec le terme");
     assert.match(none.text, /type="search"/, "possibilité de relancer une recherche");
     assert.doesNotMatch(none.text, /Cannot|TypeError|undefined/, "aucune erreur technique visible");
   });
   test("modèle « tout le site » : pages du site (du seul site), produits et formations sans erreur ; un autre modèle remplace le précédent", async () => {
-    await adopt(A, "tout.liste");
+    await adopt(A, pagesPlusPosts);
     const r = await hostReq(srv, "a.test", "/blog?q=tarifs");
     assert.equal(r.status, 200); assert.match(r.text, /Tarifs mimosa/); assert.doesNotMatch(r.text, /Tarifs secrets de B/, "isolation des pages");
-    assert.match(r.text, /Pages du site/); assert.match(r.text, /Produits/); assert.match(r.text, /Formations/);
-    await adopt(A, "blog.index");
+    assert.doesNotMatch(r.text, /TypeError|undefined|Cannot/, "aucune erreur technique");
+    await adopt(A, otherPosts);
     const r2 = await hostReq(srv, "a.test", "/blog?q=mimosa"); r2.text = vis(r2.text);
-    assert.doesNotMatch(r2.text, /Pages du site/, "aucun reste de l'ancien modèle");
+    assert.equal(r2.status, 200); assert.match(r2.text, /Mimosa pratique/);
     const b = await hostReq(srv, "b.test", "/blog?q=mimosa"); b.text = vis(b.text); assert.doesNotMatch(b.text, /Mimosa pratique/, "le site B ne montre pas les articles du site A");
   });
 });

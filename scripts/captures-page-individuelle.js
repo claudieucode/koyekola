@@ -7,6 +7,7 @@ const { startServer, loginInstructor } = require(path.join(REPO, "tests/helpers"
 const { TEST_KEY } = require(path.join(REPO, "tests/marketing-helpers"));
 const { chromium } = require("playwright-core");
 const CHROME = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+const TYPE = process.env.TYPE || "single_page";
 const OUT = process.argv[2] || "captures"; fs.mkdirSync(OUT, { recursive: true });
 const ONLY = process.env.ONLY ? process.env.ONLY.split(",") : null, WIDTHS = (process.env.WIDTHS || "1280").split(",").map(Number);
 (async () => {
@@ -15,13 +16,13 @@ const ONLY = process.env.ONLY ? process.env.ONLY.split(",") : null, WIDTHS = (pr
   const site = Number(db.prepare("INSERT INTO mk_sites (organization_id, name, slug, tokens) VALUES (?, 'Captures', 'captures', '{}')").run(org).lastInsertRowid);
   const browser = await chromium.launch({ executablePath: CHROME, headless: true });
   const Catalog = require(path.join(REPO, "src/themeBuilder/catalog"));
-  const keys = Catalog.entries("single_page").map((e) => e.key).filter((k) => !ONLY || ONLY.some((o) => k.startsWith(o)));
+  const keys = Catalog.entries(TYPE).map((e) => e.key).filter((k) => !ONLY || ONLY.some((o) => k.startsWith(o)));
   for (const w of WIDTHS) {
     const ctx = await browser.newContext({ viewport: { width: w, height: w > 800 ? 900 : 800 } });
     await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
     const page = await ctx.newPage();
     for (const key of keys) {
-      try { await page.goto(`${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/single_page/${key}/apercu`, { waitUntil: "load", timeout: 90000 }); await page.waitForTimeout(500); await page.screenshot({ path: path.join(OUT, `${key}.${w}.png`), fullPage: process.env.PLEIN === "1" }); } catch (e) { console.log(key, w, String(e.message).slice(0, 80)); }
+      try { await page.goto(`${srv.base}/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/${TYPE}/${key}/apercu`, { waitUntil: "load", timeout: 90000 }); await page.waitForTimeout(500); await page.screenshot({ path: path.join(OUT, `${key}.${w}.png`), fullPage: process.env.PLEIN === "1" }); } catch (e) { console.log(key, w, String(e.message).slice(0, 80)); }
     }
     await ctx.close();
   }
