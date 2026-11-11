@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Bibliothèque de PIEDS DE PAGE du Theme Builder : exactement 100 compositions distinctes (10 familles × 10, identités propres), toutes valides, responsive, sans élément factice,
 // utilisables (copie indépendante) et rendues par le vrai moteur (aperçu = vignette = site publié, un seul pied par page). Voir docs/theme-builder/kolakisa-footer-library.md et docs/footer-builder/FOOTER_CATALOGUE.md.
 const { test, describe, before, after } = require("node:test");

@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // décrit l'ANCIEN catalogue (100 modèles ft-*, 15 familles) : interrupteur de secours actif. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Chantier F : le catalogue des 100 pieds de page utilise les widgets « Pied de page » (données d'entreprise) au lieu de textes figés.
 // Partie 1 (sans serveur) : chaque modèle se construit, passe la grammaire, s'insère, rend VIDE de données d'entreprise sans trou ni fausse donnée, et rend les vraies données quand elles existent ;
 //   aucun lien mort ; contraste WCAG AA CALCULÉ (texte, survol, focus) ; états survol/focus définis ; zones cliquables de 44 px sur mobile ; aucune colonne ni rangée faite uniquement de widgets de données.

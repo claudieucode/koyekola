@@ -85,9 +85,11 @@ function assemble({ familles = FAMILLES_CLES.map(charger), legacy = ancien, alia
 // ── Bibliothèque v2 (docs/footer-v2/) : RÈGLE DE TRANSITION SÛRE ───────────────────────────────────────────────────────────────────────────────────────────────────────
 //  · tant que les 14 familles v2 ne sont pas TOUTES construites (100 modèles) : la liste reste EXACTEMENT celle d'aujourd'hui (aucun modèle v2 listé) ;
 //  · dès qu'elles le sont : la liste ne contient QUE les 100 modèles v2 ; les 100 modèles actuels (et, au-delà, les anciens identifiants) restent OUVRABLES (masqués) et leurs alias peuvent pointer vers la v2 (footer/v2/aliases-v2.js) ;
+//  · INTERRUPTEUR DE SECOURS : variable d'environnement FOOTER_V2=0 → la liste actuelle (100 modèles ft-*) est rétablie au redémarrage, sans changer de code ni toucher aux pieds installés ;
 //  · jamais de mélange, jamais de liste vide. Exception de TEST seulement : FOOTER_V2_APERCU=1 AJOUTE les modèles v2 déjà écrits à la liste actuelle pour pouvoir les voir et les essayer dans la bibliothèque (jamais en production).
 // integrerV2(base, v2, { apercu, aliasV2 }) : pure et testable (les tests simulent 14 familles construites).
-function integrerV2(base, v2 = V2, { apercu = false, aliasV2 = AliasV2 } = {}) {
+function integrerV2(base, v2 = V2, { apercu = false, aliasV2 = AliasV2, desactive = false } = {}) {
+  if (desactive) return { ...base, v2: { mode: "actuel", total: 0, desactive: true } }; // interrupteur de secours FOOTER_V2=0 : retour immédiat à la liste actuelle (sans redéployer)
   if (v2.toutesConstruites) {
     const actuelsId = base.layouts.filter((l) => !l.legacy).map((l) => l.fullKey);
     const alias = { ...base.aliases }; for (const id of actuelsId) if (!Object.hasOwn(alias, id)) alias[id] = id; // un modèle actuel masqué reste ouvrable par son identifiant
@@ -114,4 +116,4 @@ function integrerV2(base, v2 = V2, { apercu = false, aliasV2 = AliasV2 } = {}) {
   return { ...base, v2: { mode: "actuel", total: 0 } };
 }
 
-module.exports = { ...integrerV2(assemble(), V2, { apercu: process.env.FOOTER_V2_APERCU === "1" }), assemble, integrerV2, VERSION_DEFAUT, AJOUT_DEFAUT, FAMILLES_CLES, CIBLE, familleAncien };
+module.exports = { ...integrerV2(assemble(), V2, { apercu: process.env.FOOTER_V2_APERCU === "1", desactive: process.env.FOOTER_V2 === "0" }), assemble, integrerV2, VERSION_DEFAUT, AJOUT_DEFAUT, FAMILLES_CLES, CIBLE, familleAncien };

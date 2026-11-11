@@ -110,7 +110,8 @@ describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de li
   });
   test("mode d'essai (FOOTER_V2_APERCU) : les modèles v2 écrits sont AJOUTÉS à la liste actuelle (jamais un remplacement)", () => {
     const r = Footer.integrerV2(actuels, V2, { apercu: true });
-    if (V2.nouveaux.length) {
+    if (V2.toutesConstruites) { assert.equal(r.v2.mode, "v2", "bibliothèque complète : bascule sur les 100 modèles v2"); assert.equal(r.layouts.length, 100); }
+    else if (V2.nouveaux.length) {
       assert.equal(r.v2.mode, "apercu"); assert.equal(r.layouts.length, anciensActuels.length + V2.nouveaux.length);
       assert.deepEqual(r.layouts.slice(0, anciensActuels.length).map((l) => l.fullKey), anciensActuels);
       assert.equal(new Set(r.layouts.map((l) => l.fullKey)).size, r.layouts.length, "aucun doublon");

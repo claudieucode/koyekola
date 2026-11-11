@@ -20,6 +20,8 @@ module.exports = () => {
   const A = `${B}/api`;
   const sid = (req) => (principal ? null : Number(req.params.id)), body = (req) => (req.body && typeof req.body === "object" ? req.body : {});
   const spaceBase = (site) => (principal ? "/marketing/site-web/principal" : `/marketing/site-web/sites/${site.id}`);
+  // Contexte « catalogue » : mêmes accès au site, sans la vérification des widgets réservés (le contenu est celui de la bibliothèque de la plateforme).
+  const depuisCatalogue = (ctx) => Object.assign(Object.create(Object.getPrototypeOf(ctx)), ctx, { can: undefined });
   const run = (fn) => (req, res, next) => Promise.resolve().then(() => fn(req.mk.ctx, sid(req), req, res)).then((d) => { if (d !== undefined) res.set("Cache-Control", "no-store").json({ ok: true, ...d }); }).catch((e) => {
     if (e instanceof MarketingError || (e && e.code && STATUS[e.code])) return res.status(STATUS[e.code] || 400).set("Cache-Control", "no-store").json({ ok: false, error: e.message, code: e.code, conflicts: e.conflicts, needsScope: e.needsScope || undefined });
     next(e);
@@ -129,7 +131,7 @@ module.exports = () => {
   router.post(`${T}/revenir-au-modele`, need("forms.write"), run((ctx, id, req) => {
     const t = TB.store.get(ctx, id, tid(req));
     if (t.status === "archived") throw new MarketingError("conflict", "Ce modèle est archivé : restaurez-le avant de le modifier.");
-    if (t.type === "footer") { const r = require("../../themeBuilder/revisions").revertToOrigin(ctx, id, t.id); return { ...one(ctx, id, r.template), version: r.revisionId, original: r.original }; } // pied : brouillon recréé depuis le catalogue, révision de sécurité avant
+    if (t.type === "footer") { const r = require("../../themeBuilder/revisions").revertToOrigin(depuisCatalogue(ctx), id, t.id); return { ...one(ctx, id, r.template), version: r.revisionId, original: r.original }; } // pied : brouillon recréé depuis le catalogue, révision de sécurité avant
     if (t.type !== "header" || t.sourceKind !== "component") throw new MarketingError("invalid_field", "Seul un en-tête installé depuis la bibliothèque peut revenir à son modèle initial.");
     const key = originKey(docOf(ctx, t));
     if (!key) throw new MarketingError("invalid_field", "Cet en-tête n'a pas été installé depuis la bibliothèque : le modèle d'origine n'est pas connu.");
@@ -228,7 +230,8 @@ module.exports = () => {
   router.get(`${LIB}/${keyOf}/vignette`, need("forms.read"), libPreview(true));
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
-    const t = useTemplate(ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
+    // Pied de page : le document vient du CATALOGUE (notre code), pas de la saisie de la personne. Certains modèles contiennent des décors en widget « HTML » (réservé à « pages.code » quand on l'ajoute soi-même) : l'insertion depuis la bibliothèque ne doit pas être refusée à un compte sans ce droit (décision du propriétaire). Les modifications ultérieures du widget restent protégées (comparaison avec l'enregistré).
+    const t = useTemplate(String(b.type) === "footer" ? depuisCatalogue(ctx) : ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
     // En-tête : la clé du modèle d'origine est gardée dans le document (sert à « Revenir au modèle initial ») ; échec = installation sans cette fonction, jamais une erreur
     if (String(b.type) === "header" && t.sourceKind === "component") { try { const c = P().getComponent(ctx, t.sourceId); if (c) P().updateComponent(ctx, t.sourceId, { section: stampKey(c.section, String(b.key)) }); } catch { /* origine non mémorisée */ } }
     return { template: card(ctx, t, new Set()) };

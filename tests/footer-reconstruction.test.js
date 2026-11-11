@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Reconstruction de la bibliothèque de PIEDS DE PAGE par familles métier : garde-fous communs à toutes les familles.
 // · tant que toutes les familles ne sont pas construites (built), des tests paramétrés vérifient la cohérence de chaque famille construite et la liste de transition ;
 // · dès que les 15 familles sont construites : exactement 100 nouveaux modèles listés, 0 ancien, répartition = cible, aucune paire de structure trop proche (> 0,85) ni empreinte identique.

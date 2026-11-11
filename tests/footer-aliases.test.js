@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Pied de page — GEL DES IDENTIFIANTS et ALIAS (refonte de la bibliothèque) : les 100 anciens identifiants restent ouvrables (ouverture, « Utiliser », « Revenir au modèle d'origine »),
 // ne reparaissent jamais dans la liste dès que leur famille est construite ou redirigée, et aucune autre catégorie du Theme Builder n'est touchée. Sans serveur.
 const { test, describe } = require("node:test");

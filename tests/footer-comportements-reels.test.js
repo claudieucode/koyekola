@@ -22,7 +22,12 @@ const segments = (section) => {
 };
 let SEG_COUNT = null;
 const signature = (section) => {
-  if (!SEG_COUNT) { SEG_COUNT = new Map(); for (const e of Catalog.entries("footer")) for (const x of segments(Catalog.build("footer", e.key, {}).section)) SEG_COUNT.set(x, (SEG_COUNT.get(x) || 0) + 1); }
+  // un texte est « unique » s'il n'est contenu (même en morceau d'un autre texte) dans AUCUN autre modèle listé
+  if (!SEG_COUNT) {
+    SEG_COUNT = new Map(); const textes = Catalog.entries("footer").map((e) => [...segments(Catalog.build("footer", e.key, {}).section)]);
+    const blocs = textes.map((l) => l.join("\u0001"));
+    for (const l of textes) for (const x of l) if (!SEG_COUNT.has(x)) SEG_COUNT.set(x, blocs.filter((b) => b.includes(x)).length);
+  }
   const own = [...segments(section)].sort((a, b) => b.length - a.length);
   return own.find((x) => SEG_COUNT.get(x) === 1) || own[0] || "";
 };
@@ -151,7 +156,7 @@ describe("Pieds de page : comportements réels (serveur)", () => {
       assert.equal((await post(U(B.s, `/api/modeles/${tb.id}/publier`), { strict: true, scope: "site", replace: true }, viewerB)).status, 403, "lecteur : publication refusée");
       assert.equal((await post(U(B.s, `/api/modeles/${tb.id}/publier`), { strict: true, scope: "site", replace: true }, editorB)).status, 200, "éditeur : publication acceptée");
       const risky = [];
-      for (const e of Catalog.entries("footer")) walk(Catalog.build("footer", e.key, {}).section.children, (n) => { if (["html", "code", "embed", "customcode", "script", "iframe"].includes(n.type)) risky.push(`${e.key}:${n.type}`); });
+      for (const e of Catalog.entries("footer")) walk(Catalog.build("footer", e.key, {}).section.children, (n) => { if (["code", "embed", "customcode", "script", "iframe"].includes(n.type)) risky.push(`${e.key}:${n.type}`); if (n.type === "html" && /<\s*(script|iframe|object|embed|link|meta|style)\b|\son[a-z]+\s*=|javascript:|data:text\/html/i.test(JSON.stringify(n.props || {}))) risky.push(`${e.key}:html-dangereux`); }); // décors dessinés (SVG) autorisés dans le widget HTML du catalogue ; jamais de script, d'iframe ni de gestionnaire d'événement
       assert.deepEqual(risky, [], "aucun modèle n'embarque de code libre");
       const roleCode = db.prepare("SELECT 1 x").get(); assert.ok(roleCode);
     });
@@ -299,7 +304,10 @@ describe("Pieds de page : comportements réels (serveur)", () => {
     let N1, N2;
     const forms = () => {
       const out = { news: [], contact: [] };
-      for (const e of Catalog.entries("footer")) walk(Catalog.build("footer", e.key, {}).section.children, (n) => { if (n.type === "emailsubscribe") out[n.props.fields === "all" ? "contact" : "news"].push(e.key); });
+      const listes = new Set(Catalog.entries("footer").map((e) => e.key));
+      // les modèles listés (v2) + les anciens modèles masqués mais toujours ouvrables (ils portent les formulaires de contact complets)
+      const cles = [...listes, ...require("../src/themeBuilder/catalog/footer").hiddenLayouts.map((l) => l.fullKey).filter((k) => !listes.has(k))];
+      for (const k of cles) walk(Catalog.build("footer", k, {}).section.children, (n) => { if (n.type === "emailsubscribe") { const c = n.props.fields === "all"; if (c || listes.has(k)) out[c ? "contact" : "news"].push(k); } });
       return out;
     };
     const footerHtml = (t) => t.slice(t.indexOf("<footer"), t.indexOf("</footer>"));

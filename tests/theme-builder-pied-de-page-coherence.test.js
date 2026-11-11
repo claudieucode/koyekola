@@ -107,7 +107,7 @@ describe("Pied de page : cohérence éditeur / aperçu / vignette / site public"
     assert.equal((await boss.get(U(S1, `/api/modeles/${t2.id}/vignette`))).status, 404, "vignette d'un modèle d'un autre site");
   });
   test("bibliothèque : aperçu et copie « Utiliser » partent du MÊME document", async () => {
-    const key = json(await boss.get(U(S1, "/api/bibliotheque?type=footer&mise=communautes&limite=1"))).items[0].key;
+    const key = json(await boss.get(U(S1, "/api/bibliotheque?type=footer&limite=1"))).items[0].key;
     const lib = (await boss.get(U(S1, `/api/bibliotheque/footer/${key}/apercu`))).text;
     const used = json(await post(U(S1, "/api/bibliotheque/utiliser"), { type: "footer", key })).template;
     const mine = await vignette(S1, used);
@@ -118,7 +118,7 @@ describe("Pied de page : cohérence éditeur / aperçu / vignette / site public"
   describe("rendu dans un vrai navigateur : même composition partout, desktop / tablette / mobile", { skip: !chromium || !CHROME ? "Playwright ou Chrome absent" : false }, () => {
     let browser, tpl;
     before(async () => {
-      const key = json(await boss.get(U(S2, "/api/bibliotheque?type=footer&mise=colonnes&limite=1"))).items[0].key;
+      const key = json(await boss.get(U(S2, "/api/bibliotheque?type=footer&limite=1"))).items[0].key;
       tpl = json(await post(U(S2, "/api/bibliotheque/utiliser"), { type: "footer", key, name: "Pied navigateur" })).template;
       const c = await post(U(S2, `/api/modeles/${tpl.id}/conditions`), { conditions: { include: [{ kind: "page", ids: [p2] }] }, revision: tpl.revision }); assert.equal(c.status, 200, c.text.slice(0, 200));
       await publish(S2, tpl);

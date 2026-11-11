@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // FRONTIÈRE DE PIED — tests de COUVERTURE (sans navigateur) : l'exclusion du pied indépendant doit s'appliquer à CHAQUE feuille « du site » émise, et chaque variable du site lue par les
 // widgets partagés doit être remplacée sur la racine du pied. Un test qui échoue ici dit exactement quoi corriger quand quelqu'un ajoute un point d'émission de CSS ou une variable.
 const { test, describe } = require("node:test");

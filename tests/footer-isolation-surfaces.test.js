@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // FRONTIÈRE DE PIED — surfaces et API, sur un VRAI serveur et un VRAI Chrome : plusieurs sites (un en « solo », l'autre en « legacy »), aperçu de la bibliothèque (jamais le thème du site),
 // pages hors Page Builder (blog, page introuvable, domaine d'un site), canevas de l'éditeur, API d'apparence du pied (bascule, aperçu avant/après, révisions, copie, export/import).
 const { test, describe, before, after } = require("node:test");
