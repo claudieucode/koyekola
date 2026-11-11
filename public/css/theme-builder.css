@@ -331,3 +331,84 @@ html[data-kola-theme="dark"] .tb-star[aria-pressed="true"] { color: #fbbf24; }
 @media (max-width: 900px), (pointer: coarse) { .tb-side button { min-height: 44px; } }
 /* Sélecteur de thème (clair / sombre / auto) : cibles de 44 px sur les écrans tactiles et étroits */
 @media (max-width: 900px), (pointer: coarse) { .tb-theme button { width: 44px; height: 44px; } .tb-theme { padding: 2px; } }
+
+/* =====================================================================================================================================================
+   BARRE LATÉRALE — identité « marine » alignée sur le menu Marketing (novembre 2026)
+   Purement visuel : fond nuit fixe (clair ET sombre), pastilles d'icônes colorées par catégorie, état actif lumineux, mode réduit (icônes seules).
+   Aucune logique modifiée : mêmes boutons, mêmes compteurs, mêmes points de publication ; la couleur d'une catégorie vient de data-k posé sur son bouton.
+   ===================================================================================================================================================== */
+.tb .tb-side {
+  --sb-bg: #0b1a2c; --sb-ink: #d5e2ef; --sb-ink-hi: #f2f7fc; --sb-mute: #93a9bf; --sb-line: rgb(143 180 214 / .16); --sb-hover: rgb(143 180 214 / .10);
+  --sb-accent: #5cbdf5; --sb-chip: 32px;
+  background: var(--sb-bg); color: var(--sb-ink); border-right: 1px solid rgb(143 180 214 / .14); padding: 14px 12px 12px;
+  scrollbar-width: thin; scrollbar-color: rgb(143 180 214 / .3) transparent; color-scheme: dark;
+}
+.tb .tb-side ul { gap: 4px; }
+.tb .tb-side button { min-height: 46px; padding: 6px 10px; border-radius: 12px; border: 1px solid transparent; color: var(--sb-ink); font-size: .92rem; font-weight: 500; transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+.tb .tb-side button:hover:not([disabled]) { background: var(--sb-hover); color: var(--sb-ink-hi); }
+.tb .tb-side button:focus-visible { outline: 2px solid #8fd0f3; outline-offset: 1px; }
+
+/* intitulé de section : discret, avec filet qui se prolonge (comme « Contenu », « Design » du Marketing) */
+.tb .tb-side li.tb-grp { display: flex; align-items: center; gap: 10px; padding: 18px 10px 6px; font-size: .78rem; font-weight: 600; letter-spacing: .02em; text-transform: none; color: var(--sb-mute); }
+.tb .tb-side li.tb-grp::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--sb-line), transparent); }
+
+/* pastille d'icône : carré arrondi teinté, icône en couleur de la catégorie */
+.tb .tb-side .tb-ico { --c: #5cbdf5; box-sizing: border-box; flex: none; width: var(--sb-chip); height: var(--sb-chip); padding: 6px; border-radius: 10px; color: var(--c);
+  background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 26%, transparent); transition: background-color .15s ease, color .15s ease, box-shadow .15s ease; }
+.tb .tb-side button[data-k="all"] .tb-ico, .tb .tb-side button[data-k="sidebar"] .tb-ico { --c: #5cbdf5; }
+.tb .tb-side button[data-k="header"] .tb-ico { --c: #7cb7ff; }
+.tb .tb-side button[data-k="footer"] .tb-ico { --c: #b39af2; }
+.tb .tb-side button[data-k="single_page"] .tb-ico { --c: #4fd8c4; }
+.tb .tb-side button[data-k="single_post"] .tb-ico { --c: #6f9cff; }
+.tb .tb-side button[data-k="archive"] .tb-ico { --c: #c79cf0; }
+.tb .tb-side button[data-k="search_results"] .tb-ico { --c: #ffa45c; }
+.tb .tb-side button[data-k="not_found"] .tb-ico { --c: #ff8791; }
+.tb .tb-side button[data-k="single_product"] .tb-ico { --c: #5ed49a; }
+.tb .tb-side button[data-k="product_archive"] .tb-ico { --c: #f2d15c; }
+.tb .tb-side button[data-k="custom"] .tb-ico { --c: #b39af2; }
+.tb .tb-side button:hover:not([disabled]) .tb-ico { background: color-mix(in srgb, var(--c) 24%, transparent); color: var(--c); }
+.tb .tb-side button[disabled] { opacity: .55; } .tb .tb-side button[disabled] .tb-ico { filter: saturate(.35); }
+
+/* état actif : fond lumineux dégradé, filet fin, pastille pleine, texte contrasté, repère à gauche */
+.tb .tb-side button[aria-current="true"] { background: linear-gradient(90deg, rgb(92 189 245 / .24), rgb(92 189 245 / .08)); border-color: rgb(92 189 245 / .34); color: var(--sb-ink-hi); font-weight: 650; box-shadow: 0 4px 14px rgb(0 0 0 / .22); }
+.tb .tb-side button[aria-current="true"] .tb-ico { background: var(--c); color: #06192a; box-shadow: none; }
+.tb .tb-side button::before { background: var(--sb-accent); }
+@media (min-width: 821px) { .tb .tb-side button::before { left: -12px; top: 11px; bottom: 11px; } }
+
+/* compteurs et points de publication : colonne stable à droite */
+.tb .tb-side .tb-count { min-width: 2ch; font-size: .8rem; color: var(--sb-mute); }
+.tb .tb-side button[aria-current="true"] .tb-count { color: #8fd3fb; }
+.tb .tb-side .tb-dot[data-live="1"] { background: #4fd8ad; box-shadow: 0 0 0 3px rgb(79 216 173 / .16); }
+
+/* bouton « Réduire » : même rôle que « Replier le menu » du Marketing (corrige aussi l'icône qui s'affichait en carré noir : aucun style n'existait) */
+.tb .tb-side .tb-collapse { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 42px; margin-top: 10px; padding: 6px 10px; border: 0; border-top: 1px solid var(--sb-line); border-radius: 0 0 10px 10px; background: var(--sb-bg); color: var(--sb-mute); font: inherit; font-size: .88rem; text-align: left; cursor: pointer; transition: color .15s ease, background-color .15s ease; }
+.tb .tb-side .tb-collapse svg { flex: none; width: 18px; height: 18px; margin: 0 7px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; transition: transform .2s ease; }
+.tb .tb-side .tb-collapse:hover { color: var(--sb-ink-hi); background: var(--sb-hover); }
+.tb .tb-side .tb-collapse:focus-visible { outline: 2px solid #8fd0f3; outline-offset: -2px; }
+.tb .tb-side .tb-collapse[aria-pressed="true"] svg { transform: scaleX(-1); }
+
+/* bureau : colonne flexible, bouton Réduire collé en bas, mode réduit à icônes seules */
+@media (min-width: 821px) {
+  .tb .tb-side { display: flex; flex-direction: column; }
+  .tb .tb-side ul { flex: 1 0 auto; }
+  .tb .tb-side .tb-collapse { position: sticky; bottom: -12px; }
+  .tb-layout:not([data-side="mini"]) { grid-template-columns: 268px minmax(0, 1fr); }
+  .tb-layout { transition: grid-template-columns .22s var(--tb-ease); }
+  .tb-layout[data-side="mini"] { grid-template-columns: 76px minmax(0, 1fr); }
+  .tb-layout[data-side="mini"] .tb-side { padding-left: 12px; padding-right: 12px; }
+  .tb-layout[data-side="mini"] .tb-side .tb-lbl, .tb-layout[data-side="mini"] .tb-side .tb-count { display: none; }
+  .tb-layout[data-side="mini"] .tb-side li.tb-grp { height: 1px; margin: 12px 10px 8px; padding: 0; background: var(--sb-line); font-size: 0; }
+  .tb-layout[data-side="mini"] .tb-side li.tb-grp::after { display: none; }
+  .tb-layout[data-side="mini"] .tb-side button { padding: 6px 10px; }
+  .tb-layout[data-side="mini"] .tb-side .tb-dot { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; box-shadow: 0 0 0 2px var(--sb-bg); }
+  .tb-layout[data-side="mini"] .tb-collapse .tb-lbl { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .tb-layout, .tb .tb-side button, .tb .tb-collapse, .tb .tb-side .tb-ico, .tb .tb-side .tb-collapse svg { transition: none; } }
+
+/* bandeau horizontal (téléphone, tablette portrait) : mêmes pastilles, repère en bas déjà géré plus haut */
+@media (max-width: 820px) {
+  .tb .tb-side { padding: 6px 8px; }
+  .tb .tb-side button { min-height: 44px; padding: 4px 12px 4px 8px; }
+  .tb .tb-side li.tb-grp { display: none; }
+  .tb .tb-side .tb-ico { --sb-chip: 28px; width: 28px; height: 28px; padding: 5px; }
+}
