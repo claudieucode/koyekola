@@ -1,3 +1,5 @@
+> **REMPLACÉ par la version 4** : voir `docs/theme-builder/archive-v4/README.md`. Ce document décrit une ancienne numérotation (25 compositions) et reste pour l'historique.
+
 # Bibliothèque « Archive » — 100 modèles à identité indépendante (8 novembre 2026)
 
 Catégorie `archive` du Theme Builder (blog, catégories, étiquettes, auteurs, recherche par date). Remplace la bibliothèque 10 × 10 du commit 03a98517. Contexte, recherche et audit : `PHASE1_AUDIT_ET_CONCEPTS.md`.

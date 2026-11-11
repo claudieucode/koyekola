@@ -1,3 +1,5 @@
+> **REMPLACÉ par la version 4** : voir `docs/theme-builder/archive-v4/README.md`. Ce document décrit une ancienne numérotation (25 compositions) et reste pour l'historique.
+
 # Archives — Phase 1 : recherche, audit, 100 concepts et plan (8 novembre 2026)
 
 > **Document d'audit, écrit AVANT la réalisation.** Ce qui a été réalisé ensuite (et ce qui ne l'a pas été) est décrit dans `ARCHIVE_LIBRARY.md`. Les colonnes « Faisab. » du tableau (A/B) sont l'estimation d'avant travail : voir `ARCHIVE_LIBRARY.md` § 6 pour les compositions réellement construites.

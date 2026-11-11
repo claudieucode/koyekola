@@ -37,10 +37,16 @@ Documents : `PHASE1_RECHERCHE_AUDIT_PLAN.md` (recherche, audit, plan) · `FICHES
 Blog, catégorie (+ sous-catégories), étiquette, auteur, **date** : pris en charge. Recherche : autre catégorie. Produits : autre catégorie (« Archive de produits »). **Non pris en charge** : types de contenu personnalisés, taxonomies personnalisées, formations / événements / portfolios / membres (aucune route d'archive), image de catégorie (absente des données), tri choisi par le visiteur, filtres combinés.
 
 ## 5. Widgets, navigation, filtres
-Widgets réellement utilisés : `archiveinfo`, boucle (`grid` + `loop`), `catfilter`, `search`, `querylist`, `authorbox`, boutons, séparateurs. Pagination du moteur : numéros, précédent/suivant, « charger plus », défilement infini (+ carrousel). Filtre de rubriques = `?categorie=` réel ; recherche = widget réel ; étiquettes = liste réelle. États : vide conçu dans chaque boucle ; **pas d'état « chargement » ni « erreur »** (non fournis par le moteur). Limite connue : les boucles de tête (vedettes) restent identiques sur les pages suivantes.
+Widgets réellement utilisés : `archiveinfo`, boucle (`grid` + `loop`), `catfilter`, `search`, `querylist`, `authorbox`, boutons, séparateurs. Pagination du moteur : numéros, précédent/suivant, « charger plus », défilement infini. Filtre de rubriques = `?categorie=` réel ; recherche = widget réel ; étiquettes = liste réelle. États : vide conçu dans chaque boucle ; **pas d'état « chargement » ni « erreur »** (non fournis par le moteur). Limite connue : les boucles de tête (vedettes) restent identiques sur les pages suivantes.
 
 ## 6. Tests et résultats réels
-RÉSULTATS_PLACEHOLDER
+## 6. Résultats mesurés (exécutés, pas estimés)
+
+- **Audit statique** (`node scripts/audit-archives.js`) : 100 modèles, 100 structures distinctes, 25 palettes, 300/300 documents acceptés par le moteur (3 modes d'identité), ≤ 400 nœuds, profondeur ≤ 9, contrastes AA respectés.
+- **Audit en vrai Chrome** (`node scripts/audit-archives-navigateur.js`) : 100 modèles ouverts, **0 débordement horizontal, 0 fuite de charte** (couleurs et polices mesurées sur le rendu réel). Cet audit a trouvé des fuites réelles (titres, boutons, flèches de carrousel) : corrigées, le carrousel est remplacé par une bande de vedettes statique.
+- **Tests** : `theme-builder-archives-bibliotheque` et `theme-builder-archives-isolation-navigateur` : 21/21 réussis (archives par date, insertion des 100 modèles, scénario des modes d'identité, indépendance face aux changements de couleur/police/thème du site).
+- **Non fait / limites** : CI GitHub en échec immédiat pour toutes les PR (infrastructure, sans étape exécutée) ; pas de jugement visuel humain modèle par modèle ; pas de variables CSS ; pas d'état « chargement » ni « erreur » ; recherche de modèles externes (ThemeForest, TemplateMonster) partielle.
+
 
 ## 7. Migration et retour arrière
 Le catalogue est du **code** : remplacer `archive.js` ne modifie aucune ligne en base. Les sites qui ont utilisé un ancien modèle ont une **copie indépendante** (page + modèle du Theme Builder, conditions comprises) : intacte. Les nouvelles copies mémorisent leur modèle d'origine et leur mode (`origin_key`, `identity_mode`, colonnes existantes). **Retour arrière** : revert du commit de fusion ; aucune sauvegarde de base n'est nécessaire (rien n'y est écrit par la bibliothèque).
