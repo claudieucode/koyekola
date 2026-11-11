@@ -13,10 +13,10 @@ module.exports = [
   { key: "typographie-eclatee", family: "creatives", skin: S_ECLAT, name: "Typographie éclatée", tags: ["créatif", "typographie", "escalier"],
     desc: "Les trois chiffres du 404 descendent en escalier à des tailles différentes ; le message se glisse dans le vide.", decl: { C: 10, N: 3, P: 4, T: 2 },
     build: (k) => [stage(k, [k.col([
-      big("4", { fontSize: "22vw", color: "#1b1b1b", fontFamily: "font.playfair-display", fontStyle: "italic" }),
-      big("0", { fontSize: "16vw", color: "#ffffff", marginLeft: "14vw", fontFamily: "font.playfair-display" }),
-      big("4", { fontSize: "30vw", color: "#1b1b1b", marginLeft: "30vw", fontFamily: "font.playfair-display", fontStyle: "italic" }),
-      k.col([k.H(MSG, "1", { fontSize: "30px", fontFamily: "font.playfair-display" }), k.B("Retour à l'accueil", "/", "solid")], { gap: "14px", marginLeft: "30vw", marginTop: "-6vw" }, { marginLeft: "0px", marginTop: "10px" }),
+      big("4", { fontSize: "18vw", lineHeight: 0.85, color: "#1b1b1b", fontFamily: "font.playfair-display", fontStyle: "italic" }),
+      big("0", { fontSize: "13vw", lineHeight: 0.85, color: "#ffffff", marginLeft: "14vw", fontFamily: "font.playfair-display" }),
+      big("4", { fontSize: "22vw", lineHeight: 0.85, color: "#1b1b1b", marginLeft: "30vw", fontFamily: "font.playfair-display", fontStyle: "italic" }),
+      k.col([k.H(MSG, "1", { fontSize: "30px", fontFamily: "font.playfair-display" }), k.B("Retour à l'accueil", "/", "solid")], { gap: "14px", marginLeft: "30vw", marginTop: "60px" }, { marginLeft: "0px", marginTop: "10px" }),
     ], { gap: "0px", width: "100%" })], { gap: "0px" })] },
 
   { key: "collage-de-papier", family: "creatives", skin: S_COLLAGE, name: "Collage de papier", tags: ["créatif", "collage", "formes"],

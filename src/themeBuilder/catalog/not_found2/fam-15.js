@@ -19,7 +19,7 @@ module.exports = [
   { key: "chiffres-en-mouvement", family: "experimentales", skin: S_MOUVEMENT, name: "Chiffres en mouvement", tags: ["expérimental", "animation", "contour"],
     desc: "Le 404 en contour s'anime en continu, le message apparaît lettre par lettre, la sortie suit.", decl: { C: 11, N: 11, P: 6, T: 8 },
     build: (k) => [stage(k, [k.col([
-      W(k, "motionkinetictext", { text: "404", look: "outline", tag: "p", accent: "#ee6c4d" }, { fontSize: "20vw", fontFamily: "font.syne", textAlign: "center" }),
+      W(k, "motionkinetictext", { lines: [{ text: "404", look: "outline" }], tag: "p", accent: "#ee6c4d" }, { fontSize: "20vw", fontFamily: "font.syne", textAlign: "center" }),
       W(k, "motionsplittext", { text: MSG, tag: "h1", split: "chars" }, { fontSize: "32px", textAlign: "center", color: "#e0fbfc" }),
       k.B("Retour à l'accueil", "/", "solid", { alignSelf: "center" }),
     ], { gap: "16px", width: "100%" })], { gap: "0px" })] },

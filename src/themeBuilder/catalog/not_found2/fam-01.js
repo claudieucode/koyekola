@@ -66,8 +66,8 @@ module.exports = [
     desc: "« Introuvable. » et « Pardon. » en géants, empilés ; une barre de recherche pour rebondir.",
     decl: { C: 17, N: 6, P: 9, T: 1 },
     build: (k) => [stage(k, [k.col([
-      k.H("Introuvable.", "1", { fontSize: "13vw", lineHeight: 0.92, letterSpacing: "-0.03em" }),
-      deco("Pardon.", { fontSize: "13vw", lineHeight: 0.92, letterSpacing: "-0.03em", color: "#bfdbfe", fontFamily: "font.archivo-black" }),
+      k.H("Introuvable.", "1", { fontSize: "9.5vw", lineHeight: 0.92, letterSpacing: "-0.03em" }),
+      deco("Pardon.", { fontSize: "9.5vw", lineHeight: 0.92, letterSpacing: "-0.03em", color: "#bfdbfe", fontFamily: "font.archivo-black" }),
       k.search("blog", { maxWidth: "520px", width: "100%", marginTop: "28px" }),
       k.L("Erreur 404 — cette page n'existe plus.", { color: "#dbeafe", marginTop: "6px" }),
     ], { gap: "0px", width: "100%" })], { gap: "0px", justifyContent: "center" })] },
