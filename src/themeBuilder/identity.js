@@ -15,7 +15,7 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 function switchMode(ctx, siteId, templateId, mode) {
   if (!Modes.MODES.includes(mode)) throw bad("Mode d'identité inconnu.");
   const t = store.get(ctx, siteId, templateId);
-  if (!Modes.TYPES.has(t.type) || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit » et « Article individuel » installés depuis la bibliothèque.");
+  if (!Modes.TYPES.has(t.type) || t.sourceKind !== "page") throw bad("Le mode d'identité s'applique aux modèles « Fiche produit », « Page individuelle » et « Article individuel » installés depuis la bibliothèque.");
   if (t.status === "archived") throw bad("Ce modèle est archivé : restaurez-le avant de le modifier.", "conflict");
   const row = ctx.db.prepare("SELECT origin_key, identity_mode FROM mk_tb_templates WHERE id = ? AND organization_id = ? AND site_id IS ?").get(t.id, ctx.organizationId, siteId);
   if (!row || !row.origin_key) throw bad("Ce modèle n'a pas été installé depuis la bibliothèque : son identité d'origine n'est pas connue.");

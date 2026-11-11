@@ -1,6 +1,6 @@
 // Groupe 3 — Services (21), Contact (22-28), Vente (29-30)
 const h = require("./h");
-const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, faq, tabs, quote, plan, note, cta, counter, form, map, contactCard, slot } = h;
+const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, faq, tabs, quote, plan, note, cta, counter, form, map, contactCard, slot, lab } = h;
 module.exports = [
   L(dir(21), "services-devis", "Prestations avec demande de devis", ["services", "devis", "formulaire"], "Description des prestations à gauche, formulaire de devis collant à droite : la page qui transforme une visite en demande.", (k, env) => [
     sect(k, [H1(k, 44), k.grid(2, [k.col([desc(k), content(k), boxes(k, 2, [["check", "[Garantie 1]", "[En une ligne.]"], ["clock", "[Garantie 2]", "[En une ligne.]"]])], { gap: "20px" }), k.col([form(k, env, "Demander un devis", "Décrivez votre besoin en quelques lignes.", "Envoyer ma demande")], { position: "sticky", top: "24px" }, null, { position: "static" })], { gridTemplate: "3fr 2fr", alignItems: "start" })], "1120px")]),
@@ -12,7 +12,7 @@ module.exports = [
     band(k, [k.col([H1(k, 44), desc(k)], { maxWidth: "720px" })], { backgroundColor: k.S.alt, paddingTop: "56px", paddingBottom: "56px" }),
     sect(k, [form(k, env, "Votre message", "Choisissez un sujet et décrivez votre demande.", "Envoyer"), content(k), ...head(k, "Avant d'écrire"), faq(k, 4)], "820px")]),
   L(dir(25), "contact-carte", "Contact avec carte", ["contact", "carte", "accès"], "Carte pleine largeur en ouverture, coordonnées en trois blocs dessous : la page d'un commerce.", (k) => [
-    sect(k, [k.grid(2, [H1(k, 42), k.row([k.B("Itinéraire", "/contact", "outline")], { justifyContent: "flex-end" })], { gridTemplate: "3fr 1fr", alignItems: "end" }), W(k, "map", { address: "[Adresse ou lieu à renseigner]", zoom: 14, height: 420, title: "Plan d'accès" }, { width: "100%" }), k.grid(2, [content(k), k.card([k.L("Accès"), W(k, "bizhours", {}), W(k, "bizphone", {})])], { gridTemplate: "2fr 1fr", alignItems: "start" })], "1180px")]),
+    sect(k, [k.grid(2, [H1(k, 42), k.row([k.B("Itinéraire", "/contact", "outline")], { justifyContent: "flex-end" })], { gridTemplate: "3fr 1fr", alignItems: "end" }), W(k, "map", { address: "[Adresse ou lieu à renseigner]", zoom: 14, height: 420, title: "Plan d'accès" }, { width: "100%" }), k.grid(2, [content(k), k.card([lab(k, "Accès"), W(k, "bizhours", {}), W(k, "bizphone", {})])], { gridTemplate: "2fr 1fr", alignItems: "start" })], "1180px")]),
   L(dir(26), "contact-departements", "Contact multi-départements", ["contact", "services", "onglets"], "Un onglet par service (commercial, support, presse) avec ses propres consignes de contact.", (k) => [
     sect(k, [H1(k, 44), desc(k), tabs(k, ["[Commercial]", "[Support]", "[Presse]", "[Recrutement]"]), content(k), W(k, "bizcontact", { title: "Standard", showName: false, showAddress: false, showPhone: true, showEmail: true, showIcons: true, layout: "stack" })], "920px")]),
   L(dir(27), "contact-bureaux", "Contact avec plusieurs bureaux", ["contact", "bureaux", "cartes"], "Trois bureaux en cartes avec leur plan, puis un formulaire commun.", (k, env) => [

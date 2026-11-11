@@ -36,11 +36,12 @@ function convertNodes(cur, from, to) {
     n += swapValues(c.styles, f.styles, t.styles);
     n += swapValues(c.parts, f.parts, t.parts);
     n += swapValues(c.props, f.props, t.props);
-    if (f.css !== t.css && c.css === f.css) { if (t.css === undefined) delete c.css; else c.css = t.css; n++; } // portée CSS de la racine (Article individuel) : restituée si l'utilisateur ne l'a pas modifiée
+    // CSS de portée de l'identité (variables --kw-* du modèle) : converti seulement s'il est encore celui d'origine
+    if ((typeof f.css === "string" || typeof t.css === "string") && c.css === f.css) { if (t.css === undefined) delete c.css; else c.css = t.css; n++; }
     if (Array.isArray(c.children) && Array.isArray(f.children) && Array.isArray(t.children)) n += convertNodes(c.children, f.children, t.children);
   }
   return n;
 }
 // Catalogues dont les modèles portent leur identité propre et proposent les trois modes
-const TYPES = new Set(["single_product", "single_post"]);
+const TYPES = new Set(["single_product", "single_page", "single_post"]);
 module.exports = { TYPES, MODES, skinFor, siteSkin, hybridSkin, convertNodes };
