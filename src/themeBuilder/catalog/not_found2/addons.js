@@ -40,6 +40,6 @@ const NUMERALS = {
   objet: { N: 3, node: (k) => k.row([num(k, "4", { fontSize: "9vw", color: k.S.fg }), { type: "container", children: [], styles: { desktop: { width: "7vw", height: "7vw", minWidth: "44px", minHeight: "44px", borderRadius: "50%", backgroundColor: k.S.accent, flexShrink: "0" } } }, num(k, "4", { fontSize: "9vw", color: k.S.fg })], { gap: "1vw", flexWrap: "nowrap", alignItems: "center" }) },
   pixel: { N: 9, node: (k) => num(k, "404", { fontSize: "8vw", fontFamily: "font.press-start-2p", color: k.S.accent, lineHeight: 1.1, fontWeight: "400" }) },
   code: { N: 10, node: (k) => k.T("<p>ERROR 404 // NOT_FOUND</p>", { fontFamily: "font.jetbrains-mono", fontSize: "14px", color: k.S.accent, letterSpacing: "2px" }) },
-  anime: { N: 7, node: (k) => k.W("motionkinetictext", { text: "404", look: "outline", tag: "p", accent: "token:accent" }, { fontSize: "12vw", lineHeight: 0.9 }) },
+  anime: { N: 7, node: (k) => k.W("motionkinetictext", { lines: [{ text: "404", look: "outline" }], tag: "p", accent: "token:accent" }, { fontSize: "12vw", lineHeight: 0.9 }) },
 };
 module.exports = { ADDONS, NAMES: Object.keys(ADDONS), NUMERALS, NUM_NAMES: Object.keys(NUMERALS) };
