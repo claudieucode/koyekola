@@ -49,8 +49,10 @@ describe("Article individuel v3 : 100 identités propres (code)", () => {
       const s = D.skins.find((x) => x.key === e.skinKey);
       const site = JSON.stringify(Catalog.build("single_post", e.key, { identity: "site" }).sections).toLowerCase();
       assert.match(site, /token:/); for (const c of ["bg", "fg", "alt", "accent"]) assert.ok(!site.includes(`"${s[c].toLowerCase()}"`), `${e.key} : ${c} subsiste en mode site`);
-      const hyb = JSON.stringify(Catalog.build("single_post", e.key, { identity: "hybrid" }).sections).toLowerCase();
-      assert.ok(hyb.includes("token:primary") && hyb.includes(`"${s.bg.toLowerCase()}"`) && (s.accent.toLowerCase() === s.fg.toLowerCase() || !hyb.includes(`"${s.accent.toLowerCase()}"`)), `${e.key} : hybride`); // accent = encre : la couleur reste (texte)
+      // hybride : fond et polices gardés, la couleur de marque (accent) vient du site : plus aucune trace de l'accent du modèle, y compris dans les variables de portée de la racine
+      const hyb = JSON.stringify(Catalog.build("single_post", e.key, { identity: "hybrid" }).sections).toLowerCase().replace(/--kw-(success|warning|error):#[0-9a-f]{6}/g, ""); // couleurs d'état constantes du moteur : hors identité
+      assert.ok(hyb.includes(s.bg.toLowerCase()) && (s.accent.toLowerCase() === s.fg.toLowerCase() || !hyb.includes(s.accent.toLowerCase())) && !/--kw-primary:#|--kw-accent:#/.test(hyb), `${e.key} : hybride`);
+      assert.ok(!/"css":"/.test(site), `${e.key} : en mode « suit le site » la racine ne redéfinit rien`);
     }
   });
 });
