@@ -9122,6 +9122,7 @@ function selectField(label, value, options, onChange, opts) {
       var tab = $("#pb-tab-page"); if (tab) { var isHdr = isHeaderDoc(), isFtr = isFooterDoc(), isTpl = isTplDoc(); tab.style.display = isHdr || isFtr || isTpl ? "" : "none"; var tabText = isFtr ? "Pied de page" : isTpl ? TPL_TABS[partType()] : "En-tête"; if ((isHdr || isFtr || isTpl) && tab.textContent !== tabText) tab.textContent = tabText; }
       return;
     }
+    var tplTab = $("#pb-tab-page"); if (tplTab && isTplDoc() && tplTab.textContent !== TPL_TABS[partType()]) tplTab.textContent = TPL_TABS[partType()];
     var live = status === "published";
     el.textContent = live ? (hasDraft ? "En ligne · modifications non publiées" : "En ligne") : status === "unpublished" ? "Hors ligne" : "Brouillon";
     el.classList.toggle("is-live", live && !hasDraft);
