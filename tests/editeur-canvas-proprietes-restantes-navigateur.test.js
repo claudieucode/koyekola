@@ -114,7 +114,7 @@ describe("réglages restants effectifs (navigateur)", { skip: SKIP }, () => {
   });
   test("chaque réglage composé (dégradé, voile, image de fond, ombre libre, filtres, transformation, masque) produit son CSS", async () => {
     const p = await ctx.newPage(); await p.goto(`${srv.base}/p/${slug}`); await p.waitForTimeout(400);
-    const raw = await p.evaluate((cases) => cases.map(([, , cssProp], i) => { const e = document.querySelector(`.kw-n-${`zx`.replace("z", "z" + i.toString(36)).padEnd(12, "0")}`); return e ? getComputedStyle(e).getPropertyValue(cssProp) : null; }), COMPOSED.map((c) => [c[0], c[1], c[2]]));
+    const raw = await p.evaluate((cases) => cases.map(([, , cssProp], i) => { const e = document.querySelector(`.kw-n-${`zx`.replace("z", "z" + i.toString(36)).padEnd(12, "0")}`); return e ? getComputedStyle(e, cssProp === "filter" ? "::before" : null).getPropertyValue(cssProp) : null; }), COMPOSED.map((c) => [c[0], c[1], c[2]]));
     await p.close();
     const bad = [];
     COMPOSED.forEach((c, i) => { if (raw[i] === null) bad.push(`${c[0]} : élément absent`); else if (!verdict(raw[i], c[3])) bad.push(`${c[0]} → ${c[2]} : « ${raw[i]} »`); });
