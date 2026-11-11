@@ -1,0 +1,3 @@
+<%# Nombre de résultats de la recherche. d = { total, term, names }. Classes : kw-searchcount (racine), kw-sc-n (le nombre). %>
+<% const n = d ? Number(d.total) || 0 : 0; const fem = ["courses", "pages"].includes(p.source); const nom = d && d.names ? d.names[n > 1 ? 1 : 0] : "résultat"; %>
+<p class="<%= cls %>"<%- attrs %>><span class="kw-sc-n"><%= n %></span> <%= nom %> trouvé<%= fem ? "e" : "" %><%= n > 1 ? "s" : "" %><% if (d && p.withTerm && d.term) { %> pour « <%= d.term %> »<% } %></p>
