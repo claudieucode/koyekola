@@ -42,6 +42,8 @@ const justeUneLigne = modeleV2({
     const S = k.S;
     // 1 · le nom du site (widget Titre du site) : 28 px, gras, serré
     const nom = Moteur.item(k, "title:28", env);
+    // cible tactile ≥ 44 px (lien en ligne : le remplissage compte dans la hauteur mesurée)
+    nom.parts = { ...(nom.parts || {}), link: { ...((nom.parts || {}).link || {}), styles: { ...(((nom.parts || {}).link || {}).styles || {}), mobile: { display: "inline-block", minHeight: "44px", paddingTop: "10px", paddingBottom: "10px" } } } };
     nom.styles.desktop = { ...nom.styles.desktop, fontWeight: "700", letterSpacing: "-0.035em", lineHeight: 1.15, color: S.fg };
     nom.styles.mobile = { ...(nom.styles.mobile || {}), fontSize: "24px", order: 1 };
     // 2 · trois liens (jamais de lien mort) ; Contact souligné en permanence

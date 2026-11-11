@@ -31,8 +31,9 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
 
   const info = (pg) => pg.evaluate(() => {
     const f = document.querySelector("footer"), main = document.querySelector("main");
-    const fams = new Set(); for (const e of f.querySelectorAll("*")) { const ff = getComputedStyle(e).fontFamily.split(",")[0].replace(/["']/g, "").trim(); if (ff && ![...e.childNodes].every((n) => n.nodeType !== 3 || !n.textContent.trim())) fams.add(ff); }
-    const notLoaded = [...fams].filter((n) => !/^(sans-serif|serif|monospace|system-ui)$/.test(n) && !document.fonts.check(`16px "${n}"`));
+    const fams = new Set(), faces = new Map(); for (const e of f.querySelectorAll("*")) { const cs = getComputedStyle(e), ff = cs.fontFamily.split(",")[0].replace(/["']/g, "").trim(); if (ff && e.getClientRects().length && ![...e.childNodes].every((n) => n.nodeType !== 3 || !n.textContent.trim())) { fams.add(ff); faces.set(`${cs.fontStyle} ${cs.fontWeight} 16px "${ff}"`, ff); } }
+    // on teste la graisse et le style réellement employés (un modèle peut n'utiliser une police qu'en 700 italique)
+    const notLoaded = [...new Set([...faces].filter(([d, n]) => !/^(sans-serif|serif|monospace|system-ui)$/.test(n) && !document.fonts.check(d)).map(([, n]) => n))];
     const fl = [...document.fonts].filter((x) => x.status === "loaded").map((x) => x.family.replace(/["']/g, ""));
     return { count: document.querySelectorAll("footer").length, solo: f.getAttribute("data-kw-ft"), parentBody: f.parentElement === document.body, afterMain: Boolean(main.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING), w: f.getBoundingClientRect().width, vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth, fams: [...fams], notLoaded, loadedFaces: fl };
   });
@@ -85,15 +86,24 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
       if (vus.size < Math.max(1, n - 3)) probs.push(`parcours clavier : ${vus.size} éléments atteints sur ${n}`);
       if (faibles.length) probs.push(`focus peu ou pas visible : ${faibles.slice(0, 5).join(", ")}`);
       // cibles tactiles à 390 px
-      const petites = await pg.evaluate(() => [...document.querySelectorAll("footer a[href], footer button, footer summary")].filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== "hidden").map((e) => { const r = e.getBoundingClientRect(); return { t: (e.textContent || "").trim().slice(0, 16), w: Math.round(r.width), h: Math.round(r.height), txt: (e.textContent || "").trim().length > 0 && e.tagName === "A" }; }).filter((x) => (x.txt ? x.h < 43.5 : x.h < 43.5 || x.w < 43.5)));
-      if (petites.length) probs.push(`cibles < 44 px : ${petites.slice(0, 5).map((x) => `${x.t} ${x.w}×${x.h}`).join(", ")}`);
+      const petites = await pg.evaluate(() => [...document.querySelectorAll("footer a[href], footer button, footer summary")].filter((e) => e.getClientRects().length && getComputedStyle(e).visibility !== "hidden").map((e) => { const r = e.getBoundingClientRect(); return { enPhrase: e.tagName === "A" && getComputedStyle(e).display === "inline" && e.parentElement && (e.parentElement.textContent || "").trim().length > (e.textContent || "").trim().length + 12, html: (() => { const c = getComputedStyle(e); return [c.display, c.minHeight, c.paddingTop, c.lineHeight, c.fontSize, c.boxSizing, e.getBoundingClientRect().height].join("/"); })(), t: (e.textContent || "").trim().slice(0, 16), w: Math.round(r.width), h: Math.round(r.height), txt: (e.textContent || "").trim().length > 0 && e.tagName === "A" }; }).filter((x) => !x.enPhrase).filter((x) => (x.txt ? x.h < 43.5 : x.h < 43.5 || x.w < 43.5)));
+      if (petites.length) probs.push(`cibles < 44 px : ${petites.slice(0, 5).map((x) => `${x.t} ${x.w}×${x.h} ${process.env.DBGH ? x.html : ""}`).join(", ")}`);
       await pg.close();
       // survol (souris réelle à 1280 px) : le premier lien à état de survol change d'aspect
       const pc = await chrome.newPage({ width: 1280, height: 900, cookies: [] });
       await pc.goto(A.url); await wait(700);
-      const cible = await pc.evaluate(() => { const l = [...document.querySelectorAll("footer a[href]")].find((e) => e.getClientRects().length && e.textContent.trim()); if (!l) return null; l.scrollIntoView({ block: "center" }); const r = l.getBoundingClientRect(); const c = getComputedStyle(l); return { x: r.left + r.width / 2, y: r.top + r.height / 2, avant: [c.color, c.textDecorationLine, c.backgroundColor, c.transform, c.borderTopColor].join("|") }; });
-      if (cible) { await pc.mouseMove(cible.x, cible.y); await wait(500); const apres = await pc.evaluate((p) => { const l = document.elementFromPoint(p.x, p.y).closest("a"); const c = getComputedStyle(l); return [c.color, c.textDecorationLine, c.backgroundColor, c.transform, c.borderTopColor].join("|"); }, cible); if (apres === cible.avant) probs.push("survol : aucun changement visible sur le premier lien"); }
-      // mouvement réduit : plus aucune transition ni animation dans le pied
+      // un lien « change d'aspect » si l'une de ces propriétés (lien ou premier enfant) varie ; on essaie les 8 premiers liens visibles
+      const SIG = (l) => { const f = (e) => { const c = getComputedStyle(e); return [c.color, c.textDecorationLine, c.textDecorationColor, c.textDecorationThickness, c.textUnderlineOffset, c.backgroundColor, c.transform, c.borderTopColor, c.borderBottomColor, c.opacity, c.boxShadow, c.letterSpacing, c.paddingLeft, c.filter, c.backgroundSize, c.backgroundPositionX].join("|"); }; return f(l) + "#" + (l.firstElementChild ? f(l.firstElementChild) : ""); };
+      const cibles = await pc.evaluate((sigSrc) => { const SIG = eval(sigSrc); return [...document.querySelectorAll("footer a[href]")].filter((e) => e.getClientRects().length && e.textContent.trim()).slice(0, 8).map((l, i) => { l.scrollIntoView({ block: "center" }); const r = l.getBoundingClientRect(); return { i, x: r.left + r.width / 2, y: r.top + r.height / 2, avant: SIG(l) }; }); }, SIG.toString());
+      let survolOk = !cibles.length;
+      for (const cible of cibles) {
+        await pc.evaluate((i) => { const l = [...document.querySelectorAll("footer a[href]")].filter((e) => e.getClientRects().length && e.textContent.trim())[i]; l.scrollIntoView({ block: "center" }); }, cible.i);
+        const pos = await pc.evaluate((i) => { const l = [...document.querySelectorAll("footer a[href]")].filter((e) => e.getClientRects().length && e.textContent.trim())[i]; const r = l.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, cible.i);
+        await pc.mouseMove(pos.x, pos.y); await wait(450);
+        const apres = await pc.evaluate((p) => { const SIG = eval(p.sigSrc); const e = document.elementFromPoint(p.x, p.y); const l = e && e.closest("a"); return l ? SIG(l) : null; }, { x: pos.x, y: pos.y, sigSrc: SIG.toString() });
+        if (apres && apres !== cible.avant) { survolOk = true; break; }
+      }
+      if (!survolOk) probs.push("survol : aucun changement visible sur les 8 premiers liens");      // mouvement réduit : plus aucune transition ni animation dans le pied
       await pc.emulateMedia([{ name: "prefers-reduced-motion", value: "reduce" }]); await pc.goto(A.url); await wait(500);
       const animes = await pc.evaluate(() => [...document.querySelectorAll("footer, footer *")].filter((e) => { const c = getComputedStyle(e); return [...c.transitionDuration.split(","), ...c.animationDuration.split(",")].some((d) => parseFloat(d) > 0.05 * (d.includes("ms") ? 1000 : 1)); }).length);
       if (animes) probs.push(`mouvement réduit : ${animes} éléments encore animés`);

@@ -34,7 +34,7 @@ const nomSite = (k, o = {}) => {
   if (o.tablette) n.styles.tablet = { fontSize: o.tablette };
   if (o.mobile) n.styles.mobile = { fontSize: o.mobile };
   const sv = o.survol === null ? null : o.survol || survolDe(S);
-  n.parts = { link: { styles: { desktop: compact({ color: o.couleur || S.fg, fontFamily: f, fontWeight: o.poids || "800", textDecoration: "none" }), mobile: { display: "inline-block", minHeight: "44px", paddingTop: "8px", paddingBottom: "8px" } }, states: { hover: sv ? { color: sv, textDecoration: "underline" } : { opacity: 0.75, textDecoration: "underline" }, focus: G.focus(o.focus || S.accent) } } };
+  n.parts = { link: { styles: { desktop: compact({ color: o.couleur || S.fg, fontFamily: f, fontWeight: o.poids || "800", textDecoration: "none" }), mobile: { display: "inline-block", minHeight: "44px", paddingTop: "11px", paddingBottom: "11px" } }, states: { hover: sv ? { color: sv, textDecoration: "underline" } : { opacity: 0.75, textDecoration: "underline" }, focus: G.focus(o.focus || S.accent) } } };
   return n;
 };
 // réseaux en icônes (disques ou carrés) aux couleurs du modèle : parties du widget « Réseaux sociaux »

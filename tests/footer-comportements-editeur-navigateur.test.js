@@ -95,9 +95,17 @@ describe("Pieds de page : édition réelle dans le Page Builder (Chrome)", { ski
         await saveNow(); const n1 = linksOf(comp().draft).map(([n]) => n).find((n) => n.id === l1.id);
         (a && b && n1 && n1.props.label === "LIEN-EDITE" && n1.props.url === "/blog") ? ok("texte et adresse du lien enregistrés") : ko(`texte/adresse non enregistrés (champs ${a}/${b}, valeur ${n1 && n1.props.label} ${n1 && n1.props.url})`);
         // 2) couleur de fond d'une bande
-        const band = comp().draft.children[0].children[0];
-        await sel(band.id); await tab("Style"); await openSection("Fond");
-        const clicked = await pg.evaluate(() => { const bt = document.querySelector('[data-pb-inspector] [data-color-key="backgroundColor"]'); if (!bt) return false; bt.click(); return true; }); await wait(350);
+        const racineFoot = comp().draft.children[0];
+        const candidats = [...racineFoot.children, ...racineFoot.children.flatMap((c) => c.children || []), racineFoot];
+        const ouvrirFond = () => pg.evaluate(() => { const bt = document.querySelector('[data-pb-inspector] [data-color-key="backgroundColor"]'); if (!bt) return false; bt.click(); return true; });
+        let band = candidats[0], clicked = false;
+        // premier bloc dont la section « Fond » offre une couleur simple (un filet en dégradé n'en a pas)
+        for (const c of candidats) {
+          band = c; await sel(c.id); await tab("Style");
+          for (let t = 0; t < 2 && !clicked; t++) { await openSection("Fond"); clicked = await ouvrirFond(); }
+          if (clicked) break;
+        }
+        await wait(350);
         const hex = await pg.evaluate(() => { const i = document.querySelector(".pb-cpop-hex"); if (!i) return false; i.value = "#123456"; i.dispatchEvent(new Event("change", { bubbles: true })); return true; }); await wait(400);
         await pg.evaluate(() => document.activeElement && document.activeElement.blur()); await saveNow();
         const bd = (() => { let f = null; walk(comp().draft.children, (n) => { if (n.id === band.id) f = n; }); return f; })();
