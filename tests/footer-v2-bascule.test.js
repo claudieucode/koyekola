@@ -10,9 +10,9 @@ const actuels=F.hiddenLayouts.filter(l=>!l.legacy).map(l=>l.fullKey);
 console.log(JSON.stringify({mode:F.v2&&F.v2.mode,liste:F.layouts.length,tousV2:F.layouts.every(l=>l.v2===true),premier:F.layouts[0].fullKey,
  actuelsOuvrables:actuels.length,actuelsOk:actuels.every(id=>F.resolveAlias(id)),ancOk:Object.keys(F.aliases).every(id=>F.resolveAlias(id)),nb:actuels.length}))`;
 describe("Bascule v2 de la bibliothèque de pieds", () => {
-  test("par défaut : 100 modèles v2 listés, 100 modèles actuels et tous les anciens identifiants restent ouvrables", () => {
+  test("par défaut : 125 modèles v2 listés, 100 modèles actuels et tous les anciens identifiants restent ouvrables", () => {
     const r = lire({ FOOTER_V2: "", FOOTER_V2_APERCU: "" }, CODE);
-    assert.equal(r.mode, "v2"); assert.equal(r.liste, 100); assert.ok(r.tousV2); assert.match(r.premier, /^ft2-/);
+    assert.equal(r.mode, "v2"); assert.equal(r.liste, 125); assert.ok(r.tousV2); assert.match(r.premier, /^ft2-/);
     assert.equal(r.actuelsOuvrables, 100); assert.ok(r.actuelsOk); assert.ok(r.ancOk);
   });
   test("interrupteur de secours FOOTER_V2=0 : la liste actuelle (ft-*) est rétablie, rien d'autre ne change", () => {
