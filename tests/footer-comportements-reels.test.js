@@ -161,12 +161,12 @@ describe("Pieds de page : comportements réels (serveur)", () => {
       const roleCode = db.prepare("SELECT 1 x").get(); assert.ok(roleCode);
     });
 
-    test("un éditeur SANS pages.code insère les 100 modèles (aucun refus caché par un droit de code)", async () => {
+    test("un éditeur SANS pages.code insère tous les modèles du catalogue (aucun refus caché par un droit de code)", async () => {
       const D = await newSite("Site D droits", "d.isolation.example");
       const ed = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'editor')").run(D.s, idOf(ed));
       let ok = 0;
       for (const e of Catalog.entries("footer")) { const r = await useModel(D.s, e.key, ed); assert.equal(r.status, 200, `${e.key} : ${r.text.slice(0, 160)}`); ok++; }
-      assert.equal(ok, 100);
+      assert.equal(ok, Catalog.entries("footer").length);
     });
 
     test("réglages, formulaire et affectations restent propres à chaque site : le formulaire publié de A n'apparaît jamais sur B ; la publication de A ne change pas les conditions de B", async () => {
@@ -294,8 +294,10 @@ describe("Pieds de page : comportements réels (serveur)", () => {
       assert.equal(at("/boutique/panier"), nBoutique, "panier"); assert.equal(at("/boutique/commande"), nBoutique);
       assert.equal(withView("product_archive"), nBoutique, "liste des produits (vue posée par la route de la boutique)"); assert.equal(withView("product"), nProduit, "fiche produit : le plus précis"); assert.equal(at("/cours/seo"), nCours, "formation");
       assert.equal(at("/une-page"), nTout); assert.equal(at("/"), nTout); assert.equal(withView("search"), nTout, "recherche : le général"); assert.equal(withView("not_found"), nTout, "404 : le général");
-      const autre = (R.resolveParts(ctx, P.s, R.defaultContext(P.s, "/boutique/compte")).footer || {}).name;
-      assert.ok(![nTout, nBoutique, nCompte, nProduit, nCours].includes(autre), "isolation : un autre site n'hérite d'aucun pied du site boutique");
+      const autreF = R.resolveParts(ctx, P.s, R.defaultContext(P.s, "/boutique/compte")).footer || {};
+      // un pied d'un AUTRE site peut porter le même nom de modèle : on vérifie à qui il appartient, pas son nom
+      const proprio = autreF.id ? (db.prepare("SELECT site_id AS s FROM mk_tb_templates WHERE id = ?").get(autreF.id) || {}).s : null;
+      assert.ok(autreF.id ? proprio !== Q.s : ![nTout, nBoutique, nCompte, nProduit, nCours].includes(autreF.name), "isolation : un autre site n'hérite d'aucun pied du site boutique");
     });
   });
 

@@ -1,0 +1,639 @@
+{
+  "meta": {
+    "titre": "25 pieds « sites du quotidien » (extension du Footer v2)",
+    "date": "2026-11-11",
+    "nombre": 25
+  },
+  "concepts": [
+    {
+      "id": "c-101-goutte-et-flamme",
+      "ordre": 101,
+      "nom": "Goutte et flamme",
+      "famille": "Artisans et bâtiment",
+      "secteur": "plombier",
+      "directionArtistique": {
+        "texte": "Pour un plombier-chauffagiste : phrase de dépannage en grandes capitales sur bleu marine, bouton orange qui pulse doucement, numéro et horaires de l'entreprise, carte zone d'intervention, liens rapides et réseaux."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "plombier",
+        "chauffagiste",
+        "dépannage",
+        "bleu marine",
+        "orange",
+        "bouton qui pulse",
+        "artisan"
+      ]
+    },
+    {
+      "id": "c-102-tableau-electrique",
+      "ordre": 102,
+      "nom": "Tableau électrique",
+      "famille": "Artisans et bâtiment",
+      "secteur": "électricien",
+      "directionArtistique": {
+        "texte": "Pour un électricien : bande jaune « panne de courant ? » avec bouton et numéro, puis quatre cases façon disjoncteurs qui s'allument au survol, horaires, zone d'intervention et point d'état qui pulse doucement."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "électricien",
+        "jaune",
+        "noir",
+        "disjoncteurs",
+        "mono",
+        "urgence",
+        "artisan"
+      ]
+    },
+    {
+      "id": "c-103-atelier-du-bois",
+      "ordre": 103,
+      "nom": "Atelier du bois",
+      "famille": "Artisans et bâtiment",
+      "secteur": "menuisier",
+      "directionArtistique": {
+        "texte": "Pour un menuisier-ébéniste : crème et brun noyer, panneau de contact avec bouton laiton, tiroirs de liens qui glissent au survol, petite enseigne qui se balance, horaires et réseaux. Chaleureux, sans fioriture."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "menuisier",
+        "ébéniste",
+        "bois",
+        "crème",
+        "serif",
+        "tiroirs",
+        "atelier",
+        "artisan"
+      ]
+    },
+    {
+      "id": "c-104-portes-du-jardin",
+      "ordre": 104,
+      "nom": "Portes du jardin",
+      "famille": "Artisans et bâtiment",
+      "secteur": "paysagiste",
+      "directionArtistique": {
+        "texte": "Pour un paysagiste-jardinier : trois arches vertes alignées comme un horizon (appel, liens rapides, horaires et zone), petit soleil qui respire, arches qui se soulèvent au survol. Doux, naturel, très lisible."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paysagiste",
+        "jardinier",
+        "vert",
+        "arches",
+        "soleil",
+        "nature",
+        "serif",
+        "artisan"
+      ]
+    },
+    {
+      "id": "c-105-nuancier",
+      "ordre": 105,
+      "nom": "Nuancier",
+      "famille": "Artisans et bâtiment",
+      "secteur": "peintre",
+      "directionArtistique": {
+        "texte": "Pour un peintre-décorateur : ruban géant de mots qui défile lentement, quatre échantillons de couleur qui se soulèvent au survol pour les liens rapides, bouton de devis terracotta, horaires et réseaux. Frais et lumineux."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "peintre",
+        "décorateur",
+        "nuancier",
+        "couleurs",
+        "ruban lent",
+        "blanc cassé",
+        "terracotta",
+        "artisan"
+      ]
+    },
+    {
+      "id": "c-106-fournil-du-matin",
+      "ordre": 106,
+      "nom": "Fournil du matin",
+      "famille": "Commerces de proximité",
+      "secteur": "boulangerie",
+      "directionArtistique": {
+        "texte": "Pied de boulangerie-pâtisserie : brun croûte et or de blé, ruban qui défile lentement, grande phrase « Chaud, doré, du matin. », horaires du jour dans une carte et bouton de commande."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "pâtisserie",
+        "commerce de proximité",
+        "horaires",
+        "ruban",
+        "brun",
+        "or",
+        "commande"
+      ]
+    },
+    {
+      "id": "c-107-atelier-petale",
+      "ordre": 107,
+      "nom": "Atelier Pétale",
+      "famille": "Commerces de proximité",
+      "secteur": "fleuriste",
+      "directionArtistique": {
+        "texte": "Pied de fleuriste, tout centré : sauge pâle et rose profond, titre élégant, carte en arche pour la newsletter « Le bouquet de la semaine », horaires et commande. Trois pétales respirent doucement."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fleuriste",
+        "fleurs",
+        "centré",
+        "arche",
+        "sauge",
+        "rose",
+        "newsletter",
+        "commerce de proximité"
+      ]
+    },
+    {
+      "id": "c-108-librairie-marge",
+      "ordre": 108,
+      "nom": "Librairie Marge",
+      "famille": "Commerces de proximité",
+      "secteur": "librairie",
+      "directionArtistique": {
+        "texte": "Pied de librairie indépendante : papier ivoire et rouge reliure, index numéroté des rayons qui glisse au survol, phrase de libraire, bouton « Commander un livre » et lettre du libraire en bas de page."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "librairie",
+        "livres",
+        "index",
+        "ivoire",
+        "rouge",
+        "éditorial",
+        "commande",
+        "newsletter"
+      ]
+    },
+    {
+      "id": "c-109-halles-du-coin",
+      "ordre": 109,
+      "nom": "Halles du coin",
+      "famille": "Commerces de proximité",
+      "secteur": "épicerie",
+      "directionArtistique": {
+        "texte": "Pied d'épicerie fine ou de primeur : jaune citron et vert feuille, grand ruban qui défile, trois étals en cartes penchées (horaires, retrait en magasin, adresse) qui se redressent au survol."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "épicerie",
+        "primeur",
+        "marché",
+        "jaune",
+        "vert",
+        "ruban",
+        "retrait en magasin",
+        "commerce de proximité"
+      ]
+    },
+    {
+      "id": "c-110-petite-maison-boutique",
+      "ordre": 110,
+      "nom": "Petite maison boutique",
+      "famille": "Commerces de proximité",
+      "secteur": "boutique en ligne",
+      "directionArtistique": {
+        "texte": "Pied de petite boutique en ligne : bande de réassurance (paiement sécurisé, livraison suivie, retours simples), quatre colonnes claires (boutique, aide, compte), newsletter et point vert « commandes ouvertes » qui pulse."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique en ligne",
+        "e-commerce",
+        "paiement",
+        "livraison",
+        "retours",
+        "bleu cobalt",
+        "colonnes",
+        "newsletter"
+      ]
+    },
+    {
+      "id": "c-111-enseigne-de-barbier",
+      "ordre": 111,
+      "nom": "Enseigne de barbier",
+      "famille": "Services à la personne",
+      "secteur": "barbier",
+      "directionArtistique": {
+        "texte": "Pour un coiffeur ou un barbier : trois rayures d'enseigne, le nom en grandes capitales, un ruban rouge de prestations, les horaires sur une carte crème et un gros bouton de rendez-vous. Charbon, crème et rouge."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "barbier",
+        "coiffeur",
+        "rendez-vous",
+        "horaires",
+        "ruban",
+        "charbon et rouge"
+      ]
+    },
+    {
+      "id": "c-112-arche-de-petales",
+      "ordre": 112,
+      "nom": "Arche de pétales",
+      "famille": "Services à la personne",
+      "secteur": "institut",
+      "directionArtistique": {
+        "texte": "Pour un institut de beauté ou un spa de quartier : une grande arche rose poudré porte le nom et la réservation, des feuilles y flottent doucement ; à droite, rendez-vous, horaires et adresse en trois repères calmes."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "institut",
+        "spa",
+        "beauté",
+        "arche",
+        "pétales",
+        "rose poudré",
+        "réservation"
+      ]
+    },
+    {
+      "id": "c-113-piste-d-examen",
+      "ordre": 113,
+      "nom": "Piste d'examen",
+      "famille": "Services à la personne",
+      "secteur": "auto-école",
+      "directionArtistique": {
+        "texte": "Pour une auto-école : une bande jaune signalisation avec la grande question « Prêt à prendre la route ? », puis sur l'asphalte une ligne de tirets où un repère jaune avance quand on défile, et quatre étapes numérotées (inscription, code, conduite, examen)."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "permis",
+        "étapes",
+        "jaune",
+        "asphalte",
+        "inscription"
+      ]
+    },
+    {
+      "id": "c-114-bulles-propres",
+      "ordre": 114,
+      "nom": "Bulles propres",
+      "famille": "Services à la personne",
+      "secteur": "ménage",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de ménage ou de nettoyage : une grande carte bleue « Une maison nette, sans y penser » avec la demande de devis, des bulles qui montent doucement quand on défile, et les prestations en pastilles."
+      },
+      "typographies": {
+        "titre": "Quicksand",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ménage",
+        "nettoyage",
+        "devis",
+        "bulles",
+        "bleu ciel",
+        "prestations"
+      ]
+    },
+    {
+      "id": "c-115-petits-pas",
+      "ordre": 115,
+      "nom": "Petits pas",
+      "famille": "Services à la personne",
+      "secteur": "crèche",
+      "directionArtistique": {
+        "texte": "Pour une crèche ou une garde d'enfants : un nom tout rond avec un soleil qui respire, et un escalier de quatre marches colorées, chacune un lien (pré-inscription, questions, actualités, contact). Crème, jaune, vert, bleu et corail."
+      },
+      "typographies": {
+        "titre": "Fredoka",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "crèche",
+        "garde d'enfants",
+        "escalier",
+        "soleil",
+        "couleurs douces",
+        "pré-inscription"
+      ]
+    },
+    {
+      "id": "c-116-cabinet-bordeaux",
+      "ordre": 116,
+      "nom": "Cabinet bordeaux",
+      "famille": "Professions libérales",
+      "secteur": "avocat",
+      "directionArtistique": {
+        "texte": "Pied de cabinet d'avocat : le nom en grande serif sur bordeaux, un index numéroté des domaines d'intervention qui glisse au survol, un bouton de rendez-vous laiton, coordonnées, horaires et lien vers la déontologie."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "avocat",
+        "cabinet",
+        "bordeaux",
+        "laiton",
+        "serif",
+        "domaines d'intervention",
+        "rendez-vous"
+      ]
+    },
+    {
+      "id": "c-117-grand-livre",
+      "ordre": 117,
+      "nom": "Grand livre",
+      "famille": "Professions libérales",
+      "secteur": "expert-comptable",
+      "directionArtistique": {
+        "texte": "Pied d'expert-comptable : papier vert d'eau, une phrase nette et le grand livre des missions en lignes pointillées qui se remplissent au survol. Rendez-vous, horaires, coordonnées et espace client."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "expert-comptable",
+        "comptabilité",
+        "papier",
+        "vert d'eau",
+        "vermillon",
+        "missions",
+        "grand livre"
+      ]
+    },
+    {
+      "id": "c-118-souffle-du-cabinet",
+      "ordre": 118,
+      "nom": "Souffle du cabinet",
+      "famille": "Professions libérales",
+      "secteur": "kinésithérapeute",
+      "directionArtistique": {
+        "texte": "Pied de kinésithérapeute ou de cabinet médical : sable chaud et terre cuite, un halo qui respire doucement, une carte d'horaires avec « ouvert maintenant », des motifs de consultation en pilules et un rappel d'urgence."
+      },
+      "typographies": {
+        "titre": "DM Serif Text",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "kinésithérapeute",
+        "cabinet médical",
+        "santé",
+        "sable",
+        "terre cuite",
+        "halo",
+        "horaires",
+        "arrondi"
+      ]
+    },
+    {
+      "id": "c-119-pivot-conseil",
+      "ordre": 119,
+      "nom": "Pivot conseil",
+      "famille": "Professions libérales",
+      "secteur": "consultant",
+      "directionArtistique": {
+        "texte": "Pied de consultant indépendant : un ruban de domaines d'accompagnement qui glisse au défilement, un nom monumental rogné qui monte au défilement, une invitation franche à échanger, liens utiles et réseaux. Graphite et citron vert."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "consultant",
+        "indépendant",
+        "conseil",
+        "graphite",
+        "citron vert",
+        "ruban",
+        "nom monumental"
+      ]
+    },
+    {
+      "id": "c-120-etude-a-la-pierre",
+      "ordre": 120,
+      "nom": "Étude à la pierre",
+      "famille": "Professions libérales",
+      "secteur": "notaire",
+      "directionArtistique": {
+        "texte": "Pied d'étude notariale : pierre claire, un sceau qui suit doucement le pointeur, le nom de l'étude en serif centré, puis quatre colonnes à filets fins : actes, rendez-vous, étude et informations, avec mentions légales."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "notaire",
+        "étude notariale",
+        "pierre",
+        "vert-de-gris",
+        "sceau",
+        "quatre colonnes",
+        "classique"
+      ]
+    },
+    {
+      "id": "c-121-coup-d-envoi",
+      "ordre": 121,
+      "nom": "Coup d'envoi",
+      "famille": "Vie locale et associations",
+      "secteur": "club sportif",
+      "directionArtistique": {
+        "texte": "Pour un club de quartier : une bande jaune « Rejoins l'équipe » avec inscription, un ruban de mots du club, puis le vestiaire vert (horaires, contact, liens utiles, lettre du club). Sobre, énergique, lisible au bord du terrain."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "club sportif",
+        "association sportive",
+        "inscription",
+        "horaires",
+        "vert",
+        "jaune",
+        "ruban"
+      ]
+    },
+    {
+      "id": "c-122-table-de-quartier",
+      "ordre": 122,
+      "nom": "Table de quartier",
+      "famille": "Vie locale et associations",
+      "secteur": "association",
+      "directionArtistique": {
+        "texte": "Pour une association de quartier ou une MJC : phrase d'accueil en serif, carte d'adhésion, trois tuiles colorées qui se redressent au survol, puis horaires d'accueil, contact et lettre du quartier. Chaleureux, crème et corail."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "association",
+        "quartier",
+        "MJC",
+        "adhésion",
+        "crème",
+        "corail",
+        "tuiles"
+      ]
+    },
+    {
+      "id": "c-123-guichet-de-la-commune",
+      "ordre": 123,
+      "nom": "Guichet de la commune",
+      "famille": "Vie locale et associations",
+      "secteur": "mairie",
+      "directionArtistique": {
+        "texte": "Pour la mairie d'une petite commune : liseré tricolore sobre, nom de la commune, recherche de démarche, horaires d'ouverture avec l'état du moment, contact, démarches utiles et lettre d'information. Clair, posé, très lisible."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mairie",
+        "commune",
+        "collectivité",
+        "horaires",
+        "démarches",
+        "institutionnel",
+        "papier"
+      ]
+    },
+    {
+      "id": "c-124-studio-lumiere",
+      "ordre": 124,
+      "nom": "Studio lumière",
+      "famille": "Vie locale et associations",
+      "secteur": "photographe",
+      "directionArtistique": {
+        "texte": "Pour un photographe de mariage ou de portrait : phrase légère en serif, planche-contact de cinq cadres numérotés qui se soulèvent au survol, ligne d'italiques, demande de devis, contact et réseaux. Noir chaud, or pâle, très calme."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "photographe",
+        "mariage",
+        "portrait",
+        "studio",
+        "noir et or",
+        "serif",
+        "planche contact"
+      ]
+    },
+    {
+      "id": "c-125-carnet-de-bord",
+      "ordre": 125,
+      "nom": "Carnet de bord",
+      "famille": "Vie locale et associations",
+      "secteur": "blog",
+      "directionArtistique": {
+        "texte": "Pour un blog personnel : papier jaune pâle, phrase manuscrite surlignée au feutre, signature, derniers billets du blog et carte postale pour la lettre d'information qui se redresse au survol. Intime, lisible, sans artifice."
+      },
+      "typographies": {
+        "titre": "Caveat",
+        "corps": "Literata",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "blog",
+        "carnet",
+        "manuscrit",
+        "papier",
+        "surligneur",
+        "derniers billets",
+        "newsletter"
+      ]
+    }
+  ]
+}

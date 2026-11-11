@@ -31,3 +31,8 @@
 - Indépendance v2 (scénario en 10 étapes) : 3/3 une fois relancée seule (l'échec du passage groupé était un délai de 30 s dépassé, machine chargée). Indépendance de l'ancien catalogue : 5/5 avec `FOOTER_V2=0` (l'échec venait d'un lancement sans cette variable).
 - Éditeur réel : un vrai défaut de test (ft2-015, premier bloc = filet en dégradé sans couleur simple) corrigé dans le test ; ft2-015 passe.
 - Test navigateur : trois vrais défauts corrigés dans les modèles/le moteur — lien du titre du site de 43 px au lieu de 44 sur mobile (ft2-062, ft2-096) ; le test mesurait mal les polices (graisse réellement employée) et le survol (8 premiers liens, plus de propriétés) ; les liens placés au milieu d'une phrase (ft2-100) sont exemptés comme le prévoit la règle d'accessibilité WCAG 2.5.8.
+
+## Extension « sites du quotidien » (25 modèles, ft2-101 à ft2-125)
+- 5 familles de 5 : artisans et bâtiment, commerces de proximité, services à la personne, professions libérales, vie locale et associations (liste : `CATALOGUE_QUOTIDIEN.md`, fiches : `concepts/concepts-quotidien.json`). La bibliothèque passe à **125 modèles**.
+- Animations : survols et focus soignés, pulsations lentes, effets liés au défilement et à la souris, rubans défilants ; tout est coupé sous « mouvement réduit ».
+- Limites : pas d'animation d'entrée (le moteur la remplace par un fondu de 300 ms en mouvement réduit, refusé par le test « 0 animation ») ; les rubans défilants (106, 109, 105) sont signalés par l'audit comme « hors écran » (faux positif, comme ft2-021).
