@@ -7931,6 +7931,10 @@ function selectField(label, value, options, onChange, opts) {
   // Lecture : le bloc s'il existe, sinon l'ancien format (position de la première bande + headerFx) : le panneau affiche donc l'état réel d'un en-tête ancien.
   // Document d'en-tête : modèle « En-tête » du Theme Builder (identité du modèle) ou composant affecté comme en-tête du site (ancien réglage)
   // Document de pied de page : modèle « Pied de page » du Theme Builder (identité du modèle) ou composant du site affecté comme pied
+  // Modèles du Theme Builder autres que l'en-tête et le pied : un onglet de réglages (grille de résultats, style, éléments) comme pour le pied de page
+  var TPL_TABS = { archive: "Archive", search_results: "Recherche", not_found: "Page 404", single_post: "Article", single_page: "Page", single_product: "Produit", product_archive: "Boutique" };
+  function partType() { var c = IS_COMPONENT && PAGE.component; var t = (PAGE.identity && PAGE.identity.template) || (c && c.identity && c.identity.template); return (t && t.type) || (c && c.role) || ""; }
+  function isTplDoc() { return Object.prototype.hasOwnProperty.call(TPL_TABS, partType()); }
   function isFooterDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "footer" || Boolean(t && t.type === "footer"); }
   function isHeaderDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "header" || Boolean(t && t.type === "header"); }
   function headerSection() { var s = content.sections && content.sections[0]; return s && s.type === "layout" ? s : null; }
@@ -8302,11 +8306,27 @@ function selectField(label, value, options, onChange, opts) {
     var cols = best || root;
     return { root: root, cols: cols, slots: (cols.children || []).map(function (c) { return { node: c, role: "col" }; }) };
   }
+  // Modèle (archive, recherche, 404, article…) : « grille principale » = la première grille (résultats en boucle) ; ses blocs = les enfants du conteneur racine
+  function tplMain(sec) {
+    var root = (sec.children || []).filter(function (n) { return n.type === "container"; })[0] || null;
+    if (!root) return null;
+    var grid = null;
+    (function walk(n) { if (!grid && n.type === "grid") { grid = n; return; } (n.children || []).forEach(walk); })(root);
+    return { root: root, cols: grid || root, hasGrid: Boolean(grid), slots: (root.children || []).map(function (c) { return { node: c, role: "bloc" }; }) };
+  }
+  // Page-modèle : la section qui porte la grille de résultats, sinon la première section avec contenu
+  function tplSection() {
+    var list = (content.sections || []).filter(function (x) { return x && x.type === "layout"; }), found = null;
+    list.forEach(function (x) { if (!found && tplMain(x) && tplMain(x).hasGrid) found = x; });
+    return found || list[0] || null;
+  }
   var FOOT_GAPS = [["12px", "Serré"], ["24px", "Normal"], ["40px", "Large"], ["64px", "Très large"]];
   function renderFooterSettings(box) {
-    var sec = headerSection(), main = sec && footMain(sec), dis = !canWrite;
-    if (!main) { box.appendChild(h("p", { class: "pb-hint", text: "Ce pied de page n'a pas encore de conteneur : ajoutez-en un pour régler ses colonnes et son style." })); return; }
+    var tpl = isTplDoc(), sec = tpl ? tplSection() : headerSection(), main = sec && (tpl ? tplMain(sec) : footMain(sec)), dis = !canWrite;
+    var what = tpl ? "ce modèle" : "ce pied de page", blocs = tpl ? "blocs" : "colonnes";
+    if (!main) { box.appendChild(h("p", { class: "pb-hint", text: "Ce document n'a pas encore de conteneur : ajoutez-en un pour régler sa disposition et son style." })); return; }
     if (["colonnes", "style", "ecrans", "elements"].indexOf(hdrOpen) < 0) hdrOpen = "colonnes";
+    var hasCols = !tpl || main.hasGrid;
     var redraw = function () { var bx = $("[data-pb-page-settings]"); bx.textContent = ""; renderFooterSettings(bx); };
     // Les réglages de colonnes concernent toujours l'état « Normal », quel que soit l'état choisi plus bas dans « Style du conteneur »
     var readN = function (n, k) { var sv = styleState; styleState = "normal"; var v = ownValue(n, k); if (v === undefined || v === "") v = inheritedValue(n, k); styleState = sv; return v; };
@@ -8318,24 +8338,24 @@ function selectField(label, value, options, onChange, opts) {
         h("span", { class: "pb-hdr-txt" }, h("span", { class: "pb-hdr-title", text: title }), hint ? h("span", { class: "pb-hdr-hint", text: hint }) : null),
         h("span", { class: "pb-hdr-go", "aria-hidden": "true" }, icon("chevronRight")));
     };
-    hdrAcc(box, "colonnes", "Colonnes et disposition", function (b) {
-      b.appendChild(h("p", { class: "pb-hint", text: "Réglez les colonnes écran par écran : le téléphone suit la tablette, qui suit l'ordinateur, tant que vous n'y avez rien changé." }));
+    hdrAcc(box, "colonnes", tpl ? "Disposition" : "Colonnes et disposition", function (b) {
+      b.appendChild(h("p", { class: "pb-hint", text: "Réglez la disposition écran par écran : le téléphone suit la tablette, qui suit l'ordinateur, tant que vous n'y avez rien changé." + (hasCols ? "" : " Ce modèle n'a pas de grille de résultats : seuls l'alignement et l'ordre des blocs sont réglables ici.") }));
       b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "1 · Écran à régler" }));
       b.appendChild(h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Écran à régler" }, SPEC.breakpoints.map(function (bp) {
         return h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(device === bp.key), onclick: function () { setDevice(bp.key); redraw(); } }, h("span", { class: "pb-hdr-tile-title", text: bp.label }));
       })));
       var cur = readN(main.cols, "columns");
-      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "2 · Nombre de colonnes (écran : " + bpLabel(device) + ")" }));
-      b.appendChild(h("div", { class: "pb-hdr-tiles is-cols", role: "radiogroup", "aria-label": "Nombre de colonnes" }, [1, 2, 3, 4, 5, 6].map(function (n) {
+      if (hasCols) b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "2 · " + (tpl ? "Colonnes de la grille de résultats" : "Nombre de colonnes") + " (écran : " + bpLabel(device) + ")" }));
+      if (hasCols) b.appendChild(h("div", { class: "pb-hdr-tiles is-cols", role: "radiogroup", "aria-label": "Nombre de colonnes" }, [1, 2, 3, 4, 5, 6].map(function (n) {
         var mock = h("span", { class: "pb-fm", "aria-hidden": "true" }); for (var i = 0; i < n; i++) mock.appendChild(h("i"));
         return h("button", { type: "button", role: "radio", class: "pb-hdr-tile", "aria-checked": String(Number(cur) === n), disabled: dis, onclick: function () {
-          change(function () { var c = byId(main.cols.id); if (!c) return false; var set = styleSet(c, device, "normal", true); set.display = "grid"; delete set.gridTemplate; set.columns = n; cleanStyles(c); }, { label: "Colonnes du pied de page : " + n + " (" + bpLabel(device) + ")" });
+          change(function () { var c = byId(main.cols.id); if (!c) return false; var set = styleSet(c, device, "normal", true); if (c.type !== "grid") set.display = "grid"; delete set.gridTemplate; set.columns = n; cleanStyles(c); }, { label: "Colonnes de la grille : " + n + " (" + bpLabel(device) + ")" });
           redraw();
         } }, mock, h("span", { class: "pb-hdr-tile-title", text: n + (n > 1 ? " colonnes" : " colonne") }));
       })));
-      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "3 · Espacement entre les colonnes" }));
+      if (hasCols) b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "3 · Espacement entre les " + (tpl ? "cartes" : "colonnes") }));
       var gcur = readN(main.cols, "gap");
-      b.appendChild(h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Espacement" }, FOOT_GAPS.map(function (g) {
+      if (hasCols) b.appendChild(h("div", { class: "pb-hdr-tiles is-two", role: "radiogroup", "aria-label": "Espacement" }, FOOT_GAPS.map(function (g) {
         return h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(String(gcur) === g[0]), disabled: dis, onclick: function () { asNormal(function () { setStyles([main.cols.id], { gap: g[0] }); }); redraw(); } }, h("span", { class: "pb-hdr-tile-title", text: g[1] }), h("span", { class: "pb-hdr-tile-hint", text: g[0] }));
       })));
       b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "4 · Alignement du texte" }));
@@ -8344,14 +8364,14 @@ function selectField(label, value, options, onChange, opts) {
         return h("button", { type: "button", role: "radio", class: "pb-hdr-tile is-flat", "aria-checked": String(acur === a[0]), disabled: dis, onclick: function () { asNormal(function () { setStyles([main.root.id], { textAlign: a[0] }); }); redraw(); } }, h("span", { class: "pb-hdr-tile-title", text: a[1] }));
       })));
       // Ordre et visibilité des colonnes pour l'écran choisi
-      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "5 · Ordre et visibilité des colonnes (écran : " + bpLabel(device) + ")" }));
+      b.appendChild(h("p", { class: "pb-hdr-sublabel", text: "5 · Ordre et visibilité des " + blocs + " (écran : " + bpLabel(device) + ")" }));
       var ordered = hdrOrdered({ slots: main.slots }), card = h("div", { class: "pb-hdr-list" });
       ordered.forEach(function (sl, idx) {
         var hidden = (sl.node.hideOn || []).indexOf(device) >= 0;
         var move = function (d) { return function () {
           var list = hdrOrdered({ slots: main.slots }), at = list.indexOf(sl), to = at + d; if (to < 0 || to >= list.length) return;
           var t = list[at]; list[at] = list[to]; list[to] = t;
-          change(function () { list.forEach(function (x, i) { var n = byId(x.node.id); if (!n) return; styleSet(n, device, "normal", true).order = i + 1; cleanStyles(n); }); }, { label: "Ordre des colonnes du pied de page (" + bpLabel(device) + ")" });
+          change(function () { list.forEach(function (x, i) { var n = byId(x.node.id); if (!n) return; styleSet(n, device, "normal", true).order = i + 1; cleanStyles(n); }); }, { label: "Ordre des " + blocs + " (" + bpLabel(device) + ")" });
           redraw();
         }; };
         var btn = function (txt, label, fn, off) { return h("button", { type: "button", class: "pb-hdr-mini", "aria-label": label, "data-tip": label, disabled: dis || off, onclick: fn }, txt); };
@@ -8362,15 +8382,15 @@ function selectField(label, value, options, onChange, opts) {
           h("span", { class: "pb-hdr-slot-tools" }, btn("↑", "Avancer d'une place", move(-1), idx === 0), btn("↓", "Reculer d'une place", move(1), idx === ordered.length - 1),
             btn(hidden ? "◌" : "●", hidden ? "Afficher sur cet écran" : "Masquer sur cet écran", function () {
               var cur2 = (sl.node.hideOn || []).slice(), next = hidden ? cur2.filter(function (x) { return x !== device; }) : cur2.concat(device);
-              if (!hidden && BPS.every(function (x) { return next.indexOf(x) >= 0; })) { toast("Une colonne ne peut pas être masquée sur tous les écrans."); return; }
-              change(function () { var n = byId(sl.node.id); if (!n) return false; if (next.length) n.hideOn = next; else delete n.hideOn; }, { label: "Visibilité d'une colonne (" + bpLabel(device) + ")" }); redraw();
+              if (!hidden && BPS.every(function (x) { return next.indexOf(x) >= 0; })) { toast("Ce bloc ne peut pas être masqué sur tous les écrans."); return; }
+              change(function () { var n = byId(sl.node.id); if (!n) return false; if (next.length) n.hideOn = next; else delete n.hideOn; }, { label: "Visibilité d'un bloc (" + bpLabel(device) + ")" }); redraw();
             }))));
       });
       b.appendChild(card);
     });
     hdrAcc(box, "style", "Style du conteneur", function (b) { headerRootPanel(b, main.root, ["hover"]); });
     var els = []; (function walk(list, depth) { (list || []).forEach(function (n) { els.push({ n: n, depth: depth }); if (n.children) walk(n.children, Math.min(depth + 1, 3)); }); })(main.root.children, 0);
-    if (els.length) hdrAcc(box, "elements", "Éléments du pied de page", function (b) {
+    if (els.length) hdrAcc(box, "elements", tpl ? "Éléments du modèle" : "Éléments du pied de page", function (b) {
       b.appendChild(h("div", { class: "pb-hdr-list" }, els.map(function (e) {
         var n = e.n, t = (preview(n) || "").slice(0, 40), inside = (n.children || []).slice(0, 3).map(typeLabel).join(", ");
         return row(isNode(n) && NT[n.type] ? NT[n.type].icon : "layout", n.name || typeLabel(n), n.name ? typeLabel(n) : (t ? t : inside), function () { open(n.id, inspTab === "advanced" ? "advanced" : "content"); }, e.depth);
@@ -8383,7 +8403,7 @@ function selectField(label, value, options, onChange, opts) {
   }
   var HDR_DEVICES = [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]];
   function renderHeaderSettings(box) {
-    if (isFooterDoc()) { renderFooterSettings(box); return; }
+    if (isFooterDoc() || isTplDoc()) { renderFooterSettings(box); return; }
     var d = headerNow(), dis = !canWrite, moving = d.mode === "sticky" || d.mode === "fixed", live = d.mode !== "static";
     headerAccess(box);
     var beh = h("div");
@@ -8427,7 +8447,7 @@ function selectField(label, value, options, onChange, opts) {
     var box = $("[data-pb-page-settings]");
     if (box.contains(document.activeElement)) return; // saisie en cours : on ne redessine pas
     box.textContent = "";
-    if (isHeaderDoc() || isFooterDoc()) { renderHeaderSettings(box); return; }
+    if (isHeaderDoc() || isFooterDoc() || isTplDoc()) { renderHeaderSettings(box); return; }
     var seo = content.seo || {};
     var setC = function (k) { return function (v) { change(function () { content[k] = v; }, { key: "page:" + k, light: true }); }; };
     var setS = function (k) { return function (v) { change(function () { content.seo = Object.assign({}, content.seo); if (v === "" || v === false) delete content.seo[k]; else content.seo[k] = v; }, { key: "seo:" + k, light: true }); }; };
@@ -9099,7 +9119,7 @@ function selectField(label, value, options, onChange, opts) {
       el.classList.toggle("is-live", !cm.hasDraft);
       if (pubBtn) { pubBtn.hidden = !canWrite || !cm.hasDraft; pubBtn.textContent = part ? "Mettre à jour" : cm.kind === "global" ? "Mettre à jour…" : "Mettre à jour le modèle"; }
       var pv = $("[data-pb-preview]"); if (pv) pv.style.display = "";
-      var tab = $("#pb-tab-page"); if (tab) { var isHdr = isHeaderDoc(), isFtr = isFooterDoc(); tab.style.display = isHdr || isFtr ? "" : "none"; var tabText = isFtr ? "Pied de page" : "En-tête"; if ((isHdr || isFtr) && tab.textContent !== tabText) tab.textContent = tabText; }
+      var tab = $("#pb-tab-page"); if (tab) { var isHdr = isHeaderDoc(), isFtr = isFooterDoc(), isTpl = isTplDoc(); tab.style.display = isHdr || isFtr || isTpl ? "" : "none"; var tabText = isFtr ? "Pied de page" : isTpl ? TPL_TABS[partType()] : "En-tête"; if ((isHdr || isFtr || isTpl) && tab.textContent !== tabText) tab.textContent = tabText; }
       return;
     }
     var live = status === "published";
