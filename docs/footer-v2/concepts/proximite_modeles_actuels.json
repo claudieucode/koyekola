@@ -1,0 +1,1705 @@
+{
+ "methode": "Empreinte approximative : composition devinée sur les descriptions, colonnes max, famille de palette devinée sur le nom d'ambiance, widgets, accordéon (50 %) + similitude de mots entre descriptions (50 %). Seuil de vigilance 0,65.",
+ "resultats": [
+  {
+   "id": "c-013-mutuelle-en-cartes",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.748,
+   "empreinte": 0.725,
+   "texte": 0.309,
+   "autres": [
+    [
+     "ft-editoriaux-06-journal-de-quartier",
+     0.713
+    ],
+    [
+     "ft-corporate-04-rendez-vous-en-cartes",
+     0.629
+    ]
+   ]
+  },
+  {
+   "id": "c-045-cartel-de-musee",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.707,
+   "empreinte": 0.556,
+   "texte": 0.343,
+   "autres": [
+    [
+     "ft-institutionnels-08-intercommunalite-services-en-cartes",
+     0.61
+    ],
+    [
+     "ft-ecommerce-04-boutique-de-niche",
+     0.563
+    ]
+   ]
+  },
+  {
+   "id": "c-097-point-final",
+   "plusProche": "ft-minimalistes-05-cartouche-centre",
+   "score": 0.689,
+   "empreinte": 0.85,
+   "texte": 0.211,
+   "autres": [
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.404
+    ],
+    [
+     "ft-ong-associations-04-collectif-militant-ton-fort",
+     0.323
+    ]
+   ]
+  },
+  {
+   "id": "c-086-carte-du-quartier",
+   "plusProche": "ft-institutionnels-03-agence-plan-du-site-trois-niveaux",
+   "score": 0.663,
+   "empreinte": 0.78,
+   "texte": 0.218,
+   "autres": [
+    [
+     "ft-landing-pages-03-inscription-courte-honnete",
+     0.366
+    ],
+    [
+     "ft-institutionnels-01-portail-national-six-colonnes",
+     0.359
+    ]
+   ]
+  },
+  {
+   "id": "c-067-campus-blason",
+   "plusProche": "ft-education-01-universite-cinq-colonnes",
+   "score": 0.656,
+   "empreinte": 0.356,
+   "texte": 0.382,
+   "autres": [
+    [
+     "ft-corporate-06-certifications-centre",
+     0.369
+    ],
+    [
+     "ft-education-06-campus-plan-et-horaires",
+     0.31
+    ]
+   ]
+  },
+  {
+   "id": "c-011-gestion-privee",
+   "plusProche": "ft-minimalistes-01-menu-et-mentions",
+   "score": 0.624,
+   "empreinte": 0.775,
+   "texte": 0.189,
+   "autres": [
+    [
+     "ft-minimalistes-05-cartouche-centre",
+     0.458
+    ],
+    [
+     "ft-creatifs-portfolios-05-signature-artiste",
+     0.428
+    ]
+   ]
+  },
+  {
+   "id": "c-004-usine-et-plan",
+   "plusProche": "ft-institutionnels-07-prefecture-bandeau-officiel",
+   "score": 0.617,
+   "empreinte": 0.683,
+   "texte": 0.22,
+   "autres": [
+    [
+     "ft-corporate-02-bandeau-appel-cinq-colonnes",
+     0.588
+    ],
+    [
+     "ft-creatifs-portfolios-06-bande-annonce-neon",
+     0.559
+    ]
+   ]
+  },
+  {
+   "id": "c-015-palette-de-commandes",
+   "plusProche": "ft-landing-pages-06-capture-sobre-colonne",
+   "score": 0.616,
+   "empreinte": 0.669,
+   "texte": 0.225,
+   "autres": [
+    [
+     "ft-communautes-06-groupes-grandes-pastilles",
+     0.538
+    ],
+    [
+     "ft-saas-tech-04-pied-developpeurs-api",
+     0.525
+    ]
+   ]
+  },
+  {
+   "id": "c-068-ecole-de-code",
+   "plusProche": "ft-landing-pages-06-capture-sobre-colonne",
+   "score": 0.616,
+   "empreinte": 0.693,
+   "texte": 0.216,
+   "autres": [
+    [
+     "ft-communautes-06-groupes-grandes-pastilles",
+     0.473
+    ],
+    [
+     "ft-landing-pages-03-inscription-courte-honnete",
+     0.444
+    ]
+   ]
+  },
+  {
+   "id": "c-027-concept-store-pastel",
+   "plusProche": "ft-corporate-06-certifications-centre",
+   "score": 0.613,
+   "empreinte": 0.706,
+   "texte": 0.208,
+   "autres": [
+    [
+     "ft-ecommerce-02-maison-luxe-sobre",
+     0.583
+    ],
+    [
+     "ft-corporate-05-implantations-en-colonnes",
+     0.549
+    ]
+   ]
+  },
+  {
+   "id": "c-084-pellicule-et-salles",
+   "plusProche": "ft-creatifs-portfolios-06-bande-annonce-neon",
+   "score": 0.604,
+   "empreinte": 0.795,
+   "texte": 0.165,
+   "autres": [
+    [
+     "ft-ong-associations-03-fondation-sobre-institutionnelle",
+     0.519
+    ],
+    [
+     "ft-institutionnels-07-prefecture-bandeau-officiel",
+     0.446
+    ]
+   ]
+  },
+  {
+   "id": "c-056-carte-du-gite",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.603,
+   "empreinte": 0.375,
+   "texte": 0.332,
+   "autres": [
+    [
+     "ft-communautes-03-club-accueil-et-gazette",
+     0.56
+    ],
+    [
+     "ft-finance-juridique-04-cabinet-comptable-echeances",
+     0.514
+    ]
+   ]
+  },
+  {
+   "id": "c-022-atelier-sticker",
+   "plusProche": "ft-creatifs-portfolios-02-cadre-exposition",
+   "score": 0.599,
+   "empreinte": 0.887,
+   "texte": 0.124,
+   "autres": [
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.486
+    ],
+    [
+     "ft-ong-associations-04-collectif-militant-ton-fort",
+     0.467
+    ]
+   ]
+  },
+  {
+   "id": "c-036-revue-sommaire",
+   "plusProche": "ft-editoriaux-05-revue-et-colophon",
+   "score": 0.597,
+   "empreinte": 0.286,
+   "texte": 0.363,
+   "autres": [
+    [
+     "ft-editoriaux-01-pied-de-journal",
+     0.431
+    ],
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.42
+    ]
+   ]
+  },
+  {
+   "id": "c-052-bistro-ardoise",
+   "plusProche": "ft-restauration-hotellerie-01-bistrot-ardoise-du-jour",
+   "score": 0.588,
+   "empreinte": 0.175,
+   "texte": 0.463,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-05-signature-artiste",
+     0.415
+    ],
+    [
+     "ft-institutionnels-02-mairie-horaires-et-demarches",
+     0.389
+    ]
+   ]
+  },
+  {
+   "id": "c-061-programmes-neufs",
+   "plusProche": "ft-editoriaux-03-carnet-chaleureux",
+   "score": 0.575,
+   "empreinte": 0.9,
+   "texte": 0.1,
+   "autres": [
+    [
+     "ft-education-06-campus-plan-et-horaires",
+     0.575
+    ],
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.57
+    ]
+   ]
+  },
+  {
+   "id": "c-010-assurance-claire",
+   "plusProche": "ft-saas-tech-02-pied-minimal-produit",
+   "score": 0.566,
+   "empreinte": 0.671,
+   "texte": 0.184,
+   "autres": [
+    [
+     "ft-minimalistes-08-trois-volets-compacts",
+     0.494
+    ],
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.487
+    ]
+   ]
+  },
+  {
+   "id": "c-091-concession-contraste",
+   "plusProche": "ft-minimalistes-02-signature-typographique",
+   "score": 0.564,
+   "empreinte": 0.65,
+   "texte": 0.191,
+   "autres": [
+    [
+     "ft-ecommerce-07-club-newsletter",
+     0.497
+    ],
+    [
+     "ft-corporate-06-certifications-centre",
+     0.383
+    ]
+   ]
+  },
+  {
+   "id": "c-064-chantier-rayures",
+   "plusProche": "ft-institutionnels-05-musee-index-numerote",
+   "score": 0.56,
+   "empreinte": 0.35,
+   "texte": 0.308,
+   "autres": [
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.43
+    ],
+    [
+     "ft-services-01-artisan-grand-telephone",
+     0.397
+    ]
+   ]
+  },
+  {
+   "id": "c-038-presse-regionale",
+   "plusProche": "ft-editoriaux-01-pied-de-journal",
+   "score": 0.556,
+   "empreinte": 0.588,
+   "texte": 0.21,
+   "autres": [
+    [
+     "ft-education-06-campus-plan-et-horaires",
+     0.506
+    ],
+    [
+     "ft-corporate-06-certifications-centre",
+     0.503
+    ]
+   ]
+  },
+  {
+   "id": "c-093-maillot-en-biais",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.553,
+   "empreinte": 0.35,
+   "texte": 0.303,
+   "autres": [
+    [
+     "ft-communautes-03-club-accueil-et-gazette",
+     0.461
+    ],
+    [
+     "ft-creatifs-portfolios-06-bande-annonce-neon",
+     0.371
+    ]
+   ]
+  },
+  {
+   "id": "c-066-jardin-botanique",
+   "plusProche": "ft-corporate-05-implantations-en-colonnes",
+   "score": 0.55,
+   "empreinte": 0.706,
+   "texte": 0.157,
+   "autres": [
+    [
+     "ft-institutionnels-04-etablissement-de-sante-visiteurs",
+     0.483
+    ],
+    [
+     "ft-saas-tech-07-lettre-et-nouveautes",
+     0.472
+    ]
+   ]
+  },
+  {
+   "id": "c-078-deux-rives",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.547,
+   "empreinte": 0.6,
+   "texte": 0.198,
+   "autres": [
+    [
+     "ft-finance-juridique-04-cabinet-comptable-echeances",
+     0.496
+    ],
+    [
+     "ft-immobilier-05-gestion-locative-espaces",
+     0.487
+    ]
+   ]
+  },
+  {
+   "id": "c-023-laboratoire-donnees",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.541,
+   "empreinte": 0.65,
+   "texte": 0.173,
+   "autres": [
+    [
+     "ft-services-03-freelance-parlons-projet",
+     0.404
+    ],
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.324
+    ]
+   ]
+  },
+  {
+   "id": "c-017-phrase-de-lancement",
+   "plusProche": "ft-services-03-freelance-parlons-projet",
+   "score": 0.54,
+   "empreinte": 0.693,
+   "texte": 0.155,
+   "autres": [
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.506
+    ],
+    [
+     "ft-landing-pages-01-bouton-achat-final",
+     0.439
+    ]
+   ]
+  },
+  {
+   "id": "c-033-journal-triple-filet",
+   "plusProche": "ft-saas-tech-06-startup-decontracte-centre",
+   "score": 0.538,
+   "empreinte": 0.714,
+   "texte": 0.145,
+   "autres": [
+    [
+     "ft-editoriaux-01-pied-de-journal",
+     0.521
+    ],
+    [
+     "ft-saas-tech-01-mega-pied-six-colonnes",
+     0.38
+    ]
+   ]
+  },
+  {
+   "id": "c-088-rapports-ouverts",
+   "plusProche": "ft-ong-associations-03-fondation-sobre-institutionnelle",
+   "score": 0.538,
+   "empreinte": 0.367,
+   "texte": 0.283,
+   "autres": [
+    [
+     "ft-saas-tech-05-statut-et-securite",
+     0.437
+    ],
+    [
+     "ft-institutionnels-04-etablissement-de-sante-visiteurs",
+     0.331
+    ]
+   ]
+  },
+  {
+   "id": "c-079-affiche-de-festival",
+   "plusProche": "ft-services-07-depannage-urgent-24h",
+   "score": 0.536,
+   "empreinte": 0.769,
+   "texte": 0.121,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.43
+    ],
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.404
+    ]
+   ]
+  },
+  {
+   "id": "c-001-bastion-ardoise",
+   "plusProche": "ft-ecommerce-01-mega-enseigne",
+   "score": 0.53,
+   "empreinte": 0.45,
+   "texte": 0.244,
+   "autres": [
+    [
+     "ft-finance-juridique-06-fintech-moderne-statut",
+     0.444
+    ],
+    [
+     "ft-communautes-01-reseau-social-dense",
+     0.429
+    ]
+   ]
+  },
+  {
+   "id": "c-014-index-du-comptable",
+   "plusProche": "ft-institutionnels-05-musee-index-numerote",
+   "score": 0.53,
+   "empreinte": 0.256,
+   "texte": 0.322,
+   "autres": [
+    [
+     "ft-ecommerce-04-boutique-de-niche",
+     0.42
+    ],
+    [
+     "ft-landing-pages-06-capture-sobre-colonne",
+     0.395
+    ]
+   ]
+  },
+  {
+   "id": "c-025-marche-du-terroir",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.529,
+   "empreinte": 0.35,
+   "texte": 0.283,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.482
+    ],
+    [
+     "ft-saas-tech-04-pied-developpeurs-api",
+     0.456
+    ]
+   ]
+  },
+  {
+   "id": "c-090-benevoles-en-cartes",
+   "plusProche": "ft-ong-associations-02-association-quartier-chaleureuse",
+   "score": 0.527,
+   "empreinte": 0.25,
+   "texte": 0.322,
+   "autres": [
+    [
+     "ft-immobilier-05-gestion-locative-espaces",
+     0.501
+    ],
+    [
+     "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+     0.447
+    ]
+   ]
+  },
+  {
+   "id": "c-042-nom-rogne-rouge",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.52,
+   "empreinte": 0.65,
+   "texte": 0.156,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-01-pied-affiche-titre-geant",
+     0.503
+    ],
+    [
+     "ft-institutionnels-05-musee-index-numerote",
+     0.439
+    ]
+   ]
+  },
+  {
+   "id": "c-006-agora-en-tuiles",
+   "plusProche": "ft-institutionnels-02-mairie-horaires-et-demarches",
+   "score": 0.515,
+   "empreinte": 0.275,
+   "texte": 0.302,
+   "autres": [
+    [
+     "ft-education-03-ecole-chaleureuse-parents",
+     0.389
+    ],
+    [
+     "ft-communautes-06-groupes-grandes-pastilles",
+     0.375
+    ]
+   ]
+  },
+  {
+   "id": "c-040-rubriques-geantes",
+   "plusProche": "ft-editoriaux-02-grandes-rubriques",
+   "score": 0.51,
+   "empreinte": 0.175,
+   "texte": 0.338,
+   "autres": [
+    [
+     "ft-ong-associations-04-collectif-militant-ton-fort",
+     0.382
+    ],
+    [
+     "ft-minimalistes-05-cartouche-centre",
+     0.353
+    ]
+   ]
+  },
+  {
+   "id": "c-007-pacte-en-deux",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.509,
+   "empreinte": 0.3,
+   "texte": 0.287,
+   "autres": [
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.411
+    ],
+    [
+     "ft-saas-tech-03-grand-appel-essai-gratuit",
+     0.336
+    ]
+   ]
+  },
+  {
+   "id": "c-060-votre-agent-local",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.506,
+   "empreinte": 0.356,
+   "texte": 0.262,
+   "autres": [
+    [
+     "ft-finance-juridique-04-cabinet-comptable-echeances",
+     0.488
+    ],
+    [
+     "ft-education-02-plateforme-de-cours-vivante",
+     0.445
+    ]
+   ]
+  },
+  {
+   "id": "c-069-journee-d-ecole",
+   "plusProche": "ft-education-03-ecole-chaleureuse-parents",
+   "score": 0.506,
+   "empreinte": 0.356,
+   "texte": 0.263,
+   "autres": [
+    [
+     "ft-editoriaux-06-journal-de-quartier",
+     0.342
+    ],
+    [
+     "ft-editoriaux-01-pied-de-journal",
+     0.325
+    ]
+   ]
+  },
+  {
+   "id": "c-041-bonjour-ecrit",
+   "plusProche": "ft-services-03-freelance-parlons-projet",
+   "score": 0.504,
+   "empreinte": 0.593,
+   "texte": 0.166,
+   "autres": [
+    [
+     "ft-services-04-agence-devis-formulaire",
+     0.414
+    ],
+    [
+     "ft-landing-pages-01-bouton-achat-final",
+     0.367
+    ]
+   ]
+  },
+  {
+   "id": "c-095-courbes-de-niveau",
+   "plusProche": "ft-minimalistes-08-trois-volets-compacts",
+   "score": 0.503,
+   "empreinte": 0.521,
+   "texte": 0.194,
+   "autres": [
+    [
+     "ft-corporate-05-implantations-en-colonnes",
+     0.459
+    ],
+    [
+     "ft-landing-pages-06-capture-sobre-colonne",
+     0.395
+    ]
+   ]
+  },
+  {
+   "id": "c-085-don-en-un-geste",
+   "plusProche": "ft-ong-associations-01-ong-humanitaire-appel-au-don",
+   "score": 0.502,
+   "empreinte": 0.15,
+   "texte": 0.342,
+   "autres": [
+    [
+     "ft-ong-associations-03-fondation-sobre-institutionnelle",
+     0.42
+    ],
+    [
+     "ft-education-02-plateforme-de-cours-vivante",
+     0.419
+    ]
+   ]
+  },
+  {
+   "id": "c-034-mode-en-capitales",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.5,
+   "empreinte": 0.606,
+   "texte": 0.157,
+   "autres": [
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.47
+    ],
+    [
+     "ft-editoriaux-02-grandes-rubriques",
+     0.432
+    ]
+   ]
+  },
+  {
+   "id": "c-075-rendez-vous-bleu",
+   "plusProche": "ft-communautes-05-evenement-agenda-billets",
+   "score": 0.485,
+   "empreinte": 0.23,
+   "texte": 0.296,
+   "autres": [
+    [
+     "ft-corporate-04-rendez-vous-en-cartes",
+     0.423
+    ],
+    [
+     "ft-services-05-domicile-zone-horaires",
+     0.366
+    ]
+   ]
+  },
+  {
+   "id": "c-096-juste-une-ligne",
+   "plusProche": "ft-minimalistes-03-barre-fine-retour-en-haut",
+   "score": 0.484,
+   "empreinte": 0.55,
+   "texte": 0.168,
+   "autres": [
+    [
+     "ft-institutionnels-07-prefecture-bandeau-officiel",
+     0.419
+    ],
+    [
+     "ft-creatifs-portfolios-05-signature-artiste",
+     0.408
+    ]
+   ]
+  },
+  {
+   "id": "c-003-colophon-du-cabinet",
+   "plusProche": "ft-landing-pages-06-capture-sobre-colonne",
+   "score": 0.482,
+   "empreinte": 0.517,
+   "texte": 0.179,
+   "autres": [
+    [
+     "ft-ecommerce-04-boutique-de-niche",
+     0.391
+    ],
+    [
+     "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+     0.376
+    ]
+   ]
+  },
+  {
+   "id": "c-072-cours-ouverts",
+   "plusProche": "ft-corporate-01-grande-marque-volets",
+   "score": 0.481,
+   "empreinte": 0.36,
+   "texte": 0.24,
+   "autres": [
+    [
+     "ft-ong-associations-01-ong-humanitaire-appel-au-don",
+     0.394
+    ],
+    [
+     "ft-ecommerce-01-mega-enseigne",
+     0.369
+    ]
+   ]
+  },
+  {
+   "id": "c-044-planche-contact",
+   "plusProche": "ft-corporate-07-affiche-noir-et-or",
+   "score": 0.48,
+   "empreinte": 0.438,
+   "texte": 0.209,
+   "autres": [
+    [
+     "ft-minimalistes-06-index-numerote",
+     0.444
+    ],
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.398
+    ]
+   ]
+  },
+  {
+   "id": "c-055-heures-du-four",
+   "plusProche": "ft-services-01-artisan-grand-telephone",
+   "score": 0.479,
+   "empreinte": 0.614,
+   "texte": 0.137,
+   "autres": [
+    [
+     "ft-services-05-domicile-zone-horaires",
+     0.439
+    ],
+    [
+     "ft-immobilier-04-portail-annonces-recherche",
+     0.425
+    ]
+   ]
+  },
+  {
+   "id": "c-009-banque-nocturne",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.477,
+   "empreinte": 0.588,
+   "texte": 0.147,
+   "autres": [
+    [
+     "ft-minimalistes-02-signature-typographique",
+     0.471
+    ],
+    [
+     "ft-saas-tech-01-mega-pied-six-colonnes",
+     0.465
+    ]
+   ]
+  },
+  {
+   "id": "c-053-palace-annuaire",
+   "plusProche": "ft-saas-tech-01-mega-pied-six-colonnes",
+   "score": 0.475,
+   "empreinte": 0.343,
+   "texte": 0.243,
+   "autres": [
+    [
+     "ft-editoriaux-04-media-numerique-nuit",
+     0.447
+    ],
+    [
+     "ft-corporate-02-bandeau-appel-cinq-colonnes",
+     0.443
+    ]
+   ]
+  },
+  {
+   "id": "c-021-terminal-vigie",
+   "plusProche": "ft-saas-tech-05-statut-et-securite",
+   "score": 0.469,
+   "empreinte": 0.26,
+   "texte": 0.271,
+   "autres": [
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.415
+    ],
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.382
+    ]
+   ]
+  },
+  {
+   "id": "c-073-reperes-de-clinique",
+   "plusProche": "ft-saas-tech-05-statut-et-securite",
+   "score": 0.463,
+   "empreinte": 0.533,
+   "texte": 0.157,
+   "autres": [
+    [
+     "ft-services-05-domicile-zone-horaires",
+     0.41
+    ],
+    [
+     "ft-institutionnels-08-intercommunalite-services-en-cartes",
+     0.393
+    ]
+   ]
+  },
+  {
+   "id": "c-082-sillon-et-label",
+   "plusProche": "ft-minimalistes-05-cartouche-centre",
+   "score": 0.453,
+   "empreinte": 0.675,
+   "texte": 0.092,
+   "autres": [
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.363
+    ],
+    [
+     "ft-education-02-plateforme-de-cours-vivante",
+     0.287
+    ]
+   ]
+  },
+  {
+   "id": "c-098-inversion-noir-blanc",
+   "plusProche": "ft-landing-pages-06-capture-sobre-colonne",
+   "score": 0.452,
+   "empreinte": 0.221,
+   "texte": 0.273,
+   "autres": [
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.401
+    ],
+    [
+     "ft-corporate-05-implantations-en-colonnes",
+     0.389
+    ]
+   ]
+  },
+  {
+   "id": "c-026-drop-sneakers",
+   "plusProche": "ft-ecommerce-01-mega-enseigne",
+   "score": 0.443,
+   "empreinte": 0.363,
+   "texte": 0.21,
+   "autres": [
+    [
+     "ft-ecommerce-05-confiance-paiement-livraison",
+     0.373
+    ],
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.354
+    ]
+   ]
+  },
+  {
+   "id": "c-049-index-des-projets",
+   "plusProche": "ft-services-03-freelance-parlons-projet",
+   "score": 0.443,
+   "empreinte": 0.321,
+   "texte": 0.226,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-05-signature-artiste",
+     0.403
+    ],
+    [
+     "ft-editoriaux-05-revue-et-colophon",
+     0.398
+    ]
+   ]
+  },
+  {
+   "id": "c-083-plan-du-salon",
+   "plusProche": "ft-education-06-campus-plan-et-horaires",
+   "score": 0.443,
+   "empreinte": 0.25,
+   "texte": 0.254,
+   "autres": [
+    [
+     "ft-landing-pages-05-lancement-ligne-confiance",
+     0.327
+    ],
+    [
+     "ft-institutionnels-02-mairie-horaires-et-demarches",
+     0.326
+    ]
+   ]
+  },
+  {
+   "id": "c-019-statut-nuage",
+   "plusProche": "ft-saas-tech-05-statut-et-securite",
+   "score": 0.441,
+   "empreinte": 0.125,
+   "texte": 0.302,
+   "autres": [
+    [
+     "ft-saas-tech-03-grand-appel-essai-gratuit",
+     0.437
+    ],
+    [
+     "ft-finance-juridique-02-assurance-sinistre-et-produits",
+     0.383
+    ]
+   ]
+  },
+  {
+   "id": "c-029-botanique-bio",
+   "plusProche": "ft-corporate-04-rendez-vous-en-cartes",
+   "score": 0.44,
+   "empreinte": 0.556,
+   "texte": 0.129,
+   "autres": [
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.43
+    ],
+    [
+     "ft-ecommerce-05-confiance-paiement-livraison",
+     0.423
+    ]
+   ]
+  },
+  {
+   "id": "c-076-croix-de-garde",
+   "plusProche": "ft-institutionnels-05-musee-index-numerote",
+   "score": 0.439,
+   "empreinte": 0.356,
+   "texte": 0.209,
+   "autres": [
+    [
+     "ft-corporate-02-bandeau-appel-cinq-colonnes",
+     0.434
+    ],
+    [
+     "ft-institutionnels-07-prefecture-bandeau-officiel",
+     0.418
+    ]
+   ]
+  },
+  {
+   "id": "c-030-horlogerie-bandeau",
+   "plusProche": "ft-corporate-02-bandeau-appel-cinq-colonnes",
+   "score": 0.434,
+   "empreinte": 0.186,
+   "texte": 0.273,
+   "autres": [
+    [
+     "ft-institutionnels-03-agence-plan-du-site-trois-niveaux",
+     0.434
+    ],
+    [
+     "ft-institutionnels-07-prefecture-bandeau-officiel",
+     0.417
+    ]
+   ]
+  },
+  {
+   "id": "c-028-frise-de-confiance",
+   "plusProche": "ft-ecommerce-06-mobile-first",
+   "score": 0.429,
+   "empreinte": 0.246,
+   "texte": 0.244,
+   "autres": [
+    [
+     "ft-communautes-04-developpeurs-contribuer",
+     0.36
+    ],
+    [
+     "ft-ecommerce-08-service-client-en-deux-volets",
+     0.338
+    ]
+   ]
+  },
+  {
+   "id": "c-054-anse-turquoise",
+   "plusProche": "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+   "score": 0.428,
+   "empreinte": 0.256,
+   "texte": 0.24,
+   "autres": [
+    [
+     "ft-ecommerce-05-confiance-paiement-livraison",
+     0.373
+    ],
+    [
+     "ft-institutionnels-08-intercommunalite-services-en-cartes",
+     0.373
+    ]
+   ]
+  },
+  {
+   "id": "c-031-grand-club-lettre",
+   "plusProche": "ft-institutionnels-05-musee-index-numerote",
+   "score": 0.425,
+   "empreinte": 0.706,
+   "texte": 0.058,
+   "autres": [
+    [
+     "ft-landing-pages-03-inscription-courte-honnete",
+     0.395
+    ],
+    [
+     "ft-landing-pages-06-capture-sobre-colonne",
+     0.374
+    ]
+   ]
+  },
+  {
+   "id": "c-005-chancellerie",
+   "plusProche": "ft-finance-juridique-03-cabinet-avocats-discret",
+   "score": 0.423,
+   "empreinte": 0.456,
+   "texte": 0.156,
+   "autres": [
+    [
+     "ft-restauration-hotellerie-04-table-gastronomique-centree",
+     0.419
+    ],
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.377
+    ]
+   ]
+  },
+  {
+   "id": "c-077-cercle-de-souffle",
+   "plusProche": "ft-minimalistes-05-cartouche-centre",
+   "score": 0.423,
+   "empreinte": 0.675,
+   "texte": 0.069,
+   "autres": [
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.413
+    ],
+    [
+     "ft-saas-tech-04-pied-developpeurs-api",
+     0.273
+    ]
+   ]
+  },
+  {
+   "id": "c-063-estimation-photo",
+   "plusProche": "ft-minimalistes-01-menu-et-mentions",
+   "score": 0.42,
+   "empreinte": 0.525,
+   "texte": 0.126,
+   "autres": [
+    [
+     "ft-saas-tech-02-pied-minimal-produit",
+     0.385
+    ],
+    [
+     "ft-landing-pages-02-garantie-satisfait-rembourse",
+     0.377
+    ]
+   ]
+  },
+  {
+   "id": "c-059-commande-en-grand",
+   "plusProche": "ft-landing-pages-01-bouton-achat-final",
+   "score": 0.41,
+   "empreinte": 0.019,
+   "texte": 0.321,
+   "autres": [
+    [
+     "ft-corporate-07-affiche-noir-et-or",
+     0.37
+    ],
+    [
+     "ft-services-07-depannage-urgent-24h",
+     0.353
+    ]
+   ]
+  },
+  {
+   "id": "c-074-galets-de-spa",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.41,
+   "empreinte": 0.65,
+   "texte": 0.068,
+   "autres": [
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.339
+    ],
+    [
+     "ft-editoriaux-06-journal-de-quartier",
+     0.307
+    ]
+   ]
+  },
+  {
+   "id": "c-002-registre-public",
+   "plusProche": "ft-education-06-campus-plan-et-horaires",
+   "score": 0.408,
+   "empreinte": 0.26,
+   "texte": 0.223,
+   "autres": [
+    [
+     "ft-institutionnels-01-portail-national-six-colonnes",
+     0.381
+    ],
+    [
+     "ft-saas-tech-01-mega-pied-six-colonnes",
+     0.325
+    ]
+   ]
+  },
+  {
+   "id": "c-016-onglets-documentation",
+   "plusProche": "ft-saas-tech-04-pied-developpeurs-api",
+   "score": 0.405,
+   "empreinte": 0.343,
+   "texte": 0.187,
+   "autres": [
+    [
+     "ft-corporate-05-implantations-en-colonnes",
+     0.332
+    ],
+    [
+     "ft-landing-pages-06-capture-sobre-colonne",
+     0.326
+    ]
+   ]
+  },
+  {
+   "id": "c-070-parcours-formation",
+   "plusProche": "ft-institutionnels-03-agence-plan-du-site-trois-niveaux",
+   "score": 0.402,
+   "empreinte": 0.33,
+   "texte": 0.19,
+   "autres": [
+    [
+     "ft-landing-pages-04-webinaire-inscription",
+     0.384
+    ],
+    [
+     "ft-minimalistes-08-trois-volets-compacts",
+     0.384
+    ]
+   ]
+  },
+  {
+   "id": "c-012-fintech-tableau",
+   "plusProche": "ft-saas-tech-05-statut-et-securite",
+   "score": 0.395,
+   "empreinte": 0.325,
+   "texte": 0.186,
+   "autres": [
+    [
+     "ft-landing-pages-05-lancement-ligne-confiance",
+     0.358
+    ],
+    [
+     "ft-saas-tech-04-pied-developpeurs-api",
+     0.358
+    ]
+   ]
+  },
+  {
+   "id": "c-043-nom-et-heure",
+   "plusProche": "ft-creatifs-portfolios-05-signature-artiste",
+   "score": 0.393,
+   "empreinte": 0.125,
+   "texte": 0.264,
+   "autres": [
+    [
+     "ft-minimalistes-02-signature-typographique",
+     0.339
+    ],
+    [
+     "ft-landing-pages-05-lancement-ligne-confiance",
+     0.325
+    ]
+   ]
+  },
+  {
+   "id": "c-089-climat-en-chiffres",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.392,
+   "empreinte": 0.35,
+   "texte": 0.174,
+   "autres": [
+    [
+     "ft-landing-pages-05-lancement-ligne-confiance",
+     0.336
+    ],
+    [
+     "ft-ong-associations-01-ong-humanitaire-appel-au-don",
+     0.309
+    ]
+   ]
+  },
+  {
+   "id": "c-099-glitch-au-survol",
+   "plusProche": "ft-services-03-freelance-parlons-projet",
+   "score": 0.392,
+   "empreinte": 0.571,
+   "texte": 0.085,
+   "autres": [
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.318
+    ],
+    [
+     "ft-corporate-08-contact-et-trois-niveaux-legaux",
+     0.317
+    ]
+   ]
+  },
+  {
+   "id": "c-087-contributeurs",
+   "plusProche": "ft-saas-tech-01-mega-pied-six-colonnes",
+   "score": 0.387,
+   "empreinte": 0.487,
+   "texte": 0.114,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-03-invitation-a-ecrire",
+     0.346
+    ],
+    [
+     "ft-editoriaux-04-media-numerique-nuit",
+     0.339
+    ]
+   ]
+  },
+  {
+   "id": "c-035-carnet-de-marges",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.381,
+   "empreinte": 0.3,
+   "texte": 0.185,
+   "autres": [
+    [
+     "ft-landing-pages-06-capture-sobre-colonne",
+     0.352
+    ],
+    [
+     "ft-minimalistes-01-menu-et-mentions",
+     0.322
+    ]
+   ]
+  },
+  {
+   "id": "c-092-garage-damier",
+   "plusProche": "ft-editoriaux-02-grandes-rubriques",
+   "score": 0.375,
+   "empreinte": 0.15,
+   "texte": 0.24,
+   "autres": [
+    [
+     "ft-minimalistes-02-signature-typographique",
+     0.344
+    ],
+    [
+     "ft-finance-juridique-03-cabinet-avocats-discret",
+     0.339
+    ]
+   ]
+  },
+  {
+   "id": "c-100-pied-en-phrases",
+   "plusProche": "ft-minimalistes-07-deux-zones-asymetriques",
+   "score": 0.375,
+   "empreinte": 0.4,
+   "texte": 0.14,
+   "autres": [
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.343
+    ],
+    [
+     "ft-saas-tech-06-startup-decontracte-centre",
+     0.302
+    ]
+   ]
+  },
+  {
+   "id": "c-024-maison-ivoire",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.373,
+   "empreinte": 0.5,
+   "texte": 0.098,
+   "autres": [
+    [
+     "ft-ecommerce-02-maison-luxe-sobre",
+     0.369
+    ],
+    [
+     "ft-creatifs-portfolios-01-pied-affiche-titre-geant",
+     0.351
+    ]
+   ]
+  },
+  {
+   "id": "c-057-etiquette-de-cave",
+   "plusProche": "ft-creatifs-portfolios-05-signature-artiste",
+   "score": 0.372,
+   "empreinte": 0.417,
+   "texte": 0.131,
+   "autres": [
+    [
+     "ft-minimalistes-05-cartouche-centre",
+     0.341
+    ],
+    [
+     "ft-ong-associations-01-ong-humanitaire-appel-au-don",
+     0.303
+    ]
+   ]
+  },
+  {
+   "id": "c-032-brocante-annuaire",
+   "plusProche": "ft-institutionnels-01-portail-national-six-colonnes",
+   "score": 0.369,
+   "empreinte": 0.245,
+   "texte": 0.197,
+   "autres": [
+    [
+     "ft-ecommerce-03-place-de-marche",
+     0.366
+    ],
+    [
+     "ft-saas-tech-02-pied-minimal-produit",
+     0.31
+    ]
+   ]
+  },
+  {
+   "id": "c-047-gouache-et-feuilles",
+   "plusProche": "ft-minimalistes-05-cartouche-centre",
+   "score": 0.367,
+   "empreinte": 0.3,
+   "texte": 0.174,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-05-signature-artiste",
+     0.355
+    ],
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.287
+    ]
+   ]
+  },
+  {
+   "id": "c-018-aurore-ia",
+   "plusProche": "ft-communautes-03-club-accueil-et-gazette",
+   "score": 0.365,
+   "empreinte": 0.267,
+   "texte": 0.185,
+   "autres": [
+    [
+     "ft-restauration-hotellerie-03-cafe-boulangerie-cartes-chaudes",
+     0.363
+    ],
+    [
+     "ft-finance-juridique-06-fintech-moderne-statut",
+     0.338
+    ]
+   ]
+  },
+  {
+   "id": "c-050-grain-de-pellicule",
+   "plusProche": "ft-corporate-07-affiche-noir-et-or",
+   "score": 0.363,
+   "empreinte": 0.243,
+   "texte": 0.193,
+   "autres": [
+    [
+     "ft-creatifs-portfolios-02-cadre-exposition",
+     0.289
+    ],
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.288
+    ]
+   ]
+  },
+  {
+   "id": "c-071-cotes-de-bibliotheque",
+   "plusProche": "ft-restauration-hotellerie-06-bar-nocturne-ouvert-ce-soir",
+   "score": 0.361,
+   "empreinte": 0.186,
+   "texte": 0.214,
+   "autres": [
+    [
+     "ft-institutionnels-02-mairie-horaires-et-demarches",
+     0.346
+    ],
+    [
+     "ft-restauration-hotellerie-01-bistrot-ardoise-du-jour",
+     0.316
+    ]
+   ]
+  },
+  {
+   "id": "c-020-appli-diptyque",
+   "plusProche": "ft-ecommerce-08-service-client-en-deux-volets",
+   "score": 0.345,
+   "empreinte": 0.214,
+   "texte": 0.19,
+   "autres": [
+    [
+     "ft-services-01-artisan-grand-telephone",
+     0.336
+    ],
+    [
+     "ft-communautes-06-groupes-grandes-pastilles",
+     0.333
+    ]
+   ]
+  },
+  {
+   "id": "c-037-barres-de-son",
+   "plusProche": "ft-corporate-02-bandeau-appel-cinq-colonnes",
+   "score": 0.344,
+   "empreinte": 0.55,
+   "texte": 0.055,
+   "autres": [
+    [
+     "ft-editoriaux-01-pied-de-journal",
+     0.329
+    ],
+    [
+     "ft-landing-pages-01-bouton-achat-final",
+     0.313
+    ]
+   ]
+  },
+  {
+   "id": "c-094-planning-de-salle",
+   "plusProche": "ft-education-02-plateforme-de-cours-vivante",
+   "score": 0.326,
+   "empreinte": 0.13,
+   "texte": 0.209,
+   "autres": [
+    [
+     "ft-corporate-05-implantations-en-colonnes",
+     0.323
+    ],
+    [
+     "ft-corporate-02-bandeau-appel-cinq-colonnes",
+     0.322
+    ]
+   ]
+  },
+  {
+   "id": "c-062-cartouche-de-plan",
+   "plusProche": "ft-minimalistes-05-cartouche-centre",
+   "score": 0.322,
+   "empreinte": 0.1,
+   "texte": 0.218,
+   "autres": [
+    [
+     "ft-education-06-campus-plan-et-horaires",
+     0.31
+    ],
+    [
+     "ft-minimalistes-06-index-numerote",
+     0.269
+    ]
+   ]
+  },
+  {
+   "id": "c-008-cap-sur-le-telephone",
+   "plusProche": "ft-immobilier-03-promoteur-programmes-numerotes",
+   "score": 0.32,
+   "empreinte": 0.064,
+   "texte": 0.23,
+   "autres": [
+    [
+     "ft-ecommerce-05-confiance-paiement-livraison",
+     0.305
+    ],
+    [
+     "ft-saas-tech-06-startup-decontracte-centre",
+     0.296
+    ]
+   ]
+  },
+  {
+   "id": "c-081-numeros-d-inventaire",
+   "plusProche": "ft-editoriaux-05-revue-et-colophon",
+   "score": 0.316,
+   "empreinte": 0.256,
+   "texte": 0.15,
+   "autres": [
+    [
+     "ft-immobilier-03-promoteur-programmes-numerotes",
+     0.306
+    ],
+    [
+     "ft-institutionnels-05-musee-index-numerote",
+     0.301
+    ]
+   ]
+  },
+  {
+   "id": "c-051-specimen-typographique",
+   "plusProche": "ft-saas-tech-06-startup-decontracte-centre",
+   "score": 0.303,
+   "empreinte": 0.519,
+   "texte": 0.035,
+   "autres": [
+    [
+     "ft-ecommerce-03-place-de-marche",
+     0.264
+    ],
+    [
+     "ft-ecommerce-02-maison-luxe-sobre",
+     0.236
+    ]
+   ]
+  },
+  {
+   "id": "c-039-reportage-legende",
+   "plusProche": "ft-ong-associations-04-collectif-militant-ton-fort",
+   "score": 0.301,
+   "empreinte": 0.456,
+   "texte": 0.058,
+   "autres": [
+    [
+     "ft-minimalistes-05-cartouche-centre",
+     0.285
+    ],
+    [
+     "ft-saas-tech-04-pied-developpeurs-api",
+     0.254
+    ]
+   ]
+  },
+  {
+   "id": "c-048-grille-brutale",
+   "plusProche": "ft-ecommerce-07-club-newsletter",
+   "score": 0.299,
+   "empreinte": 0.517,
+   "texte": 0.032,
+   "autres": [
+    [
+     "ft-services-07-depannage-urgent-24h",
+     0.292
+    ],
+    [
+     "ft-ong-associations-01-ong-humanitaire-appel-au-don",
+     0.287
+    ]
+   ]
+  },
+  {
+   "id": "c-046-neon-en-mouvement",
+   "plusProche": "ft-creatifs-portfolios-06-bande-annonce-neon",
+   "score": 0.286,
+   "empreinte": 0.115,
+   "texte": 0.182,
+   "autres": [
+    [
+     "ft-editoriaux-07-lettre-independante",
+     0.265
+    ],
+    [
+     "ft-education-02-plateforme-de-cours-vivante",
+     0.245
+    ]
+   ]
+  },
+  {
+   "id": "c-080-rideau-de-scene",
+   "plusProche": "ft-corporate-06-certifications-centre",
+   "score": 0.262,
+   "empreinte": 0.456,
+   "texte": 0.027,
+   "autres": [
+    [
+     "ft-education-01-universite-cinq-colonnes",
+     0.225
+    ],
+    [
+     "ft-saas-tech-03-grand-appel-essai-gratuit",
+     0.201
+    ]
+   ]
+  },
+  {
+   "id": "c-058-semaine-en-frise",
+   "plusProche": "ft-communautes-05-evenement-agenda-billets",
+   "score": 0.245,
+   "empreinte": 0.167,
+   "texte": 0.129,
+   "autres": [
+    [
+     "ft-institutionnels-01-portail-national-six-colonnes",
+     0.233
+    ],
+    [
+     "ft-ong-associations-05-tiers-lieu-adhesion-agenda",
+     0.232
+    ]
+   ]
+  },
+  {
+   "id": "c-065-coliving-arche",
+   "plusProche": "ft-saas-tech-06-startup-decontracte-centre",
+   "score": 0.222,
+   "empreinte": 0.175,
+   "texte": 0.108,
+   "autres": [
+    [
+     "ft-ong-associations-02-association-quartier-chaleureuse",
+     0.206
+    ],
+    [
+     "ft-minimalistes-04-marque-phrase-reseaux",
+     0.204
+    ]
+   ]
+  }
+ ]
+}

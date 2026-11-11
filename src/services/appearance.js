@@ -256,7 +256,7 @@ function buildCss(cfg) {
   // Polices de la bibliothèque choisies pour le site : leurs règles @font-face sont livrées avec la feuille
   // (les polices TÉLÉVERSÉES ne sont pas figées ici : leurs règles sont ajoutées à chaque rendu par parts(), pour suivre les variantes ajoutées ou retirées)
   const faces = hasAny ? require("../utils/fontLibrary").faceCssFor(`${decl}:root{${kw}}${rules.join("")}`) : "";
-  return hasAny ? `${faces}${decl}:root{${kw}}${rules.join("")}` : "";
+  return hasAny ? `${faces}${decl}:root{${kw}}${require("../marketing/pages/footerFrontier").excludeFooter(rules.join(""))}` : ""; // + frontière de pied : ces règles ne visent jamais un pied indépendant
 }
 
 // ---------- Rendu public : une requête = au plus une lecture, mémorisée jusqu'à la prochaine publication ----------

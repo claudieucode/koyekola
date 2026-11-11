@@ -4,7 +4,9 @@
 //   débordement horizontal · chevauchements · éléments hors écran · texte coupé · erreurs JavaScript · bande pleine largeur (fond de bord à bord) · cibles tactiles < 44 px (mobile : liens et boutons) · contraste AA texte/fond (< 4,5).
 // Usage :
 //   node scripts/audit-pieds-cdp.js [--famille=minimalistes,corporate] [--id=ft-corporate-01-x,ft-…] [--largeurs=390,820,1280,1440,1920] [--donnees=avec,sans]
-//                                   [--captures=/dossier] [--sortie=/fichier.json] [--max=40]
+//                                   [--captures=/dossier] [--sortie=/fichier.json] [--max=40] [--v2]
+//   --v2 : mesure les modèles de la NOUVELLE bibliothèque (docs/footer-v2/, ids ft2-…) : active FOOTER_V2_APERCU=1 (serveur de mesure compris) et ne garde que les modèles v2
+//          (--famille=saas-tech-startup, --id=ft2-017-phrase-de-lancement). Sans --v2, comportement inchangé (bibliothèque actuelle).
 // Sortie : un résumé JSON sur la sortie standard (et dans --sortie) : { mesures, avecDefaut, parCategorie, defauts: [...] }. Code de sortie 0 = aucun défaut, 1 = défauts, 2 = Chrome absent.
 // Prérequis : Chrome (CHROME_PATH sinon emplacements usuels). Disque lent : TEST_START_TIMEOUT_MS=900000. Le groupe de processus Chrome est toujours arrêté en fin de script.
 const path = require("path"), fs = require("fs");
@@ -14,6 +16,8 @@ const list = (v) => (v ? String(v).split(",").map((x) => x.trim()).filter(Boolea
 const FAMILLES = list(arg("famille")), IDS = list(arg("id")), LARGEURS = (list(arg("largeurs")) || ["390", "820", "1280", "1440", "1920"]).map(Number);
 const DONNEES = list(arg("donnees")) || ["avec", "sans"], CAPTURES = arg("captures"), SORTIE = arg("sortie"), MAX = Number(arg("max", 60));
 
+const V2 = process.argv.includes("--v2");
+if (V2) process.env.FOOTER_V2_APERCU = "1"; // hérité par le serveur de mesure (processus enfant)
 const Chrome = require(path.join(REPO, "tests/helpers-chrome-cdp"));
 if (Chrome.SKIP) { console.error(Chrome.SKIP); process.exit(2); }
 const { startServer, loginInstructor } = require(path.join(REPO, "tests/helpers"));
@@ -96,7 +100,7 @@ function mesurerDansLaPage(mobile) {
       });
     }
   }
-  const entrees = Catalog.entries("footer").filter((e) => (!IDS || IDS.includes(e.key)) && (!FAMILLES || FAMILLES.includes(e.layoutKey)));
+  const entrees = Catalog.entries("footer").filter((e) => (!IDS || IDS.includes(e.key)) && (!FAMILLES || FAMILLES.includes(e.layoutKey)) && (!V2 || e.v2));
   if (CAPTURES) fs.mkdirSync(CAPTURES, { recursive: true });
   let chrome = null; for (let i = 0; i < 6 && !chrome; i++) { try { chrome = await Chrome.launch(); } catch (e) { console.error("Chrome : nouvel essai (" + String(e.message).slice(0, 80) + ")"); await Chrome.wait(4000); } } if (!chrome) throw new Error("Chrome n'a pas démarré après 6 essais");
   const mesures = [];

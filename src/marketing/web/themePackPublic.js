@@ -7,7 +7,7 @@ module.exports = () => {
   const router = express.Router();
   const send = (file, type) => (req, res) => {
     const p = packs.KEY.test(req.params.key) ? packs.get(req.params.key) : null;
-    const body = p ? p[file] : "";
+    const body = p ? (file === "css" ? p.served : p[file]) : ""; // feuille servie = feuille du thème + exclusion du pied indépendant (frontière de pied)
     if (!body) return res.status(404).type("text/plain").send("Introuvable");
     const etag = `"${p.hash}-${file}"`;
     if (req.get("if-none-match") === etag) return res.status(304).end();

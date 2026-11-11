@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Pied de page (chantier E) — révisions, historique, retour au modèle d'origine, protection contre la perte.
 // Partie 1 (sans serveur) : comparaison, déduplication, fusion des enregistrements rapprochés, plafond (la dernière publication reste), listes sans document.
 // Partie 2 (serveur réel) : révision à l'enregistrement et à la publication, restauration en brouillon sans toucher le public, comparaison, retour au modèle d'origine,

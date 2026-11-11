@@ -1773,6 +1773,9 @@ html.kw-noscroll { overflow: hidden; }
 
 /* Abonnement par e-mail : champ e-mail + bouton (les champs viennent du formulaire d'inscription réel) */
 .kw-emailsub-intro { margin: 0 0 8px; }
+/* Piège à robots du formulaire d'abonnement : hors écran (la règle existait seulement pour .lp-signup et .kw-signup : le champ « Ne pas remplir » apparaissait dans les pieds de page) */
+.kw-emailsub-form .req-mark { color: var(--ft-req, #b42318); } /* astérisque « obligatoire » : lisible sur le fond du pied (jeton --ft-req du modèle ; rouge d'origine sinon) */
+.kw-emailsub-form .hp-field { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .kw-emailsub-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
 .kw-emailsub-form .field-group { flex: 1 1 200px; margin: 0; } .kw-emailsub-form .checkbox-row { flex: 1 1 100%; font-size: .85em; }
 .kw-emailsub-submit { flex: none; }
@@ -1815,6 +1818,20 @@ html.kw-noscroll { overflow: hidden; }
   .kw-menu.kw-sa-slide .kw-submenu, .kw-menu.kw-sa-slide .kw-mega { animation: kw-fade-in .18s ease-out; }
 }
 
+/* ===== Frontière de pied (pied de page du Theme Builder) =====
+   <footer data-kw-ft="solo"> : pied INDÉPENDANT du site. Posé après </main>. (1) L'héritage est coupé à la racine (all: initial). (2) Les variables du site que lisent les widgets partagés
+   (--kw-* des jetons, --lp-*, --kw-lb-overlay) sont REDÉFINIES sur la racine : le style attribut de la racine les pose (src/marketing/pages/footerFrontier.js) et les --lp-* ci-dessous les
+   rattachent à ces valeurs locales. (3) Aucune règle « du site » (thème, réglages globaux, CSS personnalisé) ne le vise : l'exclusion est ajoutée à l'émission de ces feuilles (excludeFooter),
+   sans changer leur spécificité. Ce fichier est la base partagée des widgets : il n'est PAS filtré, il lit les variables locales. Même mise en colonne que l'ancien pied (:where(.lp-block-layout), 16 px entre les bandes et la ligne légale). Aucune marge haute implicite (réglable par le style du nœud racine).
+   data-kw-ft="site" : pied qui suit la charte du site ; les jetons --ft-* sont branchés sur la charte. data-kw-ft="legacy" ou sans attribut : comportement historique. */
+[data-kw-ft="solo"] { all: initial; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; position: relative; width: 100%; min-width: 0; overflow-wrap: anywhere; font-family: var(--kw-font-body); font-size: var(--kw-body-size); font-weight: var(--kw-body-weight); line-height: var(--kw-body-lh); color: var(--kw-text); --lp-accent: var(--kw-primary); --lp-on-accent: var(--kw-on-primary); --lp-bg: var(--kw-background); --lp-text: var(--kw-text); }
+[data-kw-ft="site"] { --ft-bg: var(--kw-background); --ft-bg-alt: var(--kw-surface); --ft-text: var(--kw-text); --ft-muted: var(--kw-muted); --ft-accent: var(--kw-primary); --ft-on-accent: var(--kw-on-primary); --ft-font: var(--kw-font-body); --ft-font-head: var(--kw-font-heading); --ft-size: var(--kw-body-size); --ft-weight: var(--kw-body-weight); --ft-lh: var(--kw-body-lh); --ft-radius: var(--kw-radius-card); --ft-radius-btn: var(--kw-radius-button); }
+/* Le pied posé après </main> touche le contenu : pas de remplissage bas de la colonne au-dessus (comme pour l'ancien pied, voir .lp-main:has(> .lp-site-footer) plus haut) ; aucune marge haute implicite sur le pied */
+.lp-main:has(+ [data-kw-ft="solo"], + [data-kw-ft="site"]) { padding-bottom: 0; }
+/* Mouvement réduit : le pied indépendant éteint ses transitions et animations (seul bloc en !important de la frontière : les styles des éléments sont en ligne dans le CSS des nœuds) */
+@media (prefers-reduced-motion: reduce) {
+  [data-kw-ft="solo"], [data-kw-ft="solo"] *, [data-kw-ft="solo"] *::before, [data-kw-ft="solo"] *::after { transition-duration: 0.01ms !important; transition-delay: 0s !important; animation-duration: 0.01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
 /* ── Fiche produit : galerie, choix des variantes, avis, caractéristiques (widgets shopgallery / shopbuy / shopreviews / shopspecs) ───────────────────────────────
    Valeurs de repli neutres (couleurs héritées du texte) : l'identité d'un modèle passe par les « parties » du widget, jamais par ces défauts. Aucune règle ne dépend de la charte du site. */
 .kw-pb-demo { margin: 0 0 8px; font-size: .78rem; opacity: .75; }

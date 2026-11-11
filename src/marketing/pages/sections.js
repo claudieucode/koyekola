@@ -238,6 +238,8 @@ function common(raw, at = "Section") {
       throw bad(error.message);
     }
   }
+  // Apparence d'un PIED de page (frontière de pied) : « solo » (indépendant du site) ou « site » (suit la charte) ; absent = ancien comportement. Posé sur la section racine du pied seulement.
+  if (raw.type === "layout" && (raw.ftMode === "solo" || raw.ftMode === "site")) Object.assign(out, require("./footerFrontier").normalizeAppearance(raw));
   // Styles visuels libres mais validés (Page Builder) : par écran et par état, sur toute section
   if (raw.styles || raw.states) {
     try {

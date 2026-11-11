@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // décrit l'ANCIEN catalogue (100 modèles ft-*, 15 familles) : interrupteur de secours actif. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Bibliothèque de pieds de page (étapes 8, 9 et 10) sur serveur réel : 15 familles avec comptes, tri, recherche + famille, favoris isolés par site ET par utilisateur,
 // version exposée, origine + version enregistrées à l'insertion, « Revenir au modèle d'origine » (alias suivis), remplissage prudent des anciens pieds, migration 142 + sauvegarde automatique,
 // et NON-RÉGRESSION des autres types de modèles (la liste et les filtres des 9 autres types ne changent pas).

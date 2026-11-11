@@ -97,10 +97,12 @@ function rawItem(k, code, env, center) {
   const [name, x] = head.split(":");
   const S = k.S, mid = center ? { textAlign: "center" } : {};
   const links = (list, st = {}) => k.col(list.map((s) => { const [label, url] = s.split(">"); return k.LINK(label, url, { fontSize: "14px", fontWeight: "500", ...mid }); }), { gap: "8px", alignItems: center ? "center" : "flex-start", ...st });
+  // cible tactile ≥ 44 px sur mobile : le lien du titre est en ligne, on le gonfle avec du remplissage
+  const cibleTactile = (n) => { n.parts = { ...(n.parts || {}), link: { ...((n.parts || {}).link || {}), styles: { ...(((n.parts || {}).link || {}).styles || {}), mobile: { display: "inline-block", minHeight: "44px", paddingTop: "11px", paddingBottom: "11px" } } } }; return n; };
   const mobileOff = (n) => ({ ...n, hideOn: ["mobile"] });
   switch (name) {
     case "logo": return k.logo(Number(x) || 40);
-    case "title": return k.siteTitle({ fontSize: `${Number(x) || 22}px`, ...(Number(x) >= 60 ? { lineHeight: 1.05, width: "100%" } : {}), ...mid });
+    case "title": return cibleTactile(k.siteTitle({ fontSize: `${Number(x) || 22}px`, ...(Number(x) >= 60 ? { lineHeight: 1.05, width: "100%" } : {}), ...mid }));
     case "about": return k.T(`<p>${a1 || ABOUT}</p>`, { color: S.mute, fontSize: "14px", maxWidth: "360px", ...(center ? { textAlign: "center", marginLeft: "auto", marginRight: "auto" } : {}) });
     case "text": return k.T(`<p>${a1}</p>`, { color: S.mute, fontSize: "14px", ...mid });
     case "head": return k.L(a1, mid);

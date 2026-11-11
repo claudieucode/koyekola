@@ -2,12 +2,16 @@
 // Pour 12 modèles de familles différentes : modifier le texte et l'adresse d'un lien, la couleur de fond et l'espacement d'une bande, ajouter un widget, déplacer, dupliquer, supprimer (puis annuler),
 // enregistrer, recharger l'éditeur, prévisualiser et publier. Chaque action est contrôlée dans la BASE (brouillon puis version en ligne) et, pour la publication, sur la page publique réelle :
 // aucun bouton décoratif. Les clics sur les calques sont des clics souris réels ; les champs sont renseignés comme une saisie (événements input/change) ; les raccourcis (Ctrl+D, Alt+flèche) sont de vraies touches.
+// FOOTER_EDIT_V2=1 : les modèles de la NOUVELLE bibliothèque (ft2-…, mode d'essai FOOTER_V2_APERCU activé aussi pour le serveur) ; en plus : l'IDENTITÉ du modèle reste intacte après les modifications
+// (ftMode « solo » et jetons --ft-* conservés dans le brouillon ET la version en ligne ; police propre chargée dans le canevas de l'éditeur ET sur la page publique).
 // Ignoré (avec la raison) si Chrome est absent.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const Chrome = require("./helpers-chrome-cdp");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
+const ED_V2 = process.env.FOOTER_EDIT_V2 === "1";
+if (ED_V2) process.env.FOOTER_V2_APERCU = "1"; // avant de charger le catalogue (et hérité par le serveur de test)
 const Catalog = require("../src/themeBuilder/catalog");
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,13 +46,13 @@ describe("Pieds de page : édition réelle dans le Page Builder (Chrome)", { ski
   // 12 modèles : un par famille (12 familles), avec au moins 2 liens et une bande
   const models = () => {
     const seen = new Set(), out = [];
-    for (const e of Catalog.entries("footer")) { if (seen.has(e.layoutKey) || out.length >= 12) continue; const d = Catalog.build("footer", e.key, {}).section; if (linksOf(d).length >= 3) { seen.add(e.layoutKey); out.push(e.key); } }
+    for (const e of Catalog.entries("footer").filter((x) => !ED_V2 || x.v2)) { if (seen.has(e.layoutKey) || out.length >= 12) continue; const d = Catalog.build("footer", e.key, {}).section; if (linksOf(d).length >= 3) { seen.add(e.layoutKey); out.push(e.key); } }
     return out;
   };
 
   test("12 modèles : texte, adresse, couleur de fond, espacement, ajout de widget, déplacement, duplication, suppression + annulation, enregistrement, rechargement, aperçu, publication", async () => {
     const only = process.env.FOOTER_EDIT_ONLY ? process.env.FOOTER_EDIT_ONLY.split(",") : null;
-    const keys = models().filter((k) => !only || only.includes(k)); assert.equal(keys.length, only ? only.length : 12, `${keys.length} modèles retenus`);
+    const keys = models().filter((k) => !only || only.includes(k)); assert.equal(keys.length, only ? only.length : ED_V2 ? Math.min(12, Catalog.entries("footer").filter((x) => x.v2).length) : 12, `${keys.length} modèles retenus`);
     const problems = [];
     for (const key of keys) {
       const row = { key, ok: [], ko: [] };
@@ -91,9 +95,17 @@ describe("Pieds de page : édition réelle dans le Page Builder (Chrome)", { ski
         await saveNow(); const n1 = linksOf(comp().draft).map(([n]) => n).find((n) => n.id === l1.id);
         (a && b && n1 && n1.props.label === "LIEN-EDITE" && n1.props.url === "/blog") ? ok("texte et adresse du lien enregistrés") : ko(`texte/adresse non enregistrés (champs ${a}/${b}, valeur ${n1 && n1.props.label} ${n1 && n1.props.url})`);
         // 2) couleur de fond d'une bande
-        const band = comp().draft.children[0].children[0];
-        await sel(band.id); await tab("Style"); await openSection("Fond");
-        const clicked = await pg.evaluate(() => { const bt = document.querySelector('[data-pb-inspector] [data-color-key="backgroundColor"]'); if (!bt) return false; bt.click(); return true; }); await wait(350);
+        const racineFoot = comp().draft.children[0];
+        const candidats = [...racineFoot.children, ...racineFoot.children.flatMap((c) => c.children || []), racineFoot];
+        const ouvrirFond = () => pg.evaluate(() => { const bt = document.querySelector('[data-pb-inspector] [data-color-key="backgroundColor"]'); if (!bt) return false; bt.click(); return true; });
+        let band = candidats[0], clicked = false;
+        // premier bloc dont la section « Fond » offre une couleur simple (un filet en dégradé n'en a pas)
+        for (const c of candidats) {
+          band = c; await sel(c.id); await tab("Style");
+          for (let t = 0; t < 2 && !clicked; t++) { await openSection("Fond"); clicked = await ouvrirFond(); }
+          if (clicked) break;
+        }
+        await wait(350);
         const hex = await pg.evaluate(() => { const i = document.querySelector(".pb-cpop-hex"); if (!i) return false; i.value = "#123456"; i.dispatchEvent(new Event("change", { bubbles: true })); return true; }); await wait(400);
         await pg.evaluate(() => document.activeElement && document.activeElement.blur()); await saveNow();
         const bd = (() => { let f = null; walk(comp().draft.children, (n) => { if (n.id === band.id) f = n; }); return f; })();
@@ -154,6 +166,22 @@ describe("Pieds de page : édition réelle dans le Page Builder (Chrome)", { ski
         const live = JSON.stringify(comp().live), changed = live !== before10 && live.includes(MARK);
         const page = await (await fetch(`${srv.base}/p/${slug}`, { headers: { "User-Agent": "Mozilla/5.0 Chrome/120 Safari/537.36" } })).text();
         (changed && page.includes(MARK) && (page.match(/<footer/g) || []).length === 1) ? ok("publication : version en ligne et page publique mises à jour") : ko(`publication sans effet (version en ligne changée ${changed}, page publique ${page.includes(MARK)}, bouton de confirmation ${confirmBtn})`);
+        if (ED_V2) {
+          // l'identité du modèle reste intacte : mode solo + jetons conservés (brouillon et version en ligne), police propre dans le canevas de l'éditeur ET sur la page publique réelle
+          const ref = Catalog.build("footer", key, {}).section, c = comp();
+          for (const [nom, d] of [["brouillon", c.draft], ["version en ligne", c.live]]) {
+            (d.ftMode === "solo" && JSON.stringify(d.ftVars) === JSON.stringify(ref.ftVars)) ? ok(`identité conservée (${nom} : solo + ${Object.keys(d.ftVars || {}).length} jetons --ft-*)`) : ko(`identité perdue dans le ${nom} (${d.ftMode}, ${Object.keys(d.ftVars || {}).length} jetons)`);
+          }
+          await openEditor();
+          const police = ref.ftVars["--ft-font-head"].split(",")[0].replace(/'/g, "");
+          const edit = await pg.evaluate((fam) => { const f = document.querySelector("[data-pb-frame]").contentDocument; const els = [...f.querySelectorAll("[data-node-id]")].filter((e) => getComputedStyle(e).fontFamily.includes(fam)); return { n: els.length, loaded: f.fonts.check(`700 40px "${fam}"`) }; }, police);
+          (edit.n > 0 && edit.loaded) ? ok(`police ${police} chargée dans le canevas de l'éditeur (${edit.n} éléments)`) : ko(`police ${police} absente du canevas (${JSON.stringify(edit)})`);
+          const pub = await chrome.newPage({ width: 1280, height: 900, cookies: [] });
+          await pub.goto(`${srv.base}/p/${slug}`); await wait(800);
+          const pubInfo = await pub.evaluate((fam) => { const f = document.querySelector("footer"); return { solo: f.getAttribute("data-kw-ft"), after: !document.querySelector("main footer"), footers: document.querySelectorAll("footer").length, n: [...f.querySelectorAll("*")].filter((e) => getComputedStyle(e).fontFamily.includes(fam)).length, loaded: document.fonts.check(`700 40px "${fam}"`), w: f.getBoundingClientRect().width, vw: innerWidth }; }, police);
+          (pubInfo.solo === "solo" && pubInfo.after && pubInfo.footers === 1 && pubInfo.n > 0 && pubInfo.loaded && Math.abs(pubInfo.w - pubInfo.vw) < 2) ? ok(`public : un seul <footer> solo après </main>, pleine largeur, police ${police} chargée (${pubInfo.n} éléments)`) : ko(`public : ${JSON.stringify(pubInfo)}`);
+          await pub.close();
+        }
         if (pg.errors.length) ko("erreurs JavaScript dans l'éditeur : " + pg.errors.slice(0, 2).join(" | ").slice(0, 200));
       } catch (e) { ko("exception : " + String(e.message).slice(0, 200)); }
       await pg.close();

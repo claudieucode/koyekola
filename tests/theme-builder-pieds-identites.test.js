@@ -1,3 +1,4 @@
+process.env.FOOTER_V2 = "0"; // ces tests décrivent l'ANCIEN catalogue (100 modèles ft-*) : on active l'interrupteur de secours. La bibliothèque v2 est testée par footer-v2-*.test.js.
 // Pieds de page : IDENTITÉ PROPRE (palette fixe, polices de la bibliothèque locale), aucune couleur de la charte du site ni de l'administration. Statique.
 // Voir docs/theme-builder/kolakisa-footer-library.md.
 const { test, describe } = require("node:test");

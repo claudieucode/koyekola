@@ -441,6 +441,7 @@ function baseScope(ctx, visitor, page) {
   return { visitor, page, site: siteInfo(ctx, page), business: require("../pages/business").forPage(ctx, page), now: new Date(), query: (visitor && visitor.query) || {}, ...((page && page.scope) || {}) };
 }
 const headerIdentity = require("../pages/headerIdentity");
+const FF = require("../pages/footerFrontier");
 function viewModel(ctx, page) {
   const scope = baseScope(ctx, page.visitor, page);
   const sections = page.sections.map((s0) => {
@@ -450,7 +451,7 @@ function viewModel(ctx, page) {
     const c = getCourse(ctx, s.courseId);
     if (!c) return null; // formation dépubliée depuis : la section disparaît (jamais un lien mort)
     return { ...s, course: courseView(c) };
-  }).filter(Boolean).map((s) => (s.type === "layout" ? headerIdentity.apply(s) : s));
+  }).filter(Boolean).map((s) => (s.type === "layout" ? headerIdentity.apply(s) : s)).map((s) => (s.type === "layout" && (s.ftMode === "solo" || s.ftMode === "site") ? { ...s, ft: FF.rootInfo(s) } : s)); /* pied indépendant : réglage + variables locales de la racine */
   // Panneaux de méga-menu : contenu rendu dans le menu, mais stylé comme le reste (CSS, mouvement) : ils entrent dans les mêmes calculs que les sections de la page
   const panelSections = [];
   for (const s of sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => { if (n.type === "menu" && n.props && Array.isArray(n.props.items)) n.props.items.forEach((it) => { if (it.mega) panelSections.push({ type: "layout", id: `mega${it.mega.id}`, children: it.mega.nodes }); }); });
@@ -469,7 +470,7 @@ function viewModel(ctx, page) {
   }
   // CSS personnalisé de la page (revalidé à chaque affichage ; un CSS devenu invalide n'est simplement pas appliqué)
   let customCss = "";
-  try { customCss = page.theme && page.theme.css ? pageNodes.normalizePageCss(page.theme.css) : ""; } catch { customCss = ""; }
+  try { customCss = page.theme && page.theme.css ? FF.excludeFooter(pageNodes.normalizePageCss(page.theme.css)) : ""; } catch { customCss = ""; }
   // Points de rupture du site de la page (réglages du site) : écrans « Tablette » et « Mobile » de ses éléments
   let breakpoints;
   try {
@@ -478,7 +479,7 @@ function viewModel(ctx, page) {
   } catch { breakpoints = undefined; }
   // Polices de la bibliothèque utilisées par la page : leurs règles @font-face sont livrées avec elle (aucune autre n'est chargée)
   const nodeCss = [require("../pages/layoutFormat").css(page.theme && page.theme.layout), require("../pages/scrollSnap").css(page.theme && page.theme.scrollSnap), pageNodes.pageCss(withPanels, breakpoints)].filter(Boolean).join("\n");
-  const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss);
+  const faces = require("../../utils/fontLibrary").faceCssFor(nodeCss + sections.filter((x) => x.ft && x.ft.mode === "solo").map((x) => FF.fontCss(x)).join(""));
   // Motion Studio : la page ne charge sa feuille de styles et son runtime que si elle contient un composant ou un réglage Motion Studio
   const motionStudio = pageNodes.STUDIO.usage(withPanels, pageNodes.walk, (t) => (pageNodes.CUSTOM_WIDGETS[t] && pageNodes.CUSTOM_WIDGETS[t].motion) || null, page.theme && page.theme.motionScenes);
   return { ...page, sections, motionStudio, motionCss: require("../pages/motionScenes").css(page.theme && page.theme.motionScenes), nodeCss: faces ? `${faces}\n${nodeCss}` : nodeCss, customCss, autoNav: autoNavigation(page, sections, page.visitor) };
