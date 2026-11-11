@@ -54,7 +54,8 @@ describe("Archives : indépendance graphique dans un navigateur réel (page publ
     assert.equal((await boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: "https://a.test" } }, revision: cur.revision }, headers: ORIGIN() })).status, 200);
     const u = await boss.request(U("/api/bibliotheque/utiliser"), { method: "POST", json: { type: "archive", key: KEY }, headers: ORIGIN() }); assert.equal(u.status, 200, u.text.slice(0, 200));
     const t = JSON.parse(u.text).template; assert.equal((await boss.request(U(`/api/modeles/${t.id}/publier`), { method: "POST", json: { replace: true }, headers: ORIGIN() })).status, 200);
-    chrome = await launch();
+    // Chrome peut démarrer lentement quand la machine est chargée : jusqu'à 4 essais
+    for (let i = 0; i < 4 && !chrome; i += 1) { try { chrome = await launch(); } catch (e) { if (i === 3) throw e; } }
   });
   after(async () => { if (chrome) await chrome.close(); if (db) db.close(); if (srv) await srv.stop(); });
   const open = (width = 1280) => chrome.newPage({ width, height: 900 });

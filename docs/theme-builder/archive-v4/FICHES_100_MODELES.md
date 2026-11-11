@@ -13,7 +13,7 @@
 | M05 Obscura | Photographique | #1B1D21 / #ECECEC / #FF5A36 / #2A2D33 | Syne + Karla | mosaïque d'images carrées, texte réduit au minimum | la fiche se soulève au survol | minimal | aplat de couleur, arrondi 0px | 1/1 | date seule |
 | M06 Flux | Artistique | #F4EFFF / #1B1035 / #FF4D00 / #00C2A8 | Unbounded + DM Sans | aplats de couleur franche et échelles contrastées | la fiche se soulève au survol | typographique | aplat de couleur, arrondi 24px | 4/3 | rubrique + date |
 | M07 Kernel | Technologique | #101828 / #E4E9F2 / #5EEAD4 / #1D2939 | JetBrains Mono + Space Grotesk | l'archive se lit comme un journal de versions | focus clavier très visible | minimal | cadre fin, arrondi 4px | 16/9 | rubrique + date |
-| M08 Lancement | Startup | #FFFFFF / #101828 / #7A5AF8 / #F4F3FF | Manrope + Sora | bandes défilantes de vedettes, puis grille serrée | la fiche se soulève au survol | bandeau teinté pleine largeur | ombre portée, arrondi 16px | 16/9 | auteur · date · temps de lecture |
+| M08 Lancement | Startup | #FFFFFF / #101828 / #7A5AF8 / #F4F3FF | Manrope + Sora | bande de vedettes verticales, puis grille serrée | la fiche se soulève au survol | bandeau teinté pleine largeur | ombre portée, arrondi 16px | 16/9 | auteur · date · temps de lecture |
 | M09 Registre | Corporate et institutionnel | #F5F7F6 / #0F2E2B / #0F766E / #DCEBE8 | IBM Plex Serif + IBM Plex Sans | publications présentées comme un registre daté | aucune animation | bandeau teinté pleine largeur | cadre fin, arrondi 2px | 4/3 | rubrique + date |
 | M10 Prêt-à-porter | Mode | #FFF1F0 / #2B0A12 / #E11D48 / #FAD4D8 | Bodoni Moda + Jost | portraits en pied, légendes minuscules | aucune animation | centré | sans fond, filet bas, arrondi 0px | 3/4 | date seule |
 | M11 Itinéraires | Voyage | #E8F3F1 / #0B3C49 / #F26A21 / #BFE0DA | Gloock + Outfit | destinations en cartes superposées, étapes sur frise | la fiche se soulève au survol | bandeau teinté pleine largeur | ombre portée, arrondi 20px | 3/2 | rubrique + date |
@@ -28,7 +28,7 @@
 | M20 Bilan | Financier | #F1F5F9 / #0B2545 / #13A89E / #DCE6F0 | DM Serif Display + DM Sans | rapports par année et classement | aucune animation | bandeau teinté pleine largeur | cadre fin, arrondi 4px | 16/9 | rubrique + date |
 | M21 Tribune | Économique | #FFFFFF / #1F2937 / #F59E0B / #F3F4F6 | Libre Franklin + Libre Baskerville | une et brèves chiffrées, sections de rubriques | soulignement du titre au survol | grand titre + double filet | sans fond, filet bas, arrondi 0px | 16/9 | rubrique + date |
 | M22 Coulisses | Cinéma et divertissement | #1A0F2E / #F5EEF8 / #FFB703 / #2B1A47 | Playfair Display SC + Rubik | affiches en portrait aux titres superposés | la fiche se soulève au survol | centré | ombre portée, arrondi 10px | 3/4 | date seule |
-| M23 Partition | Musique | #1F1147 / #F4F0FF / #FF7BAC / #2D1B69 | Rubik + Space Grotesk | pochettes carrées en bandes défilantes | la fiche se soulève au survol | typographique | aplat de couleur, arrondi 18px | 1/1 | date seule |
+| M23 Partition | Musique | #1F1147 / #F4F0FF / #FF7BAC / #2D1B69 | Rubik + Space Grotesk | pochettes carrées en bande de vedettes | la fiche se soulève au survol | typographique | aplat de couleur, arrondi 18px | 1/1 | date seule |
 | M24 Souffle | Santé, bien-être et communautaire | #EAF6F0 / #123D32 / #2A9D8F / #D3EBE0 | Lora + Nunito Sans | beaucoup d'air, une colonne douce, un appel à agir tranquille | la fiche se soulève au survol | centré | aplat de couleur, arrondi 28px | 3/2 | date seule |
 | M25 Brouillon | Expérimental | #F1F1F1 / #000000 / #0000FF / #FFFFFF | Anton + Space Mono | typographie brute, grille cassée, aplats purs | soulignement du titre au survol | typographique | cadre fin, arrondi 0px | 4/3 | rubrique + date |
 
@@ -67,7 +67,7 @@
 | `lancement.grille` | Lancement · Grille | M08 | G | 3 | filtres en haut | bandeau teinté pleine largeur | précédent / suivant | recherche | 15 | 5 | non |
 | `lancement.cartes-compactes` | Lancement · Cartes compactes | M08 | CH | 2 | aucune | bandeau teinté pleine largeur | défilement infini | étiquettes | 16 | 7 | non |
 | `lancement.heros-grille` | Lancement · Héros + grille | M08 | HG | 3 | droite | bandeau teinté pleine largeur | numéros | rubriques + recherche | 40 | 7 | non |
-| `lancement.bandes-defilantes` | Lancement · Bandes défilantes | M08 | CR | 4 | gauche | bandeau teinté pleine largeur | charger plus | rubriques | 32 | 7 | non |
+| `lancement.bande-de-vedettes` | Lancement · Bande de vedettes | M08 | CR | 4 | gauche | bandeau teinté pleine largeur | charger plus | rubriques | 32 | 7 | non |
 | `registre.tableau` | Registre · Tableau | M09 | TB | 1 | aucune | bandeau teinté pleine largeur | numéros | rubriques | 18 | 6 | non |
 | `registre.liste-image-a-gauche` | Registre · Liste image à gauche | M09 | LI | 1 | droite | bandeau teinté pleine largeur | charger plus | recherche | 32 | 9 | non |
 | `registre.une-breves` | Registre · Une + brèves | M09 | UB | 3 | gauche | bandeau teinté pleine largeur | précédent / suivant | étiquettes | 45 | 9 | non |
@@ -79,7 +79,7 @@
 | `itineraires.heros-grille` | Itinéraires · Héros + grille | M11 | HG | 3 | gauche | bandeau teinté pleine largeur | numéros | étiquettes | 34 | 7 | non |
 | `itineraires.titres-superposes` | Itinéraires · Titres superposés | M11 | OV | 3 | filtres en haut | bandeau teinté pleine largeur | charger plus | rubriques + recherche | 15 | 6 | non |
 | `itineraires.frise-datee` | Itinéraires · Frise datée | M11 | TL | 1 | aucune | bandeau teinté pleine largeur | précédent / suivant | rubriques | 16 | 6 | non |
-| `itineraires.bandes-defilantes` | Itinéraires · Bandes défilantes | M11 | CR | 4 | droite | bandeau teinté pleine largeur | défilement infini | recherche | 32 | 7 | non |
+| `itineraires.bande-de-vedettes` | Itinéraires · Bande de vedettes | M11 | CR | 4 | droite | bandeau teinté pleine largeur | défilement infini | recherche | 32 | 7 | non |
 | `table-d-hote.grille` | Table d'hôte · Grille | M12 | G | 3 | filtres en haut | centré | précédent / suivant | recherche | 14 | 5 | non |
 | `table-d-hote.vignettes-a-filets` | Table d'hôte · Vignettes à filets | M12 | ZZ | 1 | aucune | centré | défilement infini | étiquettes | 15 | 7 | non |
 | `table-d-hote.mosaique` | Table d'hôte · Mosaïque | M12 | MO | 3 | droite | centré | numéros | rubriques + recherche | 44 | 9 | non |
@@ -122,9 +122,9 @@
 | `tribune.classement-par-lectures` | Tribune · Classement par lectures | M21 | NU | 1 | filtres en haut | grand titre + double filet | défilement infini | rubriques + recherche | 14 | 7 | non |
 | `coulisses.titres-superposes` | Coulisses · Titres superposés | M22 | OV | 3 | droite | centré | précédent / suivant | rubriques + recherche | 25 | 8 | oui |
 | `coulisses.liste-image-a-droite` | Coulisses · Liste image à droite | M22 | LD | 1 | gauche | centré | défilement infini | rubriques | 29 | 9 | oui |
-| `coulisses.bandes-defilantes` | Coulisses · Bandes défilantes | M22 | CR | 4 | filtres en haut | centré | numéros | recherche | 19 | 5 | oui |
+| `coulisses.bande-de-vedettes` | Coulisses · Bande de vedettes | M22 | CR | 4 | filtres en haut | centré | numéros | recherche | 19 | 5 | oui |
 | `coulisses.pleine-largeur` | Coulisses · Pleine largeur | M22 | FS | 1 | aucune | centré | charger plus | étiquettes | 14 | 6 | oui |
-| `partition.bandes-defilantes` | Partition · Bandes défilantes | M23 | CR | 4 | gauche | typographique | numéros | étiquettes | 28 | 7 | oui |
+| `partition.bande-de-vedettes` | Partition · Bande de vedettes | M23 | CR | 4 | gauche | typographique | numéros | étiquettes | 28 | 7 | oui |
 | `partition.grille` | Partition · Grille | M23 | G | 3 | filtres en haut | typographique | charger plus | rubriques + recherche | 13 | 5 | oui |
 | `partition.mur-de-fiches` | Partition · Mur de fiches | M23 | PO | 3 | aucune | typographique | précédent / suivant | rubriques | 11 | 6 | oui |
 | `partition.typographique` | Partition · Typographique | M23 | TY | 1 | droite | typographique | défilement infini | recherche | 21 | 7 | oui |

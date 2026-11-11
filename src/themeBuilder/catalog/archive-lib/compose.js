@@ -194,8 +194,8 @@ const COMP = {
   OV: ({ c, loop, page }) => page([loop(c.cols, "overlay", { count: c.cols * 3, aspect: "4/3" })]),
   // Pleine largeur immersive : une image large par article
   FS: ({ v, loop, page }) => page([v === 2 ? loop(2, "grand", { count: 6, aspect: "16/9", size: "26px", plain: true }) : v === 1 ? loop(1, "grand", { count: 5, aspect: "21/9", size: "34px", plain: true, grid: { gap: "40px" } }) : loop(1, "overlay", { count: 5, aspect: "21/9", size: "34px", grid: { gap: "28px" } })], { maxWidth: "1400px" }),
-  // Bandes défilantes (carrousel horizontal réel du moteur)
-  CR: ({ k, c, loop, page }) => page([k.L("À la une"), loop(c.cols, "portrait", { count: 8, paginate: false, slider: true }), k.L("Tous les articles"), loop(c.cols, "carte", { offset: 8, count: c.cols * 2, noexc: true })]),
+  // Bande de vedettes (le carrousel du moteur n'est pas utilisé : ses flèches portent des couleurs fixes de Kolakisa, non stylables par un modèle)
+  CR: ({ k, c, loop, page }) => page([k.L("À la une"), loop(c.cols, "portrait", { count: c.cols, paginate: false }), k.L("Tous les articles"), loop(c.cols, "carte", { offset: c.cols, count: c.cols * 2, noexc: true })]),
   // Tableau : en-têtes de colonnes puis lignes réelles
   TB: ({ k, S, v, loop, page, muted }) => page([...(v === 1 ? [] : [k.row([muted("<p>Titre</p>", { flexGrow: 3, flexBasis: "0px", minWidth: "200px", fontSize: "13px" }), muted("<p>Rubrique</p>", { flexGrow: 1, flexBasis: "0px", minWidth: "110px", fontSize: "13px" }), muted("<p>Date</p>", { flexBasis: "150px", flexShrink: 0, fontSize: "13px" })], { gap: "16px", paddingLeft: S.pad, paddingRight: S.pad, borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: S.fg })]), loop(1, "ligneTab", { count: 15, line: true, plain: true, grid: { gap: "0px" } })]),
   // Zigzag : grandes images, texte qui chevauche l'image
@@ -216,12 +216,42 @@ const COMP = {
   ST: ({ k, loop, page }) => page([k.divider(), loop(1, "grand", { count: 4, aspect: "16/9", size: "30px", plain: true, grid: { gap: "48px" } })], { maxWidth: "860px" }),
 };
 
+// ── Identité des sous-éléments des widgets ──
+// Les widgets du moteur (filtre de rubriques, recherche, en-tête d'archive, listes, fiche d'auteur) ont leurs propres règles de base qui lisent les jetons du site (ou la charte Kolakisa par défaut :
+// ex. bouton actif = « --kw-primary, #0277b6 »). Un modèle INDÉPENDANT doit donc poser lui-même l'identité sur ces « parties » : mêmes réglages que l'éditeur (node.parts), aucune règle globale ni !important.
+function brand(nodes, S) {
+  const rad = S.btnRadius === "999px" ? "999px" : S.radius;
+  const line = { borderStyle: "solid", borderWidth: "1px", borderColor: S.line };
+  const PARTS = {
+    archiveinfo: { title: { color: S.fg, fontFamily: S.head }, desc: { color: S.mute, fontFamily: S.font, fontSize: "16px", lineHeight: 1.5, fontWeight: "400" }, count: { color: S.mute, fontFamily: S.font, fontSize: "14px", fontWeight: "400" } },
+    catfilter: { link: { color: S.fg, fontFamily: S.font, borderRadius: rad, ...line }, active: { backgroundColor: S.accent, color: S.onAccent, borderColor: S.accent }, count: { color: S.mute } },
+    search: { field: { backgroundColor: S.bg, color: S.fg, fontFamily: S.font, borderRadius: S.btnRadius, ...line }, button: { backgroundColor: S.accent, color: S.onAccent, fontFamily: S.font, fontWeight: "600", borderRadius: S.btnRadius, borderWidth: "0px" } },
+    querylist: { title: { color: S.mute, fontFamily: S.font }, link: { color: S.fg, fontFamily: S.font }, meta: { color: S.mute }, date: { color: S.mute }, count: { color: S.mute }, excerpt: { color: S.mute } },
+    authorbox: { heading: { color: S.fg, fontFamily: S.head }, name: { color: S.fg, fontFamily: S.head }, bio: { color: S.mute, fontFamily: S.font } },
+  };
+  const STATES = { catfilter: { link: { hover: { color: S.accent } } }, querylist: { link: { hover: { color: S.accent } } } };
+  for (const n of nodes) {
+    const def = PARTS[n.type];
+    if (def) {
+      const parts = { ...(n.parts || {}) };
+      for (const [key, st] of Object.entries(def)) parts[key] = { ...(parts[key] || {}), styles: { desktop: { ...st } }, ...((STATES[n.type] || {})[key] ? { states: STATES[n.type][key] } : {}) };
+      n.parts = parts;
+      n.styles = { ...(n.styles || {}), desktop: { fontFamily: S.font, ...((n.styles || {}).desktop || {}) } };
+    }
+    if (n.children) brand(n.children, S);
+  }
+  return nodes;
+}
+
 function build(c) {
   return (k) => {
     const ctx = ctxOf(k, c);
     const fn = COMP[c.comp];
     if (!fn) throw new Error(`Composition d'archive inconnue : ${c.comp}`);
-    return fn({ ...ctx, S: k.S });
+    const nodes = fn({ ...ctx, S: k.S });
+    // Racine : texte et police de la maison hérités par tout ce qui n'a pas de réglage propre (pagination, messages d'état vide, étiquettes…)
+    for (const n of nodes) n.styles = { ...(n.styles || {}), desktop: { fontFamily: k.S.font, color: k.S.fg, ...((n.styles || {}).desktop || {}) } };
+    return brand(nodes, k.S);
   };
 }
 module.exports = { build, COMP, imgSpec, EMPTY };
