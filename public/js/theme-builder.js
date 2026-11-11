@@ -75,11 +75,11 @@
   const ordered = () => { const o = (t) => (t.key === "sidebar" ? 1 : t.key === "custom" ? 2 : 0); return [...data.types].sort((a, b) => o(a) - o(b)); };
   function drawTypes() {
     const ul = $("tb-types"); ul.textContent = "";
-    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.setAttribute("aria-current", String(cur === "")); const dot0 = el("span", "tb-dot"); dot0.dataset.live = "0"; dot0.setAttribute("aria-hidden", "true"); b0.append(icon("all"), el("span", "tb-lbl", "Toutes les parties"), el("span", "tb-count", String(data.total)), dot0); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
+    const all = el("li"); const b0 = el("button"); b0.type = "button"; b0.dataset.k = "all"; b0.title = "Toutes les parties"; b0.setAttribute("aria-current", String(cur === "")); const dot0 = el("span", "tb-dot"); dot0.dataset.live = "0"; dot0.setAttribute("aria-hidden", "true"); b0.append(icon("all"), el("span", "tb-lbl", "Toutes les parties"), el("span", "tb-count", String(data.total)), dot0); b0.addEventListener("click", () => go("")); all.append(b0); ul.append(all);
     let g = "";
     for (const t of ordered()) {
       if (!g) { g = "x"; ul.append(el("li", "tb-grp", "Parties du site")); }
-      const li = el("li"), b = el("button"); b.type = "button"; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
+      const li = el("li"), b = el("button"); b.type = "button"; b.dataset.k = t.key; b.setAttribute("aria-current", String(cur === t.key)); if (!t.available) { b.disabled = true; b.title = t.reason; }
       const dot = el("span", "tb-dot"); dot.dataset.live = t.live ? "1" : "0"; dot.setAttribute("aria-hidden", "true");
       const cn = el("span", "tb-count", String(t.count)); if (!t.count) cn.dataset.z = "1"; b.title = t.label; b.append(icon(t.key), el("span", "tb-lbl", t.label), cn, dot);
       if (t.live) b.setAttribute("aria-label", `${t.label} : ${t.count} modèle(s), ${t.live} publié(s)`);
@@ -609,7 +609,16 @@
     const act = el("div", "tb-actions");
     const pv = el("button", "btn btn-sm btn-outline", "Prévisualiser"); pv.type = "button"; pv.setAttribute("aria-label", `Prévisualiser « ${m.name} »`); pv.addEventListener("click", () => libPreview(m, type));
     act.append(pv);
-    if (canWrite) { const us = el("button", "btn btn-sm btn-primary", "Utiliser ce modèle"); us.type = "button"; us.disabled = !available; us.setAttribute("aria-label", `Utiliser « ${m.name} »`); us.addEventListener("click", () => libUse(m, us, act, type, say)); act.append(us); }
+    if (canWrite) {
+      // Fiche produit : identité graphique du modèle (indépendante par défaut, héritée du site ou hybride) choisie à l'insertion ; modifiable ensuite sans perte
+      let idSel = null;
+      if (type === "single_product" || type === "single_page") {
+        idSel = el("select", "tb-id-select"); idSel.setAttribute("aria-label", `Identité graphique de « ${m.name} »`);
+        [["own", "Identité propre au modèle"], ["site", "Hérite de la charte du site"], ["hybrid", "Modèle + couleur de marque du site"]].forEach(([v, t]) => { const o = el("option", "", t); o.value = v; idSel.append(o); });
+        act.append(idSel);
+      }
+      const us = el("button", "btn btn-sm btn-primary", "Utiliser ce modèle"); us.type = "button"; us.disabled = !available; us.setAttribute("aria-label", `Utiliser « ${m.name} »`); us.addEventListener("click", () => libUse(m, us, act, type, say, idSel ? idSel.value : "")); act.append(us);
+    }
     body.append(act); c.append(body); libLazyThumb(th, m, type); return c;
   }
   const libIo = "IntersectionObserver" in window ? new IntersectionObserver((es) => { for (const e of es) if (e.isIntersecting) { libIo.unobserve(e.target); e.target.__go(); } }, { rootMargin: "200px" }) : null;
@@ -619,10 +628,10 @@
     th.__go = async () => { try { await frameThumb(th, `${base}/api/bibliotheque/${type}/${m.key}/vignette`, type, `l:${base}:${key}`); return; } catch { /* repli : miniature filaire */ } try { let svg = libThumbs.get(key); if (!svg) { const r = await api(`/bibliotheque/${type}/${m.key}/miniature`); svg = r.thumb; libThumbs.set(key, svg); } th.textContent = ""; th.append(svgOf(svg)); } catch { /* miniature facultative */ } };
     if (libIo) libIo.observe(th); else th.__go();
   }
-  async function libUse(m, btn, act, type = L.type, say = libStatus) {
+  async function libUse(m, btn, act, type = L.type, say = libStatus, identity = "") {
     if (L.busy) return; L.busy = true; btn.disabled = true; btn.textContent = "Création…";
     try {
-      const r = await post("/bibliotheque/utiliser", { type, key: m.key });
+      const r = await post("/bibliotheque/utiliser", { type, key: m.key, ...(identity ? { identity } : {}) });
       say(`« ${m.name} » ajouté à votre site en brouillon.`, "ok");
       btn.textContent = "Ajouté ✓"; const ed = el("a", "btn btn-sm btn-outline", "Modifier"); ed.href = r.template.editUrl; ed.setAttribute("aria-label", `Modifier « ${m.name} »`); act.append(ed);
       await refresh();

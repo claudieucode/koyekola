@@ -1,22 +1,37 @@
-<%# Ajouter au panier (widgets/shop.js). Le formulaire envoie des identifiants : le serveur recalcule prix, stock et quantité. %>
+<%# Ajouter au panier (widgets/shop.js). Le formulaire envoie des identifiants : le serveur recalcule prix, stock, quantité, accès et âge. Les données de variantes ne servent qu'à l'AFFICHAGE (prix, image, disponibilité). %>
 <% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Boutique fermée (<%= d.closed === "module" ? "module Commerce non activé" : "à ouvrir dans Boutique → Réglages" %>).</p></section><% } %>
 <% } else if (!d || !d.product) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Aucun produit : choisissez un produit ou placez cet élément dans un modèle « Fiche produit ».</p></section><% } %>
-<% } else { const pr = d.product; %>
-<section class="<%= cls %> kw-pb"<%- attrs %>>
-  <% if (p.showPrice) { %><p class="kw-pb-price"><% if (pr.onSale) { %><s class="kw-pg-old"><%= pr.regularLabel %></s> <% } %><%= pr.isVariable ? "À partir de " : "" %><strong><%= pr.priceLabel %></strong></p><% } %>
-  <% if (!pr.inStock) { %><p class="kw-pb-out" role="status"><%= p.outLabel %></p>
+<% } else { const pr = d.product, bx = d.buy || {}, gate = bx.gate, ag = bx.ageGate && bx.ageGate.required ? bx.ageGate : null, perso = bx.personalization; %>
+<section class="<%= cls %> kw-pb"<%- attrs %> data-kw-shopbuy data-style="<%= p.variantStyle %>">
+  <% if (d.demo) { %><p class="kw-pb-demo" role="note">Données d'exemple (aperçu de la bibliothèque)</p><% } %>
+  <% if (p.showPrice) { %><p class="kw-pb-price" data-kw-price data-from="<%= pr.isVariable ? "1" : "" %>"><% if (pr.onSale) { %><s class="kw-pg-old" data-kw-old><%= pr.regularLabel %></s> <% } else { %><s class="kw-pg-old" data-kw-old hidden></s> <% } %><span data-kw-from><%= pr.isVariable ? "À partir de " : "" %></span><strong data-kw-now><%= pr.priceLabel %></strong></p><% } %>
+  <% if (gate && gate.sale && gate.purchasable) { %><p class="kw-pb-msg" role="status">Vente privée « <%= gate.sale.name %> » : jusqu'au <%= gate.sale.endsLabel %>.</p><% } %>
+  <% if (gate && !gate.purchasable) { %><p class="kw-pb-out" role="status"><%= gate.message %></p><% if (gate.reason === "members") { %><p><a class="kw-pb-btn" href="/boutique/invitation">Accès membre</a></p><% } %>
+  <% } else if (!pr.inStock) { %><p class="kw-pb-out" role="status"><%= p.outLabel %></p>
+  <% } else if (ag && ag.confirmed < ag.required) { %>
+  <form class="kw-pb-wrap" method="post" action="/boutique/age">
+    <p class="kw-pb-msg" role="note"><strong>Ce produit est réservé aux personnes de <%= ag.required %> ans et plus.</strong> Déclarez votre âge pour l'acheter.</p>
+    <input type="hidden" name="p" value="<%= pr.id %>"><input type="hidden" name="retour" value="<%= d.back %>">
+    <button class="kw-pb-btn" type="submit" name="choix" value="oui">Je confirme avoir au moins <%= ag.required %> ans</button>
+    <button class="kw-pb-btn kw-pb-btn--alt" type="submit" name="choix" value="non">Je n'ai pas <%= ag.required %> ans</button>
+  </form>
   <% } else { %>
   <form class="kw-pb-wrap" method="post" action="/boutique/panier/ajouter" data-sh-add>
     <input type="hidden" name="product_id" value="<%= pr.id %>">
     <input type="hidden" name="retour" value="<%= d.back %>">
-    <% if (pr.isVariable) { %><label class="kw-pb-var"><span class="kw-pb-lbl">Variante</span>
-      <select name="variant_id" required><option value="">Choisir…</option><% pr.variants.forEach((v) => { const out = v.manage_stock && v.stock_qty <= 0; %><option value="<%= v.id %>"<%= out ? " disabled" : "" %>><%= Object.values(v.options).join(" / ") %><%= out ? " — rupture" : "" %></option><% }) %></select></label><% } %>
+    <% if (pr.isVariable) { %><label class="kw-pb-var" data-kw-varselect><span class="kw-pb-lbl">Variante</span>
+      <select name="variant_id" required><option value="">Choisir…</option><% pr.variants.forEach((v) => { const out = v.manage_stock && v.stock_qty <= 0; %><option value="<%= v.id %>"<%= out ? " disabled" : "" %>><%= Object.values(v.options).join(" / ") %><%= out ? " — rupture" : "" %></option><% }) %></select></label>
+    <script type="application/json" data-kw-variants><%- JSON.stringify(d.variantData || []).replace(/</g, "\\u003c") %></script>
+    <div class="kw-pb-opts" data-kw-opts hidden></div><% } %>
+    <% if (perso) { %><label class="kw-pb-var"><span class="kw-pb-lbl"><%= perso.label %><%= perso.required ? "" : " (facultatif)" %></span>
+      <input type="text" name="custom_text" maxlength="<%= perso.maxLength %>"<%= perso.required ? " required" : "" %> autocomplete="off"<% if (perso.hint) { %> placeholder="<%= perso.hint %>"<% } %>><small class="kw-pb-hint"><%= perso.maxLength %> caractères au maximum</small></label><% } %>
     <% if (p.showQuantity) { %><label class="kw-pb-q"><span class="kw-pb-lbl">Quantité</span><input class="kw-pb-qty" type="number" name="quantity" value="1" min="1" max="99" inputmode="numeric"></label><% } else { %><input type="hidden" name="quantity" value="1"><% } %>
     <button class="kw-pb-btn" type="submit"><%= p.label %></button>
+    <% if (p.showBuyNow) { %><button class="kw-pb-btn kw-pb-btn--now" type="submit" formaction="/boutique/panier/acheter" data-sh-now><%= p.buyNowLabel %></button><% } %>
     <p class="kw-pb-msg" data-sh-msg role="status" aria-live="polite"></p>
   </form>
   <% } %>
-  <% if (p.showStock && pr.inStock) { %><p class="kw-pb-stock">En stock</p><% } %>
-  <% if (!isBuilder) { %><script src="/js/boutique.js" defer></script><% } %>
+  <% if (p.showStock && pr.inStock) { %><p class="kw-pb-stock" data-kw-stock>En stock</p><% } %>
+  <% if (!isBuilder) { %><script src="/js/boutique.js" defer></script><script src="/js/boutique-fiche.js" defer></script><% } %>
 </section>
 <% } %>

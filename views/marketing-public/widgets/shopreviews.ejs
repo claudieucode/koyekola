@@ -1,0 +1,13 @@
+<%# Avis clients du produit (widgets/shop.js) : avis publiés d'acheteurs vérifiés, jamais d'avis d'exemple. %>
+<% const n = (d && d.count) || 0; %>
+<section class="<%= cls %> kw-prv"<%- attrs %> data-kw-shopreviews>
+  <% if (p.title) { %><h3 class="kw-prv-title"><%= p.title %></h3><% } %>
+  <% if (d && d.demo) { %><p class="kw-pb-demo" role="note">Les avis réels des acheteurs s'afficheront ici (aperçu de la bibliothèque : aucun avis d'exemple)</p>
+  <% } else if (!n) { %><p class="kw-prv-empty" role="status"><%= p.empty %></p>
+  <% } else { %>
+  <% if (p.showSummary && d.average != null) { %><p class="kw-prv-sum" aria-label="Note moyenne <%= d.average %> sur 5, <%= n %> avis"><strong><%= String(d.average).replace(".", ",") %></strong> / 5 · <%= n %> avis vérifié<%= n > 1 ? "s" : "" %></p><% } %>
+  <ul class="kw-prv-list"><% d.items.forEach((r) => { %><li class="kw-prv-item"><p class="kw-prv-stars" aria-label="<%= r.rating %> sur 5"><%= "★".repeat(r.rating) %><span aria-hidden="true"><%= "☆".repeat(5 - r.rating) %></span></p>
+    <% if (r.title) { %><p class="kw-prv-head"><strong><%= r.title %></strong></p><% } %><% if (r.body) { %><p><%= r.body %></p><% } %>
+    <p class="kw-prv-meta"><%= r.author %> · <%= r.date %> · achat vérifié</p></li><% }) %></ul>
+  <% } %>
+</section>

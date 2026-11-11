@@ -1,0 +1,21 @@
+<%# Galerie du produit (widgets/shop.js). Images réelles du produit ; aucune image factice : sans image, un cadre vide est affiché. %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Boutique fermée.</p></section><% } %>
+<% } else if (!d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Galerie : placez cet élément dans un modèle « Fiche produit ».</p></section><% } %>
+<% } else { const imgs = (d.images || []), lay = p.layout, many = lay === "stack" || lay === "grid" || lay === "mosaic", list = many ? imgs : lay === "single" || lay === "hero" ? imgs.slice(0, 1) : imgs, ph = d.demo ? [0, 1, 2, 3] : imgs.length ? [] : [0]; %>
+<section class="<%= cls %> kw-pgal kw-pgal--<%= lay %>"<%- attrs %> data-kw-gallery data-zoom="<%= p.zoom ? "1" : "" %>" style="--kw-pgal-ratio: <%= p.ratio === "auto" ? "auto" : p.ratio %>">
+  <% if (d.demo) { %><p class="kw-pb-demo" role="note">Images d'exemple vides (aperçu de la bibliothèque)</p><% } %>
+  <% if (p.showBadge && (d.onSale || d.inStock === false)) { %><span class="kw-pgal-badge"><%= d.inStock === false ? "Rupture de stock" : p.badgeLabel %></span><% } %>
+  <% if (ph.length) { %>
+  <ul class="kw-pgal-list"><% ph.forEach((n, i) => { %><li class="kw-pgal-item"><span class="kw-pgal-img kw-pgal-noimg" aria-hidden="true"></span></li><% }) %></ul>
+  <% } else if (lay === "thumbs-left" || lay === "thumbs-bottom") { %>
+  <div class="kw-pgal-main"><% if (p.zoom) { %><button type="button" class="kw-pgal-zoom" data-kw-open aria-label="Agrandir l'image"><% } %><img class="kw-pgal-img" data-kw-main src="<%= imgs[0] %>" alt="<%= d.name %>" width="800" height="800" decoding="async" fetchpriority="high"><% if (p.zoom) { %></button><% } %></div>
+  <% if (imgs.length > 1) { %><ul class="kw-pgal-thumbs" role="list"><% imgs.forEach((u, i) => { %><li><button type="button" class="kw-pgal-thumb" data-kw-thumb="<%= u %>" aria-label="Voir l'image <%= i + 1 %> sur <%= imgs.length %>" aria-pressed="<%= i === 0 ? "true" : "false" %>"><img src="<%= u %>" alt="" width="96" height="96" loading="lazy" decoding="async"></button></li><% }) %></ul><% } %>
+  <% } else if (lay === "carousel") { %>
+  <div class="kw-pgal-track" role="region" aria-roledescription="carrousel" aria-label="Images du produit" tabindex="0"><% imgs.forEach((u, i) => { %><div class="kw-pgal-slide" role="group" aria-roledescription="diapositive" aria-label="<%= i + 1 %> sur <%= imgs.length %>"><% if (p.zoom) { %><button type="button" class="kw-pgal-zoom" data-kw-open="<%= u %>" aria-label="Agrandir l'image <%= i + 1 %>"><% } %><img class="kw-pgal-img" src="<%= u %>" alt="<%= d.name %>" width="800" height="800" decoding="async"<%- i === 0 ? ' fetchpriority="high"' : ' loading="lazy"' %>><% if (p.zoom) { %></button><% } %></div><% }) %></div>
+  <% if (imgs.length > 1) { %><div class="kw-pgal-nav"><button type="button" class="kw-pgal-prev" data-kw-prev aria-label="Image précédente">‹</button><button type="button" class="kw-pgal-next" data-kw-next aria-label="Image suivante">›</button></div><% } %>
+  <% } else { %>
+  <ul class="kw-pgal-list"><% list.forEach((u, i) => { %><li class="kw-pgal-item"><% if (p.zoom) { %><button type="button" class="kw-pgal-zoom" data-kw-open="<%= u %>" aria-label="Agrandir l'image <%= i + 1 %>"><% } %><img class="kw-pgal-img"<%- i === 0 && lay !== "stack" ? " data-kw-main" : "" %> src="<%= u %>" alt="<%= d.name %>" width="800" height="800" decoding="async"<%- i === 0 ? ' fetchpriority="high"' : ' loading="lazy"' %>><% if (p.zoom) { %></button><% } %></li><% }) %></ul>
+  <% } %>
+  <% if (!isBuilder) { %><script src="/js/boutique-fiche.js" defer></script><% } %>
+</section>
+<% } %>

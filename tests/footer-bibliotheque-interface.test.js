@@ -275,13 +275,16 @@ describe("Pieds de page : interface de la bibliothèque sur serveur réel", () =
       const c = new DatabaseSync(copie);
       // on revient à l'état « avant 142 » : ni table de favoris ni colonne de version
       c.exec("DROP TABLE mk_tb_favoris; ALTER TABLE mk_tb_templates DROP COLUMN origin_version; DELETE FROM schema_migrations WHERE scope = 'marketing' AND version = '142';");
+      // les migrations POSTÉRIEURES (143 : mode d'identité des fiches produit) sont aussi retirées, sinon l'ordre des migrations refuserait d'appliquer la 142
+      if (c.prepare("SELECT 1 x FROM pragma_table_info('mk_tb_templates') WHERE name = 'identity_mode'").get()) c.exec("ALTER TABLE mk_tb_templates DROP COLUMN identity_mode");
+      c.exec("DELETE FROM schema_migrations WHERE scope = 'marketing' AND CAST(version AS INTEGER) > 142");
       before1 = c.prepare("SELECT id, origin_key, name, status, source_id FROM mk_tb_templates ORDER BY id").all(); c.close();
       journal = [];
     });
     test("appliquer 142 : sauvegarde AVANT-MIGRATION créée et lisible (journal), tables et colonne ajoutées, aucune donnée modifiée", () => {
       const c = new DatabaseSync(copie);
       const res = migrate(c, { dir: path.join(__dirname, "..", "src", "marketing", "migrations"), dbPath: copie, backupDir, log: { log: (m) => journal.push(m) } });
-      assert.deepEqual(res.applied, ["142"]);
+      assert.equal(res.applied[0], "142", "la migration des favoris est la première appliquée"); assert.ok(res.applied.every((v) => Number(v) >= 142), "seules des migrations postérieures s'ajoutent (ex. 143 : mode d'identité des fiches produit)");
       assert.ok(res.backup && path.basename(res.backup).startsWith("AVANT-MIGRATION-"), res.backup);
       assert.ok(journal.some((l) => /Sauvegarde avant migration/.test(l) && /AVANT-MIGRATION-/.test(l)), journal.join("\n"));
       assert.ok(journal.some((l) => /Migration marketing 142 .*appliquée/.test(l)));

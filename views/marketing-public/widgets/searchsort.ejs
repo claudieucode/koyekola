@@ -1,0 +1,13 @@
+<%# Tri des résultats. d = { options: [{ key, label }], base, active }. Présentations : pills (puces), text (texte), select (liste déroulante, formulaire GET sans script). Classes : kw-searchsort, kw-ss-label/list/link/select. %>
+<% const opts = d && Array.isArray(d.options) ? d.options : []; const layout = ["pills", "text", "select"].includes(p.layout) ? p.layout : "pills"; const base = d && d.base ? d.base : ""; const href = (k) => "?" + (base ? base + "&" : "") + "tri=" + encodeURIComponent(k); %>
+<% if (opts.length) { %><div class="<%= cls %><%= layout === "text" ? " kw-ss-text" : "" %>"<%- attrs %>>
+  <% if (p.label) { %><span class="kw-ss-label"><%= p.label %></span><% } %>
+  <% if (layout === "select") { %>
+  <form method="get" class="kw-ss-form"><% for (const [k, v] of new URLSearchParams(base)) { %><input type="hidden" name="<%= k %>" value="<%= v %>"><% } %>
+    <select name="tri" class="kw-ss-select" aria-label="<%= p.label || 'Trier par' %>"><% for (const o of opts) { %><option value="<%= o.key %>"<%= d.active === o.key ? " selected" : "" %>><%= o.label %></option><% } %></select>
+    <button type="submit" class="kw-ss-link">Trier</button>
+  </form>
+  <% } else { %>
+  <ul class="kw-ss-list"><% for (const o of opts) { %><li><a class="kw-ss-link<%= d.active === o.key ? ' is-active' : '' %>" href="<%= href(o.key) %>"<%- d.active === o.key ? ' aria-current="true"' : "" %>><%= o.label %></a></li><% } %></ul>
+  <% } %>
+</div><% } %>

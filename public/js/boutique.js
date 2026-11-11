@@ -18,6 +18,7 @@
     var form = event.target;
     if (!form.matches || !form.matches("form[data-sh-add]")) return;
     if (!window.fetch) return;
+    if (event.submitter && event.submitter.hasAttribute("data-sh-now")) return; // « Acheter maintenant » : navigation normale vers la commande (le serveur ajoute puis redirige)
     event.preventDefault();
     var msg = form.querySelector("[data-sh-msg]");
     var button = form.querySelector("button[type=submit]");

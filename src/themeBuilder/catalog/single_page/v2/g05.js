@@ -1,9 +1,9 @@
 // Groupe 5 — Institutionnel (43-48) et Éducation (49-52)
 const h = require("./h");
-const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, faq, tabs, quote, plan, note, toc, cta, counter, marquee, form, person, map, slot } = h;
+const { dir, L, W, p, H1, content, desc, sect, band, head, boxes, cards, steps, faq, tabs, quote, plan, note, toc, cta, counter, marquee, form, person, map, slot, lab } = h;
 module.exports = [
   L(dir(43), "institution-organisation", "Présentation d'une organisation", ["institution", "organisation", "domaines d'action"], "Mission en ouverture, domaines d'action en six cartes et appel à soutenir : la page d'une organisation reconnue.", (k) => [
-    sect(k, [k.L("[Notre organisation]"), H1(k, 50), desc(k, { fontSize: "21px" })], "900px"),
+    sect(k, [lab(k, "[Notre organisation]"), H1(k, 50), desc(k, { fontSize: "21px" })], "900px"),
     sect(k, [content(k), ...head(k, "Nos domaines d'action"), cards(k, 3, [["globe", "[Domaine 1]", "[En une ligne.]"], ["users", "[Domaine 2]", "[En une ligne.]"], ["book", "[Domaine 3]", "[En une ligne.]"]]), cards(k, 3, [["heart", "[Domaine 4]", "[En une ligne.]"], ["shield", "[Domaine 5]", "[En une ligne.]"], ["star", "[Domaine 6]", "[En une ligne.]"]])], "1100px")]),
   L(dir(44), "institution-ong", "ONG", ["institution", "ong", "soutien"], "Mission, actions menées, compteurs d'impact et appel au don : la page d'une organisation non gouvernementale.", (k) => [
     band(k, [k.col([H1(k, 54, { textAlign: "center" }), desc(k, { textAlign: "center" }), k.row([k.B("Soutenir nos actions", "/contact")], { justifyContent: "center" })], { maxWidth: "820px", alignItems: "center" })], { paddingTop: "72px", paddingBottom: "72px", backgroundColor: k.S.alt }),
@@ -26,5 +26,5 @@ module.exports = [
     band(k, [k.grid(3, [counter(k, "stagiaires formés, à renseigner"), counter(k, "formations, à renseigner"), counter(k, "taux de réussite, à renseigner")])], { backgroundColor: k.S.alt, paddingTop: "28px", paddingBottom: "28px" }),
     sect(k, [content(k), W(k, "courselist", {})], "1100px")]),
   L(dir(52), "education-programme", "Programme pédagogique", ["éducation", "programme", "semaines"], "Programme semaine après semaine en frise, objectifs et prérequis : la page d'une formation détaillée.", (k) => [
-    sect(k, [k.grid(2, [k.col([H1(k, 46), desc(k)]), k.card([k.L("En bref"), k.T(p("[Durée, rythme, niveau : à renseigner.]"))])], { gridTemplate: "2fr 1fr", alignItems: "start" }), content(k), steps(k, [["[Semaine 1]", "[Thème]", "[Contenu.]"], ["[Semaine 2]", "[Thème]", "[Contenu.]"], ["[Semaine 3]", "[Thème]", "[Contenu.]"], ["[Semaine 4]", "[Thème]", "[Contenu.]"]])], "1000px")]),
+    sect(k, [k.grid(2, [k.col([H1(k, 46), desc(k)]), k.card([lab(k, "En bref"), k.T(p("[Durée, rythme, niveau : à renseigner.]"))])], { gridTemplate: "2fr 1fr", alignItems: "start" }), content(k), steps(k, [["[Semaine 1]", "[Thème]", "[Contenu.]"], ["[Semaine 2]", "[Thème]", "[Contenu.]"], ["[Semaine 3]", "[Thème]", "[Contenu.]"], ["[Semaine 4]", "[Thème]", "[Contenu.]"]])], "1000px")]),
 ];

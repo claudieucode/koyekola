@@ -51,6 +51,7 @@ const FAMILY = [
     data(ctx, p, env) {
       const { q, needsPost } = listQuery(p, env.scope);
       if (needsPost) return { items: [], reason: "post" };
+      if (env.visitor && env.visitor.demoResults === true) { const items = require("../demoResults").loop({ source: p.source === "pages" ? "pages" : p.source === "courses" ? "courses" : "posts", count: Math.min(Number(q.count) || 5, 8), paginate: false }, 1, {}).items; return { items, reason: "" }; } // aperçu de la bibliothèque : exemples
       const r = query.runQuery(p.source === "courses" ? ctx : { ...ctx, baseUrl: "" }, q, { scope: env.scope });
       return { items: r.items, reason: r.items.length ? "" : "empty" };
     },

@@ -126,7 +126,9 @@ module.exports = ({ db }) => {
     const jsonLd = [seo.safeJson(seo.productLd(product, { origin, base: BASE, currency: settings.currency, reviews: sum, shopName: present(req).shop.name })), seo.safeJson(crumb.ld)];
     const wished = new Set(wishlist.productIds(s, wishOf(req)));
     const compared = new Set(compare.products(s, compare.parseCookie(view.readCookie(req, CMP_COOKIE))).map((p) => p.id));
-    region(req, res, "product", { category: product.categories[0] ? product.categories[0].name : "", categories: product.categories.map((c) => c.name), scope: { product: view.productScope(product, { base: BASE, currency: settings.currency }) } },
+    // postId et tags : conditions « produit précis » et « étiquette » du Theme Builder. buy / reviews / related : données DÉJÀ calculées par le serveur, relues par les éléments du modèle (jamais recalculées côté navigateur).
+    const buy = { gate: access.gate(s, product.id), personalization: personalization.get(db, product.id), ageGate: { required: age.requiredForProduct(db, product.id), confirmed: ageOf(req) }, subscription: subscriptions.offerFor(s, product) };
+    region(req, res, "product", { category: product.categories[0] ? product.categories[0].name : "", categories: product.categories.map((c) => c.name), postId: product.id, tags: Array.isArray(product.tags) ? product.tags : [], scope: { product: view.productScope(product, { base: BASE, currency: settings.currency }), buy, reviews: sum, related } },
       (themeTemplate) => render(req, res, "produit", { title: product.name, product, related, themeTemplate: themeTemplate || null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null,
         gate: access.gate(s, product.id), subscription: subscriptions.offerFor(s, product), personalization: personalization.get(db, product.id), ageGate: { required: age.requiredForProduct(db, product.id), confirmed: ageOf(req) }, reviews: sum, breadcrumb: crumb.items, jsonLd, wished, compared, ratings: reviews.summaries(s, related.map((p) => p.id)) }));
   });
@@ -380,6 +382,8 @@ module.exports = ({ db }) => {
     }
   };
   router.post(`${BASE}/panier/ajouter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/panier`));
+  // Achat immédiat : MÊME action que l'ajout au panier (mêmes validations de produit, variante, quantité, stock, âge, accès, personnalisation) puis redirection vers la commande
+  router.post(`${BASE}/panier/acheter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/commande`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)`, cartAction((req, k) => cart.setQuantity(req.shop.s, k, Number(req.params.id), req.body.quantity, req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)/supprimer`, cartAction((req, k) => cart.removeItem(req.shop.s, k, Number(req.params.id), req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/coupon`, cartAction((req, k) => cart.setCoupon(req.shop.s, k, req.body.retirer ? "" : req.body.code), () => `${BASE}/panier`));

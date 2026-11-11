@@ -225,7 +225,8 @@ function dynamicProps(ctx, n, visitor, page, scope) {
     const keep = Object.entries(q).filter(([k]) => k !== "categorie" && !k.startsWith("lp-"));
     const href = (name) => { const sp = new URLSearchParams(keep); if (name) sp.set("categorie", name); const t = sp.toString(); return t ? `?${t}` : "?"; };
     let rows = [];
-    try {
+    if (visitor && visitor.demoResults === true) rows = ["Actualités", "Conseils", "Dossiers", "Entretiens", "Guides", "Études"].map((name) => ({ name, n: 4 })); // aperçu de la bibliothèque : catégories de démonstration
+    else try {
       rows = p.source === "courses"
         ? ctx.db.prepare("SELECT category AS name, COUNT(*) AS n FROM courses WHERE published = 1 AND category != '' GROUP BY category ORDER BY category COLLATE NOCASE").all()
         : ctx.db.prepare("SELECT category AS name, COUNT(*) AS n FROM posts WHERE published = 1 AND category IS NOT NULL AND category != '' GROUP BY category ORDER BY category COLLATE NOCASE").all();
@@ -277,13 +278,18 @@ function dynamicProps(ctx, n, visitor, page, scope) {
 // Vue d'une formation pour les étiquettes dynamiques (scope.course) et les boucles
 const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instructor || "", title: c.title, subtitle: c.subtitle || "", priceCents: c.price_cents || 0, url: `/cours/${encodeURIComponent(c.slug)}`, image: c.thumbnail_path || "", category: c.category || "", description: String(c.description || "").replace(/\s+/g, " ").trim().slice(0, 300) });
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
+// Tri choisi par le visiteur (?tri=…) : ne s'applique qu'aux boucles « filtrées par l'adresse » ; une valeur que la source ne gère pas est ignorée par le moteur
+const TRI = { recent: ["date", "desc"], ancien: ["date", "asc"], alpha: ["title", "asc"], "alpha-inverse": ["title", "desc"], "prix-croissant": ["price", "asc"], "prix-decroissant": ["price", "desc"] };
 function loopQuery(ctx, loop, id, visitor, scope) {
   const q = (visitor && visitor.query) || {};
   const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
+  // Aperçu de la bibliothèque (jamais le site publié) : résultats de démonstration clairement fictifs
+  if (visitor && visitor.demoResults === true && loop.urlFilter) return require("../pages/demoResults").loop(loop, pageNo, q);
   const query = { ...loop, pagination: loop.paginate ? loop.pagination || "numbers" : "none" };
   if (loop.urlFilter) {
     if (typeof q.q === "string" && q.q.trim()) query.search = q.q.trim().slice(0, 80);
     if (typeof q.categorie === "string" && q.categorie.trim()) query.categories = [q.categorie.trim().slice(0, 80)];
+    if (typeof q.tri === "string" && Object.hasOwn(TRI, q.tri)) { query.orderby = TRI[q.tri][0]; query.order = TRI[q.tri][1]; }
   }
   const r = require("../pages/query").runQuery(loop.source === "courses" ? ctx : { ...ctx, baseUrl: "" }, query, { pageNo, scope });
   return { items: r.items, total: r.total, pageNo: r.pageNo, pages: r.pages };

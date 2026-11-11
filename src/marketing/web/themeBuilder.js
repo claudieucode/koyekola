@@ -128,6 +128,8 @@ module.exports = () => {
   router.post(`${T}/supprimer`, need("forms.write"), need("pages.delete"), run((ctx, id, req) => TB.store.remove(ctx, id, tid(req))));
   // « Revenir au modèle initial » : un en-tête installé depuis la bibliothèque retrouve exactement la composition d'origine (copie de travail du SEUL document de ce modèle ; rien n'est publié).
   // L'état avant le retour est gardé comme version (« Versions » › Restaurer) : l'opération est annulable.
+  // Identité graphique d'une fiche produit : indépendante / héritée du site / hybride. Les valeurs personnalisées sont conservées ; une version de sécurité précède la conversion.
+  router.post(`${T}/identite`, need("forms.write"), run((ctx, id, req) => { const r = require("../../themeBuilder/identity").switchMode(ctx, id, tid(req), String(body(req).mode || "")); return { ...one(ctx, id, r.template), mode: r.mode, changed: r.changed, version: r.version }; }));
   router.post(`${T}/revenir-au-modele`, need("forms.write"), run((ctx, id, req) => {
     const t = TB.store.get(ctx, id, tid(req));
     if (t.status === "archived") throw new MarketingError("conflict", "Ce modèle est archivé : restaurez-le avant de le modifier.");
@@ -231,7 +233,7 @@ module.exports = () => {
   router.post(`${LIB}/utiliser`, need("forms.write"), run((ctx, id, req) => {
     const b = body(req); libType(ctx, id, String(b.type || ""));
     // Pied de page : le document vient du CATALOGUE (notre code), pas de la saisie de la personne. Certains modèles contiennent des décors en widget « HTML » (réservé à « pages.code » quand on l'ajoute soi-même) : l'insertion depuis la bibliothèque ne doit pas être refusée à un compte sans ce droit (décision du propriétaire). Les modifications ultérieures du widget restent protégées (comparaison avec l'enregistré).
-    const t = useTemplate(String(b.type) === "footer" ? depuisCatalogue(ctx) : ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined });
+    const t = useTemplate(String(b.type) === "footer" ? depuisCatalogue(ctx) : ctx, id, String(b.type || ""), String(b.key || ""), { name: b.name ? String(b.name) : undefined, identity: b.identity ? String(b.identity) : undefined });
     // En-tête : la clé du modèle d'origine est gardée dans le document (sert à « Revenir au modèle initial ») ; échec = installation sans cette fonction, jamais une erreur
     if (String(b.type) === "header" && t.sourceKind === "component") { try { const c = P().getComponent(ctx, t.sourceId); if (c) P().updateComponent(ctx, t.sourceId, { section: stampKey(c.section, String(b.key)) }); } catch { /* origine non mémorisée */ } }
     return { template: card(ctx, t, new Set()) };

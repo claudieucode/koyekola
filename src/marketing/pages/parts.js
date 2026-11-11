@@ -431,8 +431,29 @@ const PARTS = {
     variant: part("Choix de variante", ".kw-pb-var", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
     qty: part("Quantité", ".kw-pb-qty", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
     button: part("Bouton", ".kw-pb-btn", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    now: part("Bouton « Acheter maintenant »", ".kw-pb-btn--now", { ...TEXT_BG, size: ["width"] }, ["hover", "focus"]),
+    choice: part("Choix de variante (boutons, pastilles)", ".kw-pb-choice", { ...TEXT_BG, size: ["width", "minHeight"] }, ["hover", "focus"]),
     stock: part("Stock", ".kw-pb-stock", TEXT),
     message: part("Message", ".kw-pb-msg", TEXT),
+  },
+  shopgallery: {
+    image: part("Image", ".kw-pgal-img", IMAGE, ["hover"]),
+    thumb: part("Miniature", ".kw-pgal-thumb", { ...BOX, size: ["width", "height"] }, ["hover", "focus"]),
+    badge: part("Pastille", ".kw-pgal-badge", TEXT_BG),
+    nav: part("Flèches du carrousel", ".kw-pgal-nav button", ARROW, ["hover", "focus"]),
+  },
+  shopreviews: {
+    title: part("Titre", ".kw-prv-title", TEXT),
+    summary: part("Note moyenne", ".kw-prv-sum", TEXT),
+    item: part("Avis", ".kw-prv-item", BOX),
+    stars: part("Étoiles", ".kw-prv-stars", TEXT),
+    meta: part("Auteur et date", ".kw-prv-meta", TEXT),
+  },
+  shopspecs: {
+    title: part("Titre", ".kw-psp-title", TEXT),
+    row: part("Ligne", ".kw-psp-row", BOX),
+    label: part("Libellé", ".kw-psp-row dt", TEXT),
+    value: part("Valeur", ".kw-psp-row dd", TEXT),
   },
   shopcart: {
     cart: part("Panier", ".kw-sc-cart", LINK, ["hover", "focus"]),
@@ -575,6 +596,7 @@ function scan(sections, groupOf) {
 // Widgets volontairement SANS parties : leur racine EST l'unique élément visible (ou leurs enfants sont de vrais nœuds stylables), donc le style de la racine
 // couvre tout. Chaque entrée est justifiée ; un nouveau widget doit déclarer des parties OU figurer ici (test de couverture : widgets-parts-couverture.test.js).
 const ROOT_ONLY = {
+  searchcount: "texte unique (compteur de résultats) : la racine suffit", searchsort: "liste de liens de tri : la racine suffit, couleurs héritées",
   sidebar: "la racine est l'enveloppe de la zone : les blocs affichés gardent leurs propres styles (widgets.css), réglés dans Apparence → Widgets",
   container: "conteneur : ses enfants sont de vrais nœuds", columns: "conteneur : enfants = nœuds", column: "conteneur : enfants = nœuds", grid: "conteneur : enfants = nœuds",
   stack: "conteneur : enfants = nœuds", group: "conteneur : enfants = nœuds",

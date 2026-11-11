@@ -29,6 +29,10 @@
   "json": "479a1f806487374f9b16e1d04683f0a6ad040ec4",
   "css": "d22ff609cc68c30babaec52fa68faa5e90617323"
  },
+ "backtotop": {
+  "json": "6b1b8e6e2c4610b261252016c6b8156b5f98f839",
+  "css": "076e2982039b84793ba9144b6ddc1809f3db083f"
+ },
  "badge": {
   "json": "3a544f9163d84a3f2f80762a57e258461417a501",
   "css": "de8c954cf47b99d7a35c144cc718029bc54d886c"
@@ -36,6 +40,38 @@
  "beforeafter": {
   "json": "88e9a8d6a2545ce08d4e23dc5426238c07f86cd4",
   "css": "10890c265353aa85f549a4ee9226984a8f2ab05c"
+ },
+ "bizcontact": {
+  "json": "f29b6fc651abe55fe8799103009cf8ad86481f50",
+  "css": "e6a9cad9698021f18a7439bca25b78c27d0f5c0d"
+ },
+ "bizdelivery": {
+  "json": "b34c81e140bed003e02616f64c5f475721a7d465",
+  "css": "4119a5d667dc8e07169a199cc7c3fa86f0ff718a"
+ },
+ "bizemail": {
+  "json": "664fd4cd11d74e31c9b43143b707c0b9565416d4",
+  "css": "678b1a720053b2787b82a8823e61a924fd7f4a8f"
+ },
+ "bizfields": {
+  "json": "a31cd2d05dd3c5a3edc328c44ae727ac14d36cfc",
+  "css": "80ad705b01667a1039058fad3f04d679abdb8d46"
+ },
+ "bizhours": {
+  "json": "cc5661079c56167930f309bb87ad3363fedc46c9",
+  "css": "f7a97709bdf6f3e8aa3d597c9cb2ff8930f78738"
+ },
+ "bizlegal": {
+  "json": "9ff0f7fb96f24a0da3e509795314724538917824",
+  "css": "e7624e7dcfb528adb0bcbe950a560a30c6e2683f"
+ },
+ "bizpayments": {
+  "json": "87f7e61fc213709c6a6e172327c1971a541bddc8",
+  "css": "72d5f87d8a2ccb95847577e66b25a5e9d59a1555"
+ },
+ "bizphone": {
+  "json": "48f36dcaece5d646a680debef051f7909baefbe4",
+  "css": "d720c2f10c618d46446eb76bf001dbb3ab51201d"
  },
  "breadcrumb": {
   "json": "e5787b80761a617b2093dc3c7ace4ff78e9ce780",
@@ -109,6 +145,10 @@
  "dyntext": {
   "json": "391d2c545972f58bf83b7779ac6ba2074bff5a73",
   "css": "e18ddb998d9244883c180d103695a0619b264f55"
+ },
+ "emailsubscribe": {
+  "json": "9bd8fc0443699a66f22f35d2eb2adab31f084298",
+  "css": "3db6e6b0b631c47d9b681e3c4cb8fbec22bf1154"
  },
  "embed": {
   "error": "1376c1e4e0368b6d953e3cee463d614cb72817d9"
@@ -204,7 +244,7 @@
   "error": "e9a3988b9f8a948ed6ab46c7bf9c041ec056fe62"
  },
  "minicart": {
-  "json": "6668e45ecfe97c0885ff73f39028f6c193a9f6dc",
+  "json": "d0d16e43df4f7a1f5d1f882e46d6d27be7d8979a",
   "css": "71c2dd3c3c609848763793a58d590fb70433f20a"
  },
  "modal": {
@@ -260,7 +300,7 @@
   "css": "22f3f350d245e1983f84365060d43729a98492ff"
  },
  "motionfsmenu": {
-  "json": "01d00a0e65401642df477a0e63173cd2139a19fa",
+  "json": "e48f403c39aa1621abf7367d9f78ca3a605e31b1",
   "css": "22f3f350d245e1983f84365060d43729a98492ff"
  },
  "motiongauge": {
@@ -462,29 +502,57 @@
   "json": "578fe38c08a009d318e14b714c199baaeca4cb9c",
   "css": "c2e1a63e1fc6257f9c83c4d5ed159fcdf9804eeb"
  },
+ "searchcount": {
+  "json": "cbc392633f215c6ddf7a0b50bad8e9b6ccab17de",
+  "css": "5601e56babdaf4032a97dc4206218cc41afca4b9"
+ },
+ "searchsort": {
+  "json": "8e71e4d7c9ddd4447a9a10f39c470e222100e93f",
+  "css": "c9240bf1d93ee5acef6292e8ae36ab7cae4fa794"
+ },
  "sharebuttons": {
   "json": "815d35c7b3c2370da7bff70a3b625c6677c40162",
   "css": "48b72932269d0b9ca5388c2ed3682f0890761998"
  },
  "shopbuy": {
-  "json": "f6ec89f6648afb83b092528c7dfd59bb54aef3bf",
+  "json": "0f4614fa09e8726bdddbdb4bc8b6f2ec1891adba",
   "css": "b1284c1aa45ede131148c427917f9857b62daa8c"
  },
  "shopcart": {
   "json": "400a61b4067ed43b0729b7fafd5e4ce47a734b2f",
   "css": "8edf5a18caa9e4a50a875b9c0ef1577bad119770"
  },
+ "shopcategories": {
+  "json": "ead100af108733ff7dea4750ee3072a983f5dec4",
+  "css": "65f4715c7153d429b4f34834c110d44b4fb37d00"
+ },
  "shopfilters": {
   "json": "095defc4956ce0a7b4ce6b2530dd5a85fe3425ed",
   "css": "88c6df918a8b4cc82a7db486753c9ddf864d3987"
+ },
+ "shopgallery": {
+  "json": "d66fa8abc81a18b778b286a964e248ba7f65ae4b",
+  "css": "74ab10cda6b91e2ee2b17aa080c236e04b9f4828"
  },
  "shopgrid": {
   "json": "2c3da2c9d8f126a5c6f4d0e5fd62103de33e7bbc",
   "css": "d0edab9d83c1f781e3d254031e7225d670ee6d70"
  },
+ "shoplinks": {
+  "json": "b6da5c14726c1b6dd47c36e5ecfc8b55257b29a5",
+  "css": "cfbbde2cf98e5b9a5d7762d029f233f24d854697"
+ },
+ "shopreviews": {
+  "json": "7289bcddd0a31fb6e98f0ce5676648ac43f51a9e",
+  "css": "f24acb3127af953b4536eb63b05d5b1f48fa0a77"
+ },
  "shopsearch": {
   "json": "3f65f8306ef7caf04accbcbd1c593968f10ca27d",
   "css": "30f341371ce84c9284048280abe2224708adf697"
+ },
+ "shopspecs": {
+  "json": "74776fe7b85fdf38ebf50ef33bfa8232e7e190fb",
+  "css": "5e39843e07a32cd1fa75847a9d35d2661a0d37ac"
  },
  "sidebar": {
   "json": "a0f1d85821776bcb32befe5e0660920c7e97e5d0",
