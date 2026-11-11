@@ -1,0 +1,3 @@
+<%# Nombre de résultats (widgets/searchcount.js) : total réel calculé par le moteur, avec rappel optionnel du terme. %>
+<% const total = (d && d.total) || 0, names = (d && d.names) || ["résultat", "résultats"], term = (d && d.term) || ""; %>
+<p class="<%= cls %> kw-searchcount"<%- attrs %> role="status"><span class="kw-sc-n"><%= total %></span> <%= total > 1 ? names[1] : names[0] %> trouvé<%= total > 1 ? "s" : "" %><% if (p.withTerm && term) { %> pour « <%= term %> »<% } %></p>

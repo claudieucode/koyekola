@@ -1,0 +1,16 @@
+<%# Tri des résultats (widgets/searchsort.js) : liens ?tri=… qui conservent le terme et les autres paramètres. %>
+<% const opts = (d && d.options) || [], base = (d && d.base) || "", active = (d && d.active) || "", href = (k) => "?" + (base ? base + "&" : "") + "tri=" + encodeURIComponent(k); %>
+<% if (opts.length) { %>
+<nav class="<%= cls %> kw-searchsort kw-ss-<%= p.layout %>"<%- attrs %> aria-label="Trier les résultats">
+  <% if (p.label) { %><span class="kw-ss-label"><%= p.label %></span><% } %>
+  <% if (p.layout === "select") { %>
+  <select class="kw-ss-select" aria-label="<%= p.label || 'Trier par' %>" onchange="if(this.value)location.href=this.value">
+    <% opts.forEach((o) => { %><option value="<%= href(o.key) %>"<%= o.key === active ? " selected" : "" %>><%= o.label %></option><% }) %>
+  </select>
+  <% } else { %>
+  <ul class="kw-ss-list">
+    <% opts.forEach((o) => { %><li><a class="kw-ss-link<%= o.key === active ? ' is-active' : '' %>" href="<%= href(o.key) %>"<%- o.key === active ? ' aria-current="true"' : '' %>><%= o.label %></a></li><% }) %>
+  </ul>
+  <% } %>
+</nav>
+<% } %>
