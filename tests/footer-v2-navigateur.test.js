@@ -23,12 +23,18 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "", ALLOW_INDEXING: "1" });
     boss = await loginInstructor(srv); db = srv.db();
-    A = await H.makeSite(srv, boss, "Site pieds v2");
-    require("../src/marketing/pages/business").save(db, db.prepare("SELECT organization_id AS o FROM mk_sites WHERE id = ?").get(A.S).o, A.S, { legalName: "Atelier Soleil SARL", legalPages: { notice: "/mentions-legales", privacy: "/confidentialite" } });
+    await nouveauSite("Site pieds v2");
     cookie = [...boss.cookies].map(([n, value]) => ({ name: n, value, url: srv.base }));
     for (let i = 0; i < 4 && !chrome; i++) { try { chrome = await Chrome.launch(); } catch (e) { if (i === 3) throw e; await wait(3000); } }
   });
   after(async () => { if (chrome) await chrome.close(); if (db) db.close(); if (srv) await srv.stop(); });
+
+  // La plateforme limite à 200 modèles par site : on repart d'un site neuf tous les 80 modèles testés (2 insertions par modèle) (la bibliothèque en compte plus de 200)
+  let nSites = 0, testes = 0;
+  const nouveauSite = async (nom) => {
+    A = await H.makeSite(srv, boss, `${nom} ${++nSites}`);
+    require("../src/marketing/pages/business").save(db, db.prepare("SELECT organization_id AS o FROM mk_sites WHERE id = ?").get(A.S).o, A.S, { legalName: "Atelier Soleil SARL", legalPages: { notice: "/mentions-legales", privacy: "/confidentialite" } });
+  };
 
   const info = (pg) => pg.evaluate(() => {
     const f = document.querySelector("footer"), main = document.querySelector("main");
@@ -43,6 +49,8 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
 
   for (const key of KEYS) {
     test(`${key} : page publiée 200, pied solo après </main>, pleine largeur, 0 défilement horizontal, polices propres chargées (390 / 820 / 1280 / 1920 ; avec et sans formulaire publié)`, async () => {
+      if (testes > 0 && testes % 80 === 0) await nouveauSite("Site pieds v2");
+      testes++;
       const tpl = await A.footer(key, "solo");
       const probs = [];
       for (const avecForm of [false, true]) {

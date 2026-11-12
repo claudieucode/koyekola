@@ -1,0 +1,230 @@
+{
+  "concepts": [
+    {
+      "id": "c-256-pellicule-en-damier",
+      "ordre": 256,
+      "nom": "Pellicule en damier",
+      "famille": "Photo et vidéo",
+      "secteur": "studio photo",
+      "directionArtistique": {
+        "texte": "Archétype C : damier de huit cases carrées égales alternant béton clair et noir de pellicule ; chaque case est un lien (séries Portrait et famille, Produit et mode, Entreprise et architecture, Retouche et tirages) ou une information (titre et réservation, horaires, contact, lettre). Aucune image, planche contact en texte. Orange brûlé ; carré qui respire."
+      },
+      "typographies": {
+        "titre": "Space Mono",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio photo",
+        "planche contact",
+        "damier",
+        "béton",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-257-jour-j",
+      "ordre": 257,
+      "nom": "Jour J",
+      "famille": "Photo et vidéo",
+      "secteur": "photographe de mariage",
+      "directionArtistique": {
+        "texte": "Archétype J : papier à en-tête sauge, double filet, nom en Bodoni, cartouche d'adresse centré, ligne centrée de rubriques, un seul bouton de réservation de date, double filet de clôture. Sans colonnes ni lettre. Sauge, vert profond, bronze."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mariage",
+        "papier à en-tête",
+        "centré",
+        "sauge",
+        "bronze"
+      ]
+    },
+    {
+      "id": "c-258-clap-de-fin",
+      "ordre": 258,
+      "nom": "Clap de fin",
+      "famille": "Photo et vidéo",
+      "secteur": "production vidéo",
+      "directionArtistique": {
+        "texte": "Archétype E : deux demi-pages bord à bord, corail à gauche (« Clap de fin. », carré REC qui respire, deux boutons) et pétrole nuit à droite (quatre cases de chapitres qui se remplissent de corail, case de contact), fine barre de mentions."
+      },
+      "typographies": {
+        "titre": "Chakra Petch",
+        "corps": "Hind",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "production vidéo",
+        "demi-pages",
+        "pétrole",
+        "corail"
+      ]
+    },
+    {
+      "id": "c-259-reperes-de-tirage",
+      "ordre": 259,
+      "nom": "Repères de tirage",
+      "famille": "Photo et vidéo",
+      "secteur": "imprimerie photo",
+      "directionArtistique": {
+        "texte": "Archétype G : barre de repères quadrichromie (cyan, magenta, jaune, noir) puis index de cinq grandes lignes pleine largeur en Archivo Black (tirages, toiles, livres, cadres, cartes) qui noircissent et s'indentent ; barre noire de contact et lettre. Aucune carte."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Source Serif 4",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie photo",
+        "index",
+        "quadrichromie",
+        "papier",
+        "bleu"
+      ]
+    },
+    {
+      "id": "c-260-plan-de-vol",
+      "ordre": 260,
+      "nom": "Plan de vol",
+      "famille": "Photo et vidéo",
+      "secteur": "drone",
+      "directionArtistique": {
+        "texte": "Archétype A : barre latérale graphite pleine hauteur (cinq missions en liens filetés et horaires) et grande zone titane (« Vue d'en haut. », bandeau réglementation en texte, bouton de mission, contact), barre de mentions. Rouge signal ; carré qui respire."
+      },
+      "typographies": {
+        "titre": "Rajdhani",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "drone",
+        "barre latérale",
+        "titane",
+        "rouge signal"
+      ]
+    },
+    {
+      "id": "c-261-garde-et-urgences",
+      "ordre": 261,
+      "nom": "Garde et urgences",
+      "famille": "Vétérinaires et animaux",
+      "secteur": "clinique vétérinaire",
+      "directionArtistique": {
+        "texte": "Archétype F : bandeau rouge XXL « Urgence ? Appelez sans attendre. » (texte générique : clinique ou service de garde, aucun numéro inventé) avec carré qui respire ; carte blanche coordonnées et horaires ; une seule colonne étroite de liens à droite. Blanc, vert sapin, rouge."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "clinique vétérinaire",
+        "urgences",
+        "garde",
+        "rouge",
+        "blanc"
+      ]
+    },
+    {
+      "id": "c-262-bain-moussant",
+      "ordre": 262,
+      "nom": "Bain moussant",
+      "famille": "Vétérinaires et animaux",
+      "secteur": "toilettage",
+      "directionArtistique": {
+        "texte": "Archétype H : mosaïque asymétrique, une grande case framboise (« Bain, coupe, câlins. » et carte du salon à filets pointillés) et trois petites cases collées : rendez-vous crème, horaires prune, contact rose pâle. Sans tarif."
+      },
+      "typographies": {
+        "titre": "Fredoka",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "toilettage",
+        "mosaïque",
+        "framboise",
+        "crème"
+      ]
+    },
+    {
+      "id": "c-263-maison-de-garde",
+      "ordre": 263,
+      "nom": "Maison de garde",
+      "famille": "Vétérinaires et animaux",
+      "secteur": "pension canine et féline",
+      "directionArtistique": {
+        "texte": "Archétype B : un seul mot géant « Pension. » centré sur ardoise dans un grand vide, étiquette ambre, trois liens ; petite bande basse avec horaires, contact et mentions. Ardoise du soir, ambre, lin."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pension",
+        "nom monumental",
+        "ardoise",
+        "ambre"
+      ]
+    },
+    {
+      "id": "c-264-seance-en-cours",
+      "ordre": 264,
+      "nom": "Séance en cours",
+      "famille": "Vétérinaires et animaux",
+      "secteur": "éducateur canin",
+      "directionArtistique": {
+        "texte": "Archétype K : le pied est une fenêtre à angles droits, barre de titre verte avec trois carrés, commandes en police mono (« > rappel ») qui s'orangent au survol, contact, curseur qui respire, petit formulaire de lettre en pied de fenêtre. Lin, vert prairie, orange."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "éducateur canin",
+        "fenêtre",
+        "console",
+        "vert",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-265-rayons-du-jardin",
+      "ordre": 265,
+      "nom": "Rayons du jardin",
+      "famille": "Vétérinaires et animaux",
+      "secteur": "animalerie",
+      "directionArtistique": {
+        "texte": "Archétype L : escalier de trois marches alignées à gauche, de plus en plus étroites : rayons en grands liens sur jaune, horaires et contact sur turquoise, lettre sur encre ; mentions sous l'escalier. Crème, jaune, turquoise."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "animalerie",
+        "escalier",
+        "rayons",
+        "jaune",
+        "turquoise"
+      ]
+    }
+  ]
+}

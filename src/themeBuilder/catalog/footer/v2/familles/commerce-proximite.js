@@ -21,7 +21,7 @@ function lien(k, label, url, o = {}) {
 const trait = (k, couleur, epaisseur = "1px") => k.divider({ width: "100%", borderColor: couleur, borderTopWidth: epaisseur, marginTop: "0px", marginBottom: "0px" });
 const caps = (k, texte, o = {}) => k.T(`<p>${texte}</p>`, compact({ fontSize: "12px", lineHeight: 1.4, fontWeight: o.poids || "700", textTransform: "uppercase", letterSpacing: "0.14em", color: o.couleur || k.S.mute, fontFamily: o.police || k.S.font, textAlign: o.align }));
 // Horaires d'ouverture (Données de l'entreprise) ; « ouvert maintenant » calculé par le widget
-const horaires = (k, o = {}) => Moteur.finishNode(k.S, k.W("bizhours", { title: "", showOpenNow: true, groupDays: true, showExceptions: o.exceptions !== false, showNote: true, closedLabel: "Fermé" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: k.S.font, width: "100%", ...(o.extra || {}) }));
+const horaires = (k, o = {}) => Moteur.finishNode(k.S, k.W("bizhours", { title: "", showOpenNow: o.ouvert !== false, groupDays: true, showExceptions: o.exceptions !== false, showNote: true, closedLabel: "Fermé" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: k.S.font, width: "100%", ...(o.extra || {}) }));
 // Adresse, téléphone, e-mail (Données de l'entreprise)
 const contact = (k, o = {}) => Moteur.finishNode(k.S, k.W("bizcontact", { title: "", showName: false, showAddress: true, showPhone: true, showEmail: true, showIcons: o.icones !== false, layout: "stack" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: k.S.font, ...(o.extra || {}) }));
 // Petit point qui pulse lentement (animation d'attention du Page Builder : coupée en mouvement réduit)
@@ -36,46 +36,43 @@ const bouton = (k, label, url, o = {}) => {
   return GK.fini(k, n, { hover: { backgroundColor: o.survolFond || S.fg, color: o.survolCouleur || S.bg, transform: { y: -3 } }, focus: GK.focus(o.focus || S.fg) });
 };
 
-// ── c-106 « Le Fournil » — boulangerie-pâtisserie ──────────────────────────────────────────────────────────────────────────────────────────────
-// Idée : une ardoise de boulangerie. Brun croûte et or de blé ; un ruban à lettres dorées défile lentement (pain du jour, viennoiseries…), la phrase « Chaud, doré, du matin. » domine, les horaires et l'adresse sont dans une carte.
-// Mouvement : ruban (widget Défilement continu, pause au survol), bouton qui se soulève, liens qui glissent de 4 px. Polices : Fraunces (titres, graisse 900 : rendu propre selon le guide §5 bis) et Nunito.
+// ── c-106 « Le Fournil » — boulangerie-pâtisserie ── ARCHÉTYPE D (barre de navigation inversée : tout sur deux rangées compactes) ────────────────────────
+// Idée : une ARDOISE DE COMPTOIR, basse et large. Brun croûte et or de blé. Première rangée : nom du fournil, liens utiles en ligne, bouton « Commander pour demain » ; deuxième rangée sur brun plus clair : horaires, adresse et réseaux côte à côte ;
+// puis la ligne légale. Plus de ruban ni de grande phrase. Angles droits partout (carré d'or qui « respire » devant le nom).
+// Mouvement : carré d'or qui pulse lentement, liens qui glissent de 4 px, bouton qui s'inverse et se soulève. Polices : Fraunces (nom, graisse 900) et Nunito.
 const croute = identite({
   key: "c106", label: "Brun croûte et or de blé", humeur: "dark",
   fond: "#2e1b10", texte: "#fbeed8", discret: "#dcc6a6", accent: "#f2b441", surface: "#3f2618",
   police: "font.nunito", titres: "font.fraunces",
-  rayon: "28px", rayonBouton: "999px", ombre: "none", poids: "800", bordure: "1px", ligne: "#7a5638",
+  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "800", bordure: "1px", ligne: "#7a5638",
 });
 const fournil = modeleV2({
   id: identifiantV2(106, "fournil-du-matin"), concept: "c-106-fournil-du-matin",
   name: "Fournil du matin", family: FAM,
-  description: "Pied de boulangerie-pâtisserie : brun croûte et or de blé, ruban qui défile lentement, grande phrase « Chaud, doré, du matin. », horaires du jour dans une carte et bouton de commande.",
-  tags: ["boulangerie", "pâtisserie", "commerce de proximité", "horaires", "ruban", "brun", "or", "commande"],
+  description: "Pied de boulangerie-pâtisserie en ardoise de comptoir : brun croûte et or de blé, une rangée avec le nom, les liens utiles et le bouton de commande, une seconde avec horaires, adresse et réseaux.",
+  tags: ["boulangerie", "pâtisserie", "commerce de proximité", "horaires", "barre compacte", "brun", "or", "commande"],
   identity: croute,
   racine: racineDe("#2e1b10"),
-  widgets: ["marquee", "text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["sitetitle", "text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
-    const S = k.S, BRUN = "#2e1b10";
-    // 1 · le ruban doré : lettres dorées sur brun très foncé (le libellé « Pause » du widget reste lisible), défilement lent, pause au survol (en mouvement réduit : liste à la ligne)
-    const MOTS = ["Pain du jour", "Viennoiseries", "Tartes et gâteaux", "Commandes pour les fêtes", "Cuit chaque matin"];
-    const ruban = k.W("marquee", { items: MOTS.map((text) => ({ text })), speed: "slow", direction: "left", separator: "•", pauseHover: true, label: "Les bonnes choses du fournil" }, { color: S.accent, fontFamily: S.head, fontWeight: "800", fontSize: "17px", letterSpacing: "0.1em", textTransform: "uppercase", width: "100%" });
-    const bandeRuban = G.bande(k, [ruban], { colonne: true, gap: "0px", max: "100%", padV: ["14px", "14px", "12px"], padH: ["0px", "0px", "12px"], fond: "#1c0f07", nom: "Ruban doré" });
-    Object.assign(bandeRuban.styles.desktop, { overflow: "hidden" });
-    // 2 · la phrase et la commande (gauche), la carte des horaires (droite)
-    const phrase = G.geant(`<p>Chaud,<br><span style="color:${S.accent}">doré,</span><br>du&nbsp;matin.</p>`, { taille: [56, 124], tablette: { taille: [84, 110] }, mobile: { taille: [54, 80] }, lh: 0.96, suivi: "-0.025em", poids: "900", police: S.head })(k, env);
-    const intro = G.phrase("Pains, viennoiseries et pâtisseries, cuits chaque jour au fournil. Passez les chercher, ou commandez pour demain.", { taille: 17, largeur: "460px", couleur: S.mute })(k, env);
-    const actions = k.row([bouton(k, "Commander pour demain", "/contact"), lien(k, "Voir les produits →", "/boutique", { taille: 16, poids: "700" })], { ...G.gaps("8px 24px"), alignItems: "center" });
-    const gauche = G.colonne(k, [caps(k, "Boulangerie · Pâtisserie", { couleur: S.accent }), phrase, intro, actions], { poids: 7, min: "300px", gap: "24px" });
-    const carte = G.carte([caps(k, "Horaires", { couleur: S.accent }), horaires(k, { taille: 16 }), trait(k, S.line), caps(k, "Nous trouver", { couleur: S.accent }), contact(k, { taille: 16 })], { fond: S.alt, rayon: "28px", remplissage: "32px", ombre: "none", contour: S.line, gap: "16px", poids: 5 })(k);
-    carte.styles.desktop = { ...carte.styles.desktop, flexBasis: "0px", flexShrink: 1, minWidth: "280px", alignSelf: "flex-end" };
-    carte.styles.mobile = { paddingTop: "24px", paddingBottom: "24px", paddingLeft: "20px", paddingRight: "20px", flexBasis: "100%" };
-    const haut = G.ligne(k, [gauche, carte], { gap: "48px 64px", aligne: "flex-end", justifie: "space-between", largeur: "100%" });
-    // 3 · liens utiles et réseaux (adresses d'exemple), puis mentions
-    const utiles = k.row([lien(k, "Boutique", "/boutique"), lien(k, "Questions", "/faq"), lien(k, "Journal", "/blog"), lien(k, "Contact", "/contact")], { ...G.gaps("0px 28px"), alignItems: "center" });
-    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Facebook", "https://www.facebook.com/"]], { taille: 15, couleur: S.mute })(k, env);
-    const milieu = G.ligne(k, [utiles, reseaux], { gap: "6px 40px", aligne: "center", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 12, sansCookies: true })(k, env);
-    const corps = G.bande(k, [haut, trait(k, S.line), milieu, mentions], { colonne: true, gap: "36px", max: "1280px", padV: ["88px", "64px", "48px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "28px" }, nom: "Fournil" });
-    return [G.racine(k, [bandeRuban, corps])];
+    const S = k.S, BRUN = "#2e1b10", BRUN2 = "#3f2618", BRUN3 = "#1c0f07";
+    // 1 · rangée de navigation : carré d'or + nom, liens en ligne, bouton carré
+    const nom = Moteur.item(k, "title:30", env);
+    nom.styles.desktop = { ...nom.styles.desktop, color: S.fg, fontFamily: S.head, fontWeight: "900", letterSpacing: "-0.01em", lineHeight: 1.1 };
+    nom.parts = { ...(nom.parts || {}), link: { ...((nom.parts || {}).link || {}), styles: { desktop: { color: S.fg, textDecoration: "none" }, mobile: { display: "inline-block", minHeight: "44px", paddingTop: "10px", paddingBottom: "10px" } } } };
+    const carreOr = point(k, S.accent, { t: "12px", duree: 3200 });
+    carreOr.styles.desktop.borderRadius = "0px";
+    const marque = k.row([carreOr, nom], { gap: "14px", alignItems: "center", flexWrap: "nowrap" });
+    const liens = k.row([lien(k, "Boutique", "/boutique", { taille: 16 }), lien(k, "Questions", "/faq", { taille: 16 }), lien(k, "Journal", "/blog", { taille: 16 }), lien(k, "Contact", "/contact", { taille: 16 })], { ...G.gaps("0px 30px"), alignItems: "center", justifyContent: "center" });
+    const cmd = bouton(k, "Commander pour demain", "/contact", { rayon: "0px" });
+    const nav = G.bande(k, [marque, liens, cmd], { fond: BRUN, gap: "12px 40px", aligne: "center", padV: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "14px" }, nom: "Navigation" });
+    // 2 · rangée d'informations : horaires, adresse, réseaux
+    const c = (t, enf, poids = 1) => G.colonne(k, [caps(k, t, { couleur: S.accent }), ...enf], { poids, min: "230px", gap: "10px" });
+    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Facebook", "https://www.facebook.com/"]], { taille: 15, couleur: S.fg, survol: S.accent })(k, env);
+    const infos = G.bande(k, [c("Horaires", [horaires(k, { taille: 15, ouvert: false })], 1.2), c("Nous trouver", [contact(k, { taille: 15 })], 1.2), c("Nous suivre", [reseaux], 0.8)], { fond: BRUN2, gap: "28px 48px", aligne: "flex-start", padV: ["36px", "32px", "28px"], padH: ["48px", "32px", "20px"], filetHaut: { epaisseur: "1px", couleur: S.line }, innerMobile: { rowGap: "24px" }, nom: "Informations" });
+    // 3 · mentions
+    const bas = G.bande(k, [trait(k, S.line), G.ligneLegale({ taille: 12, sansCookies: true })(k, env)], { fond: BRUN3, colonne: true, gap: "16px", padV: ["20px", "18px", "16px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [nav, infos, bas])];
   },
 }, FAM);
 
@@ -162,51 +159,51 @@ const librairieMarge = modeleV2({
   },
 }, FAM);
 
-// ── c-109 « Les Halles du Coin » — épicerie fine / primeur ───────────────────────────────────────────────────────────────────────────────────
-// Idée : une étiquette de marché. Jaune citron, vert feuille ; un GRAND ruban vert défile en sens inverse (fruits, légumes, fromages…) ; trois « étals » en cartes à bord vert, légèrement penchées, se redressent et se soulèvent au survol.
-// Horaires, retrait en magasin (« Préparer mon panier ») et adresse. Polices : Archivo (titres) et Mulish. Les produits du ruban sont des exemples modifiables.
+// ── c-109 « Les Halles du Coin » — épicerie fine / primeur — REFONTE (archétype H : mosaïque asymétrique, une grande case + trois petites) ───────
+// Idée : un MARCHÉ en cases. Une GRANDE case vert feuille (« Du frais, tous les jours. », liste des rayons, bouton « Préparer mon panier ») et trois petites cases jaune clair à filet vert : « Ouvert quand ? » (horaires),
+// « Venir nous voir » (adresse, téléphone) et « Au rayon » (liens et réseaux). Angles droits ; les cases se soulèvent au survol, un petit carré « respire » près des horaires (animation lente, coupée en mouvement réduit).
+// Marque fictive à remplacer ; aucune coordonnée inventée (horaires, adresse et téléphone viennent des Données de l'entreprise). Pas de ruban défilant : la liste des rayons est statique. Polices : Archivo (titres 800) et Mulish.
 const marche = identite({
   key: "c109", label: "Jaune citron et vert feuille", humeur: "light",
   fond: "#ffe45e", texte: "#0f3d24", discret: "#34502b", accent: "#0f5a33", surface: "#fff6c6",
   police: "font.mulish", titres: "font.archivo",
-  rayon: "22px", rayonBouton: "999px", ombre: "none", poids: "800", bordure: "2px", ligne: "#0f5a33",
+  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "800", bordure: "2px", ligne: "#0f5a33",
 });
 const primeur = modeleV2({
   id: identifiantV2(109, "halles-du-coin"), concept: "c-109-halles-du-coin",
   name: "Halles du coin", family: FAM,
-  description: "Pied d'épicerie fine ou de primeur : jaune citron et vert feuille, grand ruban qui défile, trois étals en cartes penchées (horaires, retrait en magasin, adresse) qui se redressent au survol.",
-  tags: ["épicerie", "primeur", "marché", "jaune", "vert", "ruban", "retrait en magasin", "commerce de proximité"],
+  description: "Pied d'épicerie fine ou de primeur en mosaïque : une grande case vert feuille (« Du frais, tous les jours », retrait en magasin) et trois petites cases jaunes (horaires, adresse, liens) qui se soulèvent au survol.",
+  tags: ["épicerie", "primeur", "marché", "jaune", "vert", "mosaïque", "retrait en magasin", "commerce de proximité"],
   identity: marche,
   racine: racineDe("#ffe45e"),
-  widgets: ["marquee", "text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
-    const S = k.S, VERT = "#0f5a33", JAUNE = "#ffe45e";
-    // 1 · grand ruban vert, texte jaune, sens inverse (vers la droite) ; en mouvement réduit : liste centrée
-    const MOTS = ["Fruits et légumes de saison", "Fromages", "Épicerie fine", "Paniers", "Producteurs de la région"];
-    const ruban = k.W("marquee", { items: MOTS.map((text) => ({ text })), speed: "normal", direction: "right", separator: "✦", pauseHover: true, label: "Au rayon du jour" }, { color: JAUNE, fontFamily: S.head, fontWeight: "800", fontSize: "32px", letterSpacing: "-0.01em", width: "100%" }, undefined, { fontSize: "22px" });
-    const bandeRuban = G.bande(k, [ruban], { colonne: true, gap: "0px", max: "100%", padV: ["18px", "16px", "12px"], padH: ["0px", "0px", "12px"], fond: VERT, nom: "Grand ruban" });
-    Object.assign(bandeRuban.styles.desktop, { overflow: "hidden" });
-    // 2 · titre + phrase, puis trois étals
-    const titre = G.geant(`<p>Du frais,<br>tous les jours.</p>`, { taille: [48, 112], tablette: { taille: [72, 96] }, mobile: { taille: [46, 64] }, lh: 0.96, suivi: "-0.03em", poids: "800", police: S.head })(k, env);
-    const intro = G.phrase("Des produits choisis chez des producteurs que nous connaissons. Commandez en ligne, récupérez votre panier au magasin.", { taille: 17, largeur: "420px", couleur: S.mute })(k, env);
-    const enTete = G.ligne(k, [titre, intro], { gap: "20px 56px", aligne: "flex-end", justifie: "space-between", largeur: "100%" });
-    const etal = (angle, enfants) => {
-      const n = k.col(enfants, { backgroundColor: S.alt, borderStyle: "solid", borderWidth: "2px", borderColor: VERT, borderRadius: "22px", paddingTop: "26px", paddingBottom: "28px", paddingLeft: "26px", paddingRight: "26px", flexGrow: 1, flexBasis: "0px", minWidth: "250px", gap: "14px", alignItems: "flex-start", transform: angle ? { rotate: angle } : undefined, transitionDuration: 240, boxSizing: "border-box" }, undefined, { transform: { rotate: 0 }, paddingLeft: "20px", paddingRight: "20px" });
-      n.states = { hover: { transform: { y: -8, rotate: 0 } } };
+    const S = k.S, VERT = "#0f5a33", JAUNE = "#ffe45e", CLAIR = "#fff6c6";
+    const nomCase = (t, couleur) => k.T(`<p>${t}</p>`, { fontFamily: S.head, fontSize: "24px", fontWeight: "800", lineHeight: 1.1, color: couleur || S.fg, letterSpacing: "-0.01em" });
+    // 1 · la GRANDE case : rayons (liste statique), phrase, retrait en magasin, bouton
+    const rayons = caps(k, "Fruits et légumes de saison ✦ Fromages ✦ Épicerie fine ✦ Paniers ✦ Producteurs de la région", { couleur: JAUNE });
+    const titre = G.geant(`<p>Du frais,<br>tous les jours.</p>`, { taille: [44, 104], tablette: { taille: [72, 92] }, mobile: { taille: [44, 60] }, lh: 0.96, suivi: "-0.03em", poids: "800", police: S.head, couleur: JAUNE })(k, env);
+    const intro = G.phrase("Des produits choisis chez des producteurs que nous connaissons. Commandez en ligne, récupérez votre panier au magasin.", { taille: 17, largeur: "440px", couleur: "#f3f7ec" })(k, env);
+    const panier = bouton(k, "Préparer mon panier", "/boutique", { fond: JAUNE, couleur: VERT, rayon: "0px", survolFond: "#ffffff", survolCouleur: VERT, focus: JAUNE });
+    const grande = k.col([rayons, k.col([titre, intro], { gap: "20px", alignItems: "flex-start" }), panier], { backgroundColor: VERT, gap: "56px", justifyContent: "space-between", alignItems: "flex-start", paddingTop: "40px", paddingBottom: "44px", paddingLeft: "40px", paddingRight: "40px", flexGrow: 5, flexBasis: "0px", minWidth: "340px", boxSizing: "border-box", transitionDuration: 320 }, { paddingLeft: "32px", paddingRight: "32px" }, { paddingLeft: "20px", paddingRight: "20px", paddingTop: "28px", paddingBottom: "32px", gap: "36px", minWidth: "0px", flexBasis: "100%" });
+    // 2 · les trois petites cases
+    const petite = (enfants, extra, tab, mob) => {
+      const n = k.col(enfants, { backgroundColor: CLAIR, borderStyle: "solid", borderWidth: "2px", borderColor: VERT, borderRadius: "0px", paddingTop: "24px", paddingBottom: "26px", paddingLeft: "24px", paddingRight: "24px", gap: "12px", alignItems: "flex-start", boxSizing: "border-box", transitionDuration: 320, flexGrow: 1, flexBasis: "0px", minWidth: "220px", ...(extra || {}) }, tab, { minWidth: "0px", flexBasis: "100%", ...(mob || {}) });
+      n.states = { hover: { transform: { y: -6 }, backgroundColor: "#ffffff" } };
       return n;
     };
-    const nom = (t) => k.T(`<p>${t}</p>`, { fontFamily: S.head, fontSize: "26px", fontWeight: "800", lineHeight: 1.1, color: S.fg, letterSpacing: "-0.01em" });
-    const e1 = etal(0, [nom("Ouvert quand ?"), horaires(k, { taille: 15, exceptions: false })]);
-    const e2 = etal(-1.5, [nom("Retrait en magasin"), k.T("<p>Composez votre panier en ligne, nous le préparons pour votre passage.</p>", { fontSize: "15px", lineHeight: 1.55, color: S.mute }), bouton(k, "Préparer mon panier", "/boutique", { fond: VERT, couleur: JAUNE, survolFond: S.fg, survolCouleur: JAUNE, focus: VERT })]);
-    const e3 = etal(0, [nom("Venir nous voir"), contact(k, { taille: 15 })]);
-    const etals = G.ligne(k, [e1, e2, e3], { gap: "24px", aligne: "stretch", largeur: "100%" });
-    // 3 · liens en pilules vertes, réseaux, mentions
-    const pil = G.pilules([["Boutique", "/boutique"], ["Recettes et conseils", "/blog"], ["Questions", "/faq"], ["Contact", "/contact"]], { contour: VERT, couleur: S.fg, survolFond: VERT, survolCouleur: JAUNE, focus: VERT, poids: "700" })(k, env);
-    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Facebook", "https://www.facebook.com/"]], { taille: 15, couleur: S.fg, survol: VERT, focus: VERT })(k, env);
-    const milieu = G.ligne(k, [pil, reseaux], { gap: "12px 40px", aligne: "center", justifie: "space-between", largeur: "100%" });
+    const carreSouffle = k.col([], { width: "10px", height: "10px", backgroundColor: VERT, borderRadius: "0px", flexShrink: 0 });
+    carreSouffle.motion = { entrance: "pulse", duration: 2800, delay: 0, iterations: "infinite", trigger: "load", easing: "ease-in-out" };
+    const enTeteHoraires = k.row([carreSouffle, nomCase("Ouvert quand ?")], { gap: "12px", flexWrap: "nowrap", alignItems: "center" });
+    const cH = petite([enTeteHoraires, horaires(k, { taille: 15, exceptions: false, ouvert: false })], { flexBasis: "auto", flexGrow: 0, flexShrink: 0, width: "100%" }, undefined, { flexBasis: "auto" });
+    const cA = petite([nomCase("Venir nous voir"), contact(k, { taille: 15 })]);
+    const liensCase = [["Boutique", "/boutique"], ["Recettes et conseils", "/blog"], ["Questions", "/faq"], ["Contact", "/contact"], ["Instagram ↗", "https://www.instagram.com/"]].map(([t, u]) => lien(k, t, u, { taille: 15, poids: "700", h: "40px", couleur: S.fg, survol: { color: VERT, transform: { x: 6 } }, focus: VERT }));
+    const cL = petite([nomCase("Au rayon"), ...liensCase], { gap: "2px" });
+    const petites = k.col([cH, k.row([cA, cL], { gap: "12px", flexWrap: "wrap", alignItems: "stretch", width: "100%", flexGrow: 1 })], { gap: "12px", flexGrow: 6, flexBasis: "0px", minWidth: "340px", alignItems: "stretch" }, undefined, { minWidth: "0px", flexBasis: "100%" });
+    const mosaique = G.ligne(k, [grande, petites], { gap: "12px", aligne: "stretch", largeur: "100%" });
     const mentions = G.ligneLegale({ taille: 12, sansCookies: true, couleur: S.mute, liens: S.fg })(k, env);
-    const corps = G.bande(k, [enTete, etals, trait(k, VERT, "2px"), milieu, mentions], { colonne: true, gap: "40px", max: "1280px", padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "26px" }, nom: "Étals" });
-    return [G.racine(k, [bandeRuban, corps])];
+    const corps = G.bande(k, [mosaique, trait(k, VERT, "2px"), mentions], { colonne: true, gap: "32px", max: "1280px", padV: ["56px", "44px", "28px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "24px" }, nom: "Mosaïque" });
+    return [G.racine(k, [corps])];
   },
 }, FAM);
 

@@ -49,40 +49,48 @@ const mentions = (taille = 12, o = {}) => (k, env) => {
 // colonne qui passe sous les autres : tablette (≤ 1023) pleine ligne, mobile revient à la largeur minimale
 const bloc = (k, enfants, o = {}) => G.colonne(k, enfants, { min: "0px", tablette: { flexBasis: "100%" }, mobile: { flexBasis: "100%" }, ...o });
 
-// ── c-041 « Bonjour Écrit » ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Idée : « Dites bonjour. » en lettres géantes (lien vers Contact) remplace tout bloc de contact ; l'adresse e-mail de l'entreprise (widget existant) suit en très grand, vermillon, soulignée ;
-// tout le reste est minuscule : un trait épais vermillon, une ligne de liens, des réseaux « Nom ↗ ». Beige sable, noir chaud, vermillon. Plus Jakarta Sans 800 (rendu propre au test ; Bricolage Grotesque du concept est aussi propre mais c'est la police par défaut des sites de test : le test « police chargée » du guide s'y trompe) + Inter.
+// ── c-041 « Bonjour Écrit » — REFONTE (archétype E : deux demi-pages bord à bord) ────────────────────────────────────────────────────────────
+// Idée : « Dites bonjour. » en lettres géantes (lien vers Contact) remplace tout bloc de contact. Le pied est coupé en DEUX DEMI-PAGES de couleurs opposées : à gauche, sable et noir chaud, le message ; à droite, noir chaud,
+// les actions (l'adresse e-mail de l'entreprise en très grand, vermillon, soulignée, puis les liens et les réseaux). Une fine bande sable porte les mentions. Plus Jakarta Sans 800 + Inter. Angles droits.
 // Honnêteté : l'adresse e-mail vient des Données de l'entreprise (rien d'inventé) ; sans elle, « Dites bonjour. » reste le seul appel et mène à la page Contact.
 const bonsoir = identite({
   key: "c041", label: "Beige sable, noir chaud, vermillon", humeur: "light",
-  fond: "#efe5d3", texte: "#150a06", discret: "#4a3a30", accent: "#d93a1d", surface: "#f8f0e0",
+  fond: "#efe5d3", texte: "#150a06", discret: "#4a3a30", accent: "#c4301a", surface: "#f8f0e0",
   police: "font.inter", titres: "font.plus-jakarta-sans", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "800", bordure: "1px", ligne: "#150a0640",
 });
 const bonjourEcrit = modeleV2({
   id: identifiantV2(41, "bonjour-ecrit"), concept: "c-041-bonjour-ecrit",
   name: "Bonjour écrit", family: FAM,
-  description: "Une agence qui ne dit qu'une chose : « Dites bonjour. » en lettres géantes, suivie de son adresse e-mail en très grand, vermillon sur beige sable. Tout le reste tient en une ligne minuscule.",
-  tags: ["agence", "phrase géante", "e-mail géant", "beige", "vermillon", "typographie"],
+  description: "Une agence qui ne dit qu'une chose : « Dites bonjour. » en lettres géantes sur sable. Le pied est coupé en deux demi-pages bord à bord ; à droite, sur noir chaud, son adresse e-mail en très grand, vermillon.",
+  tags: ["agence", "phrase géante", "e-mail géant", "deux demi-pages", "beige", "vermillon", "typographie"],
   identity: bonsoir,
   racine: { desktop: { backgroundColor: "#efe5d3", gap: "0px" } },
   widgets: ["sitetitle", "link", "bizemail", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
-    const S = k.S;
+    const S = k.S, SABLE = "#efe5d3", NUIT = "#150a06", VERM = "#ff6a45";
+    // ── demi-page de gauche : le message ──
     const marque = G.code("title:22")(k, env);
     const consigne = G.libelle("Un projet ? Une idée ? Un café ?", { couleur: S.mute, poids: "600" })(k);
-    const entete = G.ligne(k, [marque, consigne], { gap: "12px 32px", aligne: "center", justifie: "space-between", largeur: "100%" });
-    const trait = filetPlein(k, S.accent, "6px");
-    // le geste : « Dites bonjour. » (lien vers Contact), 60 → 168 px, interligne 0,92
-    const bonjour = lien(k, "Dites bonjour.", "/contact", { taille: "fluid:60-190", poids: "800", police: S.head, suivi: "-0.035em", lh: 0.92, couleur: S.fg, glisse: 8, survol: { color: S.accent, textDecoration: "none" }, focus: S.accent, st: { display: "block" } });
-    // l'e-mail en très grand, vermillon, souligné (texte ≥ 24 px : contraste 4,05:1 > 3:1)
-    const mail = courriel(k, { taille: "fluid:26-84", tailles: [92, 64, 30], poids: "800", police: S.head, couleur: S.accent, souligne: true, suivi: "-0.02em", survol: S.fg, focus: S.accent });
-    const geste = G.colonne(k, [bonjour, mail], { gap: "14px", poids: 1, min: "0px", aligne: "stretch" });
-    const liens = G.ligne(k, [["Blog", "/blog"], ["FAQ", "/faq"], ["Contact", "/contact"], ["Connexion", "/connexion"]].map(([l, u]) => lien(k, l, u, { taille: 14, poids: "600" })), { gap: "0px 28px", aligne: "center" });
-    const ligne = G.ligne(k, [liens, reseauxPlats(k, RESEAUX.slice(0, 3), { survol: S.fg })], { gap: "4px 40px", aligne: "center", justifie: "space-between", largeur: "100%" });
-    const bande = G.bande(k, [entete, trait, geste, filetPlein(k, S.line), ligne, mentions(12)(k, env)], {
-      colonne: true, gap: "28px", max: "1280px", padV: ["72px", "64px", "48px"], padB: ["40px", "36px", "32px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "22px" }, nom: "Bonjour écrit",
+    const bonjour = lien(k, "Dites bonjour.", "/contact", { taille: "fluid:44-124", poids: "800", police: S.head, suivi: "-0.035em", lh: 0.92, couleur: NUIT, glisse: 10, survol: { color: S.accent, textDecoration: "none" }, focus: S.accent, st: { display: "block" } });
+    const traitVerm = filetPlein(k, S.accent, "8px"); traitVerm.styles.desktop.width = "96px";
+    const gauche = G.colonne(k, [G.colonne(k, [marque, consigne], { gap: "14px", min: "0px" }), G.colonne(k, [traitVerm, bonjour], { gap: "28px", min: "0px", aligne: "stretch" })], {
+      poids: 1, min: "420px", aligne: "stretch", justifie: "space-between", gap: "64px",
+      extra: { backgroundColor: SABLE, paddingTop: "72px", paddingBottom: "64px", paddingLeft: "48px", paddingRight: "48px", boxSizing: "border-box", minHeight: "540px" },
+      tablette: { paddingLeft: "32px", paddingRight: "32px", paddingTop: "56px", paddingBottom: "48px", minHeight: "0px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "44px", paddingBottom: "40px", minHeight: "0px", minWidth: "0px" },
     });
-    return [G.racine(k, [bande])];
+    // ── demi-page de droite : les actions ──
+    const mail = courriel(k, { taille: "fluid:24-58", tailles: [58, 44, 26], poids: "800", police: S.head, couleur: VERM, souligne: true, suivi: "-0.02em", survol: SABLE, focus: VERM });
+    const ou = G.libelle("Ou écrivez-nous", { couleur: "#d9cbb5", poids: "600" })(k);
+    const liens = k.col([["Blog", "/blog"], ["FAQ", "/faq"], ["Contact", "/contact"], ["Connexion", "/connexion"]].map(([l, u]) => lien(k, l, u, { taille: 18, poids: "700", couleur: SABLE, survol: { color: VERM, transform: { x: 8 } }, focus: VERM, st: { display: "flex", minHeight: "48px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#efe5d333" } })), { gap: "0px", alignItems: "stretch", width: "100%" });
+    const reseaux = reseauxPlats(k, RESEAUX.slice(0, 3), { couleur: SABLE, survol: { color: VERM }, focus: VERM });
+    const droite = G.colonne(k, [ou, mail, liens, reseaux], {
+      poids: 1, min: "420px", aligne: "stretch", justifie: "flex-end", gap: "28px",
+      extra: { backgroundColor: NUIT, paddingTop: "72px", paddingBottom: "64px", paddingLeft: "48px", paddingRight: "48px", boxSizing: "border-box", minHeight: "540px" },
+      tablette: { paddingLeft: "32px", paddingRight: "32px", paddingTop: "56px", paddingBottom: "48px", minHeight: "0px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "44px", paddingBottom: "40px", minHeight: "0px", minWidth: "0px" },
+    });
+    const moities = G.bande(k, [gauche, droite], { fond: SABLE, max: "100%", padV: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], gap: "0px", aligne: "stretch", nom: "Deux demi-pages" });
+    const mentionsBande = G.bande(k, [filetPlein(k, S.line), mentions(12)(k, env)], { colonne: true, gap: "20px", max: "1280px", padV: ["28px", "24px", "20px"], padB: ["24px", "24px", "20px"], padH: ["48px", "32px", "20px"], fond: SABLE, nom: "Mentions" });
+    return [G.racine(k, [moities, mentionsBande])];
   },
 }, FAM);
 

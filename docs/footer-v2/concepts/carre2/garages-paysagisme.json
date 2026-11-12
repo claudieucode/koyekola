@@ -1,0 +1,246 @@
+{
+  "concepts": [
+    {
+      "id": "c-246-ordre-de-reparation",
+      "ordre": 246,
+      "nom": "Ordre de réparation",
+      "famille": "Garages et concessions",
+      "secteur": "garage indépendant",
+      "directionArtistique": {
+        "texte": "Archétype K (fenêtre / formulaire). Gris perle, graphite, outremer et safran : un formulaire à contour épais en quatre lignes (prestations en étiquettes carrées, contact, horaires avec carré safran qui respire, informations) puis une barre graphite compacte."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "garage",
+        "atelier",
+        "rendez-vous",
+        "formulaire",
+        "outremer",
+        "safran",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-247-salle-d-exposition",
+      "ordre": 247,
+      "nom": "Salle d'exposition",
+      "famille": "Garages et concessions",
+      "secteur": "concession automobile",
+      "directionArtistique": {
+        "texte": "Archétype H (mosaïque asymétrique). Titane, argent et cuivre : une grande case sombre (essai, contact) et trois petites (occasions, reprise, horaires) séparées de 6 px, qui glissent au survol. Aucune marque citée."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "concession",
+        "mosaïque",
+        "essai",
+        "titane",
+        "cuivre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-248-nuancier-de-carrosserie",
+      "ordre": 248,
+      "nom": "Nuancier de carrosserie",
+      "famille": "Garages et concessions",
+      "secteur": "carrosserie et peinture",
+      "directionArtistique": {
+        "texte": "Archétype C (damier de huit cases). Blanc, encre et vert anglais : six teintes de peinture qui mènent au devis, une case coordonnées et une case horaires ; les teintes se soulèvent au survol."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "carrosserie",
+        "nuancier",
+        "damier",
+        "devis",
+        "vert anglais",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-249-points-de-controle",
+      "ordre": 249,
+      "nom": "Points de contrôle",
+      "famille": "Garages et concessions",
+      "secteur": "contrôle technique",
+      "directionArtistique": {
+        "texte": "Archétype A (colonne latérale pleine hauteur). Marine, bleu glacé et vert contrôle : barre latérale avec feu tricolore dont le vert respire, rendez-vous, horaires et contact ; à droite six grandes lignes de points de contrôle à flèche glissante."
+      },
+      "typographies": {
+        "titre": "Titillium Web",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "contrôle technique",
+        "barre latérale",
+        "points de contrôle",
+        "marine",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-250-du-premier-regard-aux-cles",
+      "ordre": 250,
+      "nom": "Du premier regard aux clés",
+      "famille": "Garages et concessions",
+      "secteur": "véhicules d'occasion",
+      "directionArtistique": {
+        "texte": "Archétype I (frise en étapes à points carrés). Kaki, crème et orange : quatre étapes reliées par un trait, un ruban orange de reprise à flèche glissante, une bande kaki compacte."
+      },
+      "typographies": {
+        "titre": "Rubik",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "occasion",
+        "frise",
+        "étapes",
+        "reprise",
+        "kaki",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-251-quatre-saisons",
+      "ordre": 251,
+      "nom": "Quatre saisons",
+      "famille": "Paysagisme et jardinage",
+      "secteur": "paysagiste",
+      "directionArtistique": {
+        "texte": "Archétype E (deux demi-pages opposées). Craie et vert prairie à gauche (message, devis, contact) ; à droite quatre blocs pleins de saison (vert tendre, blé, rouille, ardoise) qui s'indentent au survol."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paysagiste",
+        "saisons",
+        "devis",
+        "deux demi-pages",
+        "rouille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-252-les-rayons",
+      "ordre": 252,
+      "nom": "Les rayons",
+      "famille": "Paysagisme et jardinage",
+      "secteur": "jardinerie",
+      "directionArtistique": {
+        "texte": "Archétype G (index en lignes pleine largeur). Hortensia, indigo et feuille : le plan des rayons en six grandes lignes de serif avec flèche et filet, sans cartes, puis une seule ligne de contact et de mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "jardinerie",
+        "rayons",
+        "sommaire",
+        "hortensia",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-253-coupe-nette",
+      "ordre": 253,
+      "nom": "Coupe nette",
+      "famille": "Paysagisme et jardinage",
+      "secteur": "élagage et abattage",
+      "directionArtistique": {
+        "texte": "Archétype F (bandeau XXL + colonne étroite de liens). Écorce, os et lichen : bandeau lichen « Un arbre à tailler ? » en capitales géantes avec bouton de devis, puis une phrase, les coordonnées et une seule colonne étroite de services à droite."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "élagage",
+        "abattage",
+        "bandeau XXL",
+        "écorce",
+        "lichen",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-254-racines",
+      "ordre": 254,
+      "nom": "Racines",
+      "famille": "Paysagisme et jardinage",
+      "secteur": "pépinière",
+      "directionArtistique": {
+        "texte": "Archétype B (nom monumental centré, grand vide). Prune profond, vert tendre et blanc cassé : le mot « Racines. » en très grand Cormorant, une ligne centrée de cinq liens au filet qui se dessine, et les mentions."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pépinière",
+        "monumental",
+        "minimal",
+        "prune",
+        "vert tendre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-255-bandes-de-tonte",
+      "ordre": 255,
+      "nom": "Bandes de tonte",
+      "famille": "Paysagisme et jardinage",
+      "secteur": "entretien d'espaces verts",
+      "directionArtistique": {
+        "texte": "Archétype L (escalier). Gazon, vert profond, jaune pissenlit et encre : liséré de rayures de pelouse puis quatre étages alignés à gauche de largeur décroissante (devis, formules, horaires, contact)."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "espaces verts",
+        "entretien",
+        "pelouse",
+        "escalier",
+        "gazon",
+        "pissenlit",
+        "angles droits"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,254 @@
+{
+  "concepts": [
+    {
+      "id": "c-186-ardoise-du-jour",
+      "ordre": 186,
+      "nom": "Ardoise du jour",
+      "famille": "Restaurants et brasseries",
+      "secteur": "restaurant",
+      "directionArtistique": {
+        "texte": "Pour un restaurant : l'ardoise en grandes lignes de craie pleine largeur (carte, vins) à droite, horaires du service et bouton de réservation à gauche, sur fond ardoise ; bande claire d'adresse et de mentions. Les lignes s'indentent au safran au survol."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "restaurant",
+        "carte",
+        "réservation",
+        "ardoise",
+        "safran",
+        "index",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-187-papier-de-brasserie",
+      "ordre": 187,
+      "nom": "Papier de brasserie",
+      "famille": "Restaurants et brasseries",
+      "secteur": "brasserie",
+      "directionArtistique": {
+        "texte": "Pour une brasserie : papier à en-tête entièrement centré, double filet rouge et noir, nom en grandes capitales, cartouche à double bordure (adresse et horaires du service), ligne de liens centrée, mince bande noire de mentions."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "brasserie",
+        "service continu",
+        "papier à en-tête",
+        "cartouche",
+        "rouge brique",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-188-deux-salles",
+      "ordre": 188,
+      "nom": "Deux salles",
+      "famille": "Restaurants et brasseries",
+      "secteur": "bistrot",
+      "directionArtistique": {
+        "texte": "Pour un bistrot : deux demi-pages bord à bord, olive à gauche (nom, phrase, réservation), lin à droite (note d'addition : horaires, adresse, lignes pointillées, lettre)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bistrot",
+        "réservation",
+        "deux demi-pages",
+        "olive",
+        "moutarde",
+        "lin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-189-mosaique-de-traiteur",
+      "ordre": 189,
+      "nom": "Mosaïque de traiteur",
+      "famille": "Restaurants et brasseries",
+      "secteur": "traiteur",
+      "directionArtistique": {
+        "texte": "Pour un traiteur : mosaïque asymétrique de quatre cases bord à bord, grande case noire (devis, adresse) et trois cases empilées (cocktails sur sauge, banquets sur cuivre, lettre sur ivoire)."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traiteur",
+        "devis",
+        "mosaïque",
+        "cuivre",
+        "sauge",
+        "ivoire",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-190-damier-du-four",
+      "ordre": 190,
+      "nom": "Damier du four",
+      "famille": "Restaurants et brasseries",
+      "secteur": "pizzeria",
+      "directionArtistique": {
+        "texte": "Pour une pizzeria : damier de huit cases carrées bord à bord, tomate, crème et basilic ; chaque case est un lien ou une information (sur place, horaires, à emporter, carte, adresse, livraison, lettre, réseaux) et se retourne au survol."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pizzeria",
+        "à emporter",
+        "livraison",
+        "damier",
+        "tomate",
+        "basilic",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-191-reception-en-une-ligne",
+      "ordre": 191,
+      "nom": "Réception en une ligne",
+      "famille": "Hôtels et gîtes",
+      "secteur": "hôtel",
+      "directionArtistique": {
+        "texte": "Pour un hôtel : pied compact en lignes, nom, liens (chambres, restaurant, arrivée et départ, accès), bouton Réserver, trois cases pointillées de labels à renseigner (rien d'inventé), adresse en ligne et mentions. Lavande pâle, aubergine, or."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "hôtel",
+        "réservation",
+        "compact",
+        "labels à renseigner",
+        "lavande",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-192-colonne-de-la-maison",
+      "ordre": 192,
+      "nom": "Colonne de la maison",
+      "famille": "Hôtels et gîtes",
+      "secteur": "chambres d'hôtes",
+      "directionArtistique": {
+        "texte": "Pour des chambres d'hôtes : grande colonne verte pleine hauteur à gauche (nom, réservation, arrivée et départ), zone lin à droite (phrase d'accueil, étiquettes carrées, cases arrivée et départ, adresse, lettre)."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "chambres d'hôtes",
+        "colonne latérale",
+        "petit-déjeuner",
+        "sauge",
+        "rose ancien",
+        "lin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-193-frise-du-sejour",
+      "ordre": 193,
+      "nom": "Frise du séjour",
+      "famille": "Hôtels et gîtes",
+      "secteur": "gîte",
+      "directionArtistique": {
+        "texte": "Pour un gîte : frise horizontale en quatre étapes à points carrés (réserver, arriver, séjourner, repartir) renvoyant vers les pages de conditions, bandeau de lettre, bande mousse d'adresse et de mentions."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "gîte",
+        "séjour",
+        "frise",
+        "arrivée et départ",
+        "mousse",
+        "pierre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-194-fenetre-de-reservation",
+      "ordre": 194,
+      "nom": "Fenêtre de réservation",
+      "famille": "Hôtels et gîtes",
+      "secteur": "auberge",
+      "directionArtistique": {
+        "texte": "Pour une auberge : pied dessiné comme une fenêtre de réservation (barre de titre indigo, champs arrivée, départ, voyageurs, bouton ocre, onglets d'hébergements, barre d'état avec adresse et mentions)."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auberge",
+        "réservation",
+        "fenêtre",
+        "dortoirs",
+        "indigo",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-195-emplacement-xxl",
+      "ordre": 195,
+      "nom": "Emplacement XXL",
+      "famille": "Hôtels et gîtes",
+      "secteur": "camping",
+      "directionArtistique": {
+        "texte": "Pour un camping : bandeau d'appel géant « Réservez votre emplacement » avec gros bouton orange sur kaki ; bande sable avec accueil (adresse, horaires de la réception) et colonne étroite de liens bordée d'une barre kaki."
+      },
+      "typographies": {
+        "titre": "Teko",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "emplacements",
+        "locatifs",
+        "réception",
+        "kaki",
+        "sable",
+        "angles droits"
+      ]
+    }
+  ]
+}

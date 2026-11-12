@@ -140,7 +140,7 @@
       "famille": "Commerces de proximité",
       "secteur": "boulangerie",
       "directionArtistique": {
-        "texte": "Pied de boulangerie-pâtisserie : brun croûte et or de blé, ruban qui défile lentement, grande phrase « Chaud, doré, du matin. », horaires du jour dans une carte et bouton de commande."
+        "texte": "Pied de boulangerie-pâtisserie en ardoise de comptoir (archétype D, angles droits) : brun croûte et or de blé, une rangée avec le nom du fournil, les liens utiles et le bouton de commande, une seconde avec horaires, adresse et réseaux, puis les mentions. Carré d’or qui respire, liens qui glissent."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -153,7 +153,7 @@
         "pâtisserie",
         "commerce de proximité",
         "horaires",
-        "ruban",
+        "barre compacte",
         "brun",
         "or",
         "commande"
@@ -218,7 +218,7 @@
       "famille": "Commerces de proximité",
       "secteur": "épicerie",
       "directionArtistique": {
-        "texte": "Pied d'épicerie fine ou de primeur : jaune citron et vert feuille, grand ruban qui défile, trois étals en cartes penchées (horaires, retrait en magasin, adresse) qui se redressent au survol."
+        "texte": "Pied d'épicerie fine ou de primeur en MOSAÏQUE asymétrique : une grande case vert feuille (« Du frais, tous les jours. », rayons, bouton « Préparer mon panier ») et trois petites cases jaunes à filet vert (horaires, adresse, liens) qui se soulèvent au survol. Angles droits, petit carré qui respire."
       },
       "typographies": {
         "titre": "Archivo",
@@ -232,7 +232,7 @@
         "marché",
         "jaune",
         "vert",
-        "ruban",
+        "mosaïque",
         "retrait en magasin",
         "commerce de proximité"
       ]

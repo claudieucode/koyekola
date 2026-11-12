@@ -112,9 +112,9 @@ const cartoucheEntreprise = modeleV2({
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-127 « Engagements en bloc » — entreprise qui met ses valeurs en avant
-// Idée : quatre BLOCS contigus (Qualité, Environnement, Sécurité, Formation) qui touchent les bords de l'écran, chacun coiffé d'un filet ocre : au survol le bloc se soulève et le filet s'épaissit doucement.
-// Dessous, le pied vert forêt : nom, liens, coordonnées avec horaires, lettre. Les blocs ne citent aucun chiffre ni certificat (titres et phrases génériques, liens vers FAQ et contact).
-// Polices : Plus Jakarta Sans (titres, graisse 800) et Source Sans 3. Mobile : blocs en pile, un par ligne.
+// Idée : une MOSAÏQUE asymétrique (archétype H) de cases contiguës, bord à bord. Une GRANDE case ocre à droite (« Qualité » en 84 px, le nom du site, coordonnées, horaires et lettre) et trois PETITES cases empilées à gauche
+// (Environnement vert, Sécurité ivoire, Formation vert profond) qui se soulèvent et changent de fond au survol. Une fine ligne légale ferme le tout. Aucun chiffre ni certificat : phrases génériques, liens vers FAQ, blog et contact.
+// Polices : Plus Jakarta Sans (titres, graisse 800) et Source Sans 3. Mobile : la grande case puis les trois petites, une par ligne.
 const foret = identite({
   key: "c127", label: "Vert forêt, ocre et ivoire", humeur: "dark",
   fond: "#0d3b2e", texte: "#f4f1e8", discret: "#b9cfc4", accent: "#e3b04b", surface: "#12493a", encre: "#0d3b2e", surEncre: "#f4f1e8",
@@ -126,41 +126,43 @@ const FORET = "#0d3b2e", FORET2 = "#0a2f24", FORET3 = "#12493a", OCRE = "#e3b04b
 const engagementsEnBloc = modeleV2({
   id: identifiantV2(127, "engagements-en-bloc"), concept: "c-127-engagements-en-bloc",
   name: "Engagements en bloc", family: FAM,
-  description: "Pour une entreprise qui défend ses valeurs : quatre blocs contigus (qualité, environnement, sécurité, formation) à filet ocre qui s'épaissit au survol, puis un pied vert forêt avec nom, liens, contact, horaires et lettre d'information.",
-  tags: ["entreprise", "valeurs", "engagements", "vert forêt", "ocre", "blocs", "angles droits"],
+  description: "Pour une entreprise qui défend ses valeurs : une mosaïque asymétrique, une grande case ocre (qualité, contact, horaires, lettre) et trois petites cases (environnement, sécurité, formation) qui se soulèvent au survol. Vert forêt, ocre et ivoire.",
+  tags: ["entreprise", "valeurs", "engagements", "mosaïque", "vert forêt", "ocre", "blocs", "angles droits"],
   identity: foret,
   racine: racineDe(FORET),
   widgets: ["sitetitle", "text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · quatre blocs contigus de bord à bord
-    const bloc4 = (num, titre, texte, url) => {
-      const t = lien(k, titre, url, { taille: 26, poids: "800", police: S.head, couleur: IVOIRE, survol: { color: OCRE }, focus: OCRE, h: "44px", lh: 1.1 });
-      const c = k.col([caps(k, num, { couleur: OCRE, suivi: "0.2em" }), t, k.T(`<p>${texte}</p>`, { fontSize: "16px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })], { flexGrow: 1, flexBasis: "0px", minWidth: "240px", gap: "10px", paddingTop: "36px", paddingBottom: "36px", paddingLeft: "32px", paddingRight: "32px", backgroundColor: FORET3, borderStyle: "solid", borderWidth: "0px", borderTopWidth: "6px", borderColor: OCRE, borderRadius: "0px", transitionDuration: DOUX }, undefined, { minWidth: "100%", paddingTop: "28px", paddingBottom: "28px", paddingLeft: "20px", paddingRight: "20px" });
-      c.states = { hover: { transform: { y: -6 }, borderTopWidth: "14px", backgroundColor: "#16553f" } };
+    // GRANDE case ocre
+    const nom = nomDuSite(k, env, 26, FORET, { fontWeight: "800" });
+    const qualite = lien(k, "Qualité", "/faq", { taille: 84, poids: "800", police: S.head, couleur: FORET, survol: { color: FORET2, transform: { x: 10 } }, focus: FORET, lh: 1, suivi: "-0.03em", h: "88px" });
+    const phraseQ = k.T("<p>Un travail suivi du début à la fin, expliqué simplement. Une question ? Nous répondons.</p>", { fontSize: "19px", lineHeight: 1.55, color: FORET, fontFamily: S.font, maxWidth: "520px" });
+    const pt = souffle(carre(k, FORET, "10px"), 3000);
+    const colContact = G.colonne(k, [k.row([pt, caps(k, "Nous joindre", { couleur: FORET })], { gap: "10px", alignItems: "center" }), coordonnees(k, { taille: 15, couleur: FORET, lien: FORET, survol: FORET2, focus: FORET })], { poids: 1, min: "220px", gap: "12px" });
+    const colHor = bloc(k, "Horaires", [horaires(k, { taille: 15, couleur: FORET })], { couleurTitre: FORET, poids: 1, min: "220px" });
+    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Nos actualités, quelques fois par an.", bouton: "S'abonner", largeur: "100%", accent: FORET, surBouton: OCRE, texte: FORET, couleurTitre: FORET, fond: OCRE, survolBouton: IVOIRE, survolTexte: FORET, focus: FORET });
+    const grande = k.col([k.row([caps(k, "Engagement", { couleur: FORET, suivi: "0.2em" }), nom], { gap: "16px", alignItems: "center" }), qualite, phraseQ, G.ligne(k, [colContact, colHor, G.colonne(k, [abo], { poids: 1.3, min: "260px" })], { gap: "28px 40px", aligne: "flex-start", largeur: "100%" })],
+      { flexGrow: 2, flexBasis: "0px", minWidth: "420px", gap: "22px", backgroundColor: OCRE, boxSizing: "border-box", borderRadius: "0px", paddingTop: "56px", paddingBottom: "56px", paddingLeft: "56px", paddingRight: "56px" },
+      { paddingLeft: "40px", paddingRight: "40px", paddingTop: "44px", paddingBottom: "44px" },
+      { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "36px", paddingBottom: "36px" });
+    // PETITES cases
+    const petit = (num, titre, texte, url, fond, encre, accent, hov) => {
+      const t = lien(k, titre, url, { taille: 28, poids: "800", police: S.head, couleur: encre, survol: { color: encre, transform: { x: 8 } }, focus: encre, lh: 1.1 });
+      const c = k.col([caps(k, num, { couleur: accent, suivi: "0.2em" }), t, k.T(`<p>${texte}</p>`, { fontSize: "16px", lineHeight: 1.55, color: encre, fontFamily: S.font })],
+        { flexGrow: 1, flexBasis: "0px", gap: "10px", justifyContent: "center", boxSizing: "border-box", backgroundColor: fond, borderRadius: "0px", paddingTop: "32px", paddingBottom: "32px", paddingLeft: "36px", paddingRight: "36px", transitionDuration: DOUX },
+        undefined, { flexBasis: "auto", paddingLeft: "20px", paddingRight: "20px", paddingTop: "28px", paddingBottom: "28px" });
+      c.states = { hover: { backgroundColor: hov, transform: { y: -4 } } };
       return c;
     };
-    const rang = G.ligne(k, [
-      bloc4("01", "Qualité", "Un travail suivi du début à la fin, expliqué simplement.", "/faq"),
-      bloc4("02", "Environnement", "Des choix concrets pour réduire notre empreinte.", "/blog"),
-      bloc4("03", "Sécurité", "Des règles claires pour protéger équipes et clients.", "/faq"),
-      bloc4("04", "Formation", "Des équipes qui progressent, des clients mieux conseillés.", "/contact"),
-    ], { gap: "2px", aligne: "stretch", largeur: "100%" });
-    const bandeBlocs = G.bande(k, [rang], { fond: FORET, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Engagements" });
-    // 2 · pied vert : nom + phrase, liens, coordonnées et horaires, lettre
-    const nom = nomDuSite(k, env, 30, IVOIRE);
-    const intro = k.T("<p>Ensemble, on construit un travail dont on peut être fier. Une question ? Nous répondons.</p>", { fontSize: "16px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "340px" });
-    const colNom = G.colonne(k, [caps(k, "Entreprise", { couleur: OCRE, suivi: "0.2em" }), nom, intro], { poids: 1.4, min: "260px", gap: "12px" });
-    const rapide = [["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Nous contacter", "/contact"], ["Espace client", "/connexion"]];
-    const colLiens = bloc(k, "Liens utiles", rapide.map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", survol: { color: OCRE, transform: { x: 6 } }, focus: OCRE })), { couleurTitre: OCRE, gap: "0px", min: "200px" });
-    const pt = souffle(carre(k, OCRE, "10px"), 3000);
-    const colContact = G.colonne(k, [k.row([pt, caps(k, "Nous joindre", { couleur: OCRE })], { gap: "10px", alignItems: "center" }), coordonnees(k, { taille: 15, lien: IVOIRE, survol: OCRE, focus: OCRE }), horaires(k, { taille: 15 })], { poids: 1.3, min: "240px", gap: "14px" });
-    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Nos actualités, quelques fois par an.", bouton: "S'abonner", largeur: "340px", accent: OCRE, surBouton: FORET, texte: IVOIRE, couleurTitre: OCRE, fond: FORET, survolBouton: IVOIRE, survolTexte: FORET, focus: OCRE });
-    const colLettre = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const grille = G.ligne(k, [colNom, colLiens, colContact, colLettre], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const droite = G.colonne(k, [
+      petit("Engagement", "Environnement", "Des choix concrets pour réduire notre empreinte.", "/blog", FORET3, IVOIRE, OCRE, "#16553f"),
+      petit("Engagement", "Sécurité", "Des règles claires pour protéger équipes et clients.", "/faq", IVOIRE, FORET, FORET, "#ffffff"),
+      petit("Engagement", "Formation", "Des équipes qui progressent, des clients mieux conseillés.", "/contact", FORET2, IVOIRE, OCRE, FORET3),
+    ], { poids: 1, min: "320px", gap: "2px", aligne: "stretch", mobile: { minWidth: "100%" } });
+    const mosaique = G.bande(k, [droite, grande], { fond: FORET, max: "100%", gap: "2px", aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Mosaïque" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: FORET, colonne: true, gap: "40px", padV: ["72px", "56px", "48px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Pied" });
-    return [G.racine(k, [bandeBlocs, bas])];
+    const bas = G.bande(k, [trait(k, S.line), mentions], { fond: FORET, colonne: true, gap: "22px", padV: ["32px", "28px", "24px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [mosaique, bas])];
   },
 }, FAM);
 

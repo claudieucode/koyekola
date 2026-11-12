@@ -52,8 +52,9 @@ const lignes = (k, liens, o) => k.col(liens.map(([t, u]) => rang(k, t, u, o)), {
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-166 « Parcours de soins » — clinique
-// Idée : un pied d'ACCUEIL clinique. Bandeau d'urgence rouge sobre (carré blanc qui « respire », rappel du 15 et du 112), puis une phrase en serif et une carte d'horaires barrée de bleu sur le côté (elle se soulève au survol),
-// quatre colonnes nettes (services, patients, nous trouver, lettre). Blanc, bleu clinique, rouge d'urgence en bandeau seulement. Polices : IBM Plex Serif (titres) et IBM Plex Sans.
+// Idée : un pied en ESCALIER (archétype L). Cinq marches dont la largeur décroît (100 %, 84 %, 68 %, 52 %, 40 %), alignées à gauche et de plus en plus sombres : bandeau d'urgence rouge (carré blanc qui « respire », rappel du 15 et du 112),
+// marche bleue « Des soins clairs, à chaque étape. » avec le rendez-vous, marche pâle avec horaires et coordonnées, marche bleu clair avec liens et lettre d'information, dernière marche marine avec la ligne légale. Le blanc du côté droit dessine l'escalier.
+// Polices : IBM Plex Serif (titres) et IBM Plex Sans. Mobile : les marches prennent toute la largeur et s'empilent.
 const parcours = identite({
   key: "c166", label: "Blanc, bleu clinique et rouge d'urgence", humeur: "light",
   fond: "#ffffff", texte: "#10243a", discret: "#4a5d72", accent: "#0b5394", surface: "#eef3f8", encre: "#10243a",
@@ -65,49 +66,53 @@ const BLEU1 = "#0b5394", MAR1 = "#10243a", ROUGE1 = "#b42318", PALE1 = "#eef3f8"
 const parcoursSoins = modeleV2({
   id: identifiantV2(166, "parcours-de-soins"), concept: "c-166-parcours-de-soins",
   name: "Parcours de soins", family: FAM,
-  description: "Pour une clinique : bandeau d'urgence sobre, phrase en serif, carte d'horaires, rendez-vous, puis quatre colonnes nettes (services, patients, contact, lettre). Blanc et bleu clinique, angles droits.",
-  tags: ["clinique", "urgence", "horaires", "rendez-vous", "bleu clinique", "angles droits", "santé"],
+  description: "Pour une clinique : un pied en escalier, chaque marche plus étroite que la précédente, de l'urgence au rendez-vous, aux horaires, à la lettre d'information puis aux mentions. Blanc, bleu clinique et rouge d'urgence, angles droits.",
+  tags: ["clinique", "urgence", "horaires", "rendez-vous", "escalier", "bleu clinique", "angles droits", "santé"],
   identity: parcours,
   racine: racineDe("#ffffff"),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · bandeau d'urgence
+    const PALE2 = "#dbe6f2";
+    // Une marche : bloc aligné à gauche dont la largeur diminue ; le blanc à droite dessine l'escalier. [bureau, tablette, mobile]
+    const marche = (larg, fond, enfants, o = {}) => {
+      const [pv, pt, pm] = o.pv || ["44px", "38px", "30px"];
+      const base = { backgroundColor: fond, color: o.encre || MAR1, boxSizing: "border-box", alignSelf: "flex-start", gap: o.gap || "24px", borderRadius: "0px" };
+      return k.col(enfants, { ...base, width: larg[0], paddingTop: pv, paddingBottom: pv, paddingLeft: "48px", paddingRight: "48px" },
+        { width: larg[1], paddingTop: pt, paddingBottom: pt, paddingLeft: "32px", paddingRight: "32px" },
+        { width: "100%", paddingTop: pm, paddingBottom: pm, paddingLeft: "20px", paddingRight: "20px", gap: "20px" });
+    };
+    // 0 · bandeau d'urgence (marche pleine largeur)
     const pt = souffle(carreEtat(k, "#ffffff", 12), 3200);
     const msg = k.T("<p><strong>Urgence vitale&nbsp;?</strong> Appelez le 15 (SAMU) ou le 112. Ce site ne remplace pas un avis médical.</p>", { fontSize: "16px", lineHeight: 1.5, color: "#ffffff", fontFamily: S.font });
     const aide = lien(k, "Que faire avant de venir ?", "/faq", { taille: 15, poids: "700", couleur: "#ffffff", soulign: true, survol: { color: "#ffe1de", transform: { x: 4 } }, focus: "#ffffff" });
-    const urgenceRang = k.row([pt, msg], { gap: "14px", alignItems: "center", flexWrap: "nowrap" });
-    const urgence = G.bande(k, [G.ligne(k, [urgenceRang, aide], { gap: "6px 32px", aligne: "center", justifie: "space-between", largeur: "100%" })], { colonne: true, gap: "0px", fond: ROUGE1, padV: ["14px", "14px", "12px"], padB: ["14px", "14px", "12px"], padH: ["48px", "32px", "20px"], nom: "Urgence" });
-    // 2 · phrase + carte d'horaires
-    const sur = caps(k, "Clinique", { couleur: BLEU1, suivi: "0.2em" });
-    const phrase = G.geant(`<p>Des soins clairs,<br><span style="color:${BLEU1}">à chaque étape.</span></p>`, { taille: [36, 80], tablette: { taille: [52, 68] }, mobile: { taille: [36, 46] }, lh: 1.06, suivi: "-0.015em", poids: "500", police: S.head, couleur: MAR1 })(k, env);
-    const mot = k.T("<p>Consultations, examens, suivi : retrouvez ici les horaires, les démarches et les contacts utiles avant votre venue.</p>", { fontSize: "17px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "480px" });
-    const rdv = bouton(k, "Prendre rendez-vous", "/contact", { couleur: "#ffffff", fond: BLEU1, survol: { backgroundColor: MAR1, color: "#ffffff", transform: { y: -3 } }, focus: MAR1 });
-    const espace = lien(k, "Espace patient", "/connexion", { taille: 16, poids: "700", couleur: BLEU1, soulign: true, survol: { color: MAR1, transform: { x: 4 } }, focus: BLEU1 });
-    const actions = k.row([rdv, espace], { ...GK.gaps("8px 28px"), alignItems: "center" });
-    const gauche = G.colonne(k, [sur, phrase, mot, actions], { poids: 7, min: "300px", gap: "22px" });
-    const carte = k.col([caps(k, "Horaires d'accueil", { couleur: BLEU1 }), horaires(k, { taille: 16 })], { backgroundColor: PALE1, borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "6px", borderColor: BLEU1, borderRadius: "0px", paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", gap: "14px", width: "100%", maxWidth: "440px", boxSizing: "border-box" });
-    leve(carte);
-    const droite = G.colonne(k, [carte], { poids: 5, min: "290px", soi: "flex-end", aligne: "stretch" });
-    const haut = G.bande(k, [gauche, droite], { fond: "#ffffff", gap: "40px 72px", aligne: "flex-end", padV: ["80px", "64px", "44px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "Accueil" });
-    // 3 · quatre colonnes
+    const m0 = marche(["100%", "100%", "100%"], ROUGE1, [G.ligne(k, [k.row([pt, msg], { gap: "14px", alignItems: "center", flexWrap: "nowrap" }), aide], { gap: "6px 32px", aligne: "center", justifie: "space-between", largeur: "100%" })], { pv: ["14px", "14px", "12px"] });
+    // 1 · marche bleue : la phrase et le rendez-vous
+    const phrase = G.geant(`<p>Des soins clairs,<br>à chaque étape.</p>`, { taille: [34, 64], tablette: { taille: [44, 56] }, mobile: { taille: [34, 42] }, lh: 1.08, suivi: "-0.015em", poids: "500", police: S.head, couleur: "#ffffff" })(k, env);
+    const mot = k.T("<p>Consultations, examens, suivi : horaires, démarches et contacts utiles avant votre venue.</p>", { fontSize: "17px", lineHeight: 1.6, color: "#e6eef8", fontFamily: S.font, maxWidth: "520px" });
+    const rdv = bouton(k, "Prendre rendez-vous", "/contact", { couleur: BLEU1, fond: "#ffffff", survol: { backgroundColor: PALE1, color: MAR1, transform: { y: -3 } }, focus: "#ffffff" });
+    const espace = lien(k, "Espace patient", "/connexion", { taille: 16, poids: "700", couleur: "#ffffff", soulign: true, survol: { color: "#cfe0f3", transform: { x: 4 } }, focus: "#ffffff" });
+    const m1 = marche(["84%", "92%", "100%"], BLEU1, [caps(k, "Clinique", { couleur: "#cfe0f3", suivi: "0.2em" }), phrase, mot, k.row([rdv, espace], { ...GK.gaps("8px 28px"), alignItems: "center" })], { pv: ["56px", "46px", "36px"], gap: "20px" });
+    // 2 · marche pâle : horaires et coordonnées
+    const colH = bloc(k, "Horaires d'accueil", [horaires(k, { taille: 16, couleur: MAR1 })], { couleurTitre: BLEU1, poids: 1, min: "240px" });
+    const colC = bloc(k, "Nous trouver", [coordonnees(k, { taille: 15, lien: MAR1, survol: BLEU1, focus: BLEU1 })], { couleurTitre: BLEU1, poids: 1, min: "220px" });
+    const m2 = marche(["68%", "84%", "100%"], PALE1, [G.ligne(k, [colH, colC], { gap: "28px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" })]);
+    // 3 · marche bleu clair : liens et lettre
     const lk = (t, u) => lien(k, t, u, { taille: 16, poids: "600", couleur: MAR1, survol: { color: BLEU1, transform: { x: 6 } }, focus: BLEU1 });
-    const colServ = bloc(k, "Nos services", [lk("Consultations et examens", "/catalogue"), lk("Préparer sa venue", "/faq"), lk("Actualités de la clinique", "/blog")], { couleurTitre: BLEU1, gap: "0px", min: "200px" });
-    const colPat = bloc(k, "Patients", [lk("Prendre rendez-vous", "/contact"), lk("Espace patient", "/connexion"), lk("Questions fréquentes", "/faq")], { couleurTitre: BLEU1, gap: "0px", min: "200px" });
-    const colCon = bloc(k, "Nous trouver", [coordonnees(k, { taille: 15, lien: MAR1, survol: BLEU1, focus: BLEU1 })], { couleurTitre: BLEU1, poids: 1.2 });
-    const abo = abonnement(k, env, { titre: "Lettre d'information", intro: "Informations pratiques et actualités de la clinique, par courriel.", bouton: "S'abonner", accent: BLEU1, texte: MAR1, boutonSurvol: { backgroundColor: MAR1, color: "#ffffff" }, couleurTitre: BLEU1 });
-    const colLettre = G.colonne(k, [abo], { poids: 1.5, min: "260px" });
-    const grille = G.ligne(k, [colServ, colPat, colCon, colLettre], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { colonne: true, gap: "40px", fond: PALE1, padV: ["64px", "52px", "44px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "1px", couleur: "#10243a2e" }, nom: "Colonnes" });
-    return [G.racine(k, [urgence, haut, bas])];
+    const abo = abonnement(k, env, { titre: "Lettre d'information", intro: "Informations pratiques et actualités de la clinique, par courriel.", bouton: "S'abonner", accent: BLEU1, texte: MAR1, boutonSurvol: { backgroundColor: MAR1, color: "#ffffff" }, couleurTitre: BLEU1, largeur: "420px" });
+    const m3 = marche(["52%", "76%", "100%"], PALE2, [G.ligne(k, [lk("Services et examens", "/catalogue"), lk("Actualités", "/blog"), lk("Questions fréquentes", "/faq")], { gap: "0px 28px", aligne: "center", largeur: "100%" }), abo]);
+    // 4 · marche marine : ligne légale
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#cfd8e3", liens: "#ffffff" })(k, env);
+    const m4 = marche(["40%", "62%", "100%"], MAR1, [trait(k, "#ffffff40"), mentions], { pv: ["28px", "26px", "22px"], gap: "20px", encre: "#ffffff" });
+    return [G.racine(k, [m0, m1, m2, m3, m4])];
   },
 }, FAM);
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-167 « Planche d'analyses » — laboratoire d'analyses médicales
-// Idée : une PLANCHE de laboratoire. Gris-vert très clair, encre verte, filets nets, numérotation en police mono. En haut, nom du laboratoire et bouton « Accéder à mes résultats » ; quatre cartouches numérotés
-// (01 à 04) dont le cadre passe au vert et se soulève au survol ; puis horaires, contact, lettre. Pas de délai promis, pas de chiffre. Polices : DM Sans (titres et texte) et DM Mono (numéros, libellés).
+// Idée : une PLANCHE de laboratoire (archétype C : damier de cases égales). Aucun titre géant : une grille de huit cases à angles droits, filets d'1 px, où CHAQUE case est un lien ou une information
+// (01 résultats, 02 rendez-vous, 03 préparer, 04 conseils, 05 horaires, 06 coordonnées, 07 lettre, 08 écrire). La case « résultats » est pleine d'encre verte ; au survol une case vire au vert très pâle et son lien glisse.
+// Gris-vert clair, encre verte, numéros en DM Mono ; un carré turquoise « respire » devant le libellé. Polices : DM Sans (titres et texte) et DM Mono (numéros, libellés). Mobile : une case par ligne (deux sur tablette).
 const planche = identite({
   key: "c167", label: "Gris-vert clair, encre verte et turquoise", humeur: "light",
   fond: "#eef3f1", texte: "#0f2f2a", discret: "#41594f", accent: "#0b6e63", surface: "#ffffff", encre: "#0f2f2a",
@@ -119,45 +124,39 @@ const VERT2 = "#0b6e63", ENCRE2 = "#0f2f2a", GRIS2 = "#eef3f1";
 const planchAnalyses = modeleV2({
   id: identifiantV2(167, "planche-d-analyses"), concept: "c-167-planche-d-analyses",
   name: "Planche d'analyses", family: FAM,
-  description: "Pour un laboratoire d'analyses : accès aux résultats en évidence, quatre cartouches numérotés en police mono dont le cadre passe au vert au survol, horaires, contact et lettre d'information. Gris-vert clair, rigoureux.",
-  tags: ["laboratoire", "analyses", "résultats en ligne", "vert", "mono", "numérotation", "angles droits"],
+  description: "Pour un laboratoire d'analyses : une planche de huit cases égales à filets fins (résultats, rendez-vous, préparation, conseils, horaires, coordonnées, lettre, contact), numérotées en police mono. Gris-vert clair, rigoureux, angles droits.",
+  tags: ["laboratoire", "analyses", "résultats en ligne", "damier", "vert", "mono", "numérotation", "angles droits"],
   identity: planche,
   racine: racineDe(GRIS2),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · tête : nom + accès aux résultats
-    const sur = caps(k, "Laboratoire d'analyses médicales", { couleur: VERT2, police: S.head, suivi: "0.12em" });
-    const phrase = G.geant(`<p>Vos analyses,<br>expliquées simplement.</p>`, { taille: [34, 72], tablette: { taille: [48, 60] }, mobile: { taille: [34, 42] }, lh: 1.08, suivi: "-0.025em", poids: "700", police: S.font, couleur: ENCRE2 })(k, env);
-    const gauche = G.colonne(k, [sur, phrase], { poids: 8, min: "300px", gap: "18px" });
-    const res = bouton(k, "Accéder à mes résultats", "/connexion", { couleur: "#ffffff", fond: ENCRE2, survol: { backgroundColor: VERT2, color: "#ffffff", transform: { y: -3 } }, focus: ENCRE2 });
-    const abo = abonnement(k, env, { titre: "Lettre d'information", intro: "Conseils de santé et informations pratiques du laboratoire.", bouton: "S'abonner", accent: VERT2, texte: ENCRE2, boutonSurvol: { backgroundColor: ENCRE2, color: "#ffffff" }, couleurTitre: VERT2, policeChamp: S.font });
-    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, fontFamily: S.head, letterSpacing: "0.12em" };
-    const droite = G.colonne(k, [abo, res], { poids: 4, min: "280px", gap: "18px", soi: "flex-end" });
-    const tete = G.bande(k, [gauche, droite], { fond: GRIS2, gap: "32px 64px", aligne: "flex-end", padV: ["80px", "64px", "44px"], padB: ["40px", "36px", "28px"], padH: ["48px", "32px", "20px"], nom: "Tête" });
-    // 2 · quatre cartouches numérotés : le cadre passe au vert et la carte se soulève
-    const cartouche = (num, titre, texte, url) => {
-      const n = caps(k, num, { couleur: VERT2, police: S.head, suivi: "0.2em", taille: "13px" });
-      const l = lien(k, titre, url, { taille: 20, poids: "700", couleur: ENCRE2, h: "44px", survol: { color: VERT2, transform: { x: 6 } }, focus: VERT2 });
-      const t = k.T(`<p>${texte}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font });
-      const c = k.col([n, l, t], { backgroundColor: "#ffffff", borderStyle: "solid", borderWidth: "1px", borderTopWidth: "4px", borderColor: "#0f2f2a40", borderRadius: "0px", paddingTop: "22px", paddingBottom: "26px", paddingLeft: "24px", paddingRight: "24px", gap: "6px", flexGrow: 1, flexBasis: "0px", minWidth: "230px", minHeight: "180px", boxSizing: "border-box", transitionDuration: DOUX });
-      c.states = { hover: { borderColor: VERT2, transform: { y: -6 } } };
+    // Une case : numéro mono + contenu ; fond blanc (ou encre pour la première) ; vire au vert très pâle au survol
+    const caseDe = (num, enfants, o = {}) => {
+      const c = k.col([caps(k, num, { couleur: o.numero || VERT2, police: S.head, suivi: "0.2em", taille: "13px" }), ...enfants], { backgroundColor: o.fond || "#ffffff", paddingTop: "22px", paddingBottom: "26px", paddingLeft: "24px", paddingRight: "24px", gap: "10px", minHeight: "200px", boxSizing: "border-box", borderRadius: "0px", transitionDuration: DOUX });
+      c.states = { hover: { backgroundColor: o.survol || "#e1efea" } };
       return c;
     };
-    const rangee = G.ligne(k, [
-      cartouche("01", "Prendre rendez-vous", "Choisissez le moment qui vous convient pour votre prélèvement.", "/contact"),
-      cartouche("02", "Préparer le prélèvement", "À jeun ou non, pièces à apporter : les consignes générales.", "/faq"),
-      cartouche("03", "Résultats en ligne", "Consultez vos résultats dans votre espace personnel sécurisé.", "/connexion"),
-      cartouche("04", "Conseils et actualités", "Comprendre un examen, un bilan, une valeur de référence.", "/blog"),
-    ], { gap: "20px", aligne: "stretch", largeur: "100%" });
-    const bandeCart = G.bande(k, [rangee], { colonne: true, fond: GRIS2, padV: ["16px", "16px", "8px"], padB: ["56px", "48px", "40px"], padH: ["48px", "32px", "20px"], nom: "Cartouches" });
-    // 3 · horaires, contact, lettre
-    const colH = bloc(k, "Horaires d'ouverture", [horaires(k, { taille: 15 })], { couleurTitre: VERT2, police: S.head, suiviTitre: "0.12em", poids: 1.2 });
-    const colC = bloc(k, "Nous trouver", [coordonnees(k, { taille: 15, lien: ENCRE2, survol: VERT2, focus: VERT2 })], { couleurTitre: VERT2, police: S.head, suiviTitre: "0.12em" });
-    const info = G.ligne(k, [colH, colC], { gap: "36px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const texte = (t, couleur) => k.T(`<p>${t}</p>`, { fontSize: "15px", lineHeight: 1.55, color: couleur || S.mute, fontFamily: S.font });
+    const titre = (t, u, o = {}) => lien(k, t, u, { taille: 22, poids: "700", couleur: o.couleur || ENCRE2, h: "44px", lh: 1.15, survol: { color: o.survol || VERT2, transform: { x: 6 } }, focus: o.focus || VERT2 });
+    const abo = abonnement(k, env, { titre: "Lettre d'information", intro: "Conseils de santé et informations pratiques.", bouton: "S'abonner", accent: VERT2, texte: ENCRE2, boutonSurvol: { backgroundColor: ENCRE2, color: "#ffffff" }, couleurTitre: VERT2, policeChamp: S.font, largeur: "100%" });
+    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, fontFamily: S.head, letterSpacing: "0.12em" };
+    const cases = [
+      caseDe("01", [titre("Mes résultats", "/connexion", { couleur: "#ffffff", survol: "#9fe3d6", focus: "#ffffff" }), texte("Votre espace personnel sécurisé.", "#cfe5e0")], { fond: ENCRE2, numero: "#9fe3d6", survol: VERT2 }),
+      caseDe("02", [titre("Prendre rendez-vous", "/contact"), texte("Choisissez le moment de votre prélèvement.")]),
+      caseDe("03", [titre("Préparer le prélèvement", "/faq"), texte("À jeun ou non, pièces à apporter : les consignes générales.")]),
+      caseDe("04", [titre("Conseils et actualités", "/blog"), texte("Comprendre un examen, un bilan, une valeur de référence.")]),
+      caseDe("05", [caps(k, "Horaires", { couleur: VERT2, police: S.head, suivi: "0.12em" }), horaires(k, { taille: 15 })]),
+      caseDe("06", [caps(k, "Nous trouver", { couleur: VERT2, police: S.head, suivi: "0.12em" }), coordonnees(k, { taille: 15, lien: ENCRE2, survol: VERT2, focus: VERT2 })]),
+      caseDe("07", [abo]),
+      caseDe("08", [titre("Nous écrire", "/contact"), texte("Une question sur un examen ? Écrivez-nous.")]),
+    ];
+    const damier = k.grid(4, cases, { gap: "1px", backgroundColor: "#0f2f2a40", paddingTop: "1px", paddingBottom: "1px", paddingLeft: "1px", paddingRight: "1px", boxSizing: "border-box" });
+    const marque = k.row([souffle(carreEtat(k, VERT2, 12), 3400), caps(k, "Laboratoire d'analyses médicales", { couleur: ENCRE2, police: S.head, suivi: "0.16em" })], { gap: "12px", alignItems: "center", flexWrap: "nowrap" });
+    const planche1 = G.bande(k, [marque, damier], { colonne: true, fond: GRIS2, gap: "22px", padV: ["72px", "56px", "40px"], padB: ["56px", "48px", "36px"], padH: ["48px", "32px", "20px"], nom: "Planche" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [info, trait(k, ENCRE2, "1px"), mentions], { colonne: true, gap: "36px", fond: "#ffffff", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "1px", couleur: "#0f2f2a40" }, nom: "Infos" });
-    return [G.racine(k, [tete, bandeCart, bas])];
+    const bas = G.bande(k, [trait(k, ENCRE2, "1px"), mentions], { colonne: true, gap: "24px", fond: "#ffffff", padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [planche1, bas])];
   },
 }, FAM);
 

@@ -1,0 +1,249 @@
+{
+  "concepts": [
+    {
+      "id": "c-216-estimer-acheter-louer",
+      "ordre": 216,
+      "nom": "Estimer, acheter, louer",
+      "famille": "Agences immobilières",
+      "secteur": "agence immobilière",
+      "directionArtistique": {
+        "texte": "Archétype index : trois portes géantes pleine largeur (Estimer, Acheter, Louer) en serif monumental sur crème, filets bleu nuit, retrait qui s'élargit au survol ; socle bleu nuit court avec le nom, un renvoi honoraires (page à renseigner, aucun barème) et les horaires."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence immobilière",
+        "index",
+        "bleu nuit",
+        "laiton",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-217-portail-de-gestion",
+      "ordre": 217,
+      "nom": "Portail de gestion",
+      "famille": "Agences immobilières",
+      "secteur": "gestion locative",
+      "directionArtistique": {
+        "texte": "Archétype colonne latérale : colonne prune pleine hauteur à droite (nom, deux boutons d'espace, coordonnées) et zone lilas à gauche avec deux tableaux de rubriques (propriétaires, locataires) à rangées qui s'éclaircissent, puis la lettre."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "gestion locative",
+        "portail",
+        "colonne latérale",
+        "prune",
+        "lilas",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-218-dossier-de-copropriete",
+      "ordre": 218,
+      "nom": "Dossier de copropriété",
+      "famille": "Agences immobilières",
+      "secteur": "syndic de copropriété",
+      "directionArtistique": {
+        "texte": "Archétype fenêtre : pied en forme de fenêtre d'application, barre de titre noire en mono, cinq onglets qui se soulèvent, corps blanc (coordonnées, lettre de convocations), barre d'état verte avec rappel d'urgence sans numéro inventé."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "copropriété",
+        "fenêtre",
+        "onglets",
+        "gris glacier",
+        "vert mousse",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-219-programmes-en-vitrine",
+      "ordre": 219,
+      "nom": "Programmes en vitrine",
+      "famille": "Agences immobilières",
+      "secteur": "promoteur immobilier",
+      "directionArtistique": {
+        "texte": "Archétype mosaïque asymétrique : grande case noire (titre monumental en capitales larges, trois puces de programmes) et trois petites cases empilées (sable : coordonnées ; anthracite : horaires ; blanc : lettre), joints de 3 px."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "promoteur",
+        "mosaïque",
+        "noir",
+        "sable",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-220-fiche-de-recherche",
+      "ordre": 220,
+      "nom": "Fiche de recherche",
+      "famille": "Agences immobilières",
+      "secteur": "chasseur d'appartements",
+      "directionArtistique": {
+        "texte": "Archétype frise : règle noire épaisse et quatre carrés numérotés (brief, sélection, visites, négociation) qui se remplissent de tomate au survol, pavé honoraires à compléter ; rangée menthe unique avec coordonnées et lettre."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "chasseur d'appartements",
+        "frise",
+        "étapes",
+        "menthe",
+        "sapin",
+        "tomate",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-221-appareil-de-macon",
+      "ordre": 221,
+      "nom": "Appareil de maçon",
+      "famille": "Construction et travaux publics",
+      "secteur": "maçonnerie",
+      "directionArtistique": {
+        "texte": "Archétype damier : mur de huit cases égales séparées par un joint charbon de 4 px (nom, trois savoir-faire, devis rouille, coordonnées, horaires, mention décennale générique) ; les cases de liens s'éclaircissent au survol."
+      },
+      "typographies": {
+        "titre": "Roboto Slab",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maçonnerie",
+        "damier",
+        "cases égales",
+        "pierre",
+        "charbon",
+        "rouille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-222-devis-ou-chantier",
+      "ordre": 222,
+      "nom": "Devis ou chantier",
+      "famille": "Construction et travaux publics",
+      "secteur": "entreprise générale du bâtiment",
+      "directionArtistique": {
+        "texte": "Archétype deux demi-pages opposées : aplat bleu de travail à gauche (message en capitales condensées, mention décennale, lettre), acier clair à droite (quatre grandes actions qui glissent, coordonnées)."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entreprise générale",
+        "devis",
+        "deux demi-pages",
+        "bleu de travail",
+        "cyan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-223-une-route-un-reseau",
+      "ordre": 223,
+      "nom": "Une route, un réseau",
+      "famille": "Construction et travaux publics",
+      "secteur": "travaux publics",
+      "directionArtistique": {
+        "texte": "Archétype bandeau XXL + colonne étroite : bandeau orange chantier avec la question en très grandes capitales noires et bouton noir ; socle kaki avec nom, coordonnées, mention décennale et une colonne étroite de six liens à droite."
+      },
+      "typographies": {
+        "titre": "Chivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "travaux publics",
+        "voirie",
+        "réseaux",
+        "bandeau XXL",
+        "orange",
+        "kaki",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-224-maison-a-renover",
+      "ordre": 224,
+      "nom": "Maison à rénover",
+      "famille": "Construction et travaux publics",
+      "secteur": "rénovation",
+      "directionArtistique": {
+        "texte": "Archétype nom monumental seul : nom en très grand serif canard au centre d'un grand vide plâtre, quatre liens à soulignement épais qui grandit, un bouton carré, ligne légale centrée ; ni colonnes ni horaires."
+      },
+      "typographies": {
+        "titre": "Literata",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "rénovation",
+        "nom monumental",
+        "minimal",
+        "plâtre",
+        "bleu canard",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-225-feuille-de-calque",
+      "ordre": 225,
+      "nom": "Feuille de calque",
+      "famille": "Construction et travaux publics",
+      "secteur": "bureau d'études techniques",
+      "directionArtistique": {
+        "texte": "Archétype papier à en-tête : tout centré entre filets doubles sur calque, mention en mono, nom, coordonnées, ligne de disciplines séparées par des barres, mention décennale générique, ligne légale centrée."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bureau d'études",
+        "papier à en-tête",
+        "filets doubles",
+        "calque",
+        "cyanotype",
+        "angles droits"
+      ]
+    }
+  ]
+}

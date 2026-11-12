@@ -162,10 +162,13 @@ describe("Pieds de page : comportements réels (serveur)", () => {
     });
 
     test("un éditeur SANS pages.code insère tous les modèles du catalogue (aucun refus caché par un droit de code)", async () => {
-      const D = await newSite("Site D droits", "d.isolation.example");
-      const ed = await newStudent(srv); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'editor')").run(D.s, idOf(ed));
-      let ok = 0;
-      for (const e of Catalog.entries("footer")) { const r = await useModel(D.s, e.key, ed); assert.equal(r.status, 200, `${e.key} : ${r.text.slice(0, 160)}`); ok++; }
+      // une plateforme limite à 200 modèles par site : on passe à un nouveau site tous les 150 modèles (le catalogue en compte plus de 200)
+      const ed = await newStudent(srv);
+      let D = null, ok = 0, nSites = 0;
+      for (const e of Catalog.entries("footer")) {
+        if (!D || ok % 150 === 0) { D = await newSite(`Site D droits ${++nSites}`, `d${nSites}.isolation.example`); db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'editor')").run(D.s, idOf(ed)); }
+        const r = await useModel(D.s, e.key, ed); assert.equal(r.status, 200, `${e.key} : ${r.text.slice(0, 160)}`); ok++;
+      }
       assert.equal(ok, Catalog.entries("footer").length);
     });
 
