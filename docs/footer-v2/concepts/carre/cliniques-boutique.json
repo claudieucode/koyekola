@@ -1,0 +1,262 @@
+{
+  "meta": {
+    "titre": "10 pieds « carrés » : cliniques et laboratoires (ft2-166 à 170), boutique en ligne standard (ft2-171 à 175)",
+    "date": "2026-11-11",
+    "nombre": 10
+  },
+  "concepts": [
+    {
+      "id": "c-166-parcours-de-soins",
+      "ordre": 166,
+      "nom": "Parcours de soins",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "clinique",
+      "directionArtistique": {
+        "texte": "Pour une clinique : bandeau d'urgence sobre, phrase en serif, carte d'horaires, rendez-vous, puis quatre colonnes nettes (services, patients, contact, lettre). Blanc et bleu clinique, angles droits."
+      },
+      "typographies": {
+        "titre": "IBM Plex Serif",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "clinique",
+        "urgence",
+        "horaires",
+        "rendez-vous",
+        "bleu clinique",
+        "angles droits",
+        "santé"
+      ]
+    },
+    {
+      "id": "c-167-planche-d-analyses",
+      "ordre": 167,
+      "nom": "Planche d'analyses",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "laboratoire d'analyses",
+      "directionArtistique": {
+        "texte": "Pour un laboratoire d'analyses : accès aux résultats en évidence, quatre cartouches numérotés en police mono dont le cadre passe au vert au survol, horaires, contact et lettre d'information. Gris-vert clair, rigoureux."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "laboratoire",
+        "analyses",
+        "résultats en ligne",
+        "vert",
+        "mono",
+        "numérotation",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-168-salle-de-lecture",
+      "ordre": 168,
+      "nom": "Salle de lecture",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "centre d'imagerie",
+      "directionArtistique": {
+        "texte": "Pour un centre d'imagerie : « Voir clair. » en grandes lettres, carte d'horaires, index d'examens dont les lignes s'illuminent au survol, carré cyan qui respire. Bleu nuit et cyan, angles droits, très net."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imagerie",
+        "radiologie",
+        "bleu nuit",
+        "cyan",
+        "index d'examens",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-169-croix-verte",
+      "ordre": 169,
+      "nom": "Croix verte",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une pharmacie : grand panneau vert avec carré « + » qui respire, lignes de services qui s'illuminent au survol, rappel de la pharmacie de garde, horaires, contact et lettre d'information. Vert et blanc, angles droits."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "vert",
+        "ordonnances",
+        "pharmacie de garde",
+        "horaires",
+        "angles droits",
+        "santé"
+      ]
+    },
+    {
+      "id": "c-170-fil-des-soins",
+      "ordre": 170,
+      "nom": "Fil des soins",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "centre dentaire",
+      "directionArtistique": {
+        "texte": "Pour un centre dentaire : phrase centrée, frise de trois étapes (consultation, devis, soins) avec carrés qui respirent à tour de rôle, panneau marine avec rendez-vous et horaires, contact et lettre. Glacier et marine, angles droits."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "centre dentaire",
+        "frise",
+        "étapes",
+        "bleu glacier",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-171-rayon-clair",
+      "ordre": 171,
+      "nom": "Rayon clair",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique généraliste",
+      "directionArtistique": {
+        "texte": "Pour une boutique généraliste : quatre cases de garanties en texte, colonnes aide, livraison, paiement et compte, étiquettes de paiement en texte, lettre d'information et barre noire des mentions. Blanc, noir et rouge vif."
+      },
+      "typographies": {
+        "titre": "Work Sans",
+        "corps": null,
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique",
+        "e-commerce",
+        "garanties",
+        "livraison",
+        "paiement",
+        "colonnes",
+        "blanc noir rouge"
+      ]
+    },
+    {
+      "id": "c-172-marche-vert",
+      "ordre": 172,
+      "nom": "Marché vert",
+      "famille": "Boutique en ligne standard",
+      "secteur": "épicerie fine en ligne",
+      "directionArtistique": {
+        "texte": "Pour une épicerie fine en ligne : grand panneau vert avec phrase en serif et lettre d'information, quatre colonnes à filet vert qui vire à la terre cuite au survol, trois garanties en phrases. Crème, forêt, terre cuite."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "épicerie",
+        "marché",
+        "boutique",
+        "crème",
+        "vert forêt",
+        "terre cuite",
+        "serif",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-173-console",
+      "ordre": 173,
+      "nom": "Console",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique high-tech",
+      "directionArtistique": {
+        "texte": "Pour une boutique high-tech : « Besoin d'aide ? » en grand, lettre d'information, tableau de quatre lignes (aide, livraison, paiement, compte) qui s'illuminent au survol, garanties entre crochets. Noir bleuté, police mono."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "high-tech",
+        "électronique",
+        "boutique",
+        "mono",
+        "noir",
+        "bleu électrique",
+        "tableau",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-174-maison-ivoire",
+      "ordre": 174,
+      "nom": "Maison ivoire",
+      "famille": "Boutique en ligne standard",
+      "secteur": "mode et décoration",
+      "directionArtistique": {
+        "texte": "Pour une boutique de mode ou de décoration : pied centré, « Entrez dans la maison » en serif léger, lettre d'information centrée, quatre colonnes centrées et garanties entre filets. Ivoire, encre et bordeaux, très calme."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mode",
+        "décoration",
+        "boutique",
+        "centré",
+        "ivoire",
+        "bordeaux",
+        "serif",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-175-bons-plans",
+      "ordre": 175,
+      "nom": "Bons plans",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique de promotions",
+      "directionArtistique": {
+        "texte": "Pour une boutique de promotions : bande jaune « Ne ratez rien » avec lettre d'information, quatre colonnes à titres jaunes sur marine, barre sombre avec étiquettes de paiement en texte et garanties. Marine et jaune vif, franc et lisible."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "promotions",
+        "bons plans",
+        "boutique",
+        "marine",
+        "jaune",
+        "lettre d'information",
+        "e-commerce"
+      ]
+    }
+  ]
+}

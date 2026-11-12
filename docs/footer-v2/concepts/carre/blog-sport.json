@@ -1,0 +1,64 @@
+{
+  "concepts": [
+    {
+      "id": "c-176-une-de-journal", "ordre": 176, "nom": "Une de journal", "famille": "Blogs et actualités", "secteur": "magazine d'actualités",
+      "directionArtistique": { "texte": "Pour un magazine d'actualités : triple filet de presse, nom du site en grandes capitales Playfair, ligne de rubriques qui s'encrent au survol, puis quatre colonnes séparées par des filets (derniers articles avec carré rouge qui respire, rubriques, rédaction, lettre du matin). Papier blanc cassé, encre noire, rouge presse. Angles droits." },
+      "typographies": { "titre": "Playfair Display", "corps": "Source Sans 3", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["magazine", "actualités", "presse", "rubriques", "derniers articles", "papier", "rouge"]
+    },
+    {
+      "id": "c-177-cahier-d-idees", "ordre": 177, "nom": "Cahier d'idées", "famille": "Blogs et actualités", "secteur": "blog d'entreprise",
+      "directionArtistique": { "texte": "Pour un blog d'entreprise : grande bande cobalt avec la phrase « Ce qu'on apprend, on le partage. » et une carte blanche de lettre d'information qui se soulève ; bande blanche avec derniers articles et thèmes en étiquettes carrées qui se remplissent de bleu ; bande marine pour les mentions. Aplats francs, angles droits." },
+      "typographies": { "titre": "Inter Tight", "corps": "Inter", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["blog d'entreprise", "blog de marque", "lettre d'information", "thèmes", "bleu", "jaune", "aplats"]
+    },
+    {
+      "id": "c-178-gazette-du-coin", "ordre": 178, "nom": "Gazette du coin", "famille": "Blogs et actualités", "secteur": "journal local",
+      "directionArtistique": { "texte": "Pour un journal local : papier kraft, grand titre en Libre Caslon « Ici, on parle de chez nous. », bloc encadré d'un filet épais avec panneau vert bouteille de la rédaction (contact, bouton) et grille de six rubriques numérotées qui se remplissent de vert au survol ; articles de la semaine et lettre. Angles droits." },
+      "typographies": { "titre": "Libre Caslon Text", "corps": "Libre Franklin", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["journal local", "presse locale", "quartier", "rubriques", "rédaction", "kraft", "vert"]
+    },
+    {
+      "id": "c-179-rayon-des-guides", "ordre": 179, "nom": "Rayon des guides", "famille": "Blogs et actualités", "secteur": "site de ressources",
+      "directionArtistique": { "texte": "Pour un site de ressources : fond vert-noir, grand champ de recherche à angles droits, index de six catégories en lignes pleines dont la barre latérale menthe s'allume et qui glissent de 6 px au survol, derniers guides avec carré menthe qui respire, lettre d'information. Typographie mono documentaire." },
+      "typographies": { "titre": "IBM Plex Mono", "corps": "IBM Plex Sans", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["ressources", "guides", "documentation", "recherche", "index", "sombre", "menthe"]
+    },
+    {
+      "id": "c-180-edition-speciale", "ordre": 180, "nom": "Édition spéciale", "famille": "Blogs et actualités", "secteur": "média spécialisé",
+      "directionArtistique": { "texte": "Pour un média spécialisé : bande orange vif avec « Ne ratez rien. » monumental et lettre d'information en noir sur orange, bande noire avec six rubriques en cases qui virent à l'orange, derniers articles, liens de collaboration et réseaux, fine bande de mentions soulignée d'un filet orange. Franc et contrasté, angles droits." },
+      "typographies": { "titre": "Archivo", "corps": "Archivo", "accent": "Space Mono", "source": "Bibliothèque locale de polices" },
+      "tags": ["média", "média spécialisé", "lettre d'information", "rubriques", "orange", "noir", "bandes franches"]
+    },
+    {
+      "id": "c-181-tribune-rouge", "ordre": 181, "nom": "Tribune rouge", "famille": "Sport et clubs", "secteur": "club de sport",
+      "directionArtistique": { "texte": "Pour un club de sport : barres franches rouge et blanc, bande noire avec « Tous sur le terrain. » en capitales Oswald et boutons d'inscription (carré rouge qui respire), puis quatre sections en cases numérotées qui virent au noir en se soulevant, horaires, contact, liens et lettre sur fond clair ; bande noire de mentions. Angles droits." },
+      "typographies": { "titre": "Oswald", "corps": "Work Sans", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["club de sport", "club sportif", "inscription", "sections", "horaires", "rouge", "noir"]
+    },
+    {
+      "id": "c-182-haute-intensite", "ordre": 182, "nom": "Haute intensité", "famille": "Sport et clubs", "secteur": "salle de fitness",
+      "directionArtistique": { "texte": "Pour une salle de fitness : « Bouge. » en capitales Bebas Neue géantes, panneau d'horaires de la salle à barre verte avec carré qui respire, grille de six cours numérotés qui se remplissent de vert acide au survol, contact, liens, lettre. Anthracite et vert acide, angles droits." },
+      "typographies": { "titre": "Bebas Neue", "corps": "DM Sans", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["fitness", "salle de sport", "cours collectifs", "horaires", "inscription", "anthracite", "vert acide"]
+    },
+    {
+      "id": "c-183-feu-vert", "ordre": 183, "nom": "Feu vert", "famille": "Sport et clubs", "secteur": "auto-école",
+      "directionArtistique": { "texte": "Pour une auto-école : bande bleu route avec « Prêt pour la route ? », bouton jaune d'inscription qui respire et quatre panneaux carrés blancs cerclés de jaune (formations) qui se soulèvent au survol, bande claire avec horaires du bureau, contact, liens et lettre, bande marine de mentions. Angles droits." },
+      "typographies": { "titre": "Lexend", "corps": "Public Sans", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["auto-école", "permis de conduire", "formations", "inscription", "horaires", "bleu", "jaune"]
+    },
+    {
+      "id": "c-184-court-central", "ordre": 184, "nom": "Court central", "famille": "Sport et clubs", "secteur": "club de tennis",
+      "directionArtistique": { "texte": "Pour un club de tennis : « Jeu, set et match. » en DM Serif Display sur ivoire, grand rectangle à filets verts de 3 px découpé comme un court en trois cases (horaires, contact, réservation avec bouton qui respire et lettre) puis une ligne de liens en filet ; liens qui se teintent de terre battue au survol. Angles droits." },
+      "typographies": { "titre": "DM Serif Display", "corps": "Karla", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["tennis", "club de tennis", "réservation", "horaires", "ivoire", "vert", "terre battue"]
+    },
+    {
+      "id": "c-185-barre-et-pointes", "ordre": 185, "nom": "Barre et pointes", "famille": "Sport et clubs", "secteur": "école de danse",
+      "directionArtistique": { "texte": "Pour une école de danse : fond rose poudré, « Danse. » en Instrument Serif géant posé sur trois filets comme une barre, liste de cinq disciplines en lignes à filets qui glissent de 8 px et rosissent au survol, bouton d'inscription framboise qui respire ; bande prune avec horaires des cours, contact, liens et lettre. Angles droits." },
+      "typographies": { "titre": "Instrument Serif", "corps": "Jost", "accent": null, "source": "Bibliothèque locale de polices" },
+      "tags": ["école de danse", "danse", "disciplines", "cours", "inscription", "rose", "prune"]
+    }
+  ]
+}

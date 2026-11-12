@@ -24,9 +24,9 @@ const { kit, layout, withIds } = require("../src/themeBuilder/catalog/kit");
 const { freshMarketing } = require("./marketing-helpers");
 
 const CONCEPTS_100 = require("../docs/footer-v2/concepts/concepts.json").concepts;
-const CONCEPTS = [...CONCEPTS_100, ...require("../docs/footer-v2/concepts/concepts-quotidien.json").concepts];   // 100 concepts + 25 « sites du quotidien »
-const FAMILLE_DE_CONCEPT = { "Corporate et institutions": "corporate-institutions", "Finance et assurance": "finance-assurance", "SaaS, tech et startup": "saas-tech-startup", "E-commerce, mode et luxe": "ecommerce-mode-luxe", "Médias et éditorial": "medias", "Agences, portfolios et art": "agences-portfolios-art", "Restauration, hôtellerie et tourisme": "restauration-hotellerie-tourisme", "Immobilier et architecture": "immobilier-architecture", "Éducation et université": "education-universite", "Santé et bien-être": "sante-bienetre", "Culture et événementiel": "culture-evenementiel", "Associatif et ONG": "associatif-ong", "Automobile, sport et mobilité": "auto-sport-mobilite", "Minimalisme et expérimentation": "minimalisme-experimental", "Artisans et bâtiment": "artisans-batiment", "Commerces de proximité": "commerce-proximite", "Services à la personne": "services-personne", "Professions libérales": "professions-liberales", "Vie locale et associations": "vie-locale" };
-const CIBLE = { "corporate-institutions": 8, "finance-assurance": 6, "saas-tech-startup": 9, "ecommerce-mode-luxe": 9, medias: 8, "agences-portfolios-art": 11, "restauration-hotellerie-tourisme": 8, "immobilier-architecture": 7, "education-universite": 6, "sante-bienetre": 6, "culture-evenementiel": 6, "associatif-ong": 6, "auto-sport-mobilite": 5, "minimalisme-experimental": 5, "artisans-batiment": 5, "commerce-proximite": 5, "services-personne": 5, "professions-liberales": 5, "vie-locale": 5 };
+const CONCEPTS = [...CONCEPTS_100, ...require("../docs/footer-v2/concepts/concepts-quotidien.json").concepts, ...require("../docs/footer-v2/concepts/concepts-carre.json").concepts];   // 100 concepts + 25 « sites du quotidien » + 60 « carrés »
+const FAMILLE_DE_CONCEPT = { "Corporate et institutions": "corporate-institutions", "Finance et assurance": "finance-assurance", "SaaS, tech et startup": "saas-tech-startup", "E-commerce, mode et luxe": "ecommerce-mode-luxe", "Médias et éditorial": "medias", "Agences, portfolios et art": "agences-portfolios-art", "Restauration, hôtellerie et tourisme": "restauration-hotellerie-tourisme", "Immobilier et architecture": "immobilier-architecture", "Éducation et université": "education-universite", "Santé et bien-être": "sante-bienetre", "Culture et événementiel": "culture-evenementiel", "Associatif et ONG": "associatif-ong", "Automobile, sport et mobilité": "auto-sport-mobilite", "Minimalisme et expérimentation": "minimalisme-experimental", "Artisans et bâtiment": "artisans-batiment", "Commerces de proximité": "commerce-proximite", "Services à la personne": "services-personne", "Professions libérales": "professions-liberales", "Vie locale et associations": "vie-locale", "Entreprises et PME": "pme-entreprise", "Industrie et logistique": "industrie-logistique", "Conseil et services aux entreprises": "conseil-b2b", "Services informatiques": "services-informatiques", "Énergie et environnement": "energie-environnement", "Transport et déménagement": "transport-demenagement", "Agriculture et agroalimentaire": "agri-agroalimentaire", "Recrutement et formation": "recrutement-formation", "Cliniques et laboratoires": "cliniques-laboratoires", "Boutique en ligne standard": "boutique-en-ligne", "Blogs et actualités": "blog-actualites", "Sport et clubs": "sport-clubs" };
+const CIBLE = { "corporate-institutions": 8, "finance-assurance": 6, "saas-tech-startup": 9, "ecommerce-mode-luxe": 9, medias: 8, "agences-portfolios-art": 11, "restauration-hotellerie-tourisme": 8, "immobilier-architecture": 7, "education-universite": 6, "sante-bienetre": 6, "culture-evenementiel": 6, "associatif-ong": 6, "auto-sport-mobilite": 5, "minimalisme-experimental": 5, "artisans-batiment": 5, "commerce-proximite": 5, "services-personne": 5, "professions-liberales": 5, "vie-locale": 5, "pme-entreprise": 5, "industrie-logistique": 5, "conseil-b2b": 5, "services-informatiques": 5, "energie-environnement": 5, "transport-demenagement": 5, "agri-agroalimentaire": 5, "recrutement-formation": 5, "cliniques-laboratoires": 5, "boutique-en-ligne": 5, "blog-actualites": 5, "sport-clubs": 5 };
 const walk = (list, fn, depth = 0) => { for (const n of list || []) { fn(n, depth); if (n && n.children) walk(n.children, fn, depth + 1); } };
 const KNOWN_TYPES = new Set(nodes.editorSpec().types.map((t) => t.type));
 const ROUTES = new Set(Kit.LIENS_PLATEFORME);
@@ -45,8 +45,8 @@ function simulerFamilles({ construites = true } = {}) {
   });
 }
 
-describe("Pied v2 : les 19 familles", () => {
-  test("19 modules, un fichier par famille, forme { key, label, description ≤ 280, target, built, models }, cibles = 125, aucune clé commune avec les 15 familles actuelles", () => {
+describe("Pied v2 : les 31 familles", () => {
+  test("31 modules, un fichier par famille, forme { key, label, description ≤ 280, target, built, models }, cibles = 185, aucune clé commune avec les 15 familles actuelles", () => {
     const dir = path.join(__dirname, "../src/themeBuilder/catalog/footer/v2/familles");
     const fichiers = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => f.replace(/\.js$/, "")).sort();
     assert.deepEqual(fichiers, Object.keys(CIBLE).sort());
@@ -61,12 +61,12 @@ describe("Pied v2 : les 19 familles", () => {
       assert.ok(!Footer.FAMILLES_CLES.includes(k), `${k} ne doit pas réutiliser la clé d'une famille actuelle`);
       total += f.target;
     }
-    assert.equal(total, 125);
+    assert.equal(total, 185);
   });
-  test("les cibles sont celles de CONCEPTS_100.md : nombre de concepts par famille, ordre 1 à 125", () => {
+  test("les cibles sont celles de CONCEPTS_100.md : nombre de concepts par famille, ordre 1 à 185", () => {
     const parFamille = {}; for (const c of CONCEPTS) parFamille[FAMILLE_DE_CONCEPT[c.famille]] = (parFamille[FAMILLE_DE_CONCEPT[c.famille]] || 0) + 1;
     assert.deepEqual(parFamille, CIBLE);
-    assert.deepEqual(CONCEPTS.map((c) => c.ordre), Array.from({ length: 125 }, (_, i) => i + 1));
+    assert.deepEqual(CONCEPTS.map((c) => c.ordre), Array.from({ length: 185 }, (_, i) => i + 1));
     for (const k of V2.FAMILLES_V2_CLES) { const f = require(`../src/themeBuilder/catalog/footer/v2/familles/${k}`); assert.ok(CONCEPTS.some((c) => c.famille === f.label), `libellé « ${f.label} » = famille de concept`); }
   });
 });
@@ -74,7 +74,7 @@ describe("Pied v2 : les 19 familles", () => {
 describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de liste vide)", () => {
   const anciensActuels = actuels.layouts.map((l) => l.fullKey);
   test("état courant : tant que les 14 familles ne sont pas toutes construites, la liste publique est exactement la liste actuelle (aucun modèle v2)", () => {
-    assert.equal(V2.toutesConstruites, V2.familles.every((f) => f.built) && V2.total === 125);
+    assert.equal(V2.toutesConstruites, V2.familles.every((f) => f.built) && V2.total === 185);
     if (V2.toutesConstruites) return; // état final : couvert par le test suivant
     const base = Footer.integrerV2(actuels, V2, { apercu: false });
     assert.equal(base.v2.mode, "actuel");
@@ -89,13 +89,13 @@ describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de li
     const r = Footer.integrerV2(actuels, v2, { apercu: false });
     assert.equal(r.v2.mode, "actuel"); assert.deepEqual(r.layouts.map((l) => l.fullKey), anciensActuels);
   });
-  test("19 familles construites (simulation, 125 modèles) : la liste ne contient QUE les 125 v2 ; les 100 modèles actuels et les anciens restent OUVRABLES (masqués) ; aucun alias mort", () => {
+  test("31 familles construites (simulation, 185 modèles) : la liste ne contient QUE les 185 v2 ; les 100 modèles actuels et les anciens restent OUVRABLES (masqués) ; aucun alias mort", () => {
     const v2 = V2.assemble({ familles: simulerFamilles() });
-    assert.equal(v2.total, 125); assert.equal(v2.toutesConstruites, true);
+    assert.equal(v2.total, 185); assert.equal(v2.toutesConstruites, true);
     const r = Footer.integrerV2(actuels, v2, { apercu: false, aliasV2: {} });
     assert.equal(r.v2.mode, "v2");
-    assert.equal(r.layouts.length, 125); assert.ok(r.layouts.every((l) => l.v2 && /^ft2-/.test(l.fullKey)), "uniquement des v2");
-    assert.equal(r.anciensListes, 0); assert.equal(r.nouveaux, 125);
+    assert.equal(r.layouts.length, 185); assert.ok(r.layouts.every((l) => l.v2 && /^ft2-/.test(l.fullKey)), "uniquement des v2");
+    assert.equal(r.anciensListes, 0); assert.equal(r.nouveaux, 185);
     const listes = new Set(r.layouts.map((l) => l.fullKey));
     for (const l of r.hiddenLayouts) assert.ok(!listes.has(l.fullKey), `${l.fullKey} listé ET masqué`);
     const cachees = new Set(r.hiddenLayouts.map((l) => l.fullKey));
@@ -111,7 +111,7 @@ describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de li
   });
   test("mode d'essai (FOOTER_V2_APERCU) : les modèles v2 écrits sont AJOUTÉS à la liste actuelle (jamais un remplacement)", () => {
     const r = Footer.integrerV2(actuels, V2, { apercu: true });
-    if (V2.toutesConstruites) { assert.equal(r.v2.mode, "v2", "bibliothèque complète : bascule sur les 125 modèles v2"); assert.equal(r.layouts.length, 125); }
+    if (V2.toutesConstruites) { assert.equal(r.v2.mode, "v2", "bibliothèque complète : bascule sur les 185 modèles v2"); assert.equal(r.layouts.length, 185); }
     else if (V2.nouveaux.length) {
       assert.equal(r.v2.mode, "apercu"); assert.equal(r.layouts.length, anciensActuels.length + V2.nouveaux.length);
       assert.deepEqual(r.layouts.slice(0, anciensActuels.length).map((l) => l.fullKey), anciensActuels);
@@ -200,12 +200,12 @@ describe("Pied v2 : chaque modèle écrit (paramétré)", () => {
     const cur = actuels.layouts.filter((l) => !l.legacy).map((l) => ({ k: l.fullKey, t: Emp.jetons({ type: "layout", children: withIds(l.build(kit(actuels.skins.find((s) => s.key === l.skin)), {})) }) }));
     for (const a of t) for (const b of cur) assert.ok(Emp.similarite(a.t, b.t) <= Emp.SEUIL_SIMILARITE, `${a.k} ≈ ${b.k} (modèle actuel) : ${Emp.similarite(a.t, b.t).toFixed(2)}`);
   });
-  test("état final (19 familles construites) : exactement 125 modèles, répartition = cible, un modèle par concept", () => {
-    if (!V2.toutesConstruites) { assert.ok(V2.total < 125 || V2.familles.some((f) => !f.built)); return; }
-    assert.equal(modelesV2.length, 125);
+  test("état final (31 familles construites) : exactement 185 modèles, répartition = cible, un modèle par concept", () => {
+    if (!V2.toutesConstruites) { assert.ok(V2.total < 185 || V2.familles.some((f) => !f.built)); return; }
+    assert.equal(modelesV2.length, 185);
     const parFam = {}; for (const e of modelesV2) parFam[e.family] = (parFam[e.family] || 0) + 1;
     assert.deepEqual(parFam, CIBLE);
-    assert.equal(new Set(modelesV2.map((e) => e.model.concept)).size, 125);
+    assert.equal(new Set(modelesV2.map((e) => e.model.concept)).size, 185);
   });
 });
 
@@ -217,7 +217,7 @@ describe("Pied v2 : le kit (identité, modèle, gestes)", () => {
     const fichiers = fs.readdirSync(path.join(__dirname, "../public/fonts/library"));
     assert.ok(fichiers.length > 1000, "bibliothèque locale de polices");
   });
-  test("polices des 125 concepts : toutes disponibles dans la bibliothèque (liste documentée dans le guide)", () => {
+  test("polices des 185 concepts : toutes disponibles dans la bibliothèque (liste documentée dans le guide)", () => {
     for (const c of CONCEPTS) for (const n of [c.typographies.titre, c.typographies.corps, c.typographies.accent].filter(Boolean)) assert.ok(fontLib.byName(n.toLowerCase()), `${c.id} : police « ${n} » absente`);
   });
   test("identite() : jetons --ft-* complets, contraste AA vérifié (erreur sinon), texte discret relevé s'il est trop pâle sur la surface", () => {

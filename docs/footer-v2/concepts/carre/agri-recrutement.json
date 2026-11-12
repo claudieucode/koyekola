@@ -1,0 +1,254 @@
+{
+  "concepts": [
+    {
+      "id": "c-156-registre-de-la-ferme",
+      "ordre": 156,
+      "nom": "Registre de la ferme",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "exploitation agricole",
+      "directionArtistique": {
+        "texte": "Pour une exploitation agricole : phrase en capitales sur sol brun, quatre parcelles numérotées à angles droits qui dorent leur filet au survol, horaires, contact et lettre d'information. Terre et blé, net et sobre."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "exploitation agricole",
+        "ferme",
+        "parcelles",
+        "vente à la ferme",
+        "brun",
+        "blé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-157-cercle-des-adherents",
+      "ordre": 157,
+      "nom": "Cercle des adhérents",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "coopérative agricole",
+      "directionArtistique": {
+        "texte": "Pour une coopérative agricole : phrase en serif bordée d'une barre verte, trois lignes d'accès (espace adhérent, devenir client ou fournisseur, actualités) qui glissent au survol, puis bande verte avec horaires, contact et lettre."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coopérative",
+        "adhérents",
+        "agriculture",
+        "espace adhérent",
+        "vert forêt",
+        "institutionnel",
+        "serif"
+      ]
+    },
+    {
+      "id": "c-158-etiquette-du-producteur",
+      "ordre": 158,
+      "nom": "Étiquette du producteur",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "producteur en vente directe",
+      "directionArtistique": {
+        "texte": "Pour un producteur en vente directe : « Direct du champ. » centré en grandes capitales, trois étiquettes carrées à entête tomate (paniers, marchés, commande) qui se soulèvent au survol, bande tomate avec horaires, contact et lettre."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "producteur",
+        "vente directe",
+        "paniers",
+        "marché",
+        "circuit court",
+        "tomate",
+        "étiquettes"
+      ]
+    },
+    {
+      "id": "c-159-etiquette-de-cuvee",
+      "ordre": 159,
+      "nom": "Étiquette de cuvée",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "vigneron",
+      "directionArtistique": {
+        "texte": "Pour un vigneron : cartouche à double filet façon étiquette de bouteille, index en chiffres romains (cuvées, visite, caveau, commande) qui glisse au survol, puis horaires du caveau, contact et lettre. Bordeaux, ivoire et cuivre."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vigneron",
+        "domaine viticole",
+        "cuvées",
+        "dégustation",
+        "caveau",
+        "bordeaux",
+        "cuivre"
+      ]
+    },
+    {
+      "id": "c-160-fiche-technique",
+      "ordre": 160,
+      "nom": "Fiche technique",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "transformation agroalimentaire",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de transformation agroalimentaire : filet de contrôle coloré, phrase en police mono, tableau de quatre cellules à filets fins (qualité, traçabilité, catalogue, espace pro), boutons pros, contact et bande bleu nuit."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agroalimentaire",
+        "transformation",
+        "industrie alimentaire",
+        "professionnels",
+        "fiche technique",
+        "bleu nuit",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-161-quatre-etapes",
+      "ordre": 161,
+      "nom": "Quatre étapes",
+      "famille": "Recrutement et formation",
+      "secteur": "cabinet de recrutement",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de recrutement : phrase nette, deux boutons francs (déposer une offre, candidater), quatre étapes numérotées à filet qui devient cobalt au survol, bande bleu nuit avec contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cabinet de recrutement",
+        "recrutement",
+        "étapes numérotées",
+        "offre",
+        "candidature",
+        "cobalt",
+        "blanc"
+      ]
+    },
+    {
+      "id": "c-162-mission-suivante",
+      "ordre": 162,
+      "nom": "Mission suivante",
+      "famille": "Recrutement et formation",
+      "secteur": "agence d'intérim",
+      "directionArtistique": {
+        "texte": "Pour une agence d'intérim : bloc jaune « On vous place. » avec deux gros boutons noirs (chercher une mission, recruter), trois pas numérotés, puis bande noire avec agence, horaires, métiers et lettre."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "agence d'emploi",
+        "mission",
+        "candidats",
+        "entreprises",
+        "jaune",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-163-catalogue-des-formations",
+      "ordre": 163,
+      "nom": "Catalogue des formations",
+      "famille": "Recrutement et formation",
+      "secteur": "organisme de formation professionnelle",
+      "directionArtistique": {
+        "texte": "Pour un organisme de formation professionnelle : « Se former, c'est avancer. », deux boutons, sommaire de cinq domaines numérotés qui blanchissent au survol, puis bande sapin avec horaires, contact et lettre d'information."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "organisme de formation",
+        "formation professionnelle",
+        "catalogue",
+        "stages",
+        "vert d'eau",
+        "orange",
+        "sommaire"
+      ]
+    },
+    {
+      "id": "c-164-escalier-de-niveaux",
+      "ordre": 164,
+      "nom": "Escalier de niveaux",
+      "famille": "Recrutement et formation",
+      "secteur": "centre de compétences",
+      "directionArtistique": {
+        "texte": "Pour un centre de compétences : phrase « Montez d'un niveau. », deux boutons, trois marches de hauteurs croissantes avec jauge (découvrir, pratiquer, maîtriser) qui s'éclairent au survol, puis contact, horaires et lettre. Indigo et citron."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre de compétences",
+        "montée en compétences",
+        "niveaux",
+        "parcours",
+        "indigo",
+        "citron",
+        "escalier"
+      ]
+    },
+    {
+      "id": "c-165-rendez-vous-de-carriere",
+      "ordre": 165,
+      "nom": "Rendez-vous de carrière",
+      "famille": "Recrutement et formation",
+      "secteur": "coaching professionnel",
+      "directionArtistique": {
+        "texte": "Pour un coach professionnel : phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs, trois colonnes à filets (bilan, prise de poste, transition) qui prennent la couleur terracotta au survol, contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coaching professionnel",
+        "bilan de carrière",
+        "prise de poste",
+        "transition",
+        "pierre",
+        "terracotta",
+        "serif"
+      ]
+    }
+  ]
+}
