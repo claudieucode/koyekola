@@ -50,9 +50,9 @@ function cartouche(k, enfants, o) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-161 « Quatre étapes » — cabinet de recrutement
-// Idée : la MÉTHODE en quatre étapes numérotées (brief, recherche, entretiens, intégration), chiffres géants cobalt sur fond blanc ; chaque étape a un filet noir qui devient cobalt et un fond bleu très pâle
-// au survol ; deux boutons francs (déposer une offre, envoyer sa candidature) ; bande bleu nuit pour contact, horaires et lettre. Polices : Sora (titres) et Inter.
+// ft2-161 « Quatre étapes » — cabinet de recrutement · archétype I (frise horizontale en étapes à points carrés)
+// Idée : la MÉTHODE est une FRISE. Une bande cobalt plein bord porte un rail blanc qui relie quatre points carrés ; les étapes (brief, recherche, entretiens, intégration) se lisent le long du rail
+// et leur titre glisse au survol. Au-dessus, une phrase sobre ; en dessous, une bande bleu nuit : deux boutons francs, contact et lettre (pas d'horaires). Polices : Sora (titres) et Inter.
 const cabinet = identite({
   key: "c161", label: "Blanc, cobalt et bleu nuit", humeur: "light",
   fond: "#ffffff", texte: "#0b1630", discret: "#46536b", accent: "#1d3fd1", surface: "#eef2ff", encre: "#ffffff",
@@ -64,41 +64,44 @@ const BLANC = "#ffffff", ENCRE = "#0b1630", COBALT = "#1d3fd1", PALE = "#eef2ff"
 const quatreEtapes = modeleV2({
   id: identifiantV2(161, "quatre-etapes"), concept: "c-161-quatre-etapes",
   name: "Quatre étapes", family: FAM,
-  description: "Pour un cabinet de recrutement : phrase nette, deux boutons francs (déposer une offre, candidater), quatre étapes numérotées à filet qui devient cobalt au survol, bande bleu nuit avec contact, horaires et lettre.",
-  tags: ["cabinet de recrutement", "recrutement", "étapes numérotées", "offre", "candidature", "cobalt", "blanc"],
+  description: "Pour un cabinet de recrutement : une frise cobalt en quatre étapes reliées par un rail à points carrés (brief, recherche, entretiens, intégration), deux boutons francs, contact et lettre sur bande bleu nuit.",
+  tags: ["cabinet de recrutement", "recrutement", "frise", "étapes", "offre", "candidature", "cobalt", "blanc"],
   identity: cabinet,
   racine: racineDe(ENCRE, "#ffffff"),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>Le bon profil,<br><span style="color:${COBALT}">en quatre étapes.</span></p>`, { taille: [40, 96], tablette: { taille: [60, 84] }, mobile: { taille: [38, 52] }, lh: 1.05, suivi: "-0.03em", poids: "800", police: S.head, couleur: ENCRE })(k, env);
-    const gauche = G.colonne(k, [caps(k, "Cabinet de recrutement", { couleur: COBALT, suivi: "0.2em" }), phrase], { poids: 8, min: "300px", gap: "18px" });
+    const phrase = G.geant(`<p>Le bon profil, <span style="color:${COBALT}">en quatre étapes.</span></p>`, { taille: [30, 58], tablette: { taille: [38, 50] }, mobile: { taille: [30, 38] }, lh: 1.08, suivi: "-0.03em", poids: "800", police: S.head, couleur: ENCRE })(k, env);
+    const haut = G.bande(k, [caps(k, "Cabinet de recrutement · notre méthode", { couleur: COBALT, suivi: "0.2em" }), phrase], { fond: BLANC, colonne: true, gap: "14px", padV: ["64px", "52px", "40px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "Titre" });
+    // Frise : chaque étape = un point carré blanc suivi d'un segment de rail, puis son titre et son texte ; le rail est continu d'un bord à l'autre
+    const etape = (n, titre, sous, decale) => {
+      const rail = k.row([k.col([], { width: "22px", height: "22px", backgroundColor: BLANC, flexShrink: 0, borderRadius: "0px" }), k.col([], { flexGrow: 1, flexBasis: "0px", height: "3px", backgroundColor: "#ffffff80", borderRadius: "0px" })], { gap: "0px", flexWrap: "nowrap", alignItems: "center", width: "100%" });
+      const t = lien(k, titre, "/contact", { taille: 24, poids: "800", police: S.head, bloc: true, couleur: BLANC, survol: { color: CIEL, transform: { x: 6 } }, focus: BLANC });
+      const c = k.col([k.T(`<p>Étape ${n}</p>`, { fontFamily: S.head, fontSize: "12px", fontWeight: "700", color: "#e3eaff", textTransform: "uppercase", letterSpacing: "0.16em" }), t, k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: "#dfe6ff", fontFamily: S.font })], { gap: "8px", paddingRight: "28px" });
+      return k.col([rail, c], { gap: "20px", flexGrow: 1, flexBasis: "0px", minWidth: "220px", paddingTop: decale ? "56px" : "0px", transitionDuration: 360 }, { paddingTop: "0px" });
+    };
+    const frise = k.row([etape(1, "Brief", "Nous cernons le poste, l'équipe et ce qui compte vraiment.", false), etape(2, "Recherche", "Approche directe et réseau pour trouver les bons profils.", false), etape(3, "Entretiens", "Une sélection argumentée, présentée sans jargon.", false), etape(4, "Intégration", "Un suivi après l'arrivée pour que la collaboration prenne.", false)], { rowGap: "32px", columnGap: "0px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" });
+    const bandeFrise = G.bande(k, [frise], { fond: COBALT, colonne: true, padV: ["72px", "56px", "44px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Frise" });
     const boutons = k.col([
-      btn(k, "Déposer une offre", "/contact", { texte: "#ffffff", fond: COBALT, survolFond: ENCRE, survolTexte: "#ffffff", focus: ENCRE, extra: { width: "100%" } }),
-      btn(k, "Envoyer sa candidature", "/contact", { texte: ENCRE, fond: undefined, bord: ENCRE, survolFond: ENCRE, survolTexte: "#ffffff", focus: COBALT, extra: { width: "100%" } }),
-    ], { gap: "12px", width: "100%", maxWidth: "340px" });
-    const droite = G.colonne(k, [boutons], { poids: 4, min: "280px", soi: "flex-end" });
-    const haut = G.bande(k, [gauche, droite], { fond: BLANC, gap: "36px 64px", aligne: "flex-end", padV: ["88px", "72px", "48px"], padB: ["56px", "44px", "36px"], padH: ["48px", "32px", "20px"], nom: "Méthode" });
-    const etape = (n, titre, sous) => cartouche(k, [k.T(`<p>${n}</p>`, { fontFamily: S.head, fontSize: "56px", fontWeight: "800", color: COBALT, lineHeight: 1, letterSpacing: "-0.04em" }), k.T(`<p>${titre}</p>`, { fontFamily: S.head, fontSize: "20px", fontWeight: "700", color: ENCRE, lineHeight: 1.2 }), k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })], { fond: BLANC, bord: "#0b163026", bordHaut: ENCRE, haut: "4px", survolFond: PALE, survolBord: "#0b163026", survolHaut: COBALT, hauteur: "210px", min: "220px", leve: -4 });
-    const etapes = G.ligne(k, [etape("01", "Brief", "Nous cernons le poste, l'équipe et ce qui compte vraiment."), etape("02", "Recherche", "Approche directe et réseau pour trouver les bons profils."), etape("03", "Entretiens", "Une sélection argumentée, présentée sans jargon."), etape("04", "Intégration", "Un suivi après l'arrivée pour que la collaboration prenne.")], { gap: "0px", aligne: "stretch", largeur: "100%" });
-    const bandeE = G.bande(k, [etapes], { fond: BLANC, colonne: true, padV: ["8px", "8px", "4px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Étapes" });
-    const titreH = k.row([souffle(carre(k, CIEL), 2800), caps(k, "Horaires", { couleur: CIEL })], { gap: "10px", alignItems: "center" });
-    const colH = G.colonne(k, [titreH, horaires(k, { taille: 15, couleur: "#ffffff" })], { poids: 1.1, min: "240px", gap: "14px" });
-    const colC = bloc(k, "Nous contacter", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: CIEL, focus: CIEL })], { couleurTitre: CIEL, poids: 1.1 });
-    const colL = bloc(k, "Liens utiles", [["Accueil", "/"], ["Conseils et actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace candidat", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", couleur: "#ffffff", survol: { color: CIEL, transform: { x: 4 } }, focus: CIEL })), { couleurTitre: CIEL, gap: "0px", min: "200px" });
-    const colN = lettre(k, env, G, { titre: "Offres et conseils", intro: "Les postes à pourvoir et nos conseils de carrière, par courriel.", accent: CIEL, texte: "#ffffff", survolBouton: "#ffffff", survolTexte: ENCRE, couleurTitre: CIEL, surBouton: ENCRE });
-    const grille = G.ligne(k, [colH, colC, colL, colN], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+      btn(k, "Déposer une offre", "/contact", { texte: ENCRE, fond: BLANC, survolFond: CIEL, survolTexte: ENCRE, focus: CIEL, extra: { width: "100%" } }),
+      btn(k, "Envoyer sa candidature", "/contact", { texte: "#ffffff", fond: undefined, bord: "#ffffff", survolFond: "#ffffff", survolTexte: ENCRE, focus: CIEL, extra: { width: "100%" } }),
+    ], { gap: "12px", width: "100%", maxWidth: "320px" });
+    const colB = G.colonne(k, [boutons], { poids: 3, min: "260px" });
+    const colC = bloc(k, "Nous contacter", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: CIEL, focus: CIEL })], { couleurTitre: CIEL, poids: 3, min: "240px" });
+    const colN = lettre(k, env, G, { titre: "Offres et conseils", intro: "Les postes à pourvoir et nos conseils de carrière, par courriel.", accent: CIEL, texte: "#ffffff", survolBouton: "#ffffff", survolTexte: ENCRE, couleurTitre: CIEL, surBouton: ENCRE, poids: 4 });
+    const ligneB = G.ligne(k, [colB, colC, colN], { gap: "36px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b9c3d9", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [grille, trait(k, "#ffffff40"), mentions], { fond: ENCRE, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Bande bleu nuit" });
+    const bas = G.bande(k, [ligneB, trait(k, "#ffffff40"), mentions], { fond: ENCRE, colonne: true, gap: "36px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Bande bleu nuit" });
     bas.styles.desktop.color = "#ffffff"; // la ligne légale de la plateforme reprend la couleur de la dernière bande
-    return [G.racine(k, [haut, bandeE, bas])];
+    return [G.racine(k, [haut, bandeFrise, bas])];
   },
 }, FAM);
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-162 « Mission suivante » — agence d'intérim
-// Idée : un pied de CHANTIER, jaune sécurité et noir. Grand bloc jaune « On vous place. » (capitales Oswald) avec deux gros boutons noirs (je cherche une mission, je recrute), une bande blanche de trois
-// pas numérotés (m'inscrire, rencontrer l'agence, commencer) puis un bas noir : agence (horaires, contact), métiers, lettre. Le carré jaune des horaires « respire ». Polices : Oswald (titres) et Public Sans.
+// ft2-162 « Mission suivante » — agence d'intérim · archétype F (bandeau d'appel XXL + liens en une colonne étroite à droite)
+// Idée : un pied de CHANTIER, jaune sécurité et noir. Un bandeau jaune XXL : « ON VOUS PLACE. » sur toute la largeur et deux immenses blocs d'appel noirs (je cherche une mission, je recrute). Dessous, une bande
+// noire asymétrique : l'agence (horaires et adresse) à gauche, et à droite UNE colonne étroite de liens à filets (métiers, espace candidat) qui avancent au survol. Pas de lettre d'information.
+// Le carré jaune des horaires « respire ». Polices : Oswald (titres) et Public Sans.
 const interim = identite({
   key: "c162", label: "Jaune sécurité et noir", humeur: "dark",
   fond: "#111111", texte: "#ffffff", discret: "#c9c9c9", accent: "#ffd400", surface: "#1d1d1d", encre: "#111111", surEncre: "#ffffff",
@@ -110,44 +113,42 @@ const JAUNE = "#ffd400", NOIR = "#111111", NOIR2 = "#1d1d1d";
 const missionSuivante = modeleV2({
   id: identifiantV2(162, "mission-suivante"), concept: "c-162-mission-suivante",
   name: "Mission suivante", family: FAM,
-  description: "Pour une agence d'intérim : bloc jaune « On vous place. » avec deux gros boutons noirs (chercher une mission, recruter), trois pas numérotés, puis bande noire avec agence, horaires, métiers et lettre.",
-  tags: ["intérim", "agence d'emploi", "mission", "candidats", "entreprises", "jaune", "noir"],
+  description: "Pour une agence d'intérim : un bandeau jaune XXL « On vous place. » avec deux immenses blocs d'appel noirs (chercher une mission, recruter), puis une bande noire avec l'agence à gauche et une colonne étroite de liens à droite.",
+  tags: ["intérim", "agence d'emploi", "mission", "candidats", "entreprises", "bandeau", "jaune", "noir"],
   identity: interim,
   racine: racineDe(NOIR),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>On vous<br>place.</p>`, { taille: [64, 176], tablette: { taille: [104, 150] }, mobile: { taille: [64, 100] }, lh: 0.98, suivi: "-0.01em", poids: "700", police: S.head, couleur: NOIR, extra: { textTransform: "uppercase" } })(k, env);
-    const gauche = G.colonne(k, [caps(k, "Agence d'intérim", { couleur: NOIR, suivi: "0.22em" }), phrase], { poids: 7, min: "300px", gap: "16px" });
-    const boutons = k.col([
-      btn(k, "Je cherche une mission  →", "/contact", { texte: JAUNE, fond: NOIR, survolFond: "#ffffff", survolTexte: NOIR, bord: NOIR, focus: "#ffffff", h: "64px", taille: 18, casse: "uppercase", suivi: "0.06em", extra: { width: "100%", justifyContent: "space-between" } }),
-      btn(k, "Je recrute  →", "/contact", { texte: NOIR, fond: undefined, bord: NOIR, survolFond: NOIR, survolTexte: JAUNE, focus: "#ffffff", h: "64px", taille: 18, casse: "uppercase", suivi: "0.06em", extra: { width: "100%", justifyContent: "space-between" } }),
-    ], { gap: "12px", width: "100%", maxWidth: "420px" });
-    const droite = G.colonne(k, [k.T("<p>Une mission, un contrat, un renfort : dites-nous ce que vous cherchez, une conseillère ou un conseiller vous rappelle.</p>", { fontSize: "16px", lineHeight: 1.55, color: NOIR, fontFamily: S.font, maxWidth: "420px" }), boutons], { poids: 5, min: "290px", gap: "20px", soi: "flex-end" });
-    const haut = G.bande(k, [gauche, droite], { fond: JAUNE, gap: "36px 64px", aligne: "flex-end", padV: ["80px", "64px", "44px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "On vous place" });
-    const pas = (n, t) => {
-      const c = k.row([k.T(`<p>${n}</p>`, { fontFamily: S.head, fontSize: "44px", fontWeight: "700", color: NOIR, lineHeight: 1 }), k.T(`<p>${t}</p>`, { fontFamily: S.head, fontSize: "22px", fontWeight: "500", color: NOIR, textTransform: "uppercase", letterSpacing: "0.02em" })], { flexWrap: "nowrap", alignItems: "center", gap: "16px", flexGrow: 1, flexBasis: "0px", minWidth: "220px", paddingTop: "22px", paddingBottom: "22px", paddingLeft: "20px", paddingRight: "20px", backgroundColor: "#ffffff", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "6px", borderColor: NOIR, borderRadius: "0px", transitionDuration: 340 });
-      c.states = { hover: { backgroundColor: JAUNE, borderColor: NOIR, transform: { y: -3 } } };
-      return c;
+    const phrase = G.geant(`<p>On vous place.</p>`, { taille: [64, 200], tablette: { taille: [110, 160] }, mobile: { taille: [60, 84] }, lh: 0.95, suivi: "-0.01em", poids: "700", police: S.head, couleur: NOIR, extra: { textTransform: "uppercase" } })(k, env);
+    const appel = (txt, url, plein) => {
+      const n = btn(k, `${txt}  →`, url, { texte: plein ? JAUNE : NOIR, fond: plein ? NOIR : undefined, bord: NOIR, survolFond: plein ? "#ffffff" : NOIR, survolTexte: plein ? NOIR : JAUNE, focus: "#ffffff", h: "96px", taille: 26, casse: "uppercase", suivi: "0.04em", padH: "28px", extra: { width: "100%", justifyContent: "space-between", fontFamily: S.head, borderWidth: "3px" } });
+      return G.colonne(k, [n], { poids: 1, min: "280px", extra: { alignItems: "stretch" } });
     };
-    const pasLigne = G.ligne(k, [pas("1", "Je m'inscris"), pas("2", "On se rencontre"), pas("3", "Je commence")], { gap: "0px", aligne: "stretch", largeur: "100%" });
-    const bandePas = G.bande(k, [pasLigne], { fond: "#ffffff", colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Trois pas" });
+    const appels = k.row([appel("Je cherche une mission", "/contact", true), appel("Je recrute", "/contact", false)], { gap: "16px", alignItems: "stretch", width: "100%", flexWrap: "wrap" });
+    const haut = G.bande(k, [caps(k, "Agence d'intérim", { couleur: NOIR, suivi: "0.24em" }), phrase, appels], { fond: JAUNE, colonne: true, gap: "20px", padV: ["72px", "56px", "40px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "Bandeau XXL" });
     const titreH = k.row([souffle(carre(k, JAUNE), 2600), caps(k, "L'agence", { couleur: JAUNE })], { gap: "10px", alignItems: "center" });
-    const colH = G.colonne(k, [titreH, horaires(k, { taille: 15 })], { poids: 1.2, min: "240px", gap: "14px" });
-    const colC = bloc(k, "Nous trouver", [coordonnees(k, { taille: 15, lien: "#ffffff", survol: JAUNE, focus: JAUNE })], { couleurTitre: JAUNE, poids: 1.2 });
-    const colM = bloc(k, "Nos métiers", [["Logistique", "/blog"], ["Bâtiment", "/blog"], ["Industrie", "/blog"], ["Bureau et accueil", "/blog"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", survol: { color: JAUNE, transform: { x: 6 } }, focus: JAUNE })), { couleurTitre: JAUNE, gap: "0px", min: "180px" });
-    const colN = lettre(k, env, G, { titre: "Les missions du moment", intro: "Les offres à pourvoir, par courriel.", accent: JAUNE, survolBouton: "#ffffff", survolTexte: NOIR, couleurTitre: JAUNE, surBouton: NOIR });
-    const grille = G.ligne(k, [colH, colC, colM, colN], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const colH = G.colonne(k, [titreH, horaires(k, { taille: 16 })], { poids: 1, min: "240px", gap: "14px" });
+    const colC = bloc(k, "Nous trouver", [coordonnees(k, { taille: 16, lien: "#ffffff", survol: JAUNE, focus: JAUNE })], { couleurTitre: JAUNE, poids: 1, min: "240px" });
+    const agence = G.ligne(k, [colH, colC], { gap: "32px 40px", aligne: "flex-start", largeur: "100%" });
+    const gauche = G.colonne(k, [k.T("<p>Une mission, un contrat, un renfort : dites-nous ce que vous cherchez, une conseillère ou un conseiller vous rappelle.</p>", { fontSize: "17px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "520px" }), agence], { poids: 3, min: "300px", gap: "32px" });
+    const ligneLien = (t, u) => {
+      const l = lien(k, t, u, { taille: 22, poids: "500", police: S.head, bloc: true, h: "56px", survol: { color: JAUNE, transform: { x: 8 } }, focus: JAUNE, extra: { textTransform: "uppercase", letterSpacing: "0.03em", width: "100%" } });
+      const r = k.row([l, k.T("<p>→</p>", { color: JAUNE, fontSize: "20px", fontFamily: S.font })], { flexWrap: "nowrap", justifyContent: "space-between", alignItems: "center", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#ffffff55", borderRadius: "0px", transitionDuration: 340 });
+      return r;
+    };
+    const etroite = G.colonne(k, [caps(k, "Nos métiers", { couleur: JAUNE, extra: { marginBottom: "8px" } }), ...[["Logistique", "/blog"], ["Bâtiment", "/blog"], ["Industrie", "/blog"], ["Bureau et accueil", "/blog"], ["Espace candidat", "/connexion"]].map(([t, u]) => ligneLien(t, u))], { poids: 0, base: "300px", min: "260px", gap: "0px", extra: { maxWidth: "340px", width: "100%" } });
+    const corps = G.bande(k, [gauche, etroite], { fond: NOIR, gap: "48px 96px", aligne: "flex-start", padV: ["64px", "52px", "44px"], padB: ["40px", "36px", "32px"], padH: ["48px", "32px", "20px"], nom: "Agence et liens" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line, "1px"), mentions], { fond: NOIR, colonne: true, gap: "40px", padV: ["64px", "52px", "44px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Agence" });
-    return [G.racine(k, [haut, bandePas, bas])];
+    const bas = G.bande(k, [trait(k, S.line, "1px"), mentions], { fond: NOIR, colonne: true, gap: "20px", padV: ["8px", "8px", "8px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [haut, corps, bas])];
   },
 }, FAM);
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-163 « Catalogue des formations » — organisme de formation professionnelle
-// Idée : un SOMMAIRE de catalogue. Fond vert d'eau, à gauche « Se former, c'est avancer. » et deux boutons (voir les formations, poser une question) ; à droite cinq lignes numérotées de domaines de formation
-// (exemples) séparées par des filets, qui blanchissent et dont la flèche avance au survol ; bande vert sapin pour horaires, contact et lettre. Aucun financement, aucune certification, aucun chiffre annoncé.
+// ft2-163 « Catalogue des formations » — organisme de formation professionnelle · archétype H (mosaïque asymétrique : une grande case + trois petites)
+// Idée : le pied est une MOSAÏQUE posée sur sapin. À gauche, une grande case vert d'eau porte « Se former, c'est avancer. » et deux boutons ; à droite, trois cases plus petites empilées : les domaines du
+// catalogue (liens), l'accueil orange (horaires et contact) et la lettre. Les cases se teintent au survol. Aucun financement, aucune certification, aucun chiffre annoncé.
 // Polices : Plus Jakarta Sans (titres) et Source Sans 3 (Bricolage Grotesque et Figtree sont déjà déclarées par landing.css avec des sous-ensembles non chargés : le test de chargement des polices les refuse).
 const formation = identite({
   key: "c163", label: "Vert d'eau, sapin et orange", humeur: "light",
@@ -155,37 +156,33 @@ const formation = identite({
   police: "font.source-sans-3", titres: "font.plus-jakarta-sans",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "700", bordure: "1px", ligne: "#0a3d3b40",
 });
-const EAU = "#e4f0ee", SAPIN = "#0a3d3b", SAPIN2 = "#072b2a", ORANGE = "#ff7a2f";
+const EAU = "#e4f0ee", SAPIN = "#0a3d3b", SAPIN2 = "#072b2a", SAPIN3 = "#0e4f4c", ORANGE = "#ff7a2f";
 
 const catalogueFormations = modeleV2({
   id: identifiantV2(163, "catalogue-des-formations"), concept: "c-163-catalogue-des-formations",
   name: "Catalogue des formations", family: FAM,
-  description: "Pour un organisme de formation professionnelle : « Se former, c'est avancer. », deux boutons, sommaire de cinq domaines numérotés qui blanchissent au survol, puis bande sapin avec horaires, contact et lettre d'information.",
-  tags: ["organisme de formation", "formation professionnelle", "catalogue", "stages", "vert d'eau", "orange", "sommaire"],
+  description: "Pour un organisme de formation professionnelle : une mosaïque asymétrique à angles droits, une grande case « Se former, c'est avancer. » avec deux boutons et trois petites cases (domaines, accueil orange avec horaires et contact, lettre).",
+  tags: ["organisme de formation", "formation professionnelle", "catalogue", "mosaïque", "vert d'eau", "orange", "sapin"],
   identity: formation,
   racine: racineDe(SAPIN2, "#ffffff"),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>Se former,<br>c'est <span style="color:#b04a0c">avancer.</span></p>`, { taille: [44, 104], tablette: { taille: [68, 90] }, mobile: { taille: [42, 58] }, lh: 1.02, suivi: "-0.03em", poids: "800", police: S.head, couleur: SAPIN })(k, env);
+    const phrase = G.geant(`<p>Se former,<br>c'est <span style="color:#b04a0c">avancer.</span></p>`, { taille: [44, 112], tablette: { taille: [70, 96] }, mobile: { taille: [42, 58] }, lh: 1.02, suivi: "-0.03em", poids: "800", police: S.head, couleur: SAPIN })(k, env);
     const mot = k.T("<p>Des formations pour les salariés, les équipes et les personnes en reconversion. Parlez-nous de votre besoin, on vous oriente.</p>", { fontSize: "17px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "440px" });
-    const boutons = k.row([btn(k, "Voir les formations", "/blog", { texte: SAPIN, fond: ORANGE, survolFond: SAPIN, survolTexte: "#ffffff", focus: SAPIN }), btn(k, "Poser une question", "/contact", { texte: SAPIN, fond: undefined, bord: SAPIN, survolFond: SAPIN, survolTexte: "#ffffff", focus: ORANGE })], { gap: "12px" });
-    const gauche = G.colonne(k, [caps(k, "Organisme de formation", { couleur: "#b04a0c", suivi: "0.2em" }), phrase, mot, boutons], { poids: 6, min: "300px", gap: "22px" });
-    const ligneDomaine = (num, titre, url) => {
-      const l = lien(k, titre, url, { taille: 22, poids: "700", police: S.head, bloc: true, couleur: SAPIN, h: "60px", survol: { color: "#b04a0c", transform: { x: 4 } }, focus: SAPIN, extra: { width: "100%" } });
-      const r = k.row([k.T(`<p>${num}</p>`, { fontFamily: S.head, fontSize: "16px", fontWeight: "700", color: "#b04a0c", minWidth: "40px" }), l, k.T("<p>→</p>", { color: SAPIN, fontSize: "22px", fontFamily: S.font })], { flexWrap: "nowrap", alignItems: "center", gap: "10px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#0a3d3b55", paddingLeft: "12px", paddingRight: "16px", borderRadius: "0px", transitionDuration: 360 });
-      r.states = { hover: { backgroundColor: "#ffffff", borderColor: SAPIN, paddingLeft: "22px" } };
-      return r;
-    };
-    const sommaire = G.colonne(k, [caps(k, "Sommaire · exemples de domaines", { couleur: SAPIN, extra: { marginBottom: "8px" } }), ligneDomaine("01", "Management et gestion", "/blog"), ligneDomaine("02", "Numérique et bureautique", "/blog"), ligneDomaine("03", "Santé et sécurité au travail", "/blog"), ligneDomaine("04", "Langues et communication", "/blog"), ligneDomaine("05", "Métiers techniques", "/blog")], { poids: 6, min: "300px", gap: "0px", soi: "flex-end", extra: { maxWidth: "560px" } });
-    const haut = G.bande(k, [gauche, sommaire], { fond: EAU, gap: "48px 72px", aligne: "flex-end", padV: ["88px", "72px", "48px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Catalogue" });
-    const titreH = k.row([souffle(carre(k, ORANGE), 2800), caps(k, "Accueil téléphonique et horaires", { couleur: ORANGE })], { gap: "10px", alignItems: "center" });
-    const colH = G.colonne(k, [titreH, horaires(k, { taille: 15, couleur: "#ffffff" })], { poids: 1.2, min: "240px", gap: "14px" });
-    const colC = bloc(k, "Nous contacter", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: ORANGE, focus: ORANGE })], { couleurTitre: ORANGE, poids: 1.2 });
-    const colN = lettre(k, env, G, { titre: "Nouvelles sessions", intro: "Les prochaines sessions et les nouveautés du catalogue, par courriel.", accent: ORANGE, texte: "#ffffff", survolBouton: "#ffffff", survolTexte: SAPIN, couleurTitre: ORANGE, surBouton: SAPIN });
-    const grille = G.ligne(k, [colH, colC, colN], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const boutons = k.row([btn(k, "Voir les formations", "/blog", { texte: SAPIN, fond: ORANGE, survolFond: SAPIN, survolTexte: "#ffffff", focus: SAPIN }), btn(k, "Poser une question", "/contact", { texte: SAPIN, fond: undefined, bord: SAPIN, survolFond: SAPIN, survolTexte: "#ffffff", focus: "#b04a0c" })], { gap: "12px" });
+    const pad = { paddingTop: "40px", paddingBottom: "40px", paddingLeft: "36px", paddingRight: "36px" };
+    const grande = k.col([caps(k, "Organisme de formation", { couleur: "#b04a0c", suivi: "0.2em" }), phrase, mot, boutons], { backgroundColor: EAU, gap: "22px", flexGrow: 6, flexBasis: "0px", minWidth: "300px", justifyContent: "flex-end", borderRadius: "0px", ...pad });
+    const petite = (fond, enfants, extra) => k.col(enfants, { backgroundColor: fond, gap: "12px", paddingTop: "26px", paddingBottom: "26px", paddingLeft: "28px", paddingRight: "28px", borderRadius: "0px", transitionDuration: 380, ...(extra || {}) });
+    const domaines = petite(SAPIN, [caps(k, "Domaines · exemples", { couleur: ORANGE }), k.col([["Management et gestion"], ["Numérique et bureautique"], ["Santé et sécurité au travail"], ["Langues et communication"], ["Métiers techniques"]].map(([t]) => lien(k, `${t}  →`, "/blog", { taille: 17, poids: "600", bloc: true, couleur: "#ffffff", survol: { color: ORANGE, transform: { x: 6 } }, focus: ORANGE })), { gap: "0px" })]);
+    domaines.states = { hover: { backgroundColor: SAPIN3 } };
+    const accueil = petite(ORANGE, [caps(k, "Accueil", { couleur: SAPIN }), horaires(k, { taille: 15, couleur: SAPIN }), coordonnees(k, { taille: 15, couleur: SAPIN, lien: SAPIN, survol: "#ffffff", focus: SAPIN })], { gap: "16px" });
+    const lettreC = petite(SAPIN3, [lettre(k, env, G, { titre: "Nouvelles sessions", intro: "Les prochaines sessions et les nouveautés du catalogue, par courriel.", accent: ORANGE, texte: "#ffffff", survolBouton: "#ffffff", survolTexte: SAPIN, couleurTitre: "#ffffff", surBouton: SAPIN, largeur: "100%", poids: 1 })]);
+    const droite = k.col([domaines, accueil, lettreC], { gap: "8px", flexGrow: 5, flexBasis: "0px", minWidth: "300px" });
+    const mosaique = k.row([grande, droite], { gap: "8px", alignItems: "stretch", width: "100%", flexWrap: "wrap" });
+    const haut = G.bande(k, [mosaique], { fond: SAPIN2, colonne: true, padV: ["56px", "44px", "28px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "16px"], nom: "Mosaïque" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b3cfcc", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [grille, trait(k, "#ffffff40"), mentions], { fond: SAPIN2, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Bande sapin" });
+    const bas = G.bande(k, [trait(k, "#ffffff40"), mentions], { fond: SAPIN2, colonne: true, gap: "20px", padV: ["8px", "8px", "8px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
     bas.styles.desktop.color = "#ffffff"; // la ligne légale de la plateforme reprend la couleur de la dernière bande
     return [G.racine(k, [haut, bas])];
   },
@@ -239,47 +236,46 @@ const escalierNiveaux = modeleV2({
 }, FAM);
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-165 « Rendez-vous de carrière » — coaching professionnel
-// Idée : un pied CENTRÉ, posé, comme un cabinet. Fond pierre, phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs (réserver un échange, découvrir l'accompagnement) ; trois colonnes
-// séparées par des filets verticaux (bilan, prise de poste, transition) dont le filet du haut devient terracotta au survol ; une épaisse barre terracotta ferme la page avant contact, horaires, lettre.
-// Polices : Playfair Display (titres) et Albert Sans. Aucune promesse chiffrée, aucun témoignage inventé.
+// ft2-165 « Rendez-vous de carrière » — coaching professionnel · archétype E (deux demi-pages bord à bord de couleurs opposées)
+// Idée : un pied COUPÉ EN DEUX. La moitié gauche, pierre claire, porte le message en grand serif aligné à gauche (« Et si la suite commençait ici ? ») et deux boutons francs ; la moitié droite, terracotta profond,
+// rassemble les actions : accompagnements (liens), horaires, adresse et lettre, séparés par des filets. Les deux moitiés vont de bord à bord. Polices : Playfair Display (titres) et Albert Sans.
+// Aucune promesse chiffrée, aucun témoignage inventé.
 const coaching = identite({
   key: "c165", label: "Pierre, encre et terracotta", humeur: "light",
   fond: "#ebe6dd", texte: "#221d19", discret: "#564d44", accent: "#a93f20", surface: "#f6f2ea", encre: "#ffffff",
   police: "font.albert-sans", titres: "font.playfair-display",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "700", bordure: "1px", ligne: "#221d1933",
 });
-const PIERRE = "#ebe6dd", ENCRE2 = "#221d19", TERRA = "#a93f20", LIN = "#f6f2ea";
+const PIERRE = "#ebe6dd", ENCRE2 = "#221d19", TERRA = "#a93f20", TERRA2 = "#8a3017", LIN = "#f6f2ea", ROSE = "#f6e1d6";
 
 const rendezVousCarriere = modeleV2({
   id: identifiantV2(165, "rendez-vous-de-carriere"), concept: "c-165-rendez-vous-de-carriere",
   name: "Rendez-vous de carrière", family: FAM,
-  description: "Pour un coach professionnel : phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs, trois colonnes à filets (bilan, prise de poste, transition) qui prennent la couleur terracotta au survol, contact, horaires et lettre.",
-  tags: ["coaching professionnel", "bilan de carrière", "prise de poste", "transition", "pierre", "terracotta", "serif"],
+  description: "Pour un coach professionnel : deux demi-pages bord à bord de couleurs opposées. À gauche, la phrase serif « Et si la suite commençait ici ? » et deux boutons ; à droite, sur terracotta, accompagnements, horaires, adresse et lettre.",
+  tags: ["coaching professionnel", "bilan de carrière", "prise de poste", "transition", "deux moitiés", "pierre", "terracotta", "serif"],
   identity: coaching,
-  racine: racineDe(PIERRE),
+  racine: racineDe(ENCRE2),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const titreC = k.row([souffle(carre(k, TERRA, "10px"), 3200), caps(k, "Coaching professionnel", { couleur: TERRA, suivi: "0.24em" })], { gap: "12px", alignItems: "center", justifyContent: "center", width: "100%" });
-    const phrase = G.geant(`<p>Et si la suite<br><span style="color:${TERRA}">commençait ici ?</span></p>`, { taille: [42, 100], tablette: { taille: [64, 88] }, mobile: { taille: [40, 54] }, lh: 1.08, suivi: "-0.02em", poids: "700", police: S.head, couleur: ENCRE2, align: "center" })(k, env, true);
-    const mot = k.T("<p>Changer de poste, prendre une nouvelle fonction, faire le point : un premier échange pour voir si on peut avancer ensemble.</p>", { fontSize: "18px", lineHeight: 1.65, color: S.mute, fontFamily: S.font, textAlign: "center", maxWidth: "560px", marginLeft: "auto", marginRight: "auto" });
-    const boutons = k.row([btn(k, "Réserver un échange", "/contact", { texte: "#ffffff", fond: TERRA, survolFond: ENCRE2, survolTexte: "#ffffff", focus: ENCRE2 }), btn(k, "Découvrir l'accompagnement", "/blog", { texte: ENCRE2, fond: undefined, bord: ENCRE2, survolFond: ENCRE2, survolTexte: "#ffffff", focus: TERRA })], { gap: "12px", justifyContent: "center" });
-    const haut = G.bande(k, [titreC, phrase, mot, boutons], { fond: PIERRE, colonne: true, aligne: "center", gap: "24px", max: "980px", padV: ["96px", "72px", "52px"], padB: ["56px", "44px", "36px"], padH: ["48px", "32px", "20px"], nom: "Rendez-vous" });
-    const col = (titre, sous, url, dernier) => {
-      const c = cartouche(k, [lien(k, `${titre}  →`, url, { taille: 22, poids: "700", police: S.head, bloc: true, couleur: ENCRE2, survol: { color: TERRA, transform: { x: 4 } }, focus: TERRA }), k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })], { fond: LIN, bord: "#221d1933", bordHaut: ENCRE2, haut: "4px", survolFond: "#ffffff", survolBord: "#221d1933", survolHaut: TERRA, hauteur: "150px", min: "230px", leve: -3, gap: "8px" });
-      return c;
+    const phrase = G.geant(`<p>Et si la suite<br><span style="color:${TERRA}">commençait ici ?</span></p>`, { taille: [40, 96], tablette: { taille: [60, 80] }, mobile: { taille: [38, 50] }, lh: 1.08, suivi: "-0.02em", poids: "700", police: S.head, couleur: ENCRE2 })(k, env);
+    const mot = k.T("<p>Changer de poste, prendre une nouvelle fonction, faire le point : un premier échange pour voir si on peut avancer ensemble.</p>", { fontSize: "18px", lineHeight: 1.65, color: S.mute, fontFamily: S.font, maxWidth: "500px" });
+    const boutons = k.row([btn(k, "Réserver un échange", "/contact", { texte: "#ffffff", fond: TERRA, survolFond: ENCRE2, survolTexte: "#ffffff", focus: ENCRE2 }), btn(k, "Découvrir l'accompagnement", "/blog", { texte: ENCRE2, fond: undefined, bord: ENCRE2, survolFond: ENCRE2, survolTexte: "#ffffff", focus: TERRA })], { gap: "12px" });
+    const titreC = k.row([souffle(carre(k, TERRA, "10px"), 3200), caps(k, "Coaching professionnel", { couleur: TERRA, suivi: "0.24em" })], { gap: "12px", alignItems: "center" });
+    const gauche = G.colonne(k, [titreC, phrase, mot, boutons], { poids: 1, min: "320px", gap: "24px", justifie: "center", extra: { backgroundColor: PIERRE, paddingTop: "96px", paddingBottom: "96px", paddingLeft: "64px", paddingRight: "56px" }, tablette: { paddingTop: "72px", paddingBottom: "72px", paddingLeft: "40px", paddingRight: "40px" }, mobile: { paddingTop: "48px", paddingBottom: "48px", paddingLeft: "20px", paddingRight: "20px" } });
+    const lienAcc = (t, u) => {
+      const l = lien(k, t, u, { taille: 22, poids: "700", police: S.head, bloc: true, h: "52px", couleur: "#ffffff", survol: { color: ROSE, transform: { x: 6 } }, focus: "#ffffff", extra: { width: "100%" } });
+      return k.row([l, k.T("<p>→</p>", { color: ROSE, fontSize: "20px", fontFamily: S.font })], { flexWrap: "nowrap", justifyContent: "space-between", alignItems: "center", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#ffffff66", borderRadius: "0px" });
     };
-    const trois = G.ligne(k, [col("Bilan de carrière", "Faire le point sur son parcours, ses envies, ses atouts.", "/blog"), col("Prise de poste", "Réussir ses premiers mois dans une nouvelle fonction.", "/blog"), col("Transition", "Changer de métier ou de cap, sans se précipiter.", "/blog")], { gap: "0px", aligne: "stretch", largeur: "100%" });
-    const bandeT = G.bande(k, [trois], { fond: PIERRE, colonne: true, max: "1180px", padV: ["8px", "8px", "4px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Accompagnements" });
-    const barre = { type: "container", props: { full: true }, children: [k.col([], { width: "100%", height: "10px", backgroundColor: TERRA, borderRadius: "0px" })], ...sty({ display: "flex", flexDirection: "column", width: "100%", backgroundColor: TERRA, gap: "0px" }) };
-    const colH = bloc(k, "Horaires", [horaires(k, { taille: 15 })], { couleurTitre: TERRA, poids: 1.2 });
-    const colC = bloc(k, "Nous contacter", [coordonnees(k, { taille: 15, lien: ENCRE2, survol: TERRA, focus: TERRA })], { couleurTitre: TERRA, poids: 1.2 });
-    const colN = lettre(k, env, G, { titre: "Un conseil de temps en temps", intro: "Quelques lignes sur la vie professionnelle, par courriel.", accent: TERRA, survolBouton: ENCRE2, survolTexte: "#ffffff", couleurTitre: TERRA, surBouton: "#ffffff" });
-    const grille = G.ligne(k, [colH, colC, colN], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: PIERRE, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Infos" });
-    return [G.racine(k, [haut, bandeT, barre, bas])];
+    const acc = k.col([caps(k, "Les accompagnements", { couleur: ROSE }), lienAcc("Bilan de carrière", "/blog"), lienAcc("Prise de poste", "/blog"), lienAcc("Transition", "/blog")], { gap: "0px", width: "100%" });
+    const infos = G.ligne(k, [bloc(k, "Horaires", [horaires(k, { taille: 15, couleur: "#ffffff" })], { couleurTitre: ROSE, poids: 1, min: "200px" }), bloc(k, "Nous contacter", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: ROSE, focus: "#ffffff" })], { couleurTitre: ROSE, poids: 1, min: "200px" })], { gap: "28px 36px", aligne: "flex-start", largeur: "100%" });
+    const abo = lettre(k, env, G, { titre: "Un conseil de temps en temps", intro: "Quelques lignes sur la vie professionnelle, par courriel.", accent: "#ffffff", texte: "#ffffff", survolBouton: ROSE, survolTexte: ENCRE2, couleurTitre: "#ffffff", surBouton: TERRA2, largeur: "100%", poids: 1 });
+    const droite = G.colonne(k, [acc, trait(k, "#ffffff66"), infos, trait(k, "#ffffff66"), abo], { poids: 1, min: "320px", gap: "28px", justifie: "center", extra: { backgroundColor: TERRA2, color: "#ffffff", paddingTop: "96px", paddingBottom: "96px", paddingLeft: "56px", paddingRight: "64px" }, tablette: { paddingTop: "64px", paddingBottom: "64px", paddingLeft: "40px", paddingRight: "40px" }, mobile: { paddingTop: "48px", paddingBottom: "48px", paddingLeft: "20px", paddingRight: "20px" } });
+    const moities = G.bande(k, [gauche, droite], { fond: ENCRE2, gap: "0px", aligne: "stretch", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Deux moitiés" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#cfc6ba", liens: "#ffffff" })(k, env);
+    const bas = G.bande(k, [trait(k, "#ffffff40"), mentions], { fond: ENCRE2, colonne: true, gap: "20px", padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    bas.styles.desktop.color = "#ffffff"; // la ligne légale de la plateforme reprend la couleur de la dernière bande
+    return [G.racine(k, [moities, bas])];
   },
 }, FAM);
 

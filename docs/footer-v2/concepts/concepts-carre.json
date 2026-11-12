@@ -36,7 +36,7 @@
       "famille": "Entreprises et PME",
       "secteur": "entreprise à valeurs",
       "directionArtistique": {
-        "texte": "Quatre blocs contigus de bord à bord (qualité, environnement, sécurité, formation) à filet ocre qui s'épaissit et au soulèvement doux au survol, puis un pied vert forêt (nom, liens, contact et horaires, lettre). Aucun chiffre ni certificat inventé."
+        "texte": "Mosaïque asymétrique (archétype H) bord à bord : trois petites cases à gauche (environnement, sécurité, formation) qui se soulèvent et changent de fond au survol, et une grande case ocre à droite (qualité en 84 px, nom, coordonnées, horaires, lettre) ; ligne légale dessous. Vert forêt, ocre et ivoire. Aucun chiffre ni certificat inventé."
       },
       "typographies": {
         "titre": "Plus Jakarta Sans",
@@ -47,6 +47,8 @@
       "tags": [
         "entreprise",
         "valeurs",
+        "engagements",
+        "mosaïque",
         "vert forêt",
         "ocre",
         "blocs",
@@ -227,7 +229,7 @@
       "famille": "Industrie et logistique",
       "secteur": "entrepôt / manutention",
       "directionArtistique": {
-        "texte": "Mur de béton : mot d'ordre monumental en Anton sur trois lignes, index de quatre rubriques à barre noire qui s'élargit et vire au rouge, bande de carrés de sécurité, bas noir (contact, horaires, liens, lettre)."
+        "texte": "Mur de béton à colonne latérale (archétype A) : barre noire pleine hauteur à gauche (nom, coordonnées, horaires, lettre), zone béton à droite avec mot d'ordre monumental en Anton sur trois lignes, quatre rubriques à barre noire de 8 px qui vire au rouge et ligne légale."
       },
       "typographies": {
         "titre": "Anton",
@@ -240,6 +242,7 @@
         "manutention",
         "béton",
         "rouge sécurité",
+        "colonne latérale",
         "capitales géantes",
         "angles droits"
       ]
@@ -452,7 +455,7 @@
       "famille": "Services informatiques",
       "secteur": "cybersécurité",
       "directionArtistique": {
-        "texte": "Barre d'alerte rouge-orangé pleine largeur « Signaler un incident » (devient noire au survol), phrase « Zéro confiance. » géante sur graphite, trois cartes empilées (Détecter, Protéger, Répondre) dont la barre verticale s'allume au survol. Angles droits, aucun chiffre de sécurité."
+        "texte": "Pour une société de cybersécurité : la phrase « Zéro confiance. » en Sora géant sur graphite, puis une FRISE horizontale de trois étapes reliées par un trait et marquées de carrés rouge-orangé (01 Détecter, 02 Protéger, 03 Répondre) qui se soulèvent au survol ; bouton carré « Signaler un incident » dans la dernière étape. Bande plus sombre : coordonnées, horaires, lettre, ressources. Angles droits, aucun chiffre de sécurité."
       },
       "typographies": {
         "titre": "Sora",
@@ -463,11 +466,11 @@
       "tags": [
         "cybersécurité",
         "sécurité informatique",
-        "alerte",
+        "frise",
+        "étapes",
         "graphite",
         "rouge",
-        "cartes",
-        "barre verticale"
+        "points carrés"
       ]
     },
     {
@@ -577,7 +580,7 @@
       "famille": "Énergie et environnement",
       "secteur": "recyclage et déchets",
       "directionArtistique": {
-        "texte": "Pour une entreprise de recyclage ou de collecte : trois grands carrés « Réduire, Réutiliser, Recycler » qui se soulèvent au survol, sur fond kraft, puis bande noire avec contact, horaires, liens et lettre."
+        "texte": "Pour une entreprise de recyclage ou de collecte : sous la phrase kraft « Ce qui se trie se transforme. », un ESCALIER de trois bandes de largeur décroissante alignées à gauche (1 Réduire en vert, 2 Réutiliser en kraft foncé, 3 Recycler en crème à filet épais) qui glissent au survol, puis base noire pleine largeur avec horaires, contact, lettre, liens et mentions. Angles droits."
       },
       "typographies": {
         "titre": "Staatliches",
@@ -591,8 +594,8 @@
         "tri",
         "kraft",
         "vert",
-        "carrés",
-        "angles droits"
+        "escalier",
+        "marches"
       ]
     },
     {
@@ -752,7 +755,7 @@
       "famille": "Agriculture et agroalimentaire",
       "secteur": "exploitation agricole",
       "directionArtistique": {
-        "texte": "Pour une exploitation agricole : phrase en capitales sur sol brun, quatre parcelles numérotées à angles droits qui dorent leur filet au survol, horaires, contact et lettre d'information. Terre et blé, net et sobre."
+        "texte": "Archétype C (damier). Un cadastre à angles droits sur sol brun : en-tête (phrase en capitales Archivo + bouton), puis un damier de huit cases égales damées brun et brun clair : quatre parcelles-liens (cultures, élevage, vente à la ferme, visites), horaires, adresse, liens rapides et lettre. Chaque case est un lien ou une information, elle se teinte au survol ; le carré doré des horaires respire."
       },
       "typographies": {
         "titre": "Archivo",
@@ -763,7 +766,8 @@
       "tags": [
         "exploitation agricole",
         "ferme",
-        "parcelles",
+        "damier",
+        "cadastre",
         "vente à la ferme",
         "brun",
         "blé",
@@ -852,7 +856,7 @@
       "famille": "Agriculture et agroalimentaire",
       "secteur": "transformation agroalimentaire",
       "directionArtistique": {
-        "texte": "Pour une entreprise de transformation agroalimentaire : filet de contrôle coloré, phrase en police mono, tableau de quatre cellules à filets fins (qualité, traçabilité, catalogue, espace pro), boutons pros, contact et bande bleu nuit."
+        "texte": "Archétype K (fenêtre). Le pied est une fenêtre de logiciel de gestion à angles droits sur fond graphite : barre de titre à trois carrés, lignes champ / valeur en police mono (nom, qualité, traçabilité, catalogue, espace pro, horaires, adresse, lettre, actions), barre d'état dont le carré orange respire. Les lignes-liens s'éclairent au survol."
       },
       "typographies": {
         "titre": "IBM Plex Mono",
@@ -863,11 +867,12 @@
       "tags": [
         "agroalimentaire",
         "transformation",
-        "industrie alimentaire",
-        "professionnels",
+        "fenêtre",
+        "console",
         "fiche technique",
-        "bleu nuit",
-        "orange"
+        "graphite",
+        "orange",
+        "mono"
       ]
     },
     {
@@ -877,7 +882,7 @@
       "famille": "Recrutement et formation",
       "secteur": "cabinet de recrutement",
       "directionArtistique": {
-        "texte": "Pour un cabinet de recrutement : phrase nette, deux boutons francs (déposer une offre, candidater), quatre étapes numérotées à filet qui devient cobalt au survol, bande bleu nuit avec contact, horaires et lettre."
+        "texte": "Archétype I (frise). Une phrase sobre, puis une bande cobalt plein bord portant un rail blanc continu qui relie quatre points carrés (brief, recherche, entretiens, intégration) ; le titre de chaque étape glisse au survol. En bas, bande bleu nuit : deux boutons francs, contact et lettre (sans horaires)."
       },
       "typographies": {
         "titre": "Sora",
@@ -888,7 +893,8 @@
       "tags": [
         "cabinet de recrutement",
         "recrutement",
-        "étapes numérotées",
+        "frise",
+        "étapes",
         "offre",
         "candidature",
         "cobalt",
@@ -902,7 +908,7 @@
       "famille": "Recrutement et formation",
       "secteur": "agence d'intérim",
       "directionArtistique": {
-        "texte": "Pour une agence d'intérim : bloc jaune « On vous place. » avec deux gros boutons noirs (chercher une mission, recruter), trois pas numérotés, puis bande noire avec agence, horaires, métiers et lettre."
+        "texte": "Archétype F (bandeau XXL + colonne étroite). Bandeau jaune sécurité : « ON VOUS PLACE. » sur toute la largeur en Oswald et deux immenses blocs d'appel noirs (chercher une mission, recruter). Dessous, bande noire asymétrique : agence (horaires, adresse) à gauche, une colonne étroite de liens à filets (métiers, espace candidat) à droite ; pas de lettre."
       },
       "typographies": {
         "titre": "Oswald",
@@ -916,6 +922,7 @@
         "mission",
         "candidats",
         "entreprises",
+        "bandeau",
         "jaune",
         "noir"
       ]
@@ -927,7 +934,7 @@
       "famille": "Recrutement et formation",
       "secteur": "organisme de formation professionnelle",
       "directionArtistique": {
-        "texte": "Pour un organisme de formation professionnelle : « Se former, c'est avancer. », deux boutons, sommaire de cinq domaines numérotés qui blanchissent au survol, puis bande sapin avec horaires, contact et lettre d'information."
+        "texte": "Archétype H (mosaïque asymétrique). Sur sapin, une grande case vert d'eau (« Se former, c'est avancer. » et deux boutons) à gauche, trois cases plus petites empilées à droite : domaines du catalogue (liens), accueil orange (horaires et contact), lettre d'information. Angles droits, cases séparées par de fins joints sombres."
       },
       "typographies": {
         "titre": "Plus Jakarta Sans",
@@ -939,10 +946,10 @@
         "organisme de formation",
         "formation professionnelle",
         "catalogue",
-        "stages",
+        "mosaïque",
         "vert d'eau",
         "orange",
-        "sommaire"
+        "sapin"
       ]
     },
     {
@@ -977,7 +984,7 @@
       "famille": "Recrutement et formation",
       "secteur": "coaching professionnel",
       "directionArtistique": {
-        "texte": "Pour un coach professionnel : phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs, trois colonnes à filets (bilan, prise de poste, transition) qui prennent la couleur terracotta au survol, contact, horaires et lettre."
+        "texte": "Archétype E (deux demi-pages). Pied coupé en deux de bord à bord : à gauche, pierre claire, phrase serif « Et si la suite commençait ici ? » alignée à gauche et deux boutons francs ; à droite, terracotta profond, accompagnements en liens à filets, horaires, adresse et lettre. Le bas est une bande encre avec les mentions."
       },
       "typographies": {
         "titre": "Playfair Display",
@@ -990,6 +997,7 @@
         "bilan de carrière",
         "prise de poste",
         "transition",
+        "deux moitiés",
         "pierre",
         "terracotta",
         "serif"
@@ -1002,7 +1010,7 @@
       "famille": "Cliniques et laboratoires",
       "secteur": "clinique",
       "directionArtistique": {
-        "texte": "Pour une clinique : bandeau d'urgence sobre, phrase en serif, carte d'horaires, rendez-vous, puis quatre colonnes nettes (services, patients, contact, lettre). Blanc et bleu clinique, angles droits."
+        "texte": "Pour une clinique : pied en escalier (archétype L), cinq marches alignées à gauche dont la largeur décroît (bandeau d'urgence rouge, marche bleue avec phrase en serif et rendez-vous, marche pâle avec horaires et coordonnées, marche bleu clair avec liens et lettre, marche marine avec la ligne légale). Blanc, bleu clinique, angles droits."
       },
       "typographies": {
         "titre": "IBM Plex Serif",
@@ -1015,6 +1023,7 @@
         "urgence",
         "horaires",
         "rendez-vous",
+        "escalier",
         "bleu clinique",
         "angles droits",
         "santé"
@@ -1027,7 +1036,7 @@
       "famille": "Cliniques et laboratoires",
       "secteur": "laboratoire d'analyses",
       "directionArtistique": {
-        "texte": "Pour un laboratoire d'analyses : accès aux résultats en évidence, quatre cartouches numérotés en police mono dont le cadre passe au vert au survol, horaires, contact et lettre d'information. Gris-vert clair, rigoureux."
+        "texte": "Pour un laboratoire d'analyses : planche en damier (archétype C) de huit cases égales à filets fins, numérotées en police mono, où chaque case est un lien ou une information (résultats, rendez-vous, préparation, conseils, horaires, coordonnées, lettre, contact) ; la case résultats est pleine d'encre verte. Gris-vert clair, angles droits."
       },
       "typographies": {
         "titre": "DM Mono",
@@ -1039,6 +1048,7 @@
         "laboratoire",
         "analyses",
         "résultats en ligne",
+        "damier",
         "vert",
         "mono",
         "numérotation",
@@ -1405,7 +1415,7 @@
       "famille": "Sport et clubs",
       "secteur": "salle de fitness",
       "directionArtistique": {
-        "texte": "Pour une salle de fitness : « Bouge. » en capitales Bebas Neue géantes, panneau d'horaires de la salle à barre verte avec carré qui respire, grille de six cours numérotés qui se remplissent de vert acide au survol, contact, liens, lettre. Anthracite et vert acide, angles droits."
+        "texte": "Pour une salle de fitness : pied monumental (archétype B), un seul mot « Bouge. » en capitales Bebas Neue de 200 px centré dans un grand vide anthracite, carré vert acide qui respire, deux boutons (inscription, contact) et une ligne légale centrée. Anthracite et vert acide, angles droits."
       },
       "typographies": {
         "titre": "Bebas Neue",
@@ -1416,11 +1426,12 @@
       "tags": [
         "fitness",
         "salle de sport",
-        "cours collectifs",
-        "horaires",
+        "monumental",
         "inscription",
         "anthracite",
-        "vert acide"
+        "vert acide",
+        "minimal",
+        "angles droits"
       ]
     },
     {
@@ -1430,7 +1441,7 @@
       "famille": "Sport et clubs",
       "secteur": "auto-école",
       "directionArtistique": {
-        "texte": "Pour une auto-école : bande bleu route avec « Prêt pour la route ? », bouton jaune d'inscription qui respire et quatre panneaux carrés blancs cerclés de jaune (formations) qui se soulèvent au survol, bande claire avec horaires du bureau, contact, liens et lettre, bande marine de mentions. Angles droits."
+        "texte": "Pour une auto-école : bandeau d'appel à l'action XXL jaune (archétype F) avec « Prêt pour la route ? » en 150 px et un énorme bouton bleu d'inscription qui respire, puis une bande marine avec horaires, coordonnées et une colonne étroite de liens à filets à droite. Bleu route, jaune signal, angles droits."
       },
       "typographies": {
         "titre": "Lexend",
@@ -1441,11 +1452,12 @@
       "tags": [
         "auto-école",
         "permis de conduire",
-        "formations",
         "inscription",
         "horaires",
+        "appel à l'action",
+        "jaune",
         "bleu",
-        "jaune"
+        "angles droits"
       ]
     },
     {

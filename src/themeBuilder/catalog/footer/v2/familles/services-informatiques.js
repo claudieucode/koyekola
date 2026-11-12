@@ -201,57 +201,60 @@ const baieDeServeurs = modeleV2({
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-144 « Zéro confiance » — cybersécurité
-// Idée : une barre d'ALERTE rouge-orangé pleine largeur en tête (« Incident en cours ? Signaler un incident », carré noir qui respire, la barre devient noire au survol), puis, sur graphite, la phrase « Zéro
-// confiance. » en Sora géant à gauche et trois cartes empilées à droite (Détecter, Protéger, Répondre) dont la barre verticale de gauche s'allume en rouge-orangé au survol. Puis contact, horaires, ressources, lettre.
-// Aucun chiffre de sécurité inventé. Polices : Sora (titres) et Inter Tight (texte). Mobile : barre d'alerte sur deux lignes, phrase, cartes, colonnes empilées.
+// ft2-144 « Zéro confiance » — cybersécurité — REFONTE (archétype I : frise horizontale en trois étapes, points carrés)
+// Idée : le déroulé d'une défense en FRISE. Sur graphite, la phrase « Zéro confiance. » en Sora géant, puis une ligne horizontale qui relie trois carrés rouge-orangé : 01 Détecter, 02 Protéger, 03 Répondre. Chaque étape se soulève
+// au survol ; la troisième porte le bouton carré « Signaler un incident » ; le premier carré respire lentement. Dessous, sur une bande plus sombre : coordonnées, horaires, lettre « Veille sécurité », ressources en ligne, mentions.
+// Aucun chiffre de sécurité inventé. Polices : Sora (titres) et Inter Tight (texte). Angles droits partout. Mobile : phrase, étapes en pile, blocs empilés.
 const zero = identite({
   key: "c144", label: "Graphite et rouge-orangé", humeur: "dark",
   fond: "#111214", texte: "#f4f4f2", discret: "#aeb0b6", accent: "#ff5a36", surface: "#1b1c20", encre: "#111214", surEncre: "#f4f4f2",
   police: "font.inter-tight", titres: "font.sora",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "700", bordure: "1px", ligne: "#f4f4f233",
 });
-const GRAPHITE = "#111214", GRAPHITE2 = "#1b1c20", ROUGE = "#ff5a36", BARRE = "#3a3c42";
+const GRAPHITE = "#111214", GRAPHITE2 = "#0b0c0e", ROUGE = "#ff5a36", BARRE = "#4a4d55";
 
 const zeroConfiance = modeleV2({
   id: identifiantV2(144, "zero-confiance"), concept: "c-144-zero-confiance",
   name: "Zéro confiance", family: FAM,
-  description: "Pour une société de cybersécurité : barre d'alerte rouge-orangé « Signaler un incident », phrase géante sur graphite, trois cartes à barre verticale qui s'allume au survol, puis contact, horaires, ressources et lettre.",
-  tags: ["cybersécurité", "sécurité informatique", "alerte", "graphite", "rouge", "cartes", "barre verticale", "angles droits"],
+  description: "Pour une société de cybersécurité : phrase géante sur graphite, puis une frise de trois étapes reliées par un trait (Détecter, Protéger, Répondre) à points carrés rouge-orangé, bouton « Signaler un incident », contact, horaires et lettre.",
+  tags: ["cybersécurité", "sécurité informatique", "frise", "étapes", "graphite", "rouge", "points carrés", "angles droits"],
   identity: zero,
-  racine: racineDe(GRAPHITE),
+  racine: racineDe(GRAPHITE2),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // barre d'alerte : un seul grand lien, le fond devient noir au survol
-    const texteAlerte = k.row([souffle(carre(k, GRAPHITE, "12px"), 2600), k.T("<p><strong>Incident en cours ?</strong> Signaler un incident au service de sécurité</p>", { fontFamily: S.font, fontSize: "fluid:15-19", color: GRAPHITE, lineHeight: 1.35 })], { gap: "14px", flexWrap: "nowrap", alignItems: "center" });
-    const lienAlerte = lien(k, "Signaler un incident ↗", "/contact", { taille: 16, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: GRAPHITE, h: "52px", padH: "22px", survol: { backgroundColor: GRAPHITE, color: ROUGE, transform: { x: 4 } }, focus: GRAPHITE, extra: { borderStyle: "solid", borderWidth: "2px", borderColor: GRAPHITE, borderRadius: "0px", justifyContent: "center" } });
-    const alerte = G.bande(k, [texteAlerte, lienAlerte], { fond: ROUGE, gap: "10px 28px", aligne: "center", padV: ["14px", "14px", "14px"], padB: ["14px", "14px", "14px"], padH: ["48px", "32px", "20px"], nom: "Alerte" });
-    // phrase + trois cartes à barre verticale
-    const phrase = G.geant(`<p>Zéro<br><span style="color:${ROUGE}">confiance.</span></p>`, { taille: [46, 110], tablette: { taille: [72, 100] }, mobile: { taille: [46, 70] }, lh: 1.0, suivi: "-0.04em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env);
-    const intro = k.T("<p>Chaque accès est vérifié, chaque alerte est traitée. Nous aidons les équipes à voir tôt et à réagir juste.</p>", { fontSize: "17px", lineHeight: 1.65, color: S.mute, fontFamily: S.font, maxWidth: "440px" });
-    const gauche = G.colonne(k, [caps(k, "Cybersécurité", { couleur: ROUGE, suivi: "0.24em" }), phrase, intro], { poids: 6, min: "300px", gap: "22px" });
-    const carte = (num, titre, sous, url) => {
-      const n = k.LINK(`${num}${NBSP}${NBSP}${titre}`, url, { fontFamily: S.head, fontSize: "26px", fontWeight: "700", color: "#ffffff", textDecoration: "none", lineHeight: 1.15, display: "flex", alignItems: "center", minHeight: "44px", transitionDuration: MV });
-      GK.fini(k, n, { hover: { color: ROUGE }, focus: GK.focus(ROUGE) });
-      const c = k.col([n, k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })], { backgroundColor: GRAPHITE2, gap: "6px", paddingTop: "22px", paddingBottom: "22px", paddingLeft: "26px", paddingRight: "22px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "8px", borderColor: BARRE, borderRadius: "0px", transitionDuration: MV, width: "100%" });
-      c.states = { hover: { borderColor: ROUGE, transform: { x: 8 } } };
+    // 1 · la phrase, seule, en grand
+    const phrase = G.geant(`<p>Zéro <span style="color:${ROUGE}">confiance.</span></p>`, { taille: [46, 150], tablette: { taille: [84, 120] }, mobile: { taille: [46, 76] }, lh: 1.0, suivi: "-0.04em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env);
+    const intro = k.T("<p>Chaque accès est vérifié, chaque alerte est traitée. Nous aidons les équipes à voir tôt et à réagir juste.</p>", { fontSize: "17px", lineHeight: 1.65, color: S.mute, fontFamily: S.font, maxWidth: "520px" });
+    const tete = G.colonne(k, [caps(k, "Cybersécurité", { couleur: ROUGE, suivi: "0.24em" }), phrase, intro], { gap: "22px", aligne: "flex-start" });
+    // 2 · la frise : rail (carré + trait qui s'étire) puis numéro, titre en lien, phrase ; les trois étapes sont d'égale largeur
+    const etape = (num, titre, sous, url, extra, premier) => {
+      const carre = k.col([], { width: "16px", height: "16px", backgroundColor: ROUGE, borderRadius: "0px", flexShrink: 0 });
+      if (premier) souffle(carre, 2600);
+      const rail = k.row([carre, k.divider({ width: "100%", borderColor: BARRE, borderTopWidth: "2px", marginTop: "0px", marginBottom: "0px", flexGrow: 1, flexBasis: "0px", minWidth: "0px" })], { gap: "0px", flexWrap: "nowrap", alignItems: "center", width: "100%" });
+      const n = k.LINK(`${num}${NBSP}${NBSP}${titre}`, url, { fontFamily: S.head, fontSize: "28px", fontWeight: "700", color: "#ffffff", textDecoration: "none", lineHeight: 1.15, display: "flex", alignItems: "center", minHeight: "44px", transitionDuration: MV });
+      GK.fini(k, n, { hover: { color: ROUGE, transform: { x: 6 } }, focus: GK.focus(ROUGE) });
+      const c = k.col([rail, n, k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font, maxWidth: "320px" }), ...(extra || [])], { gap: "14px", alignItems: "flex-start", flexGrow: 1, flexBasis: "0px", minWidth: "240px", paddingRight: "28px", boxSizing: "border-box", transitionDuration: MV }, undefined, { minWidth: "0px", flexBasis: "100%", paddingRight: "0px" });
+      c.states = { hover: { transform: { y: -6 } } };
       return c;
     };
-    const cartes = G.colonne(k, [carte("01", "Détecter", "Surveiller les accès, repérer les écarts.", "/blog"), carte("02", "Protéger", "Durcir les postes, les comptes et les données.", "/blog"), carte("03", "Répondre", "Contenir, expliquer, rétablir.", "/contact")], { poids: 6, min: "300px", gap: "14px", soi: "flex-end" });
-    const milieu = G.bande(k, [gauche, cartes], { fond: GRAPHITE, gap: "48px 72px", aligne: "flex-end", padV: ["96px", "72px", "52px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Principes" });
-    // contact, horaires, ressources, lettre
-    const c1 = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, lien: "#ffffff", survol: ROUGE, focus: ROUGE })], { couleurTitre: ROUGE, poids: 1.1, suiviTitre: "0.2em" });
-    const c2 = bloc(k, "Horaires", [horaires(k, { taille: 15 })], { couleurTitre: ROUGE, poids: 1.1, suiviTitre: "0.2em" });
-    const res = [["Accueil", "/"], ["Alertes et conseils", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]];
-    const c3 = bloc(k, "Ressources", res.map(([t, u]) => lien(k, t, u, { taille: 16, poids: "500", survol: { color: ROUGE, transform: { x: 6 } }, focus: ROUGE })), { couleurTitre: ROUGE, gap: "0px", min: "200px", suiviTitre: "0.2em" });
-    const abo = abonnement(k, env, { titre: "Veille sécurité", intro: "Les alertes qui comptent, sans bruit.", bouton: "S'abonner", largeur: "340px", accent: ROUGE, couleurTitre: ROUGE, survolBouton: "#ffffff", survolTexte: GRAPHITE });
-    const c4 = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const grille = G.ligne(k, [c1, c2, c3, c4], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const signal = lien(k, "Signaler un incident ↗", "/contact", { taille: 15, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: GRAPHITE, h: "48px", padH: "20px", survol: { backgroundColor: "#ffffff", color: GRAPHITE, transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: ROUGE, borderRadius: "0px", justifyContent: "center", marginTop: "6px" } });
+    const frise = k.row([
+      etape("01", "Détecter", "Surveiller les accès, repérer les écarts.", "/blog", null, true),
+      etape("02", "Protéger", "Durcir les postes, les comptes et les données.", "/blog"),
+      etape("03", "Répondre", "Contenir, expliquer, rétablir.", "/contact", [signal]),
+    ], { ...GK.gaps("40px 0px"), flexWrap: "wrap", alignItems: "stretch", width: "100%" });
+    const haut = G.bande(k, [tete, frise], { fond: GRAPHITE, colonne: true, gap: "72px", padV: ["96px", "72px", "52px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "40px" }, nom: "Frise" });
+    // 3 · bande plus sombre : coordonnées et horaires côte à côte, lettre à droite, ressources en ligne
+    const c1 = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, lien: "#ffffff", survol: ROUGE, focus: ROUGE })], { couleurTitre: ROUGE, suiviTitre: "0.2em", min: "200px" });
+    const c2 = bloc(k, "Horaires", [horaires(k, { taille: 15 })], { couleurTitre: ROUGE, suiviTitre: "0.2em", min: "200px" });
+    const abo = abonnement(k, env, { titre: "Veille sécurité", intro: "Les alertes qui comptent, sans bruit.", bouton: "S'abonner", largeur: "360px", accent: ROUGE, couleurTitre: ROUGE, survolBouton: "#ffffff", survolTexte: GRAPHITE });
+    const c3 = G.colonne(k, [abo], { poids: 1.2, min: "280px" });
+    const infos = G.ligne(k, [G.colonne(k, [G.ligne(k, [c1, c2], { gap: "32px 48px", aligne: "flex-start", largeur: "100%" })], { poids: 3, min: "320px" }), c3], { gap: "40px 72px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const res = G.ligne(k, [["Accueil", "/"], ["Alertes et conseils", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 15, poids: "600", survol: { color: ROUGE, transform: { y: -2 } }, focus: ROUGE })), { gap: "0px 32px", aligne: "center", largeur: "100%" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: GRAPHITE, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "1px", couleur: "#f4f4f233" }, nom: "Contact" });
-    return [G.racine(k, [alerte, milieu, bas])];
+    const bas = G.bande(k, [infos, res, trait(k, S.line), mentions], { fond: GRAPHITE2, colonne: true, gap: "36px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "1px", couleur: "#f4f4f233" }, nom: "Contact" });
+    return [G.racine(k, [haut, bas])];
   },
 }, FAM);
 

@@ -106,9 +106,8 @@ const tribuneRouge = modeleV2({
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-182 « Haute intensité » — salle de fitness
-// Idée : un pied de SALLE, anthracite et vert acide. « Bouge. » en capitales Bebas Neue géantes à gauche, les horaires de la salle (Données de l'entreprise) à droite sous un carré vert qui « respire » ;
-// puis une grille de six cours numérotés dont chaque case se remplit de vert acide au survol ; enfin contact, liens, lettre et mentions. Cours d'exemple, à renommer. Polices : Bebas Neue (titres) et DM Sans (texte).
-// Mobile : phrase, horaires, cases sur deux colonnes, colonnes empilées.
+// Idée : un pied MONUMENTAL (archétype B). Anthracite, un seul mot « Bouge. » en capitales Bebas Neue de 200 px centré dans un grand vide, un petit carré vert acide qui « respire » au-dessus, deux boutons (inscription, contact)
+// et rien d'autre : pas de colonnes, pas de grille. Une fine ligne légale centrée ferme le tout. Police : Bebas Neue (titres) et DM Sans (texte). Mobile : le mot passe à 110 px, les boutons s'empilent.
 const salle = identite({
   key: "c182", label: "Anthracite et vert acide", humeur: "dark",
   fond: "#14161a", texte: "#f2f4ee", discret: "#aeb4bb", accent: "#c8ff2e", surface: "#1d2025", encre: "#14161a", surEncre: "#f2f4ee",
@@ -120,53 +119,31 @@ const ANTHRA = "#14161a", ANTHRA2 = "#1d2025", ACIDE = "#c8ff2e", NEIGE = "#f2f4
 const hauteIntensite = modeleV2({
   id: identifiantV2(182, "haute-intensite"), concept: "c-182-haute-intensite",
   name: "Haute intensité", family: FAM,
-  description: "Pour une salle de fitness : « Bouge. » en capitales géantes, horaires de la salle, grille de six cours numérotés qui se remplissent de vert acide au survol, puis contact, liens, lettre et mentions. Anthracite et vert acide.",
-  tags: ["fitness", "salle de sport", "cours collectifs", "horaires", "inscription", "anthracite", "vert acide"],
+  description: "Pour une salle de fitness : un seul mot, « Bouge. », en capitales géantes centrées dans un grand vide anthracite, un carré vert acide qui respire, deux boutons (inscription, contact) et une ligne légale. Anthracite et vert acide.",
+  tags: ["fitness", "salle de sport", "monumental", "inscription", "anthracite", "vert acide", "minimal", "angles droits"],
   identity: salle,
   racine: racineDe(ANTHRA),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · « Bouge. » + horaires
-    const phrase = G.geant(`<p>Bouge<span style="color:${ACIDE}">.</span></p>`, { taille: [110, 200], tablette: { taille: [150, 200] }, mobile: { taille: [110, 170] }, lh: 0.9, suivi: "0.01em", poids: "400", police: S.head, couleur: NEIGE, extra: { textTransform: "uppercase" } })(k, env);
+    const marque = k.row([souffle(carre(k, ACIDE, "14px"), 2800), caps(k, "Salle de remise en forme", { couleur: ACIDE, suivi: "0.28em" })], { gap: "12px", alignItems: "center", justifyContent: "center", flexWrap: "nowrap" });
+    const mot = G.geant(`<p>Bouge<span style="color:${ACIDE}">.</span></p>`, { taille: [120, 200], tablette: { taille: [160, 200] }, mobile: { taille: [110, 150] }, lh: 0.86, suivi: "0.01em", poids: "400", police: S.head, couleur: NEIGE, align: "center", extra: { textTransform: "uppercase", width: "100%" } })(k, env);
     const boutons = k.row([
       bouton(k, "S'inscrire", "/inscription", { texte: ANTHRA, fond: ACIDE, survol: { backgroundColor: NEIGE, borderColor: NEIGE, color: ANTHRA, transform: { y: -3 } }, focus: NEIGE }),
       bouton(k, "Nous écrire", "/contact", { texte: NEIGE, bord: NEIGE, survol: { backgroundColor: NEIGE, color: ANTHRA, transform: { y: -3 } }, focus: ACIDE }),
-    ], { gap: "12px" });
-    const gauche = G.colonne(k, [caps(k, "Salle de remise en forme", { couleur: ACIDE, suivi: "0.22em" }), phrase, boutons], { poids: 7, min: "300px", gap: "22px" });
-    const titreHor = k.row([souffle(carre(k, ACIDE, "12px"), 2800), caps(k, "Horaires de la salle", { couleur: ACIDE })], { gap: "10px", alignItems: "center", flexWrap: "nowrap" });
-    const colHor = G.colonne(k, [titreHor, horaires(k, { taille: 16 })], { poids: 4, min: "280px", gap: "14px", extra: { backgroundColor: ANTHRA2, paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "6px", borderColor: ACIDE }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "22px", paddingBottom: "22px" } });
-    const haut = G.bande(k, [gauche, colHor], { fond: ANTHRA, gap: "40px 64px", aligne: "flex-end", padV: ["88px", "64px", "44px"], padB: ["56px", "48px", "36px"], padH: ["48px", "32px", "20px"], nom: "Bouge" });
-    // 2 · grille de cours
-    const cours = (num, nom) => {
-      const t = lien(k, nom, "/contact", { taille: 30, poids: "400", police: S.head, casse: "uppercase", suivi: "0.03em", couleur: NEIGE, survol: { color: ANTHRA }, focus: ANTHRA, h: "44px", extra: { width: "100%" } });
-      const c = k.col([caps(k, num, { couleur: ACIDE, suivi: "0.2em" }), t], { flexGrow: 1, flexBasis: "30%", minWidth: "140px", minHeight: "120px", justifyContent: "space-between", paddingTop: "16px", paddingBottom: "8px", paddingLeft: "20px", paddingRight: "20px", borderStyle: "solid", borderWidth: "1px", borderColor: "#f2f4ee33", backgroundColor: ANTHRA2, transitionDuration: DOUX, borderRadius: "0px" });
-      c.states = { hover: { backgroundColor: ACIDE, borderColor: ACIDE, transform: { y: -4 } } };
-      return c;
-    };
-    const grille = G.ligne(k, [cours("01", "Cardio"), cours("02", "Renforcement"), cours("03", "Cross training"), cours("04", "Yoga"), cours("05", "Pilates"), cours("06", "Stretching")], { gap: "10px", aligne: "stretch", largeur: "100%" });
-    const bandeCours = G.bande(k, [caps(k, "Les cours (exemples à renommer)", { couleur: ACIDE }), grille], { fond: ANTHRA, colonne: true, gap: "16px", padV: ["8px", "8px", "4px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "Cours" });
-    // 3 · contact, liens, lettre, mentions
-    const colContact = bloc(k, "Nous trouver", [coordonnees(k, { lien: NEIGE, survol: ACIDE, focus: ACIDE })], { couleurTitre: ACIDE, poids: 1.2 });
-    const rapide = [["Actualités de la salle", "/blog"], ["Questions fréquentes", "/faq"], ["Espace adhérent", "/connexion"]];
-    const colLiens = bloc(k, "Liens rapides", rapide.map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", survol: { color: ACIDE, transform: { x: 4 } }, focus: ACIDE })), { couleurTitre: ACIDE, gap: "0px", min: "200px" });
-    const abo = abonnement(k, env, { titre: "La lettre de la salle", intro: "Nouveaux cours, infos pratiques : un message de temps en temps.", bouton: "Je m'abonne", largeur: "340px", accent: ACIDE, texte: NEIGE });
-    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, color: ACIDE, lineHeight: 1.4 };
-    abo.parts.button.styles.desktop = { ...abo.parts.button.styles.desktop, color: ANTHRA };
-    abo.parts.button.states = { hover: { backgroundColor: NEIGE, color: ANTHRA }, focus: GK.focus(NEIGE) };
-    const colLettre = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const ligne = G.ligne(k, [colContact, colLiens, colLettre], { gap: "36px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [ligne, trait(k, S.line), mentions], { fond: ANTHRA, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "6px", couleur: ACIDE }, nom: "Infos" });
-    return [G.racine(k, [haut, bandeCours, bas])];
+    ], { ...GK.gaps("14px 16px"), justifyContent: "center", alignItems: "center" });
+    const centre = G.bande(k, [k.col([G.filet({ largeur: "72px", epaisseur: "6px", couleur: ACIDE })(k, env), marque, mot, boutons], { gap: "28px", alignItems: "center", width: "100%" })], { colonne: true, fond: ANTHRA, padV: ["160px", "120px", "72px"], padB: ["140px", "104px", "64px"], padH: ["48px", "32px", "20px"], nom: "Bouge" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env, true);
+    const bas = G.bande(k, [trait(k, S.line), mentions], { fond: ANTHRA, colonne: true, gap: "22px", padV: ["0px", "0px", "0px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [centre, bas])];
   },
 }, FAM);
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-183 « Feu vert » — auto-école
-// Idée : le pied d'une AUTO-ÉCOLE, comme un panneau de signalisation. Bande bleu route : « Prêt pour la route ? » en grandes lettres, bouton jaune « S'inscrire » (le carré jaune « respire ») et, à droite, quatre PANNEAUX
-// carrés blancs cerclés de jaune (formations d'exemple) qui se soulèvent au survol ; puis bande claire : horaires du bureau, contact, liens et lettre ; bande marine pour les mentions.
-// Polices : Lexend (titres) et Public Sans (texte). Mobile : phrase, bouton, panneaux sur deux colonnes, colonnes empilées.
+// Idée : le pied d'une AUTO-ÉCOLE en deux temps (archétype F). En haut, un bandeau jaune signal d'appel à l'action XXL : « Prêt pour la route ? » en 150 px et un énorme bouton bleu « S'inscrire » (il « respire » doucement).
+// Dessous, une bande bleu marine : à gauche horaires du bureau et coordonnées, à droite UNE SEULE colonne étroite de liens à filets (formations d'exemple, actualités, espace élève) dont chaque ligne glisse et jaunit au survol.
+// Plus de lettre d'information ni de panneaux carrés. Polices : Lexend (titres) et Public Sans (texte). Mobile : bandeau puis colonne de liens sous les horaires.
 const route = identite({
   key: "c183", label: "Bleu route, jaune signal et blanc", humeur: "dark",
   fond: "#0b3d91", texte: "#ffffff", discret: "#d6e2fa", accent: "#ffc800", surface: "#134aa6", encre: "#0b3d91", surEncre: "#ffffff",
@@ -178,43 +155,31 @@ const BLEUR = "#0b3d91", MARINE3 = "#082a66", JAUNE3 = "#ffc800", CLAIR3 = "#f2f
 const feuVert = modeleV2({
   id: identifiantV2(183, "feu-vert"), concept: "c-183-feu-vert",
   name: "Feu vert", family: FAM,
-  description: "Pour une auto-école : bande bleu route avec « Prêt pour la route ? », bouton jaune d'inscription et quatre panneaux carrés qui se soulèvent, puis horaires du bureau, contact, liens et lettre d'information sur fond clair.",
-  tags: ["auto-école", "permis de conduire", "formations", "inscription", "horaires", "bleu", "jaune"],
+  description: "Pour une auto-école : bandeau jaune d'appel à l'action XXL (« Prêt pour la route ? » et un énorme bouton d'inscription), puis une bande marine avec horaires, coordonnées et une colonne étroite de liens à droite.",
+  tags: ["auto-école", "permis de conduire", "inscription", "horaires", "appel à l'action", "jaune", "bleu", "angles droits"],
   identity: route,
   racine: racineDe(MARINE3),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · bande bleue : phrase, bouton, panneaux
-    const phrase = G.geant(`<p>Prêt pour<br>la <span style="color:${JAUNE3}">route&nbsp;?</span></p>`, { taille: [48, 120], tablette: { taille: [72, 100] }, mobile: { taille: [44, 64] }, lh: 1.02, suivi: "-0.03em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env);
-    const intro = k.T("<p>Code, conduite, examen : on vous accompagne à chaque étape, à votre rythme.</p>", { fontSize: "17px", lineHeight: 1.6, color: "#e6eeff", fontFamily: S.font, maxWidth: "420px" });
-    const b = souffle(bouton(k, "S'inscrire", "/inscription", { texte: BLEUR, fond: JAUNE3, survol: { backgroundColor: "#ffffff", borderColor: "#ffffff", color: BLEUR, transform: { y: -3 } }, focus: "#ffffff", extra: { alignSelf: "flex-start" } }), 4200);
-    const gauche = G.colonne(k, [caps(k, "Auto-école", { couleur: JAUNE3, suivi: "0.22em" }), phrase, intro, b], { poids: 6, min: "300px", gap: "22px" });
-    const panneau = (num, nom) => {
-      const t = lien(k, nom, "/contact", { taille: 17, poids: "800", police: S.head, couleur: BLEUR, survol: { color: BLEUR, textDecoration: "underline" }, focus: BLEUR, h: "44px", extra: { width: "100%" } });
-      const c = k.col([caps(k, num, { couleur: BLEUR, suivi: "0.2em", poids: "800" }), t], { flexGrow: 1, flexBasis: "45%", minWidth: "130px", minHeight: "150px", justifyContent: "space-between", paddingTop: "14px", paddingBottom: "10px", paddingLeft: "16px", paddingRight: "16px", borderStyle: "solid", borderWidth: "4px", borderColor: JAUNE3, backgroundColor: "#ffffff", transitionDuration: DOUX, borderRadius: "0px" });
-      c.states = { hover: { backgroundColor: "#fff3bf", transform: { y: -6 } } };
-      return c;
-    };
-    const panneaux = G.ligne(k, [panneau("A", "Permis B"), panneau("B", "Conduite accompagnée"), panneau("C", "Code de la route"), panneau("D", "Heures de conduite")], { gap: "14px", aligne: "stretch", largeur: "100%" });
-    const droite = G.colonne(k, [panneaux, k.T("<p>Formations d'exemple : renommez-les dans l'éditeur.</p>", { fontSize: "13px", lineHeight: 1.5, color: "#d6e2fa", fontFamily: S.font })], { poids: 6, min: "300px", gap: "12px" });
-    const haut = G.bande(k, [gauche, droite], { fond: BLEUR, gap: "44px 64px", aligne: "flex-end", padV: ["88px", "68px", "48px"], padB: ["88px", "68px", "48px"], padH: ["48px", "32px", "20px"], nom: "Route" });
-    // 2 · bande claire : horaires, contact, liens, lettre
-    const colHor = bloc(k, "Horaires du bureau", [horaires(k, { couleur: MARINE3, taille: 16 })], { couleurTitre: BLEUR, poids: 1.2, min: "240px" });
-    const colContact = bloc(k, "Nous contacter", [coordonnees(k, { couleur: MARINE3, lien: BLEUR, survol: MARINE3, focus: BLEUR, taille: 16 })], { couleurTitre: BLEUR, min: "220px" });
-    const rapide = [["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace élève", "/connexion"], ["Nous écrire", "/contact"]];
-    const colLiens = bloc(k, "Liens utiles", rapide.map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", couleur: MARINE3, survol: { color: BLEUR, transform: { x: 4 } }, focus: BLEUR })), { couleurTitre: BLEUR, gap: "0px", min: "190px" });
-    const abo = abonnement(k, env, { titre: "Lettre d'information", intro: "Dates d'examen, conseils, nouveautés : un message de temps en temps.", bouton: "S'abonner", largeur: "340px", accent: BLEUR, texte: MARINE3 });
-    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, color: BLEUR, lineHeight: 1.4 };
-    abo.parts.intro.styles.desktop = { ...abo.parts.intro.styles.desktop, color: "#34436b" };
-    abo.parts.button.styles.desktop = { ...abo.parts.button.styles.desktop, color: "#ffffff" };
-    abo.parts.button.states = { hover: { backgroundColor: MARINE3, color: "#ffffff" }, focus: GK.focus(MARINE3) };
-    const colLettre = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const grille = G.ligne(k, [colHor, colContact, colLiens, colLettre], { gap: "36px 44px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const milieu = G.bande(k, [grille], { fond: CLAIR3, colonne: true, padV: ["64px", "52px", "40px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], filetHaut: { epaisseur: "8px", couleur: JAUNE3 }, nom: "Infos" });
+    // 1 · bandeau jaune : appel à l'action XXL
+    const phrase = G.geant(`<p>Prêt pour<br>la route&nbsp;?</p>`, { taille: [56, 150], tablette: { taille: [80, 120] }, mobile: { taille: [48, 72] }, lh: 0.98, suivi: "-0.035em", poids: "800", police: S.head, couleur: BLEUR })(k, env);
+    const intro = k.T("<p>Code, conduite, examen : on vous accompagne à chaque étape, à votre rythme.</p>", { fontSize: "18px", lineHeight: 1.55, color: MARINE3, fontFamily: S.font, maxWidth: "440px" });
+    const b = souffle(bouton(k, "S'inscrire", "/inscription", { texte: JAUNE3, fond: BLEUR, taille: 22, survol: { backgroundColor: MARINE3, color: "#ffffff", transform: { y: -3 } }, focus: MARINE3, extra: { minHeight: "88px", paddingLeft: "56px", paddingRight: "56px", alignSelf: "flex-end" } }), 4200);
+    const gauche = G.colonne(k, [caps(k, "Auto-école", { couleur: BLEUR, suivi: "0.22em" }), phrase, intro], { poids: 3, min: "300px", gap: "20px" });
+    const cta = G.bande(k, [gauche, b], { fond: JAUNE3, gap: "40px 64px", aligne: "flex-end", padV: ["96px", "72px", "52px"], padB: ["96px", "72px", "52px"], padH: ["48px", "32px", "20px"], nom: "Appel" });
+    // 2 · bande marine : horaires et coordonnées à gauche, colonne étroite de liens à droite
+    const colHor = bloc(k, "Horaires du bureau", [horaires(k, { couleur: "#ffffff", taille: 16 })], { couleurTitre: JAUNE3, poids: 1, min: "240px" });
+    const colContact = bloc(k, "Nous contacter", [coordonnees(k, { couleur: "#ffffff", lien: "#ffffff", survol: JAUNE3, focus: JAUNE3, taille: 16 })], { couleurTitre: JAUNE3, poids: 1, min: "220px" });
+    const gaucheInfo = G.ligne(k, [colHor, colContact], { gap: "32px 48px", aligne: "flex-start", justifie: "flex-start", largeur: "100%" });
+    const rang = (t, u) => lien(k, t, u, { taille: 17, poids: "700", couleur: "#ffffff", h: "56px", bloc: true, padH: "4px", survol: { color: JAUNE3, paddingLeft: "16px" }, focus: JAUNE3, extra: { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#ffffff40" } });
+    const liste = k.col([rang("Permis B", "/contact"), rang("Conduite accompagnée", "/contact"), rang("Code de la route", "/contact"), rang("Actualités", "/blog"), rang("Questions fréquentes", "/faq"), rang("Espace élève", "/connexion")], { gap: "0px", width: "100%", alignItems: "stretch" });
+    const note = k.T("<p>Formations d'exemple : renommez-les dans l'éditeur.</p>", { fontSize: "13px", lineHeight: 1.5, color: "#d6e2fa", fontFamily: S.font });
+    const droite = G.colonne(k, [caps(k, "Liens utiles", { couleur: JAUNE3 }), liste, note], { poids: 0, base: "280px", min: "240px", gap: "12px", aligne: "stretch", extra: { flexShrink: 0 } });
+    const haut = G.ligne(k, [G.colonne(k, [gaucheInfo], { poids: 3, min: "300px" }), droite], { gap: "40px 72px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
     const mentions = G.ligneLegale({ taille: 13, couleur: "#d6e2fa", liens: "#ffffff", sansCookies: true })(k, env);
-    const bas = G.bande(k, [mentions], { fond: MARINE3, colonne: true, padV: ["28px", "24px", "20px"], padB: ["24px", "20px", "18px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [haut, milieu, bas])];
+    const bas = G.bande(k, [haut, trait(k, "#ffffff40"), mentions], { fond: MARINE3, colonne: true, gap: "40px", padV: ["72px", "56px", "44px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Infos" });
+    return [G.racine(k, [cta, bas])];
   },
 }, FAM);
 

@@ -7,7 +7,7 @@
       "famille": "Agriculture et agroalimentaire",
       "secteur": "exploitation agricole",
       "directionArtistique": {
-        "texte": "Pour une exploitation agricole : phrase en capitales sur sol brun, quatre parcelles numérotées à angles droits qui dorent leur filet au survol, horaires, contact et lettre d'information. Terre et blé, net et sobre."
+        "texte": "Archétype C (damier). Un cadastre à angles droits sur sol brun : en-tête (phrase en capitales Archivo + bouton), puis un damier de huit cases égales damées brun et brun clair : quatre parcelles-liens (cultures, élevage, vente à la ferme, visites), horaires, adresse, liens rapides et lettre. Chaque case est un lien ou une information, elle se teinte au survol ; le carré doré des horaires respire."
       },
       "typographies": {
         "titre": "Archivo",
@@ -18,7 +18,8 @@
       "tags": [
         "exploitation agricole",
         "ferme",
-        "parcelles",
+        "damier",
+        "cadastre",
         "vente à la ferme",
         "brun",
         "blé",
@@ -107,7 +108,7 @@
       "famille": "Agriculture et agroalimentaire",
       "secteur": "transformation agroalimentaire",
       "directionArtistique": {
-        "texte": "Pour une entreprise de transformation agroalimentaire : filet de contrôle coloré, phrase en police mono, tableau de quatre cellules à filets fins (qualité, traçabilité, catalogue, espace pro), boutons pros, contact et bande bleu nuit."
+        "texte": "Archétype K (fenêtre). Le pied est une fenêtre de logiciel de gestion à angles droits sur fond graphite : barre de titre à trois carrés, lignes champ / valeur en police mono (nom, qualité, traçabilité, catalogue, espace pro, horaires, adresse, lettre, actions), barre d'état dont le carré orange respire. Les lignes-liens s'éclairent au survol."
       },
       "typographies": {
         "titre": "IBM Plex Mono",
@@ -118,11 +119,12 @@
       "tags": [
         "agroalimentaire",
         "transformation",
-        "industrie alimentaire",
-        "professionnels",
+        "fenêtre",
+        "console",
         "fiche technique",
-        "bleu nuit",
-        "orange"
+        "graphite",
+        "orange",
+        "mono"
       ]
     },
     {
@@ -132,7 +134,7 @@
       "famille": "Recrutement et formation",
       "secteur": "cabinet de recrutement",
       "directionArtistique": {
-        "texte": "Pour un cabinet de recrutement : phrase nette, deux boutons francs (déposer une offre, candidater), quatre étapes numérotées à filet qui devient cobalt au survol, bande bleu nuit avec contact, horaires et lettre."
+        "texte": "Archétype I (frise). Une phrase sobre, puis une bande cobalt plein bord portant un rail blanc continu qui relie quatre points carrés (brief, recherche, entretiens, intégration) ; le titre de chaque étape glisse au survol. En bas, bande bleu nuit : deux boutons francs, contact et lettre (sans horaires)."
       },
       "typographies": {
         "titre": "Sora",
@@ -143,7 +145,8 @@
       "tags": [
         "cabinet de recrutement",
         "recrutement",
-        "étapes numérotées",
+        "frise",
+        "étapes",
         "offre",
         "candidature",
         "cobalt",
@@ -157,7 +160,7 @@
       "famille": "Recrutement et formation",
       "secteur": "agence d'intérim",
       "directionArtistique": {
-        "texte": "Pour une agence d'intérim : bloc jaune « On vous place. » avec deux gros boutons noirs (chercher une mission, recruter), trois pas numérotés, puis bande noire avec agence, horaires, métiers et lettre."
+        "texte": "Archétype F (bandeau XXL + colonne étroite). Bandeau jaune sécurité : « ON VOUS PLACE. » sur toute la largeur en Oswald et deux immenses blocs d'appel noirs (chercher une mission, recruter). Dessous, bande noire asymétrique : agence (horaires, adresse) à gauche, une colonne étroite de liens à filets (métiers, espace candidat) à droite ; pas de lettre."
       },
       "typographies": {
         "titre": "Oswald",
@@ -171,6 +174,7 @@
         "mission",
         "candidats",
         "entreprises",
+        "bandeau",
         "jaune",
         "noir"
       ]
@@ -182,7 +186,7 @@
       "famille": "Recrutement et formation",
       "secteur": "organisme de formation professionnelle",
       "directionArtistique": {
-        "texte": "Pour un organisme de formation professionnelle : « Se former, c'est avancer. », deux boutons, sommaire de cinq domaines numérotés qui blanchissent au survol, puis bande sapin avec horaires, contact et lettre d'information."
+        "texte": "Archétype H (mosaïque asymétrique). Sur sapin, une grande case vert d'eau (« Se former, c'est avancer. » et deux boutons) à gauche, trois cases plus petites empilées à droite : domaines du catalogue (liens), accueil orange (horaires et contact), lettre d'information. Angles droits, cases séparées par de fins joints sombres."
       },
       "typographies": {
         "titre": "Plus Jakarta Sans",
@@ -194,10 +198,10 @@
         "organisme de formation",
         "formation professionnelle",
         "catalogue",
-        "stages",
+        "mosaïque",
         "vert d'eau",
         "orange",
-        "sommaire"
+        "sapin"
       ]
     },
     {
@@ -232,7 +236,7 @@
       "famille": "Recrutement et formation",
       "secteur": "coaching professionnel",
       "directionArtistique": {
-        "texte": "Pour un coach professionnel : phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs, trois colonnes à filets (bilan, prise de poste, transition) qui prennent la couleur terracotta au survol, contact, horaires et lettre."
+        "texte": "Archétype E (deux demi-pages). Pied coupé en deux de bord à bord : à gauche, pierre claire, phrase serif « Et si la suite commençait ici ? » alignée à gauche et deux boutons francs ; à droite, terracotta profond, accompagnements en liens à filets, horaires, adresse et lettre. Le bas est une bande encre avec les mentions."
       },
       "typographies": {
         "titre": "Playfair Display",
@@ -245,6 +249,7 @@
         "bilan de carrière",
         "prise de poste",
         "transition",
+        "deux moitiés",
         "pierre",
         "terracotta",
         "serif"

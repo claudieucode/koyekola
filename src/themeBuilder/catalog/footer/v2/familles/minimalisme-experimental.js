@@ -98,11 +98,10 @@ const pointFinal = modeleV2({
   },
 }, FAM);
 
-// ── c-098 « Inversion noir blanc » ───────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Idée : un pied en noir et blanc, quatre colonnes séparées par des filets. Chaque lien est une barre pleine largeur qui s'INVERSE (blanc sur noir) au survol ET au focus clavier, instantanément (aucune animation).
-// Un filet noir de 6 px ouvre le pied. Polices : Archivo (titres) et Archivo Narrow (liens). Pas de logo (le nom ne figure que dans les mentions).
-// Écarts au concept : l'inversion se fait par barre de lien (inverser une colonne entière rendrait ses liens illisibles : la couleur d'un lien ne suit pas celle de son parent) ; sur mobile les colonnes deviennent des
-// volets (accordéon de 48 px, filets noirs) ; sur grand écran elles restent dépliées (les volets ne servent qu'au toucher).
+// ── c-098 « Inversion noir blanc » — REFONTE (archétype C : damier de huit cases égales) ────────────────────────────────────────────────────
+// Idée : un DAMIER noir et blanc de huit cases égales, à angles droits, bord à bord. Chaque case est un lien ; au survol ET au focus clavier elle S'INVERSE (le blanc devient noir, le noir devient blanc) en un fondu court.
+// Un filet noir de 6 px ouvre le pied ; les mentions sont sur une bande claire dessous. Polices : Archivo (titres) et Archivo Narrow. Pas de logo.
+// Écarts au concept : quatre cases par ligne en bureau (damier), deux par ligne en tablette et mobile (le damier devient des rayures verticales, les cases restent des liens de 44 px ou plus) ; le dernier lien est un EXEMPLE de réseau à remplacer.
 const negatif = identite({
   key: "c098", label: "Noir sur blanc, négatif", humeur: "light",
   fond: "#f5f5f5", texte: "#0a0a0a", discret: "#404040", accent: "#0a0a0a", surface: "#ffffff",
@@ -113,43 +112,41 @@ const negatif = identite({
 const inversionNoirBlanc = modeleV2({
   id: identifiantV2(98, "inversion-noir-blanc"), concept: "c-098-inversion-noir-blanc",
   name: "Inversion noir blanc", family: FAM,
-  description: "Noir et blanc éditorial : quatre colonnes séparées par des filets, chaque lien est une barre qui s'inverse (blanc sur noir) au survol et au clavier, sans animation. Un filet noir de 6 px ouvre le pied.",
-  tags: ["noir et blanc", "inversion", "colonnes", "filets", "éditorial", "accordéon mobile"],
+  description: "Noir et blanc éditorial : un damier de huit cases égales, chacune un lien. Au survol et au clavier, la case s'inverse en fondu (blanc sur noir, noir sur blanc). Un filet noir de 6 px ouvre le pied.",
+  tags: ["noir et blanc", "inversion", "damier", "cases égales", "filets", "éditorial"],
   identity: negatif,
   racine: racineDe("#f5f5f5"),
   widgets: ["link", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S, NOIR = "#0a0a0a", BLANC = "#f5f5f5";
-    // 1 · une « barre » de lien : pleine largeur, 52 px, filet noir au-dessus ; survol et focus = inversion franche
-    const inv = { backgroundColor: NOIR, color: BLANC, textDecoration: "none" };
-    const barre = (t, u, premiere) => {
-      const b = lien(k, t, u, { taille: 21, poids: "600", h: "52px", padH: "12px", lh: 1.1, suivi: "-0.005em", survol: inv, focus: BLANC, extra: { display: "flex", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: NOIR, boxSizing: "border-box" } });
-      b.states.focus = { ...inv, outlineStyle: "solid", outlineWidth: "3px", outlineColor: BLANC, outlineOffset: "-6px" };
-      if (premiere) b.styles.mobile = { ...(b.styles.mobile || {}), borderTopWidth: "0px" }; // le bouton du volet porte déjà un filet
-      return b;
-    };
-    const liste = (liens) => (kk) => kk.col(liens.map(([l, u], i) => barre(l, u, i === 0)), { gap: "0px", width: "100%", alignItems: "stretch" });
-    const panneaux = [
-      { title: "Naviguer", codes: [liste([["Accueil", "/"], ["Journal", "/blog"], ["Catalogue", "/catalogue"], ["Boutique", "/boutique"]])] },
-      { title: "Aide", codes: [liste([["Questions", "/faq"], ["Contact", "/contact"], ["Cookies", "/cookies"]])] },
-      { title: "Compte", codes: [liste([["Connexion", "/connexion"], ["Inscription", "/inscription"], ["Panier", "/boutique/panier"]])] },
-      { title: "Réseaux", codes: [liste([["Instagram", "https://www.instagram.com/"], ["LinkedIn", "https://www.linkedin.com/"], ["YouTube", "https://www.youtube.com/"]])] },
-    ];
-    const colonnes = Moteur.accordionNode(k, env, false, panneaux, { alignItems: "flex-start", width: "100%", maxWidth: "1280px", marginLeft: "auto", marginRight: "auto", color: S.fg, fontFamily: S.head, textTransform: "uppercase", letterSpacing: "0.06em", fontSize: "16px", rowGap: "28px", columnGap: "40px" }, { min: "150px" });
-    delete colonnes.styles.desktop.gap;
-    colonnes.children.forEach((c) => { c.styles.desktop = { ...c.styles.desktop, gap: "0px" }; c.styles.mobile = { minWidth: "0px" }; });
-    // 2 · mentions sur fond clair, sous un filet noir de 6 px (la ligne légale de la plateforme prend la couleur de la dernière bande : elle doit rester lisible)
+    // une case : lien pleine case, libellé en bas à gauche ; la couleur dépend de la parité (damier) ; survol et focus = inversion
+    const CASES = [["Accueil", "/"], ["Journal", "/blog"], ["Catalogue", "/catalogue"], ["Boutique", "/boutique"], ["Questions", "/faq"], ["Contact", "/contact"], ["Connexion", "/connexion"], ["Instagram ↗", "https://www.instagram.com/"]];
+    const cases = CASES.map(([t, u], i) => {
+      const noire = (Math.floor(i / 4) + (i % 4)) % 2 === 1, fond = noire ? NOIR : BLANC, texte = noire ? BLANC : NOIR;
+      const c = lien(k, t, u, {
+        taille: 22, poids: "700", h: "176px", padH: "24px", lh: 1.05, suivi: "-0.01em", couleur: texte, police: S.head,
+        survol: { backgroundColor: texte, color: fond, textDecoration: "none" }, focus: texte,
+        extra: { fontSize: "fluid:22-34", display: "flex", alignItems: "flex-end", justifyContent: "flex-start", backgroundColor: fond, width: "25%", flexGrow: 0, flexShrink: 0, boxSizing: "border-box", textTransform: "uppercase", letterSpacing: "0.02em", paddingBottom: "22px", borderStyle: "solid", borderWidth: "0px", borderRightWidth: "1px", borderBottomWidth: "1px", borderColor: NOIR, transitionDuration: 320 },
+      });
+      c.states.focus = { backgroundColor: texte, color: fond, outlineStyle: "solid", outlineWidth: "3px", outlineColor: fond, outlineOffset: "-8px" };
+      c.styles.tablet = { ...(c.styles.tablet || {}), width: "50%", minHeight: "140px" };
+      c.styles.mobile = { ...(c.styles.mobile || {}), width: "50%", minHeight: "112px", paddingLeft: "14px", paddingRight: "10px", paddingBottom: "16px", fontSize: "fluid:17-22" };
+      return c;
+    });
+    const damier = k.row(cases, { gap: "0px", flexWrap: "wrap", alignItems: "stretch", width: "100%" });
+    const bandeDamier = G.bande(k, [damier], { colonne: true, gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], fond: BLANC, filetHaut: { epaisseur: "6px", couleur: NOIR }, nom: "Damier" });
+    // mentions sur fond clair, sous un filet (la ligne légale de la plateforme prend la couleur de la dernière bande : elle reste lisible)
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bande = G.bande(k, [colonnes, trait(k, NOIR), mentions], { colonne: true, gap: "36px", max: "1280px", padV: ["56px", "48px", "28px"], padB: ["24px", "24px", "20px"], padH: ["48px", "32px", "16px"], fond: S.bg, filetHaut: { epaisseur: "6px", couleur: NOIR }, innerMobile: { rowGap: "24px" }, nom: "Colonnes" });
-    return [G.racine(k, [bande])];
+    const bas = G.bande(k, [trait(k, NOIR), mentions], { colonne: true, gap: "20px", max: "1280px", padV: ["28px", "24px", "20px"], padB: ["24px", "24px", "20px"], padH: ["48px", "32px", "16px"], fond: S.bg, nom: "Mentions" });
+    return [G.racine(k, [bandeDamier, bas])];
   },
 }, FAM);
 
-// ── c-099 « Glitch au survol » ───────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Idée : studio fictif « Bug ». Aubergine, rose fluo. La phrase géante « quelque chose a glissé. » est écrite sur trois lignes ; quand on SURVOLE une ligne, elle GLISSE de côté, passe au rose et se double d'un contour cyan,
-// puis revient. L'effet n'existe qu'au survol (jamais permanent), il est coupé sous « mouvement réduit » (les transformations ne se jouent pas) ; le texte reste lisible tout le temps.
-// Écart au concept : pas de clip-path ni de bruit en CSS dans la grammaire : le « défaut d'image » est un glissement de ligne + un contour cyan (états de survol du texte). Au toucher, le survol n'existe pas : la phrase reste figée.
-// Polices : Major Mono Display (phrase, testée à 150 px) et Manrope (liens, mentions). Couleurs : aubergine #3d0a3d, rose #ff4dff, cyan #3df5ff (effet seulement).
+// ── c-099 « Glitch au survol » — REFONTE (archétype F : bandeau d'appel XXL en haut + une seule colonne de liens, étroite, à droite) ──────────
+// Idée : studio fictif « Bug ». Aubergine, rose fluo. Un BANDEAU XXL ouvre le pied : la phrase « quelque chose a glissé. » sur deux lignes énormes ; quand on SURVOLE une ligne, elle GLISSE de côté, passe au rose et se double d'un
+// contour cyan, puis revient. Dessous, une grande barre rose « Écrire au studio » (le seul appel). En bas, à gauche l'e-mail du site, à droite UNE colonne étroite de liens (pages, puis réseaux). L'effet n'existe qu'au survol, jamais permanent,
+// et il est coupé sous « mouvement réduit » ; le texte reste lisible tout le temps. Au toucher, le survol n'existe pas : la phrase reste figée.
+// Polices : Major Mono Display (phrase, testée à grande taille) et Manrope (liens, mentions). Couleurs : aubergine #3d0a3d, rose #ff4dff, cyan #3df5ff (effet seulement). Angles droits.
 const aubergine = identite({
   key: "c099", label: "Aubergine et rose fluo", humeur: "dark",
   fond: "#3d0a3d", texte: "#ffe6ff", discret: "#e7b5e7", accent: "#ff4dff", surface: "#4e1250",
@@ -160,32 +157,33 @@ const aubergine = identite({
 const glitchSurvol = modeleV2({
   id: identifiantV2(99, "glitch-au-survol"), concept: "c-099-glitch-au-survol",
   name: "Glitch au survol", family: FAM,
-  description: "Studio fictif en aubergine et rose fluo : une phrase géante écrite en trois lignes. Au survol, chaque ligne glisse de côté et se double d'un contour cyan, comme un défaut d'image. Jamais permanent.",
-  tags: ["expérimental", "glitch", "phrase géante", "aubergine", "rose", "mono", "créatif"],
+  description: "Studio fictif en aubergine et rose fluo : un bandeau XXL avec la phrase géante sur deux lignes. Au survol, chaque ligne glisse de côté et se double d'un contour cyan, comme un défaut d'image. Une seule colonne de liens à droite.",
+  tags: ["expérimental", "glitch", "bandeau XXL", "aubergine", "rose", "mono", "créatif"],
   identity: aubergine,
   racine: racineDe("#3d0a3d"),
   widgets: ["text", "link", "bizemail", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S, CYAN = "#3df5ff";
-    // 1 · la phrase : trois lignes, chacune un nœud qui réagit seul au survol (glissement + rose + contour cyan)
+    // 1 · le bandeau XXL : deux lignes, chacune un nœud qui réagit seul au survol (glissement + rose + contour cyan)
     const ligneGlitch = (t, decal) => {
-      const n = k.T(`<p>${t}</p>`, { fontFamily: S.head, fontSize: "fluid:44-140", lineHeight: 0.98, letterSpacing: "-0.04em", fontWeight: "400", color: S.fg, alignSelf: "flex-start", maxWidth: "100%", transitionDuration: 90 });
+      const n = k.T(`<p>${t}</p>`, { fontFamily: S.head, fontSize: "fluid:34-150", lineHeight: 1, letterSpacing: "-0.05em", fontWeight: "400", color: S.fg, alignSelf: "flex-start", maxWidth: "100%", overflowWrap: "break-word", transitionDuration: 240 });
       n.states = { hover: { color: S.accent, textStrokeWidth: "2px", textStrokeColor: CYAN, transform: { x: decal, skewX: -6 } } };
       return n;
     };
-    const phrase = k.col([ligneGlitch("quelque", 18), ligneGlitch("chose a", -22), ligneGlitch("glissé.", 12)], { gap: "6px", alignItems: "flex-start", flexBasis: "0px", flexGrow: 7, minWidth: "300px", paddingLeft: "24px" }, undefined, { paddingLeft: "10px", minWidth: "0px", flexBasis: "100%" });
-    // 2 · la colonne de droite : libellé, e-mail du site (Données de l'entreprise), trois liens, réseaux en noms
-    const mail = GK.fini(k, k.W("bizemail", { prefix: "", text: "", showIcon: false }, { color: S.fg, fontFamily: S.font, fontSize: "20px", fontWeight: "700" }));
-    const sou = { color: S.accent, textDecoration: "underline" };
-    const un = (t, u) => lien(k, t, u, { taille: 16, poids: "600", h: "44px", survol: sou, focus: S.accent });
-    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["LinkedIn", "https://www.linkedin.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 15, couleur: S.mute, survol: S.accent })(k, env);
-    const droite = k.col([caps(k, "Écrire au studio", { couleur: S.accent }), mail, k.row([un("Journal", "/blog"), un("Questions", "/faq"), un("Contact", "/contact")], { ...GK.gaps("0px 28px"), alignItems: "center", flexWrap: "wrap" }), trait(k, S.line), reseaux],
-      { gap: "14px", alignItems: "flex-start", flexBasis: "0px", flexGrow: 4, minWidth: "260px", paddingLeft: "32px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "1px", borderColor: S.line, alignSelf: "flex-end" },
-      { flexBasis: "100%", borderLeftWidth: "0px", paddingLeft: "10px" }, { flexBasis: "100%", borderLeftWidth: "0px", paddingLeft: "10px", minWidth: "0px" });
-    const haut = G.ligne(k, [phrase, droite], { gap: "48px 56px", aligne: "flex-end", justifie: "space-between", largeur: "100%" });
+    const phrase = k.row([k.col([ligneGlitch("quelque chose", 18), ligneGlitch("a glissé.", -22)], { gap: "4px", alignItems: "flex-start", flexGrow: 1, flexBasis: "0px", minWidth: "0px" })], { gap: "0px", flexWrap: "nowrap", alignItems: "flex-start", width: "100%" });
+    // 2 · l'appel XXL : une barre rose pleine largeur ; au survol elle passe au cyan et la flèche glisse
+    const appel = lien(k, "Écrire au studio ↗", "/contact", { taille: 26, poids: "800", h: "104px", padH: "28px", couleur: "#3d0a3d", suivi: "0.02em", survol: { backgroundColor: CYAN, color: "#3d0a3d", transform: { x: 6 }, textDecoration: "none" }, focus: CYAN, extra: { fontSize: "fluid:20-46", backgroundColor: S.accent, display: "flex", width: "100%", justifyContent: "space-between", boxSizing: "border-box", transitionDuration: 320, borderRadius: "0px" } });
+    const bandeau = G.bande(k, [phrase, appel], { colonne: true, gap: "40px", max: "1280px", padV: ["88px", "64px", "44px"], padB: ["56px", "44px", "32px"], padH: ["48px", "32px", "20px"], fond: S.bg, degrade: { from: "#4e1250", to: "#3d0a3d", angle: 180 }, innerMobile: { rowGap: "28px" }, nom: "Bandeau XXL" });
+    // 3 · en bas : l'e-mail du site à gauche, UNE colonne étroite de liens à droite
+    const mail = GK.fini(k, k.W("bizemail", { prefix: "", text: "", showIcons: false, showIcon: false }, { color: S.fg, fontFamily: S.font, fontSize: "22px", fontWeight: "700" }));
+    const gauche = k.col([caps(k, "Un message, une idée, un bug à signaler ?", { couleur: S.accent }), mail, trait(k, S.line), k.T("<p>Écrivez-nous et dites-nous ce qui a glissé de votre côté.</p>", { fontSize: "14px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "380px" })], { gap: "14px", alignItems: "flex-start", flexBasis: "0px", flexGrow: 1, minWidth: "260px" }, { flexBasis: "100%" }, { flexBasis: "100%", minWidth: "0px" });
+    const ligneLien = (t, u) => lien(k, t, u, { taille: 16, poids: "600", h: "48px", couleur: S.fg, survol: { color: S.accent, transform: { x: 6 }, textDecoration: "none" }, focus: S.accent, extra: { display: "flex", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: S.line, transitionDuration: 320 } });
+    const reseauxLiens = k.row([lien(k, "Instagram ↗", "https://www.instagram.com/", { taille: 15, poids: "600", couleur: S.mute, survol: { color: S.accent }, focus: S.accent }), lien(k, "LinkedIn ↗", "https://www.linkedin.com/", { taille: 15, poids: "600", couleur: S.mute, survol: { color: S.accent }, focus: S.accent })], { ...GK.gaps("0px 24px"), alignItems: "center", flexWrap: "wrap", paddingTop: "10px" });
+    const colonneLiens = k.col([ligneLien("Journal", "/blog"), ligneLien("Questions", "/faq"), ligneLien("Contact", "/contact"), reseauxLiens], { gap: "0px", alignItems: "stretch", flexBasis: "280px", flexGrow: 0, flexShrink: 0, maxWidth: "100%" }, { flexBasis: "100%" }, { flexBasis: "100%" });
+    const milieu = G.ligne(k, [gauche, colonneLiens], { gap: "36px 72px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
     const mentions = G.ligneLegale({ taille: 12, sansCookies: true })(k, env);
-    const bande = G.bande(k, [haut, trait(k, S.line), mentions], { colonne: true, gap: "40px", max: "1280px", padV: ["96px", "72px", "56px"], padB: ["40px", "36px", "32px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "32px" }, degrade: { from: "#4e1250", to: "#3d0a3d", angle: 180 }, nom: "Phrase glitch" });
-    return [G.racine(k, [bande])];
+    const bas = G.bande(k, [milieu, trait(k, S.line), mentions], { colonne: true, gap: "36px", max: "1280px", padV: ["16px", "12px", "8px"], padB: ["36px", "32px", "28px"], padH: ["48px", "32px", "20px"], fond: S.bg, innerMobile: { rowGap: "28px" }, nom: "Liens" });
+    return [G.racine(k, [bandeau, bas])];
   },
 }, FAM);
 

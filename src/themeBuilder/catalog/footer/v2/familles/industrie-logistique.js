@@ -276,9 +276,9 @@ const chaineLogistique = modeleV2({
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-135 « Béton et sécurité » — entrepôt, stockage industriel, manutention
-// Idée : un MUR DE BÉTON. Fond gris béton, mot d'ordre monumental en Anton « STOCKER. TRANSPORTER. LIVRER. » sur trois lignes, à droite un index de quatre rubriques en grandes capitales dont la barre noire à gauche
-// s'épaissit et vire au rouge au survol ; une bande de carrés noirs et rouge sécurité sépare le haut du bas. Bas noir : contact, horaires (voyant carré qui « respire »), lettre, mentions. Rubriques = EXEMPLES.
-// Polices : Anton (géant, propre en grand corps) et Work Sans. Mobile : mot d'ordre à 64 px, index sous le mot d'ordre.
+// Idée : un MUR DE BÉTON à COLONNE LATÉRALE (archétype A). À gauche une barre noire pleine hauteur de 340 px : nom du site, coordonnées, horaires (voyant carré qui « respire »), lettre d'information.
+// À droite la zone béton : mot d'ordre monumental en Anton « STOCKER. TRANSPORTER. LIVRER. », quatre rubriques en grandes capitales coiffées d'une barre noire de 8 px qui vire au rouge au survol, puis la ligne légale. Rubriques = EXEMPLES.
+// Polices : Anton (géant, propre en grand corps) et Work Sans. Mobile : la barre passe au-dessus, mot d'ordre à 56 px.
 const beton = identite({
   key: "c135", label: "Béton, noir et rouge sécurité", humeur: "light",
   fond: "#d8d8d2", texte: "#141414", discret: "#3d3d38", accent: "#b3121d", surface: "#e8e8e3", encre: "#141414",
@@ -290,39 +290,35 @@ const BETON = "#d8d8d2", BNOIR = "#141414", ROUGE = "#b3121d", ROUGE2 = "#ff8a8a
 const betonSecurite = modeleV2({
   id: identifiantV2(135, "beton-et-securite"), concept: "c-135-beton-et-securite",
   name: "Béton et sécurité", family: FAM,
-  description: "Pour un entrepôt ou une société de manutention : mot d'ordre monumental en capitales sur fond béton, index de quatre rubriques à barre noire qui vire au rouge, bande de carrés de sécurité, puis un bas noir avec contact, horaires et lettre.",
-  tags: ["entrepôt", "manutention", "béton", "rouge sécurité", "capitales géantes", "index", "angles droits"],
+  description: "Pour un entrepôt ou une société de manutention : une barre noire latérale pleine hauteur (nom, coordonnées, horaires, lettre) et, sur fond béton, un mot d'ordre monumental en capitales avec quatre rubriques à barre noire qui vire au rouge.",
+  tags: ["entrepôt", "manutention", "béton", "rouge sécurité", "colonne latérale", "capitales géantes", "angles droits"],
   identity: beton,
-  racine: racineDe(BNOIR),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  racine: racineDe(BETON),
+  widgets: ["sitetitle", "text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    // 1 · mot d'ordre monumental + index
-    const mot = G.geant(`<p>Stocker.<br>Transporter.<br><span style="color:${ROUGE}">Livrer.</span></p>`, { taille: [56, 112], tablette: { taille: [88, 104] }, mobile: { taille: [56, 84] }, lh: 0.98, suivi: "0.005em", poids: "400", police: S.head, couleur: BNOIR, extra: { textTransform: "uppercase" } })(k, env);
-    const gauche = G.colonne(k, [caps(k, "Entrepôt et manutention", { couleur: ROUGE, suivi: "0.22em" }), mot], { poids: 7, min: "520px", gap: "16px", mobile: { minWidth: "100%" } });
-    const rub = (num, t, u) => {
-      const l = lien(k, t, u, { taille: 28, poids: "400", police: S.head, casse: "uppercase", suivi: "0.03em", couleur: BNOIR, survol: { color: ROUGE }, focus: ROUGE, h: "56px", extra: { flexGrow: 1 } });
-      const r = k.row([caps(k, num, { couleur: ROUGE, suivi: "0.16em", extra: { minWidth: "30px" } }), l], { flexWrap: "nowrap", alignItems: "center", gap: "14px", width: "100%", paddingLeft: "18px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "8px", borderBottomWidth: "1px", borderColor: BNOIR, borderBottomColor: "#14141455", borderRadius: "0px", transitionDuration: DOUX });
-      r.states = { hover: { borderColor: ROUGE, borderLeftWidth: "20px", backgroundColor: "#e8e8e3" } };
-      return r;
-    };
-    const index = G.colonne(k, [caps(k, "Index", { couleur: BNOIR, suivi: "0.22em" }), k.col([rub("01", "Stockage", "/contact"), rub("02", "Transport", "/contact"), rub("03", "Livraison", "/faq"), rub("04", "Manutention", "/faq")], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: BNOIR })], { poids: 5, min: "300px", gap: "10px", soi: "flex-end" });
-    const haut = G.bande(k, [gauche, index], { fond: BETON, gap: "40px 64px", aligne: "flex-end", padV: ["96px", "72px", "52px"], padB: ["72px", "56px", "40px"], padH: ["48px", "32px", "20px"], nom: "Mot d'ordre" });
-    // 2 · bande de sécurité (carrés noirs et rouge)
-    const sep = G.bande(k, [bandeSecurite(k, BNOIR, ROUGE, 36, "16px")], { fond: BETON, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Repère" });
-    // 3 · bas noir : contact, horaires, lettre, mentions
-    const colContact = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, couleur: "#f2f2ee", lien: "#ffffff", survol: ROUGE2, focus: "#ffffff" })], { couleurTitre: ROUGE2 });
+    const CLAIR = "#f2f2ee";
+    // Barre latérale noire (pleine hauteur)
+    const nom = nomDuSite(k, env, 30, "#ffffff", { fontWeight: "400", textTransform: "uppercase", letterSpacing: "0.03em" });
+    const colContact = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, couleur: CLAIR, lien: "#ffffff", survol: ROUGE2, focus: "#ffffff" })], { couleurTitre: ROUGE2 });
     const pt = souffle(carre(k, ROUGE2, "10px"), 3000);
-    const colHor = G.colonne(k, [k.row([pt, caps(k, "Horaires", { couleur: ROUGE2 })], { gap: "10px", alignItems: "center" }), horaires(k, { taille: 15, couleur: "#f2f2ee" })], { poids: 1, min: "220px", gap: "12px" });
-    const rapide = [["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]];
-    const colLiens = bloc(k, "Liens utiles", rapide.map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", couleur: "#f2f2ee", survol: { color: ROUGE2, transform: { x: 6 } }, focus: "#ffffff" })), { couleurTitre: ROUGE2, gap: "0px", min: "180px" });
-    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Les nouvelles du site, par courriel.", bouton: "S'abonner", largeur: "340px", accent: "#ffffff", surBouton: BNOIR, texte: "#f2f2ee", couleurTitre: ROUGE2, fond: BNOIR, survolBouton: ROUGE2, survolTexte: BNOIR, focus: "#ffffff" });
-    const colLettre = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const grille = G.ligne(k, [colContact, colHor, colLiens, colLettre], { gap: "36px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#cfcfca", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [grille, trait(k, "#ffffff33"), mentions], { fond: BNOIR, colonne: true, gap: "36px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Contact" });
-    bas.styles.desktop.color = "#f2f2ee";
-    return [G.racine(k, [haut, sep, bas])];
+    const colHor = G.colonne(k, [k.row([pt, caps(k, "Horaires", { couleur: ROUGE2 })], { gap: "10px", alignItems: "center" }), horaires(k, { taille: 15, couleur: CLAIR })], { poids: 0, min: "0px", gap: "12px", aligne: "stretch" });
+    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Les nouvelles du site, par courriel.", bouton: "S'abonner", largeur: "100%", accent: "#ffffff", surBouton: BNOIR, texte: CLAIR, couleurTitre: ROUGE2, fond: BNOIR, survolBouton: ROUGE2, survolTexte: BNOIR, focus: "#ffffff" });
+    const barre = k.col([caps(k, "Entrepôt", { couleur: ROUGE2, suivi: "0.22em" }), nom, trait(k, "#ffffff40"), colContact, colHor, trait(k, "#ffffff40"), abo],
+      { flexGrow: 0, flexShrink: 0, flexBasis: "340px", minWidth: "300px", gap: "22px", backgroundColor: BNOIR, boxSizing: "border-box", borderRadius: "0px", paddingTop: "64px", paddingBottom: "48px", paddingLeft: "40px", paddingRight: "40px" },
+      { flexBasis: "300px", paddingLeft: "32px", paddingRight: "32px" },
+      { flexBasis: "100%", flexShrink: 1, flexGrow: 1, minWidth: "0px", paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "36px" });
+    // Zone béton : mot d'ordre, rubriques, mentions
+    const mot = G.geant(`<p>Stocker.<br>Transporter.<br><span style="color:${ROUGE}">Livrer.</span></p>`, { taille: [56, 112], tablette: { taille: [64, 88] }, mobile: { taille: [56, 80] }, lh: 0.98, suivi: "0.005em", poids: "400", police: S.head, couleur: BNOIR, extra: { textTransform: "uppercase" } })(k, env);
+    const rub = (t, u) => lien(k, t, u, { taille: 26, poids: "400", police: S.head, casse: "uppercase", suivi: "0.03em", couleur: BNOIR, h: "72px", bloc: true, survol: { color: ROUGE, borderColor: ROUGE }, focus: ROUGE, extra: { flexGrow: 1, flexBasis: "0px", minWidth: "150px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "8px", borderColor: BNOIR, paddingTop: "10px" } });
+    const rubriques = G.ligne(k, [rub("Stockage", "/contact"), rub("Transport", "/contact"), rub("Livraison", "/faq"), rub("Manutention", "/faq")], { gap: "16px 20px", aligne: "stretch", largeur: "100%" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
+    const zone = k.col([caps(k, "Entrepôt et manutention", { couleur: ROUGE, suivi: "0.22em" }), mot, rubriques, trait(k, BNOIR, "2px"), mentions],
+      { flexGrow: 1, flexBasis: "0px", minWidth: "460px", gap: "36px", boxSizing: "border-box", paddingTop: "72px", paddingBottom: "28px", paddingLeft: "56px", paddingRight: "56px", justifyContent: "space-between" },
+      { paddingLeft: "40px", paddingRight: "40px", paddingTop: "56px" },
+      { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "20px", gap: "28px" });
+    const mur = G.bande(k, [barre, zone], { fond: BETON, max: "100%", gap: "0px", aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Mur" });
+    return [G.racine(k, [mur])];
   },
 }, FAM);
 
