@@ -597,7 +597,7 @@
       "famille": "Experts-comptables et gestion",
       "secteur": "centre de gestion",
       "directionArtistique": {
-        "texte": "Deux demi-pages de couleurs opposées : message en grand serif sur prune à gauche, actions en grandes lignes flèchées sur sable rosé à droite, mentions en bas. Archétype E."
+        "texte": "L’espace adhérent dessiné comme une fenêtre d’application (archétype K) : barre de titre prune avec voyant carré qui respire, menu de grandes lignes flèchées à gauche, coordonnées et horaires à droite sur fond clair, barre d’état nuit, mentions dessous. Angles droits."
       },
       "typographies": {
         "titre": "DM Serif Text",
@@ -608,7 +608,8 @@
       "tags": [
         "centre de gestion",
         "adhérents",
-        "deux demi-pages",
+        "fenêtre",
+        "interface",
         "prune",
         "sable",
         "serif",
@@ -1017,7 +1018,7 @@
       "famille": "Écoles et établissements",
       "secteur": "école privée",
       "directionArtistique": {
-        "texte": "Archétype J. Cartouche centré entre deux doubles filets sauge : nom de l'école en grand serif, devise, adresse, ligne de liens (inscriptions, portes ouvertes sans date, espace parents). Bleu nuit ; carré qui respire devant « Portes ouvertes ». Ni horaires ni lettre."
+        "texte": "Archétype G (index en lignes pleine largeur). En-tête de papier : nom de l'école en grand serif, devise en italique, filet double sauge ; puis sommaire en quatre lignes pleine largeur (I. Inscriptions, II. Portes ouvertes sans date, III. Espace parents, IV. Nous écrire) en grand serif avec flèche, qui glissent au survol ; adresse et mentions en pied. Bleu nuit et sauge ; carré qui respire devant « Portes ouvertes »."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -1028,8 +1029,9 @@
       "tags": [
         "école privée",
         "papier à en-tête",
-        "centré",
-        "doubles filets",
+        "sommaire",
+        "index",
+        "grand serif",
         "bleu nuit",
         "sauge",
         "angles droits"

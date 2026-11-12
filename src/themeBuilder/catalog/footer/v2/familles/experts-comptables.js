@@ -173,9 +173,10 @@ const echeancierFiscal = modeleV2({
   },
 }, FAM);
 
-// ── ft2-209 « Deux demi-pages » ─ centre de gestion ── ARCHÉTYPE E (deux demi-pages de couleurs opposées) ─────────────────────────────────────
-// Idée : DEUX DEMI-PAGES bord à bord. À gauche, prune profond : le message (« Espace adhérent » en grand serif) et un bouton blanc carré. À droite, rose sable clair : les actions, en liste de grandes lignes
-// flèchées, puis les horaires et les mentions. Pas de lettre, pas de quatre colonnes. Polices : DM Serif Text (titres) et Nunito Sans. Mobile : la demi-page prune passe au-dessus.
+// ── ft2-209 « Deux demi-pages » ─ centre de gestion ── ARCHÉTYPE K (fenêtre : le pied ressemble à un bloc d'interface) ─────────────────────────────────────────
+// Idée : l'ESPACE ADHÉRENT dessiné comme une FENÊTRE d'application, posée sur le sable rosé. Barre de titre prune (« Espace adhérent » et trois petits carrés de commande décoratifs), volet gauche en menu de grandes lignes
+// flèchées (connexion, actualités, questions, écrire), volet droit « Nous joindre » (coordonnées et horaires des Données de l'entreprise), barre d'état nuit en bas de la fenêtre. Mentions sous la fenêtre.
+// Le nom « deux demi-pages » est conservé : deux volets côte à côte, prune et clair. Polices : DM Serif Text (titres) et Nunito Sans. Mobile : volets l'un sous l'autre.
 const SABLE_R = "#f4e1d6", PRUNE = "#6b2459", NUIT_P = "#2a1233", CLAIR_R = "#fff4ec";
 const guichets = identite({
   key: "c209", label: "Prune profond et sable rosé", humeur: "light",
@@ -186,28 +187,36 @@ const guichets = identite({
 const deuxGuichets = modeleV2({
   id: identifiantV2(209, "deux-demi-pages"), concept: "c-209-deux-demi-pages",
   name: "Deux demi-pages", family: FAM,
-  description: "Pour un centre de gestion : deux demi-pages de couleurs opposées, le message en grand serif sur prune à gauche, les actions en grandes lignes flèchées sur sable rosé à droite, avec les mentions.",
-  tags: ["centre de gestion", "adhérents", "deux demi-pages", "prune", "sable", "serif", "angles droits"],
+  description: "Pour un centre de gestion : l'espace adhérent dessiné comme une fenêtre d'application, barre de titre prune, menu de grandes lignes flèchées à gauche, coordonnées et horaires à droite, barre d'état en bas.",
+  tags: ["centre de gestion", "adhérents", "fenêtre", "interface", "prune", "sable", "serif", "angles droits"],
   identity: guichets,
   racine: racineDe(SABLE_R),
-  widgets: ["text", "link", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizcontact", "bizhours", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const t = G.geant("<p>Espace<br>adhérent</p>", { taille: [48, 104], tablette: { taille: [64, 92] }, mobile: { taille: [48, 64] }, lh: 1.0, suivi: "-0.02em", poids: "400", police: S.head, couleur: "#ffffff" })(k, env);
-    const btn = lien(k, "Me connecter", "/connexion", { taille: 17, poids: "800", couleur: PRUNE, h: "58px", padH: "34px", survol: { backgroundColor: PRUNE, color: "#ffffff", transform: { x: 6 } }, focus: "#ffffff", extra: { backgroundColor: "#ffffff", justifyContent: "center", alignSelf: "flex-start", borderStyle: "solid", borderWidth: "2px", borderColor: "#ffffff" } });
-    const gauche = G.colonne(k, [caps(k, "Centre de gestion", { couleur: "#ffffff", suivi: "0.24em" }), t, k.T("<p>Vos documents, vos démarches et vos questions au même endroit.</p>", { fontSize: "18px", lineHeight: 1.55, color: "#ffffff", fontFamily: S.font, maxWidth: "380px" }), btn], { poids: 1, min: "340px", gap: "26px", justifie: "center", extra: { backgroundColor: PRUNE, paddingTop: "96px", paddingBottom: "96px", paddingLeft: "64px", paddingRight: "56px", borderRadius: "0px" }, mobile: { minWidth: "100%", paddingTop: "52px", paddingBottom: "52px", paddingLeft: "20px", paddingRight: "20px" }, tablette: { paddingLeft: "32px", paddingRight: "32px" } });
-    const A = [["Actualités du centre", "/blog"], ["Questions fréquentes", "/faq"], ["Écrire au centre", "/contact"]];
+    // 1 · barre de titre : voyant carré qui respire, titre, trois carrés de commande (décoratifs)
+    const voyant = souffle(carre(k, "#ffffff", "10px"), 3200);
+    const commandes = k.row([0, 1, 2].map(() => k.col([], { width: "12px", height: "12px", borderStyle: "solid", borderWidth: "2px", borderColor: "#ffffff", borderRadius: "0px", boxSizing: "border-box", flexShrink: 0 })), { gap: "8px", alignItems: "center", flexWrap: "nowrap" });
+    const titre = k.row([voyant, k.T("<p>Espace adhérent</p>", { fontSize: "22px", lineHeight: 1.2, color: "#ffffff", fontFamily: S.head, fontWeight: "400" })], { gap: "12px", alignItems: "center", flexWrap: "nowrap" });
+    const barreTitre = k.row([titre, commandes], { justifyContent: "space-between", alignItems: "center", flexWrap: "nowrap", width: "100%", backgroundColor: PRUNE, boxSizing: "border-box", paddingTop: "14px", paddingBottom: "14px", paddingLeft: "24px", paddingRight: "24px", borderRadius: "0px" });
+    // 2 · volet gauche : menu de grandes lignes flèchées
+    const A = [["Me connecter", "/connexion"], ["Actualités du centre", "/blog"], ["Questions fréquentes", "/faq"], ["Écrire au centre", "/contact"]];
     const ligne = ([tx, u]) => {
       const l = lien(k, tx, u, { taille: 26, poids: "400", police: S.head, couleur: NUIT_P, survol: { color: PRUNE }, focus: PRUNE, h: "64px", extra: { flexGrow: 1 } });
       const r = k.row([l, k.T("<p>→</p>", { fontSize: "24px", color: PRUNE, fontFamily: S.font })], { flexWrap: "nowrap", alignItems: "center", width: "100%", paddingRight: "12px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#2a123355", borderRadius: "0px", transitionDuration: DOUX });
-      r.states = { hover: { paddingLeft: "20px", backgroundColor: CLAIR_R } };
+      r.states = { hover: { paddingLeft: "16px", backgroundColor: SABLE_R } };
       return r;
     };
-    const bas = k.col([G.ligneLegale({ taille: 13, sansCookies: true })(k, env)], { width: "100%", paddingTop: "28px" });
-    const droite = G.colonne(k, [caps(k, "Actions", { couleur: PRUNE, suivi: "0.24em" }), k.col(A.map(ligne), { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderColor: NUIT_P, borderRadius: "0px" }), bas], { poids: 1, min: "340px", gap: "20px", justifie: "center", extra: { backgroundColor: SABLE_R, paddingTop: "88px", paddingBottom: "40px", paddingLeft: "56px", paddingRight: "64px", borderRadius: "0px" }, mobile: { minWidth: "100%", paddingTop: "40px", paddingBottom: "32px", paddingLeft: "20px", paddingRight: "20px" }, tablette: { paddingLeft: "32px", paddingRight: "32px" } });
-    droite.children.forEach((c) => { c.styles.desktop = { ...c.styles.desktop, width: "100%" }; });
-    const deux = G.bande(k, [gauche, droite], { fond: SABLE_R, gap: "0px", aligne: "stretch", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Demi-pages" });
-    return [G.racine(k, [deux])];
+    const menu = G.colonne(k, [caps(k, "Menu", { couleur: PRUNE, suivi: "0.24em", extra: { paddingBottom: "12px" } }), ...A.map(ligne)], { poids: 3, min: "320px", gap: "0px", aligne: "stretch", extra: { boxSizing: "border-box", paddingTop: "28px", paddingBottom: "20px", paddingLeft: "28px", paddingRight: "28px" }, mobile: { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px" } });
+    // 3 · volet droit : coordonnées et horaires, sur fond clair, filet à gauche
+    const joindre = G.colonne(k, [caps(k, "Nous joindre", { couleur: PRUNE, suivi: "0.24em" }), coordonnees(k, { taille: 15, lien: NUIT_P, survol: PRUNE, focus: PRUNE }), trait(k, "#2a123355"), caps(k, "Horaires", { couleur: PRUNE, suivi: "0.24em" }), horaires(k, { taille: 15 })], { poids: 2, min: "260px", gap: "14px", extra: { backgroundColor: CLAIR_R, boxSizing: "border-box", paddingTop: "28px", paddingBottom: "24px", paddingLeft: "28px", paddingRight: "28px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "2px", borderColor: NUIT_P, borderRadius: "0px" }, mobile: { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", borderLeftWidth: "0px", borderTopWidth: "2px" } });
+    const corps = k.row([menu, joindre], { flexWrap: "wrap", alignItems: "stretch", gap: "0px", width: "100%", backgroundColor: "#ffffff", borderRadius: "0px" });
+    // 4 · barre d'état de la fenêtre
+    const etat = k.col([caps(k, "Centre de gestion · espace des adhérents", { couleur: "#ffffff", taille: "11px", suivi: "0.2em" })], { backgroundColor: NUIT_P, width: "100%", boxSizing: "border-box", paddingTop: "10px", paddingBottom: "10px", paddingLeft: "24px", paddingRight: "24px", borderRadius: "0px" });
+    const fenetre = k.col([barreTitre, corps, etat], { width: "100%", gap: "0px", borderStyle: "solid", borderWidth: "2px", borderColor: NUIT_P, boxSizing: "border-box", borderRadius: "0px" });
+    const haut = G.bande(k, [fenetre], { fond: SABLE_R, colonne: true, max: "1040px", padV: ["72px", "56px", "36px"], padB: ["32px", "28px", "20px"], padH: ["48px", "32px", "20px"], nom: "Fenêtre" });
+    const bas = G.bande(k, [k.divider({ width: "100%", borderColor: "#2a123366", borderStyle: "solid", borderTopWidth: "1px", marginTop: "0px", marginBottom: "0px" }), G.ligneLegale({ taille: 13, sansCookies: true })(k, env)], { fond: SABLE_R, colonne: true, gap: "18px", max: "1040px", padV: ["8px", "8px", "8px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [haut, bas])];
   },
 }, FAM);
 

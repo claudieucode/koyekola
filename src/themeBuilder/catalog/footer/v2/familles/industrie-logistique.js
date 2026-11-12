@@ -218,10 +218,11 @@ const pupitreControle = modeleV2({
 }, FAM);
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-134 « Chaîne logistique » — transporteur, commissionnaire, plateforme de distribution
-// Idée : la CHAÎNE en cinq étapes (Commande, Préparation, Expédition, Transport, Livraison), tracée comme une ligne de plan : chaque étape est un bloc à trait supérieur épais bleu pétrole qui devient orange au survol,
-// numéroté, avec un lien et une phrase d'exemple (aucun délai ni chiffre). Dessous, bande blanche : contact, horaires, lettre, mentions. Étapes = rubriques d'EXEMPLE à renommer.
-// Polices : Barlow Semi Condensed (titres) et Barlow. Mobile : étapes en pile, trait à gauche.
+// ft2-134 « Chaîne logistique » — transporteur, commissionnaire, plateforme de distribution ── ARCHÉTYPE L (escalier : bandes de largeurs décroissantes alignées à gauche)
+// Idée : la CHAÎNE en cinq étapes, descendue comme un ESCALIER. Cinq marches alignées à gauche, de plus en plus étroites (100 %, 84 %, 68 %, 52 %, 36 %) et dont le ton passe du gris clair au bleu pétrole puis au marine :
+// 01 Commande (avec le titre « De la commande à la livraison. » et le bouton), 02 Préparation, 03 Expédition, 04 Transport, 05 Livraison. Au survol, la marche s'allonge d'un trait orange et se décale.
+// Dessous : une bande marine avec coordonnées et horaires côte à côte, puis les mentions. Étapes = rubriques d'EXEMPLE à renommer (aucun délai, aucun chiffre). Plus de lettre.
+// Polices : Barlow Semi Condensed (titres) et Barlow. Mobile : marches pleine largeur.
 const chaine = identite({
   key: "c134", label: "Gris clair, bleu pétrole et orange", humeur: "light",
   fond: "#f1f3f4", texte: "#0b2e3f", discret: "#4a5c66", accent: "#c2410c", surface: "#ffffff", encre: "#0b2e3f",
@@ -233,44 +234,44 @@ const GRIS = "#f1f3f4", PETROLE = "#0b4f6c", MARINE2 = "#0b2e3f", ORANGE = "#c24
 const chaineLogistique = modeleV2({
   id: identifiantV2(134, "chaine-logistique"), concept: "c-134-chaine-logistique",
   name: "Chaîne logistique", family: FAM,
-  description: "Pour un transporteur ou une plateforme de distribution : cinq étapes (commande, préparation, expédition, transport, livraison) tracées comme un plan, au trait épais qui vire à l'orange au survol, puis contact, horaires, lettre et mentions.",
-  tags: ["logistique", "transport", "étapes", "chaîne", "bleu pétrole", "orange", "frise", "angles droits"],
+  description: "Pour un transporteur ou une plateforme de distribution : la chaîne (commande, préparation, expédition, transport, livraison) descendue en escalier de cinq marches de plus en plus étroites, puis coordonnées, horaires et mentions.",
+  tags: ["logistique", "transport", "étapes", "chaîne", "escalier", "bleu pétrole", "orange", "angles droits"],
   identity: chaine,
   racine: racineDe(MARINE2),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
-    const S = k.S;
-    // 1 · titre + cinq étapes
-    const titre = G.geant(`<p>De la commande<br>à la livraison.</p>`, { taille: [40, 88], tablette: { taille: [60, 80] }, mobile: { taille: [40, 52] }, lh: 1.02, suivi: "-0.01em", poids: "700", police: S.head, couleur: MARINE2 })(k, env);
-    const sous = k.T("<p>Cinq étapes, un seul interlocuteur. Choisissez celle qui vous concerne ou écrivez-nous.</p>", { fontSize: "17px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "380px" });
-    const bouton = lien(k, "Suivre ou demander", "/contact", { taille: 16, poids: "700", couleur: "#ffffff", h: "52px", padH: "26px", survol: { backgroundColor: ORANGE, color: "#ffffff", transform: { y: -3 } }, focus: ORANGE, extra: { backgroundColor: MARINE2, justifyContent: "center", alignSelf: "flex-start" } });
-    const gaucheT = G.colonne(k, [caps(k, "Notre chaîne", { couleur: ORANGE, suivi: "0.22em" }), titre], { poids: 7, min: "300px", gap: "16px" });
-    const droiteT = G.colonne(k, [sous, bouton], { poids: 4, min: "280px", gap: "20px", soi: "flex-end" });
-    const entete = G.bande(k, [gaucheT, droiteT], { fond: GRIS, gap: "32px 64px", aligne: "flex-end", padV: ["88px", "68px", "48px"], padB: ["40px", "36px", "28px"], padH: ["48px", "32px", "20px"], nom: "Titre" });
-    const etape = (num, t, texte, url) => {
-      const l = lien(k, t, url, { taille: 24, poids: "700", police: S.head, couleur: MARINE2, survol: { color: ORANGE }, focus: ORANGE });
-      const c = k.col([caps(k, num, { couleur: PETROLE, suivi: "0.2em" }), l, k.T(`<p>${texte}</p>`, { fontSize: "15px", lineHeight: 1.5, color: S.mute, fontFamily: S.font })], { flexGrow: 1, flexBasis: "0px", minWidth: "180px", gap: "6px", paddingTop: "18px", paddingBottom: "22px", paddingLeft: "0px", paddingRight: "16px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "8px", borderColor: PETROLE, borderRadius: "0px", transitionDuration: DOUX }, undefined, { minWidth: "100%", borderTopWidth: "0px", borderLeftWidth: "8px", paddingLeft: "18px", paddingTop: "8px", paddingBottom: "12px" });
-      c.states = { hover: { borderColor: ORANGE, transform: { y: -6 } } };
-      return c;
+    const S = k.S, CLAIR = "#f1f3f4";
+    // une marche : bande à largeur réduite (alignée à gauche), numéro + nom (lien) + phrase d'exemple ; survol : trait orange et décalage
+    const marche = (largeur, fond, clair, num, t, texte, url, o = {}) => {
+      const encre = clair ? "#ffffff" : MARINE2;
+      const l = lien(k, t, url, { taille: o.taille || 30, poids: "700", police: S.head, couleur: encre, survol: { transform: { x: 6 } }, focus: clair ? "#ffffff" : ORANGE, h: "56px" });
+      const corps = [caps(k, num, { couleur: clair ? "#ffb27a" : PETROLE, suivi: "0.2em" }), l, k.T(`<p>${texte}</p>`, { fontSize: "15px", lineHeight: 1.5, color: clair ? "#e3ecf0" : MARINE2, fontFamily: S.font })];
+      const b = G.bande(k, o.avant ? [...o.avant, ...corps] : corps, { fond, gap: "6px 28px", aligne: "center", justifie: "flex-start", padV: ["22px", "20px", "16px"], padH: ["48px", "32px", "20px"], max: "1280px", innerMobile: { rowGap: "4px" }, nom: `Marche ${num}` });
+      b.children[0].styles.desktop.justifyContent = "flex-start";
+      Object.assign(b.styles.desktop, { width: largeur, boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "10px", borderColor: clair ? "#ffb27a" : PETROLE, transitionDuration: DOUX });
+      b.styles.tablette = { ...(b.styles.tablette || {}), width: "100%" };
+      b.styles.mobile = { ...(b.styles.mobile || {}), width: "100%" };
+      b.states = { hover: { borderColor: ORANGE, transform: { x: 8 } } };
+      return b;
     };
-    const etapes = G.ligne(k, [
-      etape("01", "Commande", "Dites-nous ce qu'il faut déplacer.", "/contact"),
-      etape("02", "Préparation", "Votre marchandise est prête à partir.", "/faq"),
-      etape("03", "Expédition", "Le départ est organisé avec vous.", "/faq"),
-      etape("04", "Transport", "Le parcours est suivi pas à pas.", "/blog"),
-      etape("05", "Livraison", "La remise est confirmée.", "/contact"),
-    ], { gap: "16px", aligne: "stretch", largeur: "100%" });
-    const bandeEtapes = G.bande(k, [etapes], { fond: GRIS, colonne: true, padV: ["16px", "16px", "8px"], padB: ["72px", "56px", "40px"], padH: ["48px", "32px", "20px"], nom: "Étapes" });
-    // 2 · bande blanche : contact, horaires, lettre, mentions
-    const colContact = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, lien: MARINE2, survol: ORANGE, focus: ORANGE })], { couleurTitre: PETROLE });
-    const pt = souffle(carre(k, ORANGE, "10px"), 3000);
-    const colHor = G.colonne(k, [k.row([pt, caps(k, "Horaires", { couleur: PETROLE })], { gap: "10px", alignItems: "center" }), horaires(k, { taille: 15 })], { poids: 1, min: "220px", gap: "12px" });
-    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Les nouvelles du transport, par courriel.", bouton: "S'abonner", largeur: "360px", accent: ORANGE, surBouton: "#ffffff", texte: MARINE2, couleurTitre: PETROLE, fond: "#ffffff", survolBouton: MARINE2, survolTexte: "#ffffff", focus: MARINE2 });
-    const colLettre = G.colonne(k, [abo], { poids: 1.4, min: "260px" });
-    const grille = G.ligne(k, [colContact, colHor, colLettre], { gap: "36px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: "#ffffff", colonne: true, gap: "36px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, filetHaut: { epaisseur: "4px", couleur: MARINE2 }, nom: "Contact" });
-    return [G.racine(k, [entete, bandeEtapes, bas])];
+    // en-tête : titre et bouton, sur la première marche (pleine largeur)
+    const titre = G.geant(`<p>De la commande<br>à la livraison.</p>`, { taille: [40, 84], tablette: { taille: [56, 76] }, mobile: { taille: [38, 50] }, lh: 1.02, suivi: "-0.01em", poids: "700", police: S.head, couleur: MARINE2 })(k, env);
+    const bouton = lien(k, "Suivre ou demander", "/contact", { taille: 16, poids: "700", couleur: "#ffffff", h: "52px", padH: "26px", survol: { backgroundColor: ORANGE, color: "#ffffff", transform: { y: -3 } }, focus: ORANGE, extra: { backgroundColor: MARINE2, justifyContent: "center", alignSelf: "flex-start" } });
+    const tete = G.bande(k, [G.colonne(k, [caps(k, "Notre chaîne", { couleur: ORANGE, suivi: "0.22em" }), titre], { poids: 1, min: "300px", gap: "14px" }), bouton], { fond: GRIS, gap: "24px 48px", aligne: "flex-end", padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Titre" });
+    const m1 = marche("100%", GRIS, false, "01", "Commande", "Dites-nous ce qu'il faut déplacer.", "/contact");
+    const m2 = marche("84%", "#dde6ea", false, "02", "Préparation", "Votre marchandise est prête à partir.", "/faq");
+    const m3 = marche("68%", "#9fc3d3", false, "03", "Expédition", "Le départ est organisé avec vous.", "/faq");
+    const m4 = marche("52%", PETROLE, true, "04", "Transport", "Le parcours est suivi pas à pas.", "/blog");
+    const m5 = marche("36%", MARINE2, true, "05", "Livraison", "La remise est confirmée.", "/contact");
+    // contact et horaires (marine, pleine largeur), puis mentions
+    const pt = souffle(carre(k, "#ffb27a", "10px"), 3000);
+    const infos = G.bande(k, [
+      bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, couleur: CLAIR, lien: "#ffffff", survol: "#ffb27a", focus: "#ffffff" })], { couleurTitre: "#ffb27a", min: "240px" }),
+      G.colonne(k, [k.row([pt, caps(k, "Horaires", { couleur: "#ffb27a" })], { gap: "10px", alignItems: "center" }), horaires(k, { taille: 15, couleur: CLAIR })], { poids: 1, min: "240px", gap: "12px" }),
+    ], { fond: MARINE2, gap: "28px 48px", aligne: "flex-start", justifie: "flex-start", padV: ["44px", "40px", "32px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "24px" }, nom: "Contact" });
+    const bas = G.bande(k, [trait(k, "#f1f3f444"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#c9d6dc", liens: "#ffffff" })(k, env)], { fond: MARINE2, colonne: true, gap: "18px", padV: ["8px", "8px", "8px"], padB: ["24px", "22px", "18px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    bas.styles.desktop.color = "#ffffff"; // la ligne légale de la plateforme prend la couleur de la dernière bande
+    return [G.racine(k, [tete, m1, m2, m3, m4, m5, infos, bas])];
   },
 }, FAM);
 

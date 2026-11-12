@@ -53,10 +53,10 @@ const nomDuSite = (k, env, taille, couleur, extra = {}) => {
 const liensStd = (k, couleur, survol, liste, o = {}) => (liste || [["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Nous contacter", "/contact"], ["Espace client", "/connexion"]]).map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", couleur, survol: { color: survol, transform: { x: 6 } }, focus: survol, ...o }));
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-226 « Papier à en-tête » — école privée   [archétype J : cartouche centré, filets doubles, liens en ligne centrée]
-// Idée : le pied est un PAPIER À EN-TÊTE d'école. Tout est centré entre deux doubles filets sauge : « Établissement scolaire », le nom en grand serif, une devise, l'adresse (Données de l'entreprise),
-// puis une ligne centrée de liens (inscriptions, portes ouvertes — sans date —, espace parents, contact) ; un carré sauge « respire » devant « Portes ouvertes ». Ni horaires ni lettre : sobriété d'une correspondance.
-// Polices : Cormorant Garamond (titres, en grand) et Hanken Grotesk. Mobile : liens empilés, filets pleine largeur.
+// ft2-226 « Papier à en-tête » — école privée   [archétype G : index en lignes pleine largeur — REFONTE]
+// Idée : le pied est un PAPIER À EN-TÊTE d'école devenu SOMMAIRE. En tête, le nom en grand serif et la devise en italique au-dessus d'un double filet sauge ; puis quatre lignes pleine largeur (I. Inscriptions, II. Portes ouvertes — sans date —,
+// III. Espace parents, IV. Nous écrire) en grand serif avec flèche, séparées par des filets, qui glissent de 10 px au survol ; un carré sauge « respire » devant « Portes ouvertes ». Adresse (Données de l'entreprise), filet et mentions en bas.
+// Polices : Cormorant Garamond (titres, en grand) et Hanken Grotesk. Mobile : libellés réduits, lignes pleine largeur.
 const encre = identite({
   key: "c226", label: "Encre bleue et sauge", humeur: "dark",
   fond: "#16233a", texte: "#eef2ea", discret: "#b4c2d3", accent: "#9fd0a8", surface: "#1d2e4a", encre: "#16233a", surEncre: "#eef2ea",
@@ -68,30 +68,34 @@ const ENC = "#16233a", SAUGE = "#9fd0a8", LIN = "#eef2ea";
 const papierEnTete = modeleV2({
   id: identifiantV2(226, "papier-a-en-tete"), concept: "c-226-papier-a-en-tete",
   name: "Papier à en-tête", family: FAM,
-  description: "Pour une école privée : un cartouche centré comme un papier à en-tête, doubles filets sauge, nom de l'école en grand serif, adresse et une ligne de liens (inscriptions, portes ouvertes, espace parents). Bleu nuit, très sobre.",
-  tags: ["école privée", "papier à en-tête", "centré", "doubles filets", "bleu nuit", "sauge", "serif", "angles droits"],
+  description: "Pour une école privée : en-tête de papier (nom en grand serif, devise, double filet sauge) puis un sommaire en quatre lignes pleine largeur (inscriptions, portes ouvertes, espace parents, nous écrire) qui glissent au survol, adresse et mentions. Bleu nuit, très sobre.",
+  tags: ["école privée", "papier à en-tête", "sommaire", "index", "bleu nuit", "sauge", "serif", "angles droits"],
   identity: encre,
   racine: racineDe(ENC),
   widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
+    // en-tête : le nom de l'école en grand serif, la devise en italique ; un filet double dessous
     const double = () => k.col([trait(k, SAUGE, "1px"), trait(k, SAUGE, "1px")], { gap: "5px", width: "100%" });
-    const nom = nomDuSite(k, env, 64, LIN, { fontWeight: "500", textAlign: "center", letterSpacing: "0em" });
-    nom.styles.desktop.fontSize = "fluid:44-84";
-    const centre = (n) => { n.styles.desktop = { ...n.styles.desktop, textAlign: "center", alignSelf: "center" }; return n; };
-    const devise = para(k, "Apprendre, grandir, réussir ensemble.", { taille: 22, couleur: "#d5dfe9", align: "center", police: S.head, extra: { fontStyle: "italic" } });
-    const adresse = centre(coordonnees(k, { taille: 15, lien: LIN, survol: SAUGE, focus: SAUGE }));
-    adresse.styles.desktop.width = "fit-content"; adresse.styles.desktop.maxWidth = "100%";
-    const point = () => caps(k, "·", { couleur: SAUGE });
-    const pt = souffle(carre(k, SAUGE, "9px"), 3000);
-    const portesOuvertes = k.row([pt, lien(k, "Portes ouvertes", "/blog", { taille: 16, poids: "600", couleur: LIN, survol: { color: SAUGE, transform: { y: -2 } }, focus: SAUGE })], { gap: "8px", alignItems: "center", flexWrap: "nowrap" });
-    const l = (t, u) => lien(k, t, u, { taille: 16, poids: "600", couleur: LIN, survol: { color: SAUGE, transform: { y: -2 } }, focus: SAUGE, padH: "6px" });
-    const liens = k.row([l("Inscriptions", "/contact"), point(), portesOuvertes, point(), l("Espace parents", "/connexion"), point(), l("Nous écrire", "/contact")], { rowGap: "0px", columnGap: "12px", justifyContent: "center", alignItems: "center" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#c3cfdc", liens: LIN })(k, env, true);
-    const cartouche = G.colonne(k, [double(), caps(k, "Établissement scolaire", { couleur: SAUGE, suivi: "0.3em", extra: { textAlign: "center" } }), nom, devise, adresse, liens, double(), mentions], { poids: 1, min: "0px", gap: "26px", aligne: "stretch", extra: { maxWidth: "860px", width: "100%", alignItems: "center", marginLeft: "auto", marginRight: "auto" } });
-    cartouche.children.forEach((c) => { if (c.type === "text") c.styles.desktop = { ...c.styles.desktop, textAlign: "center" }; });
-    const bande = G.bande(k, [cartouche], { fond: ENC, colonne: true, padV: ["104px", "80px", "56px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Cartouche" });
-    return [G.racine(k, [bande])];
+    const nom = nomDuSite(k, env, 64, LIN, { fontWeight: "500", letterSpacing: "0em" });
+    nom.styles.desktop.fontSize = "fluid:40-76";
+    const devise = para(k, "Apprendre, grandir, réussir ensemble.", { taille: 22, couleur: "#d5dfe9", police: S.head, max: "360px", extra: { fontStyle: "italic" } });
+    const tete = G.bande(k, [G.colonne(k, [caps(k, "Établissement scolaire", { couleur: SAUGE, suivi: "0.3em" }), nom], { poids: 2, min: "280px", gap: "14px" }), G.colonne(k, [devise], { poids: 1, min: "240px", soi: "flex-end" }), double()], { fond: ENC, gap: "20px 48px", aligne: "flex-end", padV: ["80px", "64px", "48px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "16px" }, nom: "En-tête" });
+    // sommaire : lignes pleine largeur, numéro en chiffres romains, grand libellé serif, flèche ; la ligne glisse au survol
+    const rangee = (num, label, url, doux) => {
+      const n = lien(k, label, url, { taille: 46, poids: "500", police: S.head, couleur: LIN, h: "88px", bloc: true, survol: { color: SAUGE }, focus: SAUGE, extra: { flexGrow: 1, flexBasis: "0px", minWidth: "0px", lineHeight: 1.05, letterSpacing: "-0.01em" } });
+      n.styles.mobile = { ...(n.styles.mobile || {}), fontSize: "30px", minHeight: "64px" };
+      const r = k.row([caps(k, num, { couleur: SAUGE, suivi: "0.2em", extra: { width: "56px", flexShrink: 0 } }), doux ? k.row([souffle(carre(k, SAUGE, "9px"), 3000), n], { gap: "12px", flexGrow: 1, flexWrap: "nowrap", alignItems: "center", flexBasis: "0px", minWidth: "0px" }) : n, caps(k, "→", { couleur: SAUGE, taille: "26px", extra: { flexShrink: 0 } })], { width: "100%", gap: "12px", flexWrap: "nowrap", alignItems: "center", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#eef2ea55", transitionDuration: DOUX, borderRadius: "0px" });
+      r.states = { hover: { transform: { x: 10 } } };
+      return r;
+    };
+    const sommaire = k.col([rangee("I.", "Inscriptions", "/contact"), rangee("II.", "Portes ouvertes", "/blog", true), rangee("III.", "Espace parents", "/connexion"), rangee("IV.", "Nous écrire", "/contact")], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#eef2ea55" });
+    const milieu = G.bande(k, [sommaire], { fond: ENC, colonne: true, padV: ["0px", "0px", "0px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "Sommaire" });
+    // pied du papier : adresse (Données de l'entreprise), puis filet et mentions
+    const adresse = coordonnees(k, { taille: 15, lien: LIN, survol: SAUGE, focus: SAUGE });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#c3cfdc", liens: LIN })(k, env);
+    const bas = G.bande(k, [adresse, trait(k, S.line), mentions], { fond: ENC, colonne: true, gap: "28px", padV: ["16px", "12px", "8px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "20px" }, nom: "Adresse" });
+    return [G.racine(k, [tete, milieu, bas])];
   },
 }, FAM);
 

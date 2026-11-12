@@ -205,7 +205,7 @@
       "famille": "Industrie et logistique",
       "secteur": "transport / distribution",
       "directionArtistique": {
-        "texte": "Chaîne en cinq étapes (commande, préparation, expédition, transport, livraison) tracée comme un plan : trait épais bleu pétrole qui devient orange et se soulève au survol ; bande blanche (contact, horaires, lettre). Aucun délai chiffré."
+        "texte": "La chaîne (commande, préparation, expédition, transport, livraison) descendue en escalier (archétype L) : cinq marches alignées à gauche, de plus en plus étroites (100 % à 36 %) et de plus en plus sombres, trait orange et décalage au survol ; puis coordonnées, horaires et mentions sur marine. Aucun délai chiffré."
       },
       "typographies": {
         "titre": "Barlow Semi Condensed",
@@ -215,8 +215,10 @@
       },
       "tags": [
         "logistique",
+        "transport",
         "étapes",
         "chaîne",
+        "escalier",
         "bleu pétrole",
         "orange",
         "angles droits"
@@ -405,7 +407,7 @@
       "famille": "Services informatiques",
       "secteur": "agence web",
       "directionArtistique": {
-        "texte": "Affiche jaune et noire : nom monumental « octet » (marque fictive) et bouton noir sur aplat jaune vif, quatre rangées numérotées qui se remplissent de noir au survol, bande noire avec contact, horaires, lettre. Angles droits."
+        "texte": "Archétype L (pied en escalier). Quatre marches alignées à gauche, de largeur décroissante (100, 76, 56, 38 %) : jaune vif avec nom monumental « octet » (marque fictive) et bouton noir qui respire, noire avec quatre liens numérotés, blanche avec coordonnées et horaires, jaune pâle avec la lettre ; chaque marche glisse de 10 px au survol. Base noire pour les mentions. Angles droits."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -418,9 +420,10 @@
         "création de sites",
         "jaune",
         "noir",
-        "affiche",
+        "escalier",
+        "marches",
         "nom monumental",
-        "rangées"
+        "angles droits"
       ]
     },
     {
@@ -480,7 +483,7 @@
       "famille": "Services informatiques",
       "secteur": "support informatique",
       "directionArtistique": {
-        "texte": "Phrase centrale « Besoin d'aide ? Nous sommes là. », grand champ de recherche carré, quatre tuiles à contour épais (FAQ, demande, guides, espace client) qui se soulèvent au survol sur lilas clair, puis bande indigo profond avec horaires du support, coordonnées, lettre et mentions."
+        "texte": "Archétype K (fenêtre / console). Une fenêtre à angles droits sur lilas : barre de titre indigo (trois carrés, carré de statut qui respire, lien « Ouvrir une demande »), volet gauche de rubriques qui s'indentent au survol, volet droit avec « Besoin d'aide ? Nous sommes là. », champ de recherche carré, horaires et coordonnées, barre d'état avec la lettre du support ; mentions sous la fenêtre."
       },
       "typographies": {
         "titre": "Outfit",
@@ -492,10 +495,12 @@
         "support informatique",
         "assistance",
         "centre d'aide",
+        "fenêtre",
+        "console",
         "recherche",
-        "tuiles",
         "lilas",
-        "indigo"
+        "indigo",
+        "angles droits"
       ]
     },
     {
@@ -1415,7 +1420,7 @@
       "famille": "Sport et clubs",
       "secteur": "salle de fitness",
       "directionArtistique": {
-        "texte": "Pour une salle de fitness : pied monumental (archétype B), un seul mot « Bouge. » en capitales Bebas Neue de 200 px centré dans un grand vide anthracite, carré vert acide qui respire, deux boutons (inscription, contact) et une ligne légale centrée. Anthracite et vert acide, angles droits."
+        "texte": "Pour une salle de fitness (archétype D, barre compacte) : une grande barre vert acide, « Bouge. » en Bebas Neue avec carré anthracite qui respire et bouton d'inscription noir, puis une rangée de quatre cases égales (planning, abonnements, espace membre, contact) qui se remplissent d'anthracite au survol ; ruban de réseaux, filet et ligne légale sur anthracite. Angles droits."
       },
       "typographies": {
         "titre": "Bebas Neue",
@@ -1426,11 +1431,11 @@
       "tags": [
         "fitness",
         "salle de sport",
-        "monumental",
+        "barre de navigation",
         "inscription",
         "anthracite",
         "vert acide",
-        "minimal",
+        "compact",
         "angles droits"
       ]
     },

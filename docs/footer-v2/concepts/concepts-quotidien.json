@@ -140,7 +140,7 @@
       "famille": "Commerces de proximité",
       "secteur": "boulangerie",
       "directionArtistique": {
-        "texte": "Pied de boulangerie-pâtisserie : brun croûte et or de blé, ruban qui défile lentement, grande phrase « Chaud, doré, du matin. », horaires du jour dans une carte et bouton de commande."
+        "texte": "Pied de boulangerie-pâtisserie en ardoise de comptoir (archétype D, angles droits) : brun croûte et or de blé, une rangée avec le nom du fournil, les liens utiles et le bouton de commande, une seconde avec horaires, adresse et réseaux, puis les mentions. Carré d’or qui respire, liens qui glissent."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -153,7 +153,7 @@
         "pâtisserie",
         "commerce de proximité",
         "horaires",
-        "ruban",
+        "barre compacte",
         "brun",
         "or",
         "commande"

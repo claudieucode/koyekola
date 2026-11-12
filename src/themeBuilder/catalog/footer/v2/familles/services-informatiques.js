@@ -104,10 +104,10 @@ const terminalEtat = modeleV2({
 }, FAM);
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-142 « Atelier Octet » — agence web
-// Idée : AFFICHE JAUNE ET NOIRE. Un grand aplat jaune vif : à gauche le nom « octet » en lettres monumentales (marque fictive) et un bouton noir « Démarrer un projet » ; à droite quatre rangées numérotées (index) qui
-// se REMPLISSENT de noir au survol, texte jaune glissant de 28 px. En dessous, une bande noire : coordonnées, horaires, lettre (champ à filet jaune) et mentions.
-// Polices : Space Grotesk (titres) et Onest (texte). Mobile : nom, bouton, rangées, puis colonnes empilées.
+// ft2-142 « Atelier Octet » — agence web — REFONTE (archétype L : pied en escalier, bandes de largeurs décroissantes alignées à gauche)
+// Idée : AFFICHE JAUNE ET NOIRE EN MARCHES. Quatre marches alignées à gauche dont la largeur décroît (100, 76, 56, 38 %) : jaune vif avec le nom « octet » monumental (marque fictive) et un bouton noir qui respire ; noire avec quatre liens numérotés ;
+// blanche avec coordonnées et horaires ; jaune pâle avec la lettre. Chaque marche glisse de 10 px au survol. Base noire pleine largeur : filet et mentions.
+// Polices : Space Grotesk (titres) et Onest (texte). Mobile : marches de 100, 94, 88 et 80 %.
 const octet = identite({
   key: "c142", label: "Jaune vif, noir et blanc", humeur: "dark",
   fond: "#0b0b0b", texte: "#ffffff", discret: "#c9c9c9", accent: "#ffe600", surface: "#1a1a1a", encre: "#0b0b0b", surEncre: "#ffffff",
@@ -119,29 +119,45 @@ const JAUNE = "#ffe600", NOIR2 = "#0b0b0b";
 const atelierOctet = modeleV2({
   id: identifiantV2(142, "atelier-octet"), concept: "c-142-atelier-octet",
   name: "Atelier Octet", family: FAM,
-  description: "Pour une agence web : grand aplat jaune avec nom monumental et bouton noir, quatre rangées numérotées qui se remplissent de noir au survol, puis bande noire (contact, horaires, lettre, mentions). Affiche franche, très lisible.",
-  tags: ["agence web", "création de sites", "jaune", "noir", "affiche", "nom monumental", "rangées", "angles droits"],
+  description: "Pour une agence web : quatre marches alignées à gauche de largeur décroissante (jaune avec nom monumental et bouton noir, noire avec quatre liens, blanche avec contact et horaires, jaune pâle avec la lettre), qui glissent au survol ; base noire pour les mentions.",
+  tags: ["agence web", "création de sites", "jaune", "noir", "escalier", "marches", "nom monumental", "angles droits"],
   identity: octet,
   racine: racineDe(NOIR2),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
+    // marche : bande alignée à gauche, de largeur décroissante (bureau, tablette, mobile) ; se décale de 10 px au survol
+    const marche = (enfants, fond, largeurs, nom, o = {}) => {
+      const b = G.bande(k, enfants, { fond, gap: "20px 48px", aligne: o.aligne || "center", max: "100%", padV: o.padV || ["40px", "34px", "28px"], padH: ["48px", "32px", "20px"], nom, innerMobile: { rowGap: "20px" } });
+      Object.assign(b.styles.desktop, { width: largeurs[0], alignSelf: "flex-start", boxSizing: "border-box", transitionDuration: MV });
+      b.styles.tablet = { ...(b.styles.tablet || {}), width: largeurs[1] };
+      b.styles.mobile = { ...(b.styles.mobile || {}), width: largeurs[2] };
+      if (!o.fixe) b.states = { hover: { transform: { x: 10 } } };
+      return b;
+    };
+    // marche 1 : jaune, 100 % : nom monumental, phrase, bouton noir
     const nom = G.geant(`<p>octet</p>`, { taille: [96, 200], tablette: { taille: [120, 170] }, mobile: { taille: [96, 140] }, lh: 0.9, suivi: "-0.05em", poids: "700", police: S.head, couleur: NOIR2 })(k, env);
     const sous = k.T("<p>Agence web : sites, boutiques en ligne et maintenance, du premier croquis à la mise en ligne.</p>", { fontSize: "18px", lineHeight: 1.5, color: NOIR2, fontFamily: S.font, maxWidth: "420px", fontWeight: "500" });
     const projet = lien(k, "Démarrer un projet", "/contact", { taille: 15, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: JAUNE, h: "56px", padH: "30px", survol: { backgroundColor: "#ffffff", color: NOIR2, transform: { y: -3 } }, focus: NOIR2, extra: { backgroundColor: NOIR2, borderRadius: "0px", justifyContent: "center", alignSelf: "flex-start" } });
-    const gauche = G.colonne(k, [caps(k, "Agence web", { couleur: NOIR2, suivi: "0.24em" }), nom, sous, projet], { poids: 6, min: "300px", gap: "22px" });
-    const opt = { police: S.head, couleur: NOIR2, filet: NOIR2, fondSurvol: NOIR2, couleurSurvol: JAUNE, focus: NOIR2, taille: "fluid:24-40" };
-    const rangees = k.col([ligneIndex(k, "01", "Réalisations", "/blog", opt), ligneIndex(k, "02", "Questions", "/faq", opt), ligneIndex(k, "03", "Espace client", "/connexion", opt), ligneIndex(k, "04", "Nous écrire", "/contact", opt)], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: NOIR2 });
-    const droite = G.colonne(k, [rangees], { poids: 6, min: "300px", soi: "flex-end" });
-    const haut = G.bande(k, [gauche, droite], { fond: JAUNE, gap: "48px 72px", aligne: "flex-end", padV: ["88px", "68px", "48px"], padB: ["72px", "56px", "44px"], padH: ["48px", "32px", "20px"], nom: "Affiche" });
-    const c1 = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, lien: "#ffffff", survol: JAUNE, focus: JAUNE })], { couleurTitre: JAUNE, poids: 1.1, suiviTitre: "0.2em" });
-    const c2 = bloc(k, "Horaires", [horaires(k, { taille: 15 })], { couleurTitre: JAUNE, poids: 1.1, suiviTitre: "0.2em" });
-    const abo = abonnement(k, env, { titre: "Lettre de l'atelier", intro: "Un exemple de projet et un conseil, de temps en temps.", bouton: "S'abonner", largeur: "360px", accent: JAUNE, couleurTitre: JAUNE, survolBouton: "#ffffff", survolTexte: NOIR2, soulignement: "3px" });
-    const c3 = G.colonne(k, [abo], { poids: 1.5, min: "260px" });
-    const grille = G.ligne(k, [c1, c2, c3], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const gauche = G.colonne(k, [caps(k, "Agence web", { couleur: NOIR2, suivi: "0.24em" }), nom], { poids: 1, min: "280px", gap: "14px" });
+    const droite = G.colonne(k, [sous, souffle(projet, 4200)], { poids: 1, min: "260px", gap: "22px", soi: "flex-end" });
+    const m1 = marche([gauche, droite], JAUNE, ["100%", "100%", "100%"], "Marche 1", { aligne: "flex-end", padV: ["72px", "56px", "40px"], fixe: true });
+    // marche 2 : noire, 76 % : quatre liens en ligne, numérotés
+    const rangee = (num, label, url) => lien(k, `${num}${NBSP}${NBSP}${label} →`, url, { taille: 19, poids: "700", police: S.head, casse: "uppercase", couleur: JAUNE, survol: { color: "#ffffff", transform: { x: 4 } }, focus: "#ffffff" });
+    const m2 = marche([G.ligne(k, [rangee("01", "Réalisations", "/blog"), rangee("02", "Questions", "/faq"), rangee("03", "Espace client", "/connexion"), rangee("04", "Nous écrire", "/contact")], { gap: "4px 32px", aligne: "center", justifie: "flex-start", largeur: "100%" })], NOIR2, ["76%", "88%", "94%"], "Marche 2");
+    // marche 3 : blanche, 56 % : coordonnées et horaires
+    const c1 = bloc(k, "Coordonnées", [coordonnees(k, { taille: 15, couleur: NOIR2, lien: NOIR2, survol: "#6b5f00", focus: NOIR2 })], { couleurTitre: "#4a4300", poids: 1, suiviTitre: "0.2em" });
+    const c2 = bloc(k, "Horaires", [horaires(k, { taille: 15, couleur: NOIR2 })], { couleurTitre: "#4a4300", poids: 1, suiviTitre: "0.2em" });
+    const m3 = marche([G.ligne(k, [c1, c2], { gap: "28px 48px", aligne: "flex-start", justifie: "flex-start", largeur: "100%" })], "#ffffff", ["56%", "74%", "88%"], "Marche 3", { aligne: "flex-start", padV: ["44px", "36px", "30px"] });
+    // marche 4 : jaune pâle, 38 % : lettre de l'atelier
+    const abo = abonnement(k, env, { titre: "Lettre de l'atelier", intro: "Un exemple de projet et un conseil, de temps en temps.", bouton: "S'abonner", largeur: "360px", accent: NOIR2, texte: NOIR2, couleurTitre: NOIR2, couleurIntro: "#2b2800", surBouton: JAUNE, couleurManque: NOIR2, survolBouton: "#2b2800", survolTexte: "#ffffff", soulignement: "3px" });
+    const m4 = marche([G.colonne(k, [abo], { poids: 1, min: "240px" })], "#fff6a8", ["38%", "62%", "80%"], "Marche 4", { aligne: "flex-start", padV: ["40px", "34px", "28px"] });
+    // base : noire, pleine largeur, mentions
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: NOIR2, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Contact" });
-    return [G.racine(k, [haut, bas])];
+    const bas = G.bande(k, [trait(k, S.line), mentions], { fond: NOIR2, colonne: true, gap: "22px", padV: ["32px", "28px", "24px"], padB: ["24px", "20px", "18px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "16px" }, nom: "Mentions" });
+    const pied = G.racine(k, [m1, m2, m3, m4, bas]);
+    pied.styles.desktop.backgroundColor = "#e9e3c8"; // fond derrière les marches étroites
+    return [pied];
   },
 }, FAM);
 
@@ -259,10 +275,10 @@ const zeroConfiance = modeleV2({
 }, FAM);
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-145 « Centre d'aide » — support informatique et assistance aux utilisateurs
-// Idée : un CENTRE D'AIDE. Sur fond lilas très clair, au centre, la phrase « Besoin d'aide ? Nous sommes là. », un grand champ de recherche carré (widget Recherche du site) et quatre tuiles à contour épais
-// (Questions fréquentes, Ouvrir une demande, Articles et guides, Espace client) qui se soulèvent et passent à l'indigo au survol. Une bande indigo profond ferme le pied : horaires du support, coordonnées, lettre, mentions.
-// Polices : Outfit (titres) et Mulish (texte). Mobile : tuiles empilées, champ pleine largeur.
+// ft2-145 « Centre d'aide » — support informatique et assistance aux utilisateurs — REFONTE (archétype K : fenêtre / console)
+// Idée : un CENTRE D'AIDE en FENÊTRE. Sur lilas, une fenêtre à angles droits : barre de titre indigo (trois carrés, carré de statut qui respire, lien « Ouvrir une demande »), volet gauche de rubriques (FAQ, demande, guides, espace client) qui s'indentent
+// et passent à l'indigo au survol, volet droit avec « Besoin d'aide ? Nous sommes là. », grand champ de recherche carré (widget Recherche), horaires du support et coordonnées, barre d'état avec la lettre. Filet et mentions sous la fenêtre.
+// Polices : Outfit (titres) et Mulish (texte). Mobile : volets empilés, champ pleine largeur.
 const aide = identite({
   key: "c145", label: "Lilas clair et indigo", humeur: "light",
   fond: "#f4f2ff", texte: "#1b1740", discret: "#4f4a78", accent: "#4f2fe0", surface: "#ffffff", encre: "#1b1740",
@@ -274,41 +290,45 @@ const LILAS_C = "#f4f2ff", INDIGO_N = "#1b1740", INDIGO = "#4f2fe0", PERVENCHE =
 const centreDAide = modeleV2({
   id: identifiantV2(145, "centre-d-aide"), concept: "c-145-centre-d-aide",
   name: "Centre d'aide", family: FAM,
-  description: "Pour un support informatique : question centrale, grand champ de recherche carré, quatre tuiles à contour épais qui se soulèvent au survol, puis bande indigo avec horaires du support, coordonnées, lettre et mentions.",
-  tags: ["support informatique", "assistance", "centre d'aide", "recherche", "tuiles", "lilas", "indigo", "angles droits"],
+  description: "Pour un support informatique : une fenêtre à angles droits (barre de titre, menu de rubriques à gauche, question, champ de recherche, horaires et coordonnées à droite, barre d'état avec la lettre), puis les mentions. Lilas et indigo.",
+  tags: ["support informatique", "assistance", "centre d'aide", "recherche", "fenêtre", "console", "lilas", "indigo", "angles droits"],
   identity: aide,
-  racine: racineDe(INDIGO_N),
+  racine: racineDe(LILAS_C),
   widgets: ["text", "search", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const sur = caps(k, "Centre d'aide", { couleur: INDIGO, suivi: "0.24em", extra: { textAlign: "center" } });
-    const phrase = G.geant(`<p>Besoin d'aide ?<br>Nous sommes là.</p>`, { taille: [38, 84], tablette: { taille: [56, 76] }, mobile: { taille: [38, 52] }, lh: 1.05, suivi: "-0.03em", poids: "700", police: S.head, couleur: INDIGO_N, align: "center" })(k, env, true);
-    const rech = k.W("search", { target: "site", placeholder: "Votre question…", button: "Rechercher" }, { width: "100%", maxWidth: "680px", fontFamily: S.font, marginLeft: "auto", marginRight: "auto", borderRadius: "0px" });
+    // barre de titre de la fenêtre : trois carrés, intitulé, carré de statut qui respire
+    const barreTitre = k.row([
+      k.row([carre(k, LILAS_C, "12px"), carre(k, PERVENCHE, "12px"), carre(k, INDIGO, "12px")], { gap: "8px", flexWrap: "nowrap", alignItems: "center" }),
+      caps(k, "Centre d'aide", { couleur: "#ffffff", suivi: "0.2em", extra: { flexGrow: 1 } }),
+      k.row([souffle(carre(k, PERVENCHE, "12px"), 3200), lien(k, "Ouvrir une demande", "/contact", { taille: 14, poids: "700", couleur: "#ffffff", survol: { color: PERVENCHE, transform: { x: 3 } }, focus: PERVENCHE })], { gap: "12px", flexWrap: "nowrap", alignItems: "center" }),
+    ], { backgroundColor: INDIGO_N, paddingTop: "6px", paddingBottom: "6px", paddingLeft: "20px", paddingRight: "20px", gap: "16px", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", borderRadius: "0px" });
+    // volet gauche : le menu de la fenêtre
+    const rang = (t, u) => lien(k, t, u, { taille: 17, poids: "700", couleur: INDIGO_N, h: "56px", bloc: true, padH: "20px", survol: { backgroundColor: INDIGO, color: "#ffffff", paddingLeft: "32px" }, focus: INDIGO, extra: { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: INDIGO_N } });
+    const menu = k.col([caps(k, "Rubriques", { couleur: INDIGO, suivi: "0.22em", extra: { paddingLeft: "20px", paddingBottom: "12px" } }), rang("Questions fréquentes", "/faq"), rang("Ouvrir une demande", "/contact"), rang("Articles et guides", "/blog"), rang("Espace client", "/connexion")], { backgroundColor: "#ece8ff", paddingTop: "20px", gap: "0px", flexGrow: 0, flexShrink: 0, flexBasis: "280px", minWidth: "240px", alignItems: "stretch", borderStyle: "solid", borderWidth: "0px", borderRightWidth: "3px", borderColor: INDIGO_N, borderRadius: "0px" });
+    menu.styles.mobile = { ...(menu.styles.mobile || {}), flexGrow: 1, flexBasis: "100%", borderRightWidth: "0px" };
+    // volet droit : la question, la recherche, horaires et coordonnées
+    const phrase = G.geant(`<p>Besoin d'aide&nbsp;?<br>Nous sommes là.</p>`, { taille: [34, 64], tablette: { taille: [44, 60] }, mobile: { taille: [34, 44] }, lh: 1.05, suivi: "-0.03em", poids: "700", police: S.head, couleur: INDIGO_N })(k, env);
+    const rech = k.W("search", { target: "site", placeholder: "Votre question…", button: "Rechercher" }, { width: "100%", maxWidth: "620px", fontFamily: S.font, borderRadius: "0px" });
     rech.parts = {
       field: { styles: { desktop: { fontFamily: S.font, fontSize: "18px", color: INDIGO_N, backgroundColor: "#ffffff", borderStyle: "solid", borderWidth: "2px", borderColor: INDIGO_N, borderRadius: "0px", minHeight: "60px", paddingLeft: "18px", paddingRight: "18px" }, mobile: { minHeight: "56px" } }, states: { focus: { outlineStyle: "solid", outlineWidth: "3px", outlineColor: INDIGO, outlineOffset: "2px" } } },
       button: { styles: { desktop: { fontFamily: S.font, fontSize: "16px", fontWeight: "800", color: "#ffffff", backgroundColor: INDIGO, borderStyle: "solid", borderWidth: "0px", borderRadius: "0px", minHeight: "60px", paddingLeft: "28px", paddingRight: "28px", transitionDuration: MV }, mobile: { minHeight: "56px" } }, states: { hover: { backgroundColor: INDIGO_N }, focus: { outlineStyle: "solid", outlineWidth: "3px", outlineColor: INDIGO_N, outlineOffset: "2px" } } },
     };
-    const haut = G.bande(k, [sur, phrase, rech], { fond: LILAS_C, colonne: true, aligne: "center", gap: "28px", max: "1180px", padV: ["104px", "80px", "56px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Question" });
-    // quatre tuiles à contour épais
-    const tuile = (titre, sous, url) => {
-      const t = k.LINK(`${titre}${NBSP}↗`, url, { fontFamily: S.head, fontSize: "24px", fontWeight: "700", color: INDIGO_N, textDecoration: "none", lineHeight: 1.15, display: "flex", alignItems: "center", minHeight: "44px", transitionDuration: MV });
-      GK.fini(k, t, { hover: { color: INDIGO }, focus: GK.focus(INDIGO) });
-      const c = k.col([t, k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })], { backgroundColor: "#ffffff", flexGrow: 1, flexBasis: "0px", minWidth: "230px", minHeight: "150px", gap: "8px", paddingTop: "26px", paddingBottom: "26px", paddingLeft: "24px", paddingRight: "24px", borderStyle: "solid", borderWidth: "2px", borderColor: INDIGO_N, borderRadius: "0px", transitionDuration: MV });
-      c.states = { hover: { borderColor: INDIGO, backgroundColor: "#ece8ff", transform: { y: -6 } } };
-      return c;
-    };
-    const tuiles = G.ligne(k, [tuile("Questions fréquentes", "Les réponses aux demandes les plus courantes.", "/faq"), tuile("Ouvrir une demande", "Décrivez le problème : l'équipe vous répond.", "/contact"), tuile("Articles et guides", "Pas à pas, conseils, bonnes pratiques.", "/blog"), tuile("Espace client", "Suivre vos demandes et vos accès.", "/connexion")], { gap: "18px", aligne: "stretch", largeur: "100%" });
-    const bandeTuiles = G.bande(k, [tuiles], { fond: LILAS_C, colonne: true, padV: ["16px", "16px", "8px"], padB: ["80px", "64px", "48px"], padH: ["48px", "32px", "20px"], nom: "Tuiles" });
-    // bande indigo : horaires, coordonnées, lettre, mentions
-    const c1 = bloc(k, "Horaires du support", [horaires(k, { taille: 15, couleur: "#ffffff" })], { couleurTitre: PERVENCHE, poids: 1.2 });
-    const c2 = bloc(k, "Nous joindre", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: PERVENCHE, focus: PERVENCHE })], { couleurTitre: PERVENCHE, poids: 1.1 });
-    const abo = abonnement(k, env, { titre: "Lettre du support", intro: "Pannes connues et astuces, par courriel.", bouton: "S'abonner", largeur: "340px", accent: PERVENCHE, texte: "#ffffff", couleurTitre: PERVENCHE, couleurIntro: "#d9d3ff", survolBouton: "#ffffff", survolTexte: INDIGO_N, surBouton: INDIGO_N, couleurManque: "#ffffff" });
-    const c3 = G.colonne(k, [abo], { poids: 1.5, min: "260px" });
-    const grille = G.ligne(k, [c1, c2, c3], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d9d3ff", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [grille, trait(k, "#ffffff33"), mentions], { fond: INDIGO_N, colonne: true, gap: "40px", padV: ["64px", "52px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Support" });
-    bas.styles.desktop = { ...bas.styles.desktop, color: "#ffffff" }; // la ligne légale de la plateforme reprend la couleur de la dernière bande : claire sur indigo
-    return [G.racine(k, [haut, bandeTuiles, bas])];
+    const c1 = bloc(k, "Horaires du support", [horaires(k, { taille: 15, couleur: INDIGO_N })], { couleurTitre: INDIGO, poids: 1, min: "220px" });
+    const c2 = bloc(k, "Nous joindre", [coordonnees(k, { taille: 15, couleur: INDIGO_N, lien: INDIGO_N, survol: INDIGO, focus: INDIGO })], { couleurTitre: INDIGO, poids: 1, min: "220px" });
+    // la colonne de droite est une rangée qui passe à la ligne : question, recherche et filet pleins, puis horaires et coordonnées côte à côte (imbrication maîtrisée)
+    for (const n of [phrase, rech]) n.styles.desktop = { ...n.styles.desktop, flexBasis: "100%" };
+    const filet = trait(k, "#1b174033");
+    const droite = k.row([phrase, rech, filet, c1, c2], { backgroundColor: "#ffffff", flexGrow: 1, flexShrink: 1, flexBasis: "0px", minWidth: "300px", rowGap: "28px", columnGap: "48px", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "40px", paddingRight: "40px", alignItems: "flex-start", alignContent: "flex-start", borderRadius: "0px" }, null, { paddingTop: "28px", paddingBottom: "28px", paddingLeft: "20px", paddingRight: "20px" });
+    const corps = k.row([menu, droite], { alignItems: "stretch", flexWrap: "wrap", gap: "0px", width: "100%", borderRadius: "0px" });
+    // barre d'état de la fenêtre : la lettre du support
+    const abo = abonnement(k, env, { titre: "Lettre du support", intro: "Pannes connues et astuces, par courriel.", bouton: "S'abonner", largeur: "420px", accent: INDIGO_N, texte: INDIGO_N, couleurTitre: INDIGO_N, couleurIntro: S.mute, survolBouton: INDIGO, survolTexte: "#ffffff", surBouton: "#ffffff", couleurManque: INDIGO_N });
+    const etat = k.col([abo], { backgroundColor: PERVENCHE, paddingTop: "24px", paddingBottom: "24px", paddingLeft: "20px", paddingRight: "20px", alignItems: "flex-start", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderColor: INDIGO_N, borderRadius: "0px" });
+    const fenetre = k.col([barreTitre, corps, etat], { width: "100%", gap: "0px", alignItems: "stretch", borderStyle: "solid", borderWidth: "3px", borderColor: INDIGO_N, borderRadius: "0px", backgroundColor: "#ffffff" });
+    const bandeFenetre = G.bande(k, [fenetre], { fond: LILAS_C, colonne: true, padV: ["88px", "64px", "40px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Fenêtre d'aide" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
+    const bas = G.bande(k, [trait(k, "#1b174033"), mentions], { fond: LILAS_C, colonne: true, gap: "22px", padV: ["0px", "0px", "0px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "16px" }, nom: "Mentions" });
+    return [G.racine(k, [bandeFenetre, bas])];
   },
 }, FAM);
 

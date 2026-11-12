@@ -106,8 +106,8 @@ const tribuneRouge = modeleV2({
 
 // ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
 // ft2-182 « Haute intensité » — salle de fitness
-// Idée : un pied MONUMENTAL (archétype B). Anthracite, un seul mot « Bouge. » en capitales Bebas Neue de 200 px centré dans un grand vide, un petit carré vert acide qui « respire » au-dessus, deux boutons (inscription, contact)
-// et rien d'autre : pas de colonnes, pas de grille. Une fine ligne légale centrée ferme le tout. Police : Bebas Neue (titres) et DM Sans (texte). Mobile : le mot passe à 110 px, les boutons s'empilent.
+// Idée : une BARRE COMPACTE (archétype D, REFONTE). Grande barre vert acide : carré anthracite qui « respire », « Bouge. » en Bebas Neue et bouton d'inscription noir ; dessous, quatre cases égales (planning, abonnements, espace membre, contact)
+// qui se remplissent d'anthracite au survol ; ruban anthracite (réseaux), filet et ligne légale. Police : Bebas Neue (titres) et DM Sans (texte). Mobile : cases sur deux colonnes puis empilées.
 const salle = identite({
   key: "c182", label: "Anthracite et vert acide", humeur: "dark",
   fond: "#14161a", texte: "#f2f4ee", discret: "#aeb4bb", accent: "#c8ff2e", surface: "#1d2025", encre: "#14161a", surEncre: "#f2f4ee",
@@ -119,23 +119,26 @@ const ANTHRA = "#14161a", ANTHRA2 = "#1d2025", ACIDE = "#c8ff2e", NEIGE = "#f2f4
 const hauteIntensite = modeleV2({
   id: identifiantV2(182, "haute-intensite"), concept: "c-182-haute-intensite",
   name: "Haute intensité", family: FAM,
-  description: "Pour une salle de fitness : un seul mot, « Bouge. », en capitales géantes centrées dans un grand vide anthracite, un carré vert acide qui respire, deux boutons (inscription, contact) et une ligne légale. Anthracite et vert acide.",
-  tags: ["fitness", "salle de sport", "monumental", "inscription", "anthracite", "vert acide", "minimal", "angles droits"],
+  description: "Pour une salle de fitness : une grande barre vert acide avec « Bouge. » et le bouton d'inscription, une rangée de quatre cases égales (planning, abonnements, espace membre, contact) qui se remplissent au survol, réseaux et ligne légale. Anthracite et vert acide.",
+  tags: ["fitness", "salle de sport", "barre de navigation", "inscription", "anthracite", "vert acide", "compact", "angles droits"],
   identity: salle,
   racine: racineDe(ANTHRA),
   widgets: ["text", "link", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const marque = k.row([souffle(carre(k, ACIDE, "14px"), 2800), caps(k, "Salle de remise en forme", { couleur: ACIDE, suivi: "0.28em" })], { gap: "12px", alignItems: "center", justifyContent: "center", flexWrap: "nowrap" });
-    const mot = G.geant(`<p>Bouge<span style="color:${ACIDE}">.</span></p>`, { taille: [120, 200], tablette: { taille: [160, 200] }, mobile: { taille: [110, 150] }, lh: 0.86, suivi: "0.01em", poids: "400", police: S.head, couleur: NEIGE, align: "center", extra: { textTransform: "uppercase", width: "100%" } })(k, env);
-    const boutons = k.row([
-      bouton(k, "S'inscrire", "/inscription", { texte: ANTHRA, fond: ACIDE, survol: { backgroundColor: NEIGE, borderColor: NEIGE, color: ANTHRA, transform: { y: -3 } }, focus: NEIGE }),
-      bouton(k, "Nous écrire", "/contact", { texte: NEIGE, bord: NEIGE, survol: { backgroundColor: NEIGE, color: ANTHRA, transform: { y: -3 } }, focus: ACIDE }),
-    ], { ...GK.gaps("14px 16px"), justifyContent: "center", alignItems: "center" });
-    const centre = G.bande(k, [k.col([G.filet({ largeur: "72px", epaisseur: "6px", couleur: ACIDE })(k, env), marque, mot, boutons], { gap: "28px", alignItems: "center", width: "100%" })], { colonne: true, fond: ANTHRA, padV: ["160px", "120px", "72px"], padB: ["140px", "104px", "64px"], padH: ["48px", "32px", "20px"], nom: "Bouge" });
+    // une seule barre acide : mot, liens, bouton sur UNE ligne (repli propre sur mobile)
+    const marque = k.row([souffle(carre(k, ANTHRA, "14px"), 2800), G.geant(`<p>Bouge.</p>`, { taille: [56, 88], tablette: { taille: [56, 72] }, mobile: { taille: [56, 64] }, lh: 1, suivi: "0.01em", poids: "400", police: S.head, couleur: ANTHRA, extra: { textTransform: "uppercase" } })(k, env)], { gap: "14px", alignItems: "center", flexWrap: "nowrap" });
+    const cellule = (t, u, dernier) => lien(k, t, u, { taille: 26, poids: "400", police: S.head, casse: "uppercase", suivi: "0.04em", couleur: ANTHRA, h: "72px", bloc: true, survol: { backgroundColor: ANTHRA, color: ACIDE }, focus: ANTHRA, extra: { flexGrow: 1, flexBasis: "160px", justifyContent: "center", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderLeftWidth: dernier === 0 ? "0px" : "3px", borderColor: ANTHRA } });
+    const cellules = k.row([cellule("Planning", "/blog", 0), cellule("Abonnements", "/faq", 1), cellule("Espace membre", "/connexion", 1), cellule("Contact", "/contact", 1)], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
+    const inscrire = bouton(k, "S'inscrire", "/inscription", { texte: ACIDE, fond: ANTHRA, bord: ANTHRA, survol: { backgroundColor: NEIGE, borderColor: ANTHRA, color: ANTHRA, transform: { y: -3 } }, focus: NEIGE });
+    const haut = G.bande(k, [marque, inscrire], { fond: ACIDE, gap: "16px 32px", aligne: "center", padV: ["32px", "28px", "24px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "16px" }, nom: "Marque" });
+    const barreAcide = G.bande(k, [cellules], { fond: ACIDE, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Liens" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env, true);
-    const bas = G.bande(k, [trait(k, S.line), mentions], { fond: ANTHRA, colonne: true, gap: "22px", padV: ["0px", "0px", "0px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [centre, bas])];
+    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Facebook", "https://www.facebook.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 15, poids: "700", couleur: NEIGE, survol: ACIDE, focus: ACIDE })(k, env);
+    const note = caps(k, "Salle de remise en forme", { couleur: ACIDE, suivi: "0.28em" });
+    const ruban = G.ligne(k, [note, reseaux], { gap: "8px 40px", aligne: "center", justifie: "space-between", largeur: "100%" });
+    const bas = G.bande(k, [ruban, trait(k, S.line), mentions], { fond: ANTHRA, colonne: true, gap: "20px", padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [haut, barreAcide, bas])];
   },
 }, FAM);
 
