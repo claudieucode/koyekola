@@ -51,3 +51,10 @@
 - Corrections d'intégration : widgets déclarés absents (divider), contraste du consentement e-mail (`G.abonnement` colore le consentement avec `texte`), limite de 200 modèles par site dans les tests (insertion par lots).
 - **Résultats** : bibliothèque 809, bascule 2, bas 5, comportements réels 19, reconstruction 128, rendu unifié 10, isolation v2 3 et ancien catalogue 5, éditeur réel 1, navigateur 265 modèles (angles droits pour 126 et plus).
 - Limites : mouvements validés par test et non vus en direct ; états « ouvert maintenant » des horaires retirés (pastille ronde, CSS partagé) ; le glitch du 099 n'existe qu'au survol souris ; fiches de concept par agent (`concepts/carre*/`) en double (les fiches `concepts-carre*.json` font foi).
+
+## Extension « inspirés » (PR 55) : 168 modèles, total 433
+- 28 familles de 6 modèles (ft2-266 à ft2-433), inspirées de 41 captures ; 12 archétypes de composition (DIVERSITE_STRICTE.md) ; ressemblance max 0,60 sur les 433.
+- Bas de page : 512 combinaisons (8 présentations de ligne × 8 filets × 8 barres de plateforme) pour que chaque pied ait un bas distinct.
+- `deuxEcarts` (index.js) : sépare tout `gap` à deux valeurs en rowGap/columnGap, refusé par le Page Builder.
+- Tests : bibliothèque 1313, bascule, bas, comportements réels, reconstruction, rendu unifié, isolation v2/legacy, éditeur, navigateur (168 modèles : 336 contrôles) : 0 échec.
+- Limites : mouvements validés par tests et non vus en direct ; liens internes d'exemple (routes plateforme) ; ligne légale automatique parfois encadrée ou décalée selon le plan du bas.

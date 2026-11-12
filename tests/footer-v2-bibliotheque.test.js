@@ -24,9 +24,9 @@ const { kit, layout, withIds } = require("../src/themeBuilder/catalog/kit");
 const { freshMarketing } = require("./marketing-helpers");
 
 const CONCEPTS_100 = require("../docs/footer-v2/concepts/concepts.json").concepts;
-const CONCEPTS = [...CONCEPTS_100, ...require("../docs/footer-v2/concepts/concepts-quotidien.json").concepts, ...require("../docs/footer-v2/concepts/concepts-carre.json").concepts, ...require("../docs/footer-v2/concepts/concepts-carre2.json").concepts];   // 100 concepts + 25 « sites du quotidien » + 60 « carrés »
-const FAMILLE_DE_CONCEPT = { "Corporate et institutions": "corporate-institutions", "Finance et assurance": "finance-assurance", "SaaS, tech et startup": "saas-tech-startup", "E-commerce, mode et luxe": "ecommerce-mode-luxe", "Médias et éditorial": "medias", "Agences, portfolios et art": "agences-portfolios-art", "Restauration, hôtellerie et tourisme": "restauration-hotellerie-tourisme", "Immobilier et architecture": "immobilier-architecture", "Éducation et université": "education-universite", "Santé et bien-être": "sante-bienetre", "Culture et événementiel": "culture-evenementiel", "Associatif et ONG": "associatif-ong", "Automobile, sport et mobilité": "auto-sport-mobilite", "Minimalisme et expérimentation": "minimalisme-experimental", "Artisans et bâtiment": "artisans-batiment", "Commerces de proximité": "commerce-proximite", "Services à la personne": "services-personne", "Professions libérales": "professions-liberales", "Vie locale et associations": "vie-locale", "Entreprises et PME": "pme-entreprise", "Industrie et logistique": "industrie-logistique", "Conseil et services aux entreprises": "conseil-b2b", "Services informatiques": "services-informatiques", "Énergie et environnement": "energie-environnement", "Transport et déménagement": "transport-demenagement", "Agriculture et agroalimentaire": "agri-agroalimentaire", "Recrutement et formation": "recrutement-formation", "Cliniques et laboratoires": "cliniques-laboratoires", "Boutique en ligne standard": "boutique-en-ligne", "Blogs et actualités": "blog-actualites", "Sport et clubs": "sport-clubs", "Restaurants et brasseries": "restaurants-brasseries", "Hôtels et gîtes": "hotels-gites", "Coiffure et beauté": "coiffure-beaute", "Droit et notariat": "droit-notariat", "Experts-comptables et gestion": "experts-comptables", "Assurance et courtage": "assurance-courtage", "Agences immobilières": "agences-immobilieres", "Construction et travaux publics": "btp-construction", "Écoles et établissements": "ecoles-etablissements", "Cours et soutien scolaire": "cours-soutien", "Événements et réceptions": "evenements-receptions", "Voyages et tourisme": "voyage-tourisme", "Garages et concessions": "garages-concessions", "Paysagisme et jardinage": "paysagisme-jardin", "Photo et vidéo": "photo-video", "Vétérinaires et animaux": "veterinaires-animaux" };
-const CIBLE = { "corporate-institutions": 8, "finance-assurance": 6, "saas-tech-startup": 9, "ecommerce-mode-luxe": 9, medias: 8, "agences-portfolios-art": 11, "restauration-hotellerie-tourisme": 8, "immobilier-architecture": 7, "education-universite": 6, "sante-bienetre": 6, "culture-evenementiel": 6, "associatif-ong": 6, "auto-sport-mobilite": 5, "minimalisme-experimental": 5, "artisans-batiment": 5, "commerce-proximite": 5, "services-personne": 5, "professions-liberales": 5, "vie-locale": 5, "pme-entreprise": 5, "industrie-logistique": 5, "conseil-b2b": 5, "services-informatiques": 5, "energie-environnement": 5, "transport-demenagement": 5, "agri-agroalimentaire": 5, "recrutement-formation": 5, "cliniques-laboratoires": 5, "boutique-en-ligne": 5, "blog-actualites": 5, "sport-clubs": 5, "restaurants-brasseries": 5, "hotels-gites": 5, "coiffure-beaute": 5, "droit-notariat": 5, "experts-comptables": 5, "assurance-courtage": 5, "agences-immobilieres": 5, "btp-construction": 5, "ecoles-etablissements": 5, "cours-soutien": 5, "evenements-receptions": 5, "voyage-tourisme": 5, "garages-concessions": 5, "paysagisme-jardin": 5, "photo-video": 5, "veterinaires-animaux": 5 };
+const CONCEPTS = [...CONCEPTS_100, ...require("../docs/footer-v2/concepts/concepts-quotidien.json").concepts, ...require("../docs/footer-v2/concepts/concepts-carre.json").concepts, ...require("../docs/footer-v2/concepts/concepts-carre2.json").concepts, ...require("../docs/footer-v2/concepts/concepts-inspire.json").concepts];   // 100 concepts + 25 « sites du quotidien » + 60 « carrés »
+const FAMILLE_DE_CONCEPT = { "Corporate et institutions": "corporate-institutions", "Finance et assurance": "finance-assurance", "SaaS, tech et startup": "saas-tech-startup", "E-commerce, mode et luxe": "ecommerce-mode-luxe", "Médias et éditorial": "medias", "Agences, portfolios et art": "agences-portfolios-art", "Restauration, hôtellerie et tourisme": "restauration-hotellerie-tourisme", "Immobilier et architecture": "immobilier-architecture", "Éducation et université": "education-universite", "Santé et bien-être": "sante-bienetre", "Culture et événementiel": "culture-evenementiel", "Associatif et ONG": "associatif-ong", "Automobile, sport et mobilité": "auto-sport-mobilite", "Minimalisme et expérimentation": "minimalisme-experimental", "Artisans et bâtiment": "artisans-batiment", "Commerces de proximité": "commerce-proximite", "Services à la personne": "services-personne", "Professions libérales": "professions-liberales", "Vie locale et associations": "vie-locale", "Entreprises et PME": "pme-entreprise", "Industrie et logistique": "industrie-logistique", "Conseil et services aux entreprises": "conseil-b2b", "Services informatiques": "services-informatiques", "Énergie et environnement": "energie-environnement", "Transport et déménagement": "transport-demenagement", "Agriculture et agroalimentaire": "agri-agroalimentaire", "Recrutement et formation": "recrutement-formation", "Cliniques et laboratoires": "cliniques-laboratoires", "Boutique en ligne standard": "boutique-en-ligne", "Blogs et actualités": "blog-actualites", "Sport et clubs": "sport-clubs", "Restaurants et brasseries": "restaurants-brasseries", "Hôtels et gîtes": "hotels-gites", "Coiffure et beauté": "coiffure-beaute", "Droit et notariat": "droit-notariat", "Experts-comptables et gestion": "experts-comptables", "Assurance et courtage": "assurance-courtage", "Agences immobilières": "agences-immobilieres", "Construction et travaux publics": "btp-construction", "Écoles et établissements": "ecoles-etablissements", "Cours et soutien scolaire": "cours-soutien", "Événements et réceptions": "evenements-receptions", "Voyages et tourisme": "voyage-tourisme", "Garages et concessions": "garages-concessions", "Paysagisme et jardinage": "paysagisme-jardin", "Photo et vidéo": "photo-video", "Vétérinaires et animaux": "veterinaires-animaux", "Engins et matériel professionnel": "engins-materiel", "Fintech et paiement": "fintech-paiement", "Cloud et infrastructure": "cloud-infrastructure", "Cybersécurité": "cybersecurite", "Données et intelligence artificielle": "data-ia", "Applications mobiles": "applications-mobiles", "Studios créatifs": "studios-creatifs", "Architecture et design d'intérieur": "architecture-design", "Mode et prêt-à-porter": "mode-pret-a-porter", "Cosmétique et parfumerie": "cosmetique-parfumerie", "Bijouterie et horlogerie": "bijouterie-horlogerie", "Gastronomie et épicerie fine": "gastronomie-epicerie", "Cave, bières et spiritueux": "boissons-cave", "Cafés et boulangeries": "cafe-boulangerie", "Musique et spectacle": "musique-spectacle", "Galeries et musées": "galeries-musees", "Édition et librairie": "edition-librairie", "Jeux vidéo et esport": "jeux-video", "Universités et recherche": "universites-recherche", "ONG et solidarité": "ong-solidarite", "Collectivités et services publics": "collectivites", "Santé numérique et pharmacie": "sante-numerique", "Fitness, yoga et bien-être": "fitness-bienetre", "Outdoor et aventure": "outdoor-aventure", "Maison, mobilier et déco": "maison-deco", "Mobilité électrique et vélos": "mobilite-electrique", "Aéronautique et spatial": "aeronautique-spatial", "Luxe et hôtellerie de prestige": "luxe-hotellerie" };
+const CIBLE = { "corporate-institutions": 8, "finance-assurance": 6, "saas-tech-startup": 9, "ecommerce-mode-luxe": 9, medias: 8, "agences-portfolios-art": 11, "restauration-hotellerie-tourisme": 8, "immobilier-architecture": 7, "education-universite": 6, "sante-bienetre": 6, "culture-evenementiel": 6, "associatif-ong": 6, "auto-sport-mobilite": 5, "minimalisme-experimental": 5, "artisans-batiment": 5, "commerce-proximite": 5, "services-personne": 5, "professions-liberales": 5, "vie-locale": 5, "pme-entreprise": 5, "industrie-logistique": 5, "conseil-b2b": 5, "services-informatiques": 5, "energie-environnement": 5, "transport-demenagement": 5, "agri-agroalimentaire": 5, "recrutement-formation": 5, "cliniques-laboratoires": 5, "boutique-en-ligne": 5, "blog-actualites": 5, "sport-clubs": 5, "restaurants-brasseries": 5, "hotels-gites": 5, "coiffure-beaute": 5, "droit-notariat": 5, "experts-comptables": 5, "assurance-courtage": 5, "agences-immobilieres": 5, "btp-construction": 5, "ecoles-etablissements": 5, "cours-soutien": 5, "evenements-receptions": 5, "voyage-tourisme": 5, "garages-concessions": 5, "paysagisme-jardin": 5, "photo-video": 5, "veterinaires-animaux": 5, "engins-materiel": 6, "fintech-paiement": 6, "cloud-infrastructure": 6, "cybersecurite": 6, "data-ia": 6, "applications-mobiles": 6, "studios-creatifs": 6, "architecture-design": 6, "mode-pret-a-porter": 6, "cosmetique-parfumerie": 6, "bijouterie-horlogerie": 6, "gastronomie-epicerie": 6, "boissons-cave": 6, "cafe-boulangerie": 6, "musique-spectacle": 6, "galeries-musees": 6, "edition-librairie": 6, "jeux-video": 6, "universites-recherche": 6, "ong-solidarite": 6, "collectivites": 6, "sante-numerique": 6, "fitness-bienetre": 6, "outdoor-aventure": 6, "maison-deco": 6, "mobilite-electrique": 6, "aeronautique-spatial": 6, "luxe-hotellerie": 6 };
 const walk = (list, fn, depth = 0) => { for (const n of list || []) { fn(n, depth); if (n && n.children) walk(n.children, fn, depth + 1); } };
 const KNOWN_TYPES = new Set(nodes.editorSpec().types.map((t) => t.type));
 const ROUTES = new Set(Kit.LIENS_PLATEFORME);
@@ -45,8 +45,8 @@ function simulerFamilles({ construites = true } = {}) {
   });
 }
 
-describe("Pied v2 : les 47 familles", () => {
-  test("47 modules, un fichier par famille, forme { key, label, description ≤ 280, target, built, models }, cibles = 265, aucune clé commune avec les 15 familles actuelles", () => {
+describe("Pied v2 : les 75 familles", () => {
+  test("75 modules, un fichier par famille, forme { key, label, description ≤ 280, target, built, models }, cibles = 433, aucune clé commune avec les 15 familles actuelles", () => {
     const dir = path.join(__dirname, "../src/themeBuilder/catalog/footer/v2/familles");
     const fichiers = fs.readdirSync(dir).filter((f) => f.endsWith(".js")).map((f) => f.replace(/\.js$/, "")).sort();
     assert.deepEqual(fichiers, Object.keys(CIBLE).sort());
@@ -61,12 +61,12 @@ describe("Pied v2 : les 47 familles", () => {
       assert.ok(!Footer.FAMILLES_CLES.includes(k), `${k} ne doit pas réutiliser la clé d'une famille actuelle`);
       total += f.target;
     }
-    assert.equal(total, 265);
+    assert.equal(total, 433);
   });
-  test("les cibles sont celles de CONCEPTS_100.md : nombre de concepts par famille, ordre 1 à 265", () => {
+  test("les cibles sont celles de CONCEPTS_100.md : nombre de concepts par famille, ordre 1 à 433", () => {
     const parFamille = {}; for (const c of CONCEPTS) parFamille[FAMILLE_DE_CONCEPT[c.famille]] = (parFamille[FAMILLE_DE_CONCEPT[c.famille]] || 0) + 1;
     assert.deepEqual(parFamille, CIBLE);
-    assert.deepEqual(CONCEPTS.map((c) => c.ordre), Array.from({ length: 265 }, (_, i) => i + 1));
+    assert.deepEqual(CONCEPTS.map((c) => c.ordre), Array.from({ length: 433 }, (_, i) => i + 1));
     for (const k of V2.FAMILLES_V2_CLES) { const f = require(`../src/themeBuilder/catalog/footer/v2/familles/${k}`); assert.ok(CONCEPTS.some((c) => c.famille === f.label), `libellé « ${f.label} » = famille de concept`); }
   });
 });
@@ -74,7 +74,7 @@ describe("Pied v2 : les 47 familles", () => {
 describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de liste vide)", () => {
   const anciensActuels = actuels.layouts.map((l) => l.fullKey);
   test("état courant : tant que les 14 familles ne sont pas toutes construites, la liste publique est exactement la liste actuelle (aucun modèle v2)", () => {
-    assert.equal(V2.toutesConstruites, V2.familles.every((f) => f.built) && V2.total === 265);
+    assert.equal(V2.toutesConstruites, V2.familles.every((f) => f.built) && V2.total === 433);
     if (V2.toutesConstruites) return; // état final : couvert par le test suivant
     const base = Footer.integrerV2(actuels, V2, { apercu: false });
     assert.equal(base.v2.mode, "actuel");
@@ -89,13 +89,13 @@ describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de li
     const r = Footer.integrerV2(actuels, v2, { apercu: false });
     assert.equal(r.v2.mode, "actuel"); assert.deepEqual(r.layouts.map((l) => l.fullKey), anciensActuels);
   });
-  test("47 familles construites (simulation, 265 modèles) : la liste ne contient QUE les 265 v2 ; les 100 modèles actuels et les anciens restent OUVRABLES (masqués) ; aucun alias mort", () => {
+  test("75 familles construites (simulation, 433 modèles) : la liste ne contient QUE les 433 v2 ; les 100 modèles actuels et les anciens restent OUVRABLES (masqués) ; aucun alias mort", () => {
     const v2 = V2.assemble({ familles: simulerFamilles() });
-    assert.equal(v2.total, 265); assert.equal(v2.toutesConstruites, true);
+    assert.equal(v2.total, 433); assert.equal(v2.toutesConstruites, true);
     const r = Footer.integrerV2(actuels, v2, { apercu: false, aliasV2: {} });
     assert.equal(r.v2.mode, "v2");
-    assert.equal(r.layouts.length, 265); assert.ok(r.layouts.every((l) => l.v2 && /^ft2-/.test(l.fullKey)), "uniquement des v2");
-    assert.equal(r.anciensListes, 0); assert.equal(r.nouveaux, 265);
+    assert.equal(r.layouts.length, 433); assert.ok(r.layouts.every((l) => l.v2 && /^ft2-/.test(l.fullKey)), "uniquement des v2");
+    assert.equal(r.anciensListes, 0); assert.equal(r.nouveaux, 433);
     const listes = new Set(r.layouts.map((l) => l.fullKey));
     for (const l of r.hiddenLayouts) assert.ok(!listes.has(l.fullKey), `${l.fullKey} listé ET masqué`);
     const cachees = new Set(r.hiddenLayouts.map((l) => l.fullKey));
@@ -111,7 +111,7 @@ describe("Pied v2 : RÈGLE DE TRANSITION SÛRE (jamais de mélange, jamais de li
   });
   test("mode d'essai (FOOTER_V2_APERCU) : les modèles v2 écrits sont AJOUTÉS à la liste actuelle (jamais un remplacement)", () => {
     const r = Footer.integrerV2(actuels, V2, { apercu: true });
-    if (V2.toutesConstruites) { assert.equal(r.v2.mode, "v2", "bibliothèque complète : bascule sur les 265 modèles v2"); assert.equal(r.layouts.length, 265); }
+    if (V2.toutesConstruites) { assert.equal(r.v2.mode, "v2", "bibliothèque complète : bascule sur les 433 modèles v2"); assert.equal(r.layouts.length, 433); }
     else if (V2.nouveaux.length) {
       assert.equal(r.v2.mode, "apercu"); assert.equal(r.layouts.length, anciensActuels.length + V2.nouveaux.length);
       assert.deepEqual(r.layouts.slice(0, anciensActuels.length).map((l) => l.fullKey), anciensActuels);
@@ -200,12 +200,12 @@ describe("Pied v2 : chaque modèle écrit (paramétré)", () => {
     const cur = actuels.layouts.filter((l) => !l.legacy).map((l) => ({ k: l.fullKey, t: Emp.jetons({ type: "layout", children: withIds(l.build(kit(actuels.skins.find((s) => s.key === l.skin)), {})) }) }));
     for (const a of t) for (const b of cur) assert.ok(Emp.similarite(a.t, b.t) <= Emp.SEUIL_SIMILARITE, `${a.k} ≈ ${b.k} (modèle actuel) : ${Emp.similarite(a.t, b.t).toFixed(2)}`);
   });
-  test("état final (47 familles construites) : exactement 265 modèles, répartition = cible, un modèle par concept", () => {
-    if (!V2.toutesConstruites) { assert.ok(V2.total < 265 || V2.familles.some((f) => !f.built)); return; }
-    assert.equal(modelesV2.length, 265);
+  test("état final (75 familles construites) : exactement 433 modèles, répartition = cible, un modèle par concept", () => {
+    if (!V2.toutesConstruites) { assert.ok(V2.total < 433 || V2.familles.some((f) => !f.built)); return; }
+    assert.equal(modelesV2.length, 433);
     const parFam = {}; for (const e of modelesV2) parFam[e.family] = (parFam[e.family] || 0) + 1;
     assert.deepEqual(parFam, CIBLE);
-    assert.equal(new Set(modelesV2.map((e) => e.model.concept)).size, 265);
+    assert.equal(new Set(modelesV2.map((e) => e.model.concept)).size, 433);
   });
 });
 
@@ -217,7 +217,7 @@ describe("Pied v2 : le kit (identité, modèle, gestes)", () => {
     const fichiers = fs.readdirSync(path.join(__dirname, "../public/fonts/library"));
     assert.ok(fichiers.length > 1000, "bibliothèque locale de polices");
   });
-  test("polices des 265 concepts : toutes disponibles dans la bibliothèque (liste documentée dans le guide)", () => {
+  test("polices des 433 concepts : toutes disponibles dans la bibliothèque (liste documentée dans le guide)", () => {
     for (const c of CONCEPTS) for (const n of [c.typographies.titre, c.typographies.corps, c.typographies.accent].filter(Boolean)) assert.ok(fontLib.byName(n.toLowerCase()), `${c.id} : police « ${n} » absente`);
   });
   test("identite() : jetons --ft-* complets, contraste AA vérifié (erreur sinon), texte discret relevé s'il est trop pâle sur la surface", () => {

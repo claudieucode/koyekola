@@ -1,0 +1,281 @@
+{
+  "concepts": [
+    {
+      "id": "c-362-marque-page",
+      "ordre": 362,
+      "nom": "Marque-page",
+      "famille": "Édition et librairie",
+      "secteur": "maison d'édition et librairie",
+      "directionArtistique": {
+        "texte": "Archétype A (inspiré de la capture « logo + colonnes ») : colonne de marque bordeaux pleine hauteur à gauche (monogramme Maison Verso, phrase, lettre d'information, carré doré qui respire), grande zone crème à droite en trois colonnes (catalogue, horaires de la librairie, la maison). Bordeaux, crème, or."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maison d'édition",
+        "librairie",
+        "colonne latérale",
+        "bordeaux",
+        "crème"
+      ]
+    },
+    {
+      "id": "c-363-epilogue",
+      "ordre": 363,
+      "nom": "Épilogue",
+      "famille": "Édition et librairie",
+      "secteur": "maison d'édition de romans et de poésie",
+      "directionArtistique": {
+        "texte": "Archétype B (capture « marque monumentale ») : grand vide vert nuit, nom Épilogue géant en Instrument Serif rogné par le bas, trois liens seulement, un carré pistache qui respire devant la phrase. Vert nuit, pistache."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maison d'édition",
+        "nom monumental",
+        "minimal",
+        "vert nuit",
+        "pistache"
+      ]
+    },
+    {
+      "id": "c-364-table-des-matieres",
+      "ordre": 364,
+      "nom": "Table des matières",
+      "famille": "Édition et librairie",
+      "secteur": "éditeur d'essais",
+      "directionArtistique": {
+        "texte": "Archétype G : le pied est une table des matières ; six rubriques en lignes pleine largeur (numéro, grand titre Newsreader, précision, flèche) séparées par des filets, qui se remplissent de jaune au survol. Blanc, noir, jaune."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "éditeur d'essais",
+        "sommaire",
+        "index",
+        "noir et blanc",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-365-papier-d-alinea",
+      "ordre": 365,
+      "nom": "Papier d'Alinéa",
+      "famille": "Édition et librairie",
+      "secteur": "librairie-papeterie",
+      "directionArtistique": {
+        "texte": "Archétype J : papier à en-tête ivoire, double filet, nom Alinéa centré en Cardo entre deux volets (horaires à gauche, adresse à droite, Données de l'entreprise), carré qui respire, ligne de rubriques centrée entre doubles filets. Sans lettre. Ivoire et bleu marine."
+      },
+      "typographies": {
+        "titre": "Cardo",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "librairie",
+        "papeterie",
+        "papier à en-tête",
+        "double filet",
+        "ivoire",
+        "marine"
+      ]
+    },
+    {
+      "id": "c-366-rayonnage",
+      "ordre": 366,
+      "nom": "Rayonnage",
+      "famille": "Édition et librairie",
+      "secteur": "librairie indépendante",
+      "directionArtistique": {
+        "texte": "Archétype H : mosaïque asymétrique de cases à angles droits, une grande case moutarde (« Lisez. » en DM Serif Display et lettre d'information) et trois petites (catalogue canard, horaires écru, contact noir) qui se soulèvent au survol. Moutarde, canard, écru."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "librairie",
+        "mosaïque",
+        "cases",
+        "moutarde",
+        "canard"
+      ]
+    },
+    {
+      "id": "c-367-page-double",
+      "ordre": 367,
+      "nom": "Page double",
+      "famille": "Édition et librairie",
+      "secteur": "éditeur de livres d'art",
+      "directionArtistique": {
+        "texte": "Archétype E : un livre ouvert, deux demi-pages bord à bord de couleurs opposées ; page gauche indigo avec le message en grand Fraunces, page droite pêche avec deux boutons (le premier respire), liste de liens à filets et contact. Indigo et pêche."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "livres d'art",
+        "deux demi-pages",
+        "indigo",
+        "pêche",
+        "bord à bord"
+      ]
+    },
+    {
+      "id": "c-368-super-cases",
+      "ordre": 368,
+      "nom": "Super cases",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "média de jeux vidéo",
+      "directionArtistique": {
+        "texte": "Archétype C : damier de huit cases carrées égales (bleu électrique, jaune, blanc, noir) ; la première porte la marque en Press Start 2P (carré qui respire), six sont des liens qui s'inversent au survol, la dernière contient la lettre d'information. Style arcade."
+      },
+      "typographies": {
+        "titre": "Press Start 2P",
+        "corps": "Chakra Petch",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "jeux vidéo",
+        "damier",
+        "arcade",
+        "bleu électrique",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-369-barre-hud",
+      "ordre": 369,
+      "nom": "Barre HUD",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "plateforme de jeux",
+      "directionArtistique": {
+        "texte": "Archétype D : une seule ligne type barre de console : nom en Orbitron, six liens en ligne, bouton Se connecter qui respire ; filet cyan en haut, ligne légale dessous. Compact. Violet nuit et cyan."
+      },
+      "typographies": {
+        "titre": "Orbitron",
+        "corps": "Exo 2",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "plateforme de jeux",
+        "barre",
+        "compact",
+        "violet",
+        "cyan"
+      ]
+    },
+    {
+      "id": "c-370-pret-joueur",
+      "ordre": 370,
+      "nom": "Prêt, joueur ?",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "studio de jeux indépendant",
+      "directionArtistique": {
+        "texte": "Archétype F (capture « grande phrase ») : bandeau orange avec « Prêt, joueur ? » en Anton géant et énorme bouton noir qui respire ; dessous, noir : un mot du studio à gauche et une seule colonne étroite de liens à filets qui glissent au survol. Orange vif et noir."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio de jeux",
+        "appel à l'action",
+        "bandeau XXL",
+        "orange",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-371-carte-du-jeu",
+      "ordre": 371,
+      "nom": "Carte du jeu",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "communauté de joueurs",
+      "directionArtistique": {
+        "texte": "Archétype I : frise horizontale de cinq niveaux (découvrir, jouer, rejoindre, concourir, contribuer) qui monte comme une courbe de progression, points carrés ambre sur une ligne marine, chaque étape se remplit au survol. Bleu glacier, marine, ambre."
+      },
+      "typographies": {
+        "titre": "Oxanium",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communauté",
+        "frise",
+        "étapes",
+        "glacier",
+        "ambre"
+      ]
+    },
+    {
+      "id": "c-372-terminal-quartz",
+      "ordre": 372,
+      "nom": "Terminal Quartz",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "équipe d'esport",
+      "directionArtistique": {
+        "texte": "Archétype K : le pied est une fenêtre de terminal à angles droits (barre de titre menthe à trois carrés, contour menthe), lignes de commande qui s'inversent au survol, champ e-mail en ligne de commande, curseur bloc qui bat lentement. Vert terminal et menthe, monospace."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "esport",
+        "terminal",
+        "console",
+        "menthe",
+        "monospace"
+      ]
+    },
+    {
+      "id": "c-373-next-level",
+      "ordre": 373,
+      "nom": "Next level",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "éditeur de jeux mobiles",
+      "directionArtistique": {
+        "texte": "Archétype L (capture « marque monumentale ») : pied en escalier, quatre marches de largeurs décroissantes alignées à gauche (rose avec NEXT LEVEL géant en Bowlby One, noir pour les liens, jaune pour la lettre, violet pour les réseaux). Crème, rose, noir, jaune, violet."
+      },
+      "typographies": {
+        "titre": "Bowlby One",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "jeux mobiles",
+        "escalier",
+        "marches",
+        "rose",
+        "jaune"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,291 @@
+{
+  "concepts": [
+    {
+      "id": "c-374-damier-des-facultes",
+      "ordre": 374,
+      "nom": "Damier des facultés",
+      "famille": "Universités et recherche",
+      "secteur": "université",
+      "directionArtistique": {
+        "texte": "Archétype C, inspiré de la capture 28 (grille de cases à filets fins, flèche à droite). Damier 4 × 2 de huit cases égales à angles droits sur papier crème, filets bordeaux de 1 px ; chaque case est un lien vers une faculté et se remplit de bordeaux au survol. Adresse et mentions dessous."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "université",
+        "damier",
+        "grille",
+        "crème",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-375-amphi-et-couloirs",
+      "ordre": 375,
+      "nom": "Amphi et couloirs",
+      "famille": "Universités et recherche",
+      "secteur": "université",
+      "directionArtistique": {
+        "texte": "Archétype E, inspiré de la capture 29 (phrase à gauche, colonnes de liens à droite). Deux demi-pages bord à bord : à gauche bleu nuit avec grande phrase serif et appel Candidater, à droite pierre claire avec deux colonnes de liens (étudier, chercher), mentions et adresse."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "université",
+        "deux moitiés",
+        "bleu nuit",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-376-guichet-du-chercheur",
+      "ordre": 376,
+      "nom": "Guichet du chercheur",
+      "famille": "Universités et recherche",
+      "secteur": "centre de recherche",
+      "directionArtistique": {
+        "texte": "Archétype K, inspiré de la capture 30 (formulaire sombre). Le pied est une fenêtre de console à angles droits : barre de titre à trois carrés (un carré vert respire), liste de commandes-liens à gauche, formulaire d'abonnement aux appels à projets et coordonnées à droite, ligne d'état avec les mentions."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recherche",
+        "console",
+        "formulaire",
+        "monospace",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-377-index-des-laboratoires",
+      "ordre": 377,
+      "nom": "Index des laboratoires",
+      "famille": "Universités et recherche",
+      "secteur": "institut de recherche",
+      "directionArtistique": {
+        "texte": "Archétype G, inspiré de la capture 28 (libellé, flèche, filets). Cinq lignes pleine largeur en très gros caractères sur jaune acide, filets noirs de 2 px ; la ligne se remplit de noir au survol. Aucune carte ; adresse et mentions en pied."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "institut",
+        "index",
+        "jaune acide",
+        "noir",
+        "grande typographie",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-378-annales",
+      "ordre": 378,
+      "nom": "Annales monumentales",
+      "famille": "Universités et recherche",
+      "secteur": "école doctorale",
+      "directionArtistique": {
+        "texte": "Archétype B, inspiré du mot géant de la capture 30. Le mot ANNALES démesuré, lilas sur violet profond, rogné par le bas du pied ; trois liens soulignés et une phrase courte au-dessus, grand vide."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "école doctorale",
+        "nom monumental",
+        "violet",
+        "lilas",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-379-gradins-du-savoir",
+      "ordre": 379,
+      "nom": "Gradins du savoir",
+      "famille": "Universités et recherche",
+      "secteur": "bibliothèque universitaire",
+      "directionArtistique": {
+        "texte": "Archétype L, inspiré de la capture 28 (pied en bandes sous un bandeau). Quatre gradins alignés à gauche de largeurs décroissantes (100, 78, 56, 34 %) en turquoises de plus en plus clairs : nom, services, coordonnées, mentions ; le second gradin s'élargit au survol."
+      },
+      "typographies": {
+        "titre": "Fira Sans Condensed",
+        "corps": "Fira Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bibliothèque",
+        "étagé",
+        "gradins",
+        "turquoise",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-380-barre-du-don",
+      "ordre": 380,
+      "nom": "Barre du don",
+      "famille": "ONG et solidarité",
+      "secteur": "association d'aide humanitaire",
+      "directionArtistique": {
+        "texte": "Archétype A, inspiré de la capture 29 (phrase à gauche, colonnes de liens à droite). Zone sable avec grande phrase slab et deux colonnes de liens ; barre verticale terre cuite à droite avec « Agir. », trois façons d'aider qui s'indentent et bouton Faire un don ; ligne d'adresse et de mentions dessous."
+      },
+      "typographies": {
+        "titre": "Bitter",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "association",
+        "humanitaire",
+        "barre latérale",
+        "terre cuite",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-381-appel-a-agir",
+      "ordre": 381,
+      "nom": "Appel à agir",
+      "famille": "ONG et solidarité",
+      "secteur": "ONG de défense des droits",
+      "directionArtistique": {
+        "texte": "Archétype F, inspiré de la capture 30 (grand appel et bouton). Bandeau XXL jaune tournesol : appel démesuré en capitales condensées et gros bouton noir ; dessous sur noir lettre d'information et coordonnées à gauche, une seule colonne étroite de liens à droite."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ONG",
+        "droits",
+        "appel",
+        "jaune",
+        "noir",
+        "condensé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-382-mosaique-solidaire",
+      "ordre": 382,
+      "nom": "Mosaïque solidaire",
+      "famille": "ONG et solidarité",
+      "secteur": "association d'entraide locale",
+      "directionArtistique": {
+        "texte": "Archétype H, inspiré de la capture 30 (blocs sur fond sombre). Grande case verte pleine largeur (mission et lettre) puis trois petites cases franches rose, paille et blanche qui se soulèvent au survol ; barre d'adresse et de mentions."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entraide",
+        "mosaïque",
+        "vert",
+        "rose",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-383-barre-d-entraide",
+      "ordre": 383,
+      "nom": "Barre d'entraide",
+      "famille": "ONG et solidarité",
+      "secteur": "fondation",
+      "directionArtistique": {
+        "texte": "Archétype D, inspiré de la capture 29 (copyright et liens sur une ligne). Ligne unique compacte bleu roi : nom, liens à repères carrés ambre et bouton Faire un don ; fine bande de mention en haut, ligne de mentions en bas."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": null,
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fondation",
+        "ligne unique",
+        "compact",
+        "bleu roi",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-384-le-chemin-du-don",
+      "ordre": 384,
+      "nom": "Le chemin du don",
+      "famille": "ONG et solidarité",
+      "secteur": "ONG de santé",
+      "directionArtistique": {
+        "texte": "Archétype I, inspiré des trois chiffres alignés de la capture 30 (sans chiffres). Titre à gauche et frise de trois étapes à repères carrés magenta reliés par un filet noir sur fond blanc ; bande noire de liens, bouton, adresse et mentions."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ONG",
+        "santé",
+        "frise",
+        "étapes",
+        "blanc",
+        "magenta",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-385-papier-de-l-association",
+      "ordre": 385,
+      "nom": "Papier de l'association",
+      "famille": "ONG et solidarité",
+      "secteur": "association caritative",
+      "directionArtistique": {
+        "texte": "Archétype J, inspiré de la capture 29 (texte sobre sur aplat). Cartouche à filet sur terre brune : doubles filets or, nom en grand serif centré, devise en italique, ligne centrée de liens ; adresse et mentions centrées dessous."
+      },
+      "typographies": {
+        "titre": "EB Garamond",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "association",
+        "caritatif",
+        "papier à en-tête",
+        "brun",
+        "or",
+        "angles droits"
+      ]
+    }
+  ]
+}

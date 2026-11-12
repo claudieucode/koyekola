@@ -1,0 +1,307 @@
+{
+  "concepts": [
+    {
+      "id": "c-386-facade-de-mairie",
+      "ordre": 386,
+      "nom": "Façade de mairie",
+      "famille": "Collectivités et services publics",
+      "secteur": "mairie",
+      "directionArtistique": {
+        "texte": "Pour une commune : le nom de la mairie en capitales géantes et centrées sur papier chaud, une barre terracotta pleine largeur, puis trois liens essentiels et la ligne légale. Un seul geste : le nom. Inspiré d'une capture à nom monumental sur fond blanc. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mairie",
+        "commune",
+        "nom monumental",
+        "papier",
+        "bleu",
+        "terracotta",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-387-guichet-lateral",
+      "ordre": 387,
+      "nom": "Guichet latéral",
+      "famille": "Collectivités et services publics",
+      "secteur": "communauté de communes",
+      "directionArtistique": {
+        "texte": "Pour une communauté de communes : une haute colonne vert sapin à gauche (carré jaune qui respire, nom, réseaux) et à droite sur crème huit rubriques en cases blanches, horaires et contact. Inspiré d'une capture à logo et réseaux à gauche, colonnes à droite. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communauté de communes",
+        "colonne latérale",
+        "démarches",
+        "horaires",
+        "vert",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-388-demarche-en-ligne",
+      "ordre": 388,
+      "nom": "Démarche en ligne",
+      "famille": "Collectivités et services publics",
+      "secteur": "ville",
+      "directionArtistique": {
+        "texte": "Pour une ville : un énorme bandeau ambre avec « Une démarche à faire ? Commencez en ligne. » et deux boutons, puis sur bleu nuit le nom de la ville et une seule colonne étroite de liens à filets. Inspiré d'une capture à grande phrase serif et boutons. Archétype : F bandeau XXL + colonne étroite."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ville",
+        "démarches en ligne",
+        "bandeau d'appel",
+        "bleu nuit",
+        "ambre",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-389-sommaire-citoyen",
+      "ordre": 389,
+      "nom": "Sommaire citoyen",
+      "famille": "Collectivités et services publics",
+      "secteur": "mairie",
+      "directionArtistique": {
+        "texte": "Pour une mairie : six rubriques en lignes pleine largeur à grand titre serif, flèche et précision dessous, qui se teintent et se décalent au survol, puis le contact. Inspiré des listes de rubriques d'une capture à colonnes. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mairie",
+        "sommaire",
+        "index",
+        "rubriques",
+        "serif",
+        "sable",
+        "rouge brique",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-390-tableau-d-affichage",
+      "ordre": 390,
+      "nom": "Tableau d'affichage",
+      "famille": "Collectivités et services publics",
+      "secteur": "ville",
+      "directionArtistique": {
+        "texte": "Pour une ville : un damier de huit cases égales à angles droits, horaires et contact de l'hôtel de ville, six services en cases qui se remplissent de violet au survol. Inspiré des grilles de rubriques d'une capture. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ville",
+        "damier",
+        "cases égales",
+        "services",
+        "horaires",
+        "violet",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-391-courrier-de-la-commune",
+      "ordre": 391,
+      "nom": "Courrier de la commune",
+      "famille": "Collectivités et services publics",
+      "secteur": "commune",
+      "directionArtistique": {
+        "texte": "Pour une commune : un pied en courrier officiel, double filet, nom en grand serif italique, coordonnées et horaires centrés, ligne de liens centrée et sceau d'or qui respire. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "commune",
+        "courrier officiel",
+        "centré",
+        "filets doubles",
+        "serif",
+        "crème",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-392-deux-consultations",
+      "ordre": 392,
+      "nom": "Deux consultations",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "cabinet connecté",
+      "directionArtistique": {
+        "texte": "Pour un cabinet connecté : un liseré menthe, deux demi-pages bord à bord, un panneau sarcelle avec « Se soigner, simplement. » en grand serif, un panneau crème avec quatre actions en rangées à flèche. Inspiré d'une capture à grande phrase serif et actions. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cabinet",
+        "téléconsultation",
+        "deux panneaux",
+        "grand serif",
+        "sarcelle",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-393-enseigne-verte",
+      "ordre": 393,
+      "nom": "Enseigne verte",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une pharmacie : une barre verte très compacte, croix blanche qui respire, nom et quatre liens en capitales séparés par des filets sur une seule ligne, puis une ligne sombre pour les mentions. Archétype : D barre unique."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "barre compacte",
+        "une ligne",
+        "croix",
+        "vert",
+        "jaune citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-394-console-patient",
+      "ordre": 394,
+      "nom": "Console patient",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé numérique",
+      "directionArtistique": {
+        "texte": "Pour un service de santé numérique : une fenêtre étroite à angles droits, barre de titre à trois carrés, commandes-liens en police mono, curseur menthe qui respire, lettre d'information en champ de formulaire, barre d'état. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "santé numérique",
+        "fenêtre",
+        "console",
+        "police mono",
+        "graphite",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-395-parcours-de-soin",
+      "ordre": 395,
+      "nom": "Parcours de soin",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé en ligne",
+      "directionArtistique": {
+        "texte": "Pour un service de santé en ligne : une frise de quatre étapes sur bleu ciel, chaque titre-lien sous un point carré et un filet épais (le premier respire), puis une bande marine avec mention d'urgence, coordonnées et mentions. Archétype : I frise à points carrés."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "frise",
+        "étapes",
+        "parcours patient",
+        "points carrés",
+        "bleu ciel",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-396-mosaique-sante",
+      "ordre": 396,
+      "nom": "Mosaïque santé",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé",
+      "directionArtistique": {
+        "texte": "Pour un service de santé : une grande case pêche avec « Votre santé, en clair. » et un bouton, trois petites cases (annuaire ardoise qui se remplit au survol, contact blanc, réseaux miel). Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "cases",
+        "annuaire",
+        "pêche",
+        "ardoise",
+        "miel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-397-etages-du-cabinet",
+      "ordre": 397,
+      "nom": "Étages du cabinet",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "plateforme de santé",
+      "directionArtistique": {
+        "texte": "Pour une plateforme de santé : quatre marches de plus en plus étroites et sombres alignées à gauche, le nom monumental sur lavande, les services, horaires et contact sur violet vif, les mentions sur nuit. Inspiré d'une capture à nom monumental. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "escalier",
+        "bandes",
+        "nom monumental",
+        "lavande",
+        "violet",
+        "nuit",
+        "angles droits"
+      ]
+    }
+  ]
+}

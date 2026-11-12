@@ -1,0 +1,292 @@
+{
+  "concepts": [
+    {
+      "id": "c-398-souffle-du-matin",
+      "ordre": 398,
+      "nom": "Souffle du matin",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "studio de yoga",
+      "directionArtistique": {
+        "texte": "Pour un studio de yoga : colonne verte pleine hauteur à gauche (nom, phrase, réseaux, bouton de réservation qui respire) et zone crème à droite avec pratiques, journal à puces et coordonnées sous des titres soulignés d'un court trait. Inspiré des captures 34/35. Archétype A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Tenor Sans",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "yoga",
+        "studio",
+        "colonne latérale",
+        "sauge",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-399-fonte",
+      "ordre": 399,
+      "nom": "Fonte",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "salle de musculation",
+      "directionArtistique": {
+        "texte": "Pour une salle de musculation : le nom FONTE en énormes capitales condensées vert volt, rogné par le bord de la bande, puis coordonnées, repère carré avec bouton d'inscription, réseaux et liens. Inspiré de la capture 36. Archétype B nom monumental."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "Chakra Petch",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musculation",
+        "nom monumental",
+        "graphite",
+        "vert volt",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-400-casier-souple",
+      "ordre": 400,
+      "nom": "Casier souple",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "studio de pilates",
+      "directionArtistique": {
+        "texte": "Pour un studio de pilates : enseigne puis damier de huit cases égales en violet et menthe, liens numérotés qui se remplissent au survol, horaires, coordonnées, réseaux et case d'inscription qui respire. Inspiré des colonnes de liens des captures 34/35. Archétype C damier."
+      },
+      "typographies": {
+        "titre": "Gabarito",
+        "corps": "Spline Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pilates",
+        "damier",
+        "cases",
+        "violet",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-401-cap-vitalite",
+      "ordre": 401,
+      "nom": "Cap vitalité",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "coaching nutrition et forme",
+      "directionArtistique": {
+        "texte": "Pour un coach en nutrition : une barre corail compacte (nom, réseaux, bouton marine), une ligne de quatre liens numérotés et une ligne marine de mentions. Archétype D ligne unique compacte."
+      },
+      "typographies": {
+        "titre": "Kanit",
+        "corps": "Kumbh Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coaching",
+        "nutrition",
+        "barre compacte",
+        "corail",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-402-rive-thermale",
+      "ordre": 402,
+      "nom": "Rive thermale",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "spa et massages",
+      "directionArtistique": {
+        "texte": "Pour un spa : deux demi-pages bord à bord, panneau vert thermal (phrase en capitales, liens, lettre d'information) et panneau sable (énorme bouton de réservation, horaires, coordonnées, réseaux), mentions en bande basse. Inspiré de la capture 36 (blocs aux deux bords). Archétype E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Cinzel",
+        "corps": "Raleway",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spa",
+        "massage",
+        "deux panneaux",
+        "vert thermal",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-403-dernier-round",
+      "ordre": 403,
+      "nom": "Dernier round",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "club de boxe",
+      "directionArtistique": {
+        "texte": "Pour un club de boxe : bandeau magenta d'appel à l'action en très grandes capitales avec énorme bouton blanc, puis bande noire avec horaires, coordonnées et une seule colonne étroite de liens à filets. Archétype F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Bowlby One",
+        "corps": "Gabarito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boxe",
+        "bandeau XXL",
+        "colonne de liens",
+        "magenta",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-404-carnet-de-sentier",
+      "ordre": 404,
+      "nom": "Carnet de sentier",
+      "famille": "Outdoor et aventure",
+      "secteur": "randonnée",
+      "directionArtistique": {
+        "texte": "Pour un site de randonnée : index de six rubriques en lignes pleine largeur (grand libellé en slab, numéro, filet) qui glissent et passent à l'ocre au survol, puis coordonnées, réseaux et mentions. Inspiré de la capture 36. Archétype G index."
+      },
+      "typographies": {
+        "titre": "Alfa Slab One",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "randonnée",
+        "index",
+        "lignes",
+        "vert forêt",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-405-cordee",
+      "ordre": 405,
+      "nom": "Cordée",
+      "famille": "Outdoor et aventure",
+      "secteur": "alpinisme et matériel",
+      "directionArtistique": {
+        "texte": "Pour une boutique d'alpinisme : une grande case marine (nom, phrase, bouton orange qui respire) accompagnée de trois petites cases franches (liens, coordonnées, horaires et réseaux) en mosaïque asymétrique. Archétype H mosaïque."
+      },
+      "typographies": {
+        "titre": "Saira Condensed",
+        "corps": "Be Vietnam Pro",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "alpinisme",
+        "mosaïque",
+        "asymétrique",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-406-frise-du-bivouac",
+      "ordre": 406,
+      "nom": "Frise du bivouac",
+      "famille": "Outdoor et aventure",
+      "secteur": "voyage en autonomie",
+      "directionArtistique": {
+        "texte": "Pour un site de voyage en autonomie : frise horizontale de quatre étapes reliées par un filet à repères carrés, puis bande rouille avec coordonnées, réseaux et mentions. Inspiré des captures 34/35. Archétype I frise."
+      },
+      "typographies": {
+        "titre": "Yeseva One",
+        "corps": "Josefin Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bivouac",
+        "frise",
+        "étapes",
+        "sable",
+        "rouille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-407-bureau-des-guides",
+      "ordre": 407,
+      "nom": "Bureau des guides",
+      "famille": "Outdoor et aventure",
+      "secteur": "guides de haute montagne",
+      "directionArtistique": {
+        "texte": "Pour un bureau de guides : papier à en-tête crème, filets doubles, nom en capitales, horaires et coordonnées centrés, liens en ligne séparés par des carrés, réseaux. Archétype J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Crimson Pro",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "guides",
+        "papier à en-tête",
+        "centré",
+        "crème",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-408-console-de-sentier",
+      "ordre": 408,
+      "nom": "Console de sentier",
+      "famille": "Outdoor et aventure",
+      "secteur": "application de trail",
+      "directionArtistique": {
+        "texte": "Pour une application de trail : le pied est une fenêtre de terminal à bords nets avec barre de titre à trois carrés, rubriques en liste, coordonnées et lettre d'information en invites. Tout en monospace, bleu nuit et cyan. Archétype K console."
+      },
+      "typographies": {
+        "titre": "Martian Mono",
+        "corps": "Martian Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "trail",
+        "console",
+        "terminal",
+        "monospace",
+        "bleu nuit",
+        "cyan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-409-denivele",
+      "ordre": 409,
+      "nom": "Dénivelé",
+      "famille": "Outdoor et aventure",
+      "secteur": "cyclo-voyage",
+      "directionArtistique": {
+        "texte": "Pour un site de cyclo-voyage : quatre bandes en escalier alignées à gauche, de largeurs décroissantes (100, 72, 48, 32 %) et de plus en plus sombres : nom et bouton, liens, coordonnées, réseaux et mentions. Archétype L escalier."
+      },
+      "typographies": {
+        "titre": "Oxanium",
+        "corps": "Oxanium",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vélo",
+        "escalier",
+        "bandes",
+        "ambre",
+        "cuivre",
+        "angles droits"
+      ]
+    }
+  ]
+}

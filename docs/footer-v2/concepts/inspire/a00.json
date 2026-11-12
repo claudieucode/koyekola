@@ -1,0 +1,316 @@
+{
+  "concepts": [
+    {
+      "id": "c-266-nom-de-chantier",
+      "ordre": 266,
+      "nom": "Nom de chantier",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "vendeur d'engins de chantier",
+      "directionArtistique": {
+        "texte": "Sur noir de fonte, le nom du site en capitales condensées sur toute la largeur sous une barre jaune épaisse ; au-dessus, une seule ligne de cinq liens et un carré jaune qui respire. Inspiré de la capture au logo et au nom géants sur noir. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Saira Extra Condensed",
+        "corps": "Golos Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "engins",
+        "chantier",
+        "nom monumental",
+        "noir",
+        "jaune",
+        "capitales",
+        "angles droits",
+        "minimal"
+      ]
+    },
+    {
+      "id": "c-267-parc-de-machines",
+      "ordre": 267,
+      "nom": "Parc de machines",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "concessionnaire de machines",
+      "directionArtistique": {
+        "texte": "Un damier de huit cases carrées bord à bord sur béton clair : cinq gammes en cobalt, blanc et noir, une case lettre d'information, une case horaires, une case nom ; les coordonnées en bande basse. Case qui se soulève au survol. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "Chakra Petch",
+        "corps": "IBM Plex Sans Condensed",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "machines",
+        "concession",
+        "damier",
+        "cases",
+        "béton",
+        "cobalt",
+        "angles droits",
+        "lettre d'information"
+      ]
+    },
+    {
+      "id": "c-268-console-de-flotte",
+      "ordre": 268,
+      "nom": "Console de flotte",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "gestionnaire de parc d'engins connectés",
+      "directionArtistique": {
+        "texte": "Le pied comme une fenêtre de terminal bleu nuit : barre de titre à trois carrés dont un cyan qui respire, commandes (« $ ls gammes », « $ cat horaires », « $ subscribe »), gammes en liens, horaires, coordonnées, lettre d'information et barre d'état pour les mentions. Archétype : K console."
+      },
+      "typographies": {
+        "titre": "Overpass Mono",
+        "corps": "Overpass Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "parc",
+        "console",
+        "terminal",
+        "mono",
+        "bleu nuit",
+        "cyan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-269-barre-d-atelier",
+      "ordre": 269,
+      "nom": "Barre d'atelier",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "atelier de pièces et de maintenance",
+      "directionArtistique": {
+        "texte": "Une haute barre orange sécurité à droite (nom, devis noir, horaires, coordonnées) et, à gauche, un grand titre condensé avec trois listes en rangées à filet qui glissent au survol. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Rajdhani",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "atelier",
+        "maintenance",
+        "pièces",
+        "barre latérale",
+        "orange",
+        "blanc cassé",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-270-escalier-de-location",
+      "ordre": 270,
+      "nom": "Escalier de location",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "loueur de matériel",
+      "directionArtistique": {
+        "texte": "Quatre marches rouille alignées à gauche et de plus en plus étroites : le nom, les gammes en une ligne, les horaires et les coordonnées, l'appel « Demander une offre » ; mentions sur fond crème. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Archivo Narrow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "matériel",
+        "escalier",
+        "bandes décroissantes",
+        "rouille",
+        "crème",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-271-index-des-gammes",
+      "ordre": 271,
+      "nom": "Index des gammes",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "constructeur d'engins",
+      "directionArtistique": {
+        "texte": "Sur vert forêt, six lignes pleine largeur : énorme libellé de gamme en capitales étroites, filet dessous ; au survol la ligne se remplit de jaune sable et glisse. Nom et repère au-dessus, coordonnées et réseaux dessous. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Alumni Sans",
+        "corps": "Commissioner",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "constructeur",
+        "engins",
+        "index",
+        "sommaire",
+        "lignes",
+        "vert forêt",
+        "jaune sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-272-appel-a-l-encaissement",
+      "ordre": 272,
+      "nom": "Appel à l'encaissement",
+      "famille": "Fintech et paiement",
+      "secteur": "solution d'encaissement en ligne",
+      "directionArtistique": {
+        "texte": "Un bandeau violet électrique avec une phrase gigantesque et un bouton blanc, puis sur lavande le nom, une phrase et les réseaux à gauche et une seule colonne étroite de huit liens à rangées à filet à droite. Inspiré de la capture à grand appel avant les colonnes. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fintech",
+        "encaissement",
+        "bandeau XXL",
+        "appel à l'action",
+        "violet",
+        "lavande",
+        "angles droits",
+        "colonne étroite"
+      ]
+    },
+    {
+      "id": "c-273-barre-de-reglement",
+      "ordre": 273,
+      "nom": "Barre de règlement",
+      "famille": "Fintech et paiement",
+      "secteur": "néobanque pour indépendants",
+      "directionArtistique": {
+        "texte": "Tout sur deux lignes sur un aplat vert citron : le nom, cinq liens en capitales mono qui se remplissent de noir au survol, un bouton noir « Ouvrir un compte » et les mentions. Compact, sans colonnes. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "Martian Mono",
+        "corps": "Martian Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "néobanque",
+        "indépendants",
+        "barre unique",
+        "compact",
+        "mono",
+        "vert citron",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-274-deux-rives",
+      "ordre": 274,
+      "nom": "Rives du paiement",
+      "famille": "Fintech et paiement",
+      "secteur": "plateforme de paiement pour associations",
+      "directionArtistique": {
+        "texte": "Deux demi-pages : à gauche un panneau vert sapin avec une phrase en serif italique et un bouton menthe, à droite un panneau menthe pâle avec deux listes de liens et les réseaux. Inspiré de la capture à phrase italique et colonnes de droite. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "IBM Plex Serif",
+        "corps": "Golos Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paiement",
+        "associations",
+        "deux panneaux",
+        "serif italique",
+        "sapin",
+        "menthe",
+        "angles droits",
+        "réseaux"
+      ]
+    },
+    {
+      "id": "c-275-mosaique-de-comptes",
+      "ordre": 275,
+      "nom": "Mosaïque de comptes",
+      "famille": "Fintech et paiement",
+      "secteur": "banque en ligne pour PME",
+      "directionArtistique": {
+        "texte": "Une grande case marine avec phrase, bouton et nom monumental rogné ton sur ton, et trois petites cases à droite (jaune, blanche, corail) qui se soulèvent au survol. Inspiré de la capture à marque géante rognée. Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "Lexend Deca",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "banque en ligne",
+        "PME",
+        "mosaïque",
+        "asymétrique",
+        "marine",
+        "jaune",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-276-chemin-du-virement",
+      "ordre": 276,
+      "nom": "Chemin du virement",
+      "famille": "Fintech et paiement",
+      "secteur": "service de virements",
+      "directionArtistique": {
+        "texte": "Sur papier clair, une frise de quatre marches (initier, valider, régler, rapprocher) à carrés orange numérotés dont le premier respire, puis une ligne de liens et les mentions. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Michroma",
+        "corps": "Familjen Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "virements",
+        "frise",
+        "étapes",
+        "carrés numérotés",
+        "indigo",
+        "orange",
+        "papier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-277-papier-du-tresorier",
+      "ordre": 277,
+      "nom": "Papier du trésorier",
+      "famille": "Fintech et paiement",
+      "secteur": "établissement de paiement institutionnel",
+      "directionArtistique": {
+        "texte": "Une feuille crème à double bordure : nom en capitales serif espacées, coordonnées centrées comme un courrier, ligne de liens centrée et coupon à bordure pointillée pour la lettre d'information. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Commissioner",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paiement",
+        "institutionnel",
+        "papier à en-tête",
+        "double bordure",
+        "coupon",
+        "bordeaux",
+        "crème",
+        "angles droits"
+      ]
+    }
+  ]
+}

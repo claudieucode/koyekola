@@ -1,0 +1,293 @@
+{
+  "concepts": [
+    {
+      "id": "c-290-invite-de-commande",
+      "ordre": 290,
+      "nom": "Invite de commande",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "plateforme de données",
+      "directionArtistique": {
+        "texte": "Pour une plateforme de données : le pied est une fenêtre de terminal noire à barre de titre (trois carrés, le dernier vert citron qui respire), commentaires # produit et # ressources, liens-commandes qui se surlignent et s'indentent, lettre d'information intégrée et ligne d'état. Inspiré de la capture 07 (logo, colonnes de liens, lettre). Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "données",
+        "plateforme",
+        "console",
+        "terminal",
+        "mono",
+        "vert citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-291-barre-d-inference",
+      "ordre": 291,
+      "nom": "Barre d'inférence",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "IA appliquée",
+      "directionArtistique": {
+        "texte": "Pour un service d'IA appliquée : pied de poche sur une seule rangée sous un filet cobalt (marque dans une cellule blanche, six liens, mentions dessous, bouton Essayer). Inspiré de la barre basse de la capture 07. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intelligence artificielle",
+        "compact",
+        "une ligne",
+        "cobalt",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-292-appel-au-corpus",
+      "ordre": 292,
+      "nom": "Appel au corpus",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "conseil en données",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de conseil en données : bandeau d'appel à l'action démesuré en serif (« Parlons de vos données. ») avec bouton pêche, puis une seule colonne étroite de sept liens à filets fins à droite. Inspiré du bandeau de la capture 08. Archétype : F appel XXL + colonne étroite."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "appel à l'action",
+        "grande typographie",
+        "colonne étroite",
+        "aubergine",
+        "pêche",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-293-deux-modeles",
+      "ordre": 293,
+      "nom": "Deux modèles",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "IA explicable",
+      "directionArtistique": {
+        "texte": "Pour une entreprise d'IA explicable : deux demi-pages bord à bord, ambre à gauche (message « Chaque réponse a sa preuve. » et lettre) et noir à droite (quatre grandes lignes d'action à filets). Inspiré du bandeau et du formulaire à contour de la capture 08. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "IA explicable",
+        "demi-pages",
+        "ambre",
+        "noir",
+        "lettre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-294-glossaire-vivant",
+      "ordre": 294,
+      "nom": "Glossaire vivant",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "lexique de la donnée",
+      "directionArtistique": {
+        "texte": "Pour un éditeur de contenus sur la donnée : titre à gauche et sommaire de glossaire en cinq grandes lignes (lettre, terme en italique, définition) qui noircissent et s'indentent au survol. Inspiré des index de liens de la capture 09. Archétype : G index en lignes pleine largeur."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "glossaire",
+        "lexique",
+        "index",
+        "serif",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-295-chaine-de-traitement",
+      "ordre": 295,
+      "nom": "Chaîne de traitement",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "ingénierie de la donnée",
+      "directionArtistique": {
+        "texte": "Pour une société d'ingénierie de la donnée : frise horizontale en cinq étapes à points carrés reliés par un filet menthe, deux liens par étape (cinq colonnes comme dans la capture 09), puis marque et mentions. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pipeline",
+        "frise",
+        "étapes",
+        "points carrés",
+        "vert profond",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-296-rail-d-application",
+      "ordre": 296,
+      "nom": "Rail d'application",
+      "famille": "Applications mobiles",
+      "secteur": "application grand public",
+      "directionArtistique": {
+        "texte": "Pour une application grand public : haute colonne bleue à droite (marque, promesse, deux boutons de boutique, réseaux), zone claire à gauche avec lettre et trois rangées de liens. Inspiré de la colonne logo + description de la capture 07. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "application",
+        "grand public",
+        "colonne latérale",
+        "boutons de boutique",
+        "bleu électrique",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-297-mosaique-de-poche",
+      "ordre": 297,
+      "nom": "Mosaïque de poche",
+      "famille": "Applications mobiles",
+      "secteur": "application de services",
+      "directionArtistique": {
+        "texte": "Pour une application de services : mosaïque asymétrique, trois petites cases à gauche (aide, nouveautés, lettre) et une grande case orange à droite (« Dans votre poche. » et boutons de boutique). Inspiré du bloc de téléchargement de la capture 07. Archétype : H mosaïque."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "boutons de boutique",
+        "orange",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-298-lune-en-grand",
+      "ordre": 298,
+      "nom": "Lune en grand",
+      "famille": "Applications mobiles",
+      "secteur": "application de sommeil",
+      "directionArtistique": {
+        "texte": "Pour une application de méditation ou de sommeil : le nom en immense serif au centre d'un grand vide lilas, deux liens de boutique et une ligne de mentions. Inspiré du logo isolé de la capture 08. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bien-être",
+        "nom monumental",
+        "minimal",
+        "lilas",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-299-damier-des-ecrans",
+      "ordre": 299,
+      "nom": "Damier des écrans",
+      "famille": "Applications mobiles",
+      "secteur": "application multiplateforme",
+      "directionArtistique": {
+        "texte": "Pour une application multiplateforme : damier de six cases charbon et cyan, chacune un lien ou une information (marque, iPhone et iPad, Android, version web, lettre, aide). Inspiré de la grille de liens de la capture 09. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "multiplateforme",
+        "damier",
+        "cyan",
+        "charbon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-300-papier-de-premiere-version",
+      "ordre": 300,
+      "nom": "Papier de première version",
+      "famille": "Applications mobiles",
+      "secteur": "application de lecture",
+      "directionArtistique": {
+        "texte": "Pour une application de lecture : papier à en-tête ivoire centré (filet, nom en Cormorant, ligne de boutiques, rubriques centrées), puis bande de lettre et mentions. Inspiré du titre centré et du pied centré de la capture 09. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lecture",
+        "papier à en-tête",
+        "centré",
+        "serif",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-301-escalier-du-lancement",
+      "ordre": 301,
+      "nom": "Escalier du lancement",
+      "famille": "Applications mobiles",
+      "secteur": "application de transport",
+      "directionArtistique": {
+        "texte": "Pour une application de transport : quatre marches alignées à gauche de largeurs décroissantes (100, 78, 56, 34 %) en rouge brique, corail et rose pâle : marque, rubriques, boutiques, mentions. Inspiré des étages de la capture 08. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Rubik",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "transport",
+        "escalier",
+        "marches",
+        "rouge brique",
+        "corail",
+        "angles droits"
+      ]
+    }
+  ]
+}

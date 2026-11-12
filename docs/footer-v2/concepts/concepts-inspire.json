@@ -1,0 +1,4067 @@
+{
+  "concepts": [
+    {
+      "id": "c-266-nom-de-chantier",
+      "ordre": 266,
+      "nom": "Nom de chantier",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "vendeur d'engins de chantier",
+      "directionArtistique": {
+        "texte": "Sur noir de fonte, le nom du site en capitales condensées sur toute la largeur sous une barre jaune épaisse ; au-dessus, une seule ligne de cinq liens et un carré jaune qui respire. Inspiré de la capture au logo et au nom géants sur noir. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Saira Extra Condensed",
+        "corps": "Golos Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "engins",
+        "chantier",
+        "nom monumental",
+        "noir",
+        "jaune",
+        "capitales",
+        "angles droits",
+        "minimal"
+      ]
+    },
+    {
+      "id": "c-267-parc-de-machines",
+      "ordre": 267,
+      "nom": "Parc de machines",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "concessionnaire de machines",
+      "directionArtistique": {
+        "texte": "Un damier de huit cases carrées bord à bord sur béton clair : cinq gammes en cobalt, blanc et noir, une case lettre d'information, une case horaires, une case nom ; les coordonnées en bande basse. Case qui se soulève au survol. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "Chakra Petch",
+        "corps": "IBM Plex Sans Condensed",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "machines",
+        "concession",
+        "damier",
+        "cases",
+        "béton",
+        "cobalt",
+        "angles droits",
+        "lettre d'information"
+      ]
+    },
+    {
+      "id": "c-268-console-de-flotte",
+      "ordre": 268,
+      "nom": "Console de flotte",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "gestionnaire de parc d'engins connectés",
+      "directionArtistique": {
+        "texte": "Le pied comme une fenêtre de terminal bleu nuit : barre de titre à trois carrés dont un cyan qui respire, commandes (« $ ls gammes », « $ cat horaires », « $ subscribe »), gammes en liens, horaires, coordonnées, lettre d'information et barre d'état pour les mentions. Archétype : K console."
+      },
+      "typographies": {
+        "titre": "Overpass Mono",
+        "corps": "Overpass Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "parc",
+        "console",
+        "terminal",
+        "mono",
+        "bleu nuit",
+        "cyan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-269-barre-d-atelier",
+      "ordre": 269,
+      "nom": "Barre d'atelier",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "atelier de pièces et de maintenance",
+      "directionArtistique": {
+        "texte": "Une haute barre orange sécurité à droite (nom, devis noir, horaires, coordonnées) et, à gauche, un grand titre condensé avec trois listes en rangées à filet qui glissent au survol. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Rajdhani",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "atelier",
+        "maintenance",
+        "pièces",
+        "barre latérale",
+        "orange",
+        "blanc cassé",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-270-escalier-de-location",
+      "ordre": 270,
+      "nom": "Escalier de location",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "loueur de matériel",
+      "directionArtistique": {
+        "texte": "Quatre marches rouille alignées à gauche et de plus en plus étroites : le nom, les gammes en une ligne, les horaires et les coordonnées, l'appel « Demander une offre » ; mentions sur fond crème. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Archivo Narrow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "matériel",
+        "escalier",
+        "bandes décroissantes",
+        "rouille",
+        "crème",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-271-index-des-gammes",
+      "ordre": 271,
+      "nom": "Index des gammes",
+      "famille": "Engins et matériel professionnel",
+      "secteur": "constructeur d'engins",
+      "directionArtistique": {
+        "texte": "Sur vert forêt, six lignes pleine largeur : énorme libellé de gamme en capitales étroites, filet dessous ; au survol la ligne se remplit de jaune sable et glisse. Nom et repère au-dessus, coordonnées et réseaux dessous. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Alumni Sans",
+        "corps": "Commissioner",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "constructeur",
+        "engins",
+        "index",
+        "sommaire",
+        "lignes",
+        "vert forêt",
+        "jaune sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-272-appel-a-l-encaissement",
+      "ordre": 272,
+      "nom": "Appel à l'encaissement",
+      "famille": "Fintech et paiement",
+      "secteur": "solution d'encaissement en ligne",
+      "directionArtistique": {
+        "texte": "Un bandeau violet électrique avec une phrase gigantesque et un bouton blanc, puis sur lavande le nom, une phrase et les réseaux à gauche et une seule colonne étroite de huit liens à rangées à filet à droite. Inspiré de la capture à grand appel avant les colonnes. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fintech",
+        "encaissement",
+        "bandeau XXL",
+        "appel à l'action",
+        "violet",
+        "lavande",
+        "angles droits",
+        "colonne étroite"
+      ]
+    },
+    {
+      "id": "c-273-barre-de-reglement",
+      "ordre": 273,
+      "nom": "Barre de règlement",
+      "famille": "Fintech et paiement",
+      "secteur": "néobanque pour indépendants",
+      "directionArtistique": {
+        "texte": "Tout sur deux lignes sur un aplat vert citron : le nom, cinq liens en capitales mono qui se remplissent de noir au survol, un bouton noir « Ouvrir un compte » et les mentions. Compact, sans colonnes. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "Martian Mono",
+        "corps": "Martian Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "néobanque",
+        "indépendants",
+        "barre unique",
+        "compact",
+        "mono",
+        "vert citron",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-274-deux-rives",
+      "ordre": 274,
+      "nom": "Rives du paiement",
+      "famille": "Fintech et paiement",
+      "secteur": "plateforme de paiement pour associations",
+      "directionArtistique": {
+        "texte": "Deux demi-pages : à gauche un panneau vert sapin avec une phrase en serif italique et un bouton menthe, à droite un panneau menthe pâle avec deux listes de liens et les réseaux. Inspiré de la capture à phrase italique et colonnes de droite. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "IBM Plex Serif",
+        "corps": "Golos Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paiement",
+        "associations",
+        "deux panneaux",
+        "serif italique",
+        "sapin",
+        "menthe",
+        "angles droits",
+        "réseaux"
+      ]
+    },
+    {
+      "id": "c-275-mosaique-de-comptes",
+      "ordre": 275,
+      "nom": "Mosaïque de comptes",
+      "famille": "Fintech et paiement",
+      "secteur": "banque en ligne pour PME",
+      "directionArtistique": {
+        "texte": "Une grande case marine avec phrase, bouton et nom monumental rogné ton sur ton, et trois petites cases à droite (jaune, blanche, corail) qui se soulèvent au survol. Inspiré de la capture à marque géante rognée. Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "Lexend Deca",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "banque en ligne",
+        "PME",
+        "mosaïque",
+        "asymétrique",
+        "marine",
+        "jaune",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-276-chemin-du-virement",
+      "ordre": 276,
+      "nom": "Chemin du virement",
+      "famille": "Fintech et paiement",
+      "secteur": "service de virements",
+      "directionArtistique": {
+        "texte": "Sur papier clair, une frise de quatre marches (initier, valider, régler, rapprocher) à carrés orange numérotés dont le premier respire, puis une ligne de liens et les mentions. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Michroma",
+        "corps": "Familjen Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "virements",
+        "frise",
+        "étapes",
+        "carrés numérotés",
+        "indigo",
+        "orange",
+        "papier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-277-papier-du-tresorier",
+      "ordre": 277,
+      "nom": "Papier du trésorier",
+      "famille": "Fintech et paiement",
+      "secteur": "établissement de paiement institutionnel",
+      "directionArtistique": {
+        "texte": "Une feuille crème à double bordure : nom en capitales serif espacées, coordonnées centrées comme un courrier, ligne de liens centrée et coupon à bordure pointillée pour la lettre d'information. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Commissioner",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "paiement",
+        "institutionnel",
+        "papier à en-tête",
+        "double bordure",
+        "coupon",
+        "bordeaux",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-278-nuage-monumental",
+      "ordre": 278,
+      "nom": "Nuage monumental",
+      "famille": "Cloud et infrastructure",
+      "secteur": "fournisseur cloud",
+      "directionArtistique": {
+        "texte": "Archétype B (nom monumental). Inspiré d'une capture au nom géant fondu dans un dégradé : ardoise vers vert-de-gris, trois grands liens à gauche, coordonnées à droite, nom « Cumulo » sur toute la largeur. Un carré de statut respire."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "nom géant",
+        "dégradé",
+        "ardoise",
+        "statut",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-279-index-des-services",
+      "ordre": 279,
+      "nom": "Index des services",
+      "famille": "Cloud et infrastructure",
+      "secteur": "hébergeur",
+      "directionArtistique": {
+        "texte": "Archétype G (index en lignes pleine largeur). Papier chaud et vermillon : six lignes numérotées en grand serif avec description et flèche qui glisse, filets d'encre, la ligne s'indente et se teinte au survol."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "index",
+        "serif",
+        "vermillon",
+        "papier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-280-console-de-deploiement",
+      "ordre": 280,
+      "nom": "Console de déploiement",
+      "famille": "Cloud et infrastructure",
+      "secteur": "cloud pour développeurs",
+      "directionArtistique": {
+        "texte": "Archétype K (fenêtre / console). Fenêtre de terminal à angles droits, noir et vert : barre de titre à trois carrés, invites « $ » pour commandes, contact et lettre, curseur carré qui respire."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "terminal",
+        "console",
+        "monospace",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-281-damier-d-infrastructure",
+      "ordre": 281,
+      "nom": "Damier d'infrastructure",
+      "famille": "Cloud et infrastructure",
+      "secteur": "fournisseur d'infrastructure",
+      "directionArtistique": {
+        "texte": "Archétype C (damier de huit cases). Blanc, noir et jaune signal à filets noirs : marque, cinq services en cases-liens, support (coordonnées) et horaires. La case survolée se soulève."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "damier",
+        "jaune",
+        "noir",
+        "services",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-282-tableau-de-statut",
+      "ordre": 282,
+      "nom": "Tableau de statut",
+      "famille": "Cloud et infrastructure",
+      "secteur": "plateforme cloud",
+      "directionArtistique": {
+        "texte": "Archétype A (colonne latérale pleine hauteur). Inspiré des colonnes titrées de la capture claire et sombre : barre marine (nom, statut qui respire, contact, réseaux) et trois colonnes de liens sur gris clair, puis la lettre."
+      },
+      "typographies": {
+        "titre": "Saira Extra Condensed",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "barre latérale",
+        "colonnes",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-283-chaine-de-mise-en-ligne",
+      "ordre": 283,
+      "nom": "Chaîne de mise en ligne",
+      "famille": "Cloud et infrastructure",
+      "secteur": "cloud et déploiement",
+      "directionArtistique": {
+        "texte": "Archétype I (frise en étapes). Rose pâle, prune et menthe : quatre étapes reliées par un filet à points carrés (connecter, configurer, déployer, superviser), le dernier point respire ; liens et mentions en bas."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "frise",
+        "étapes",
+        "prune",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-284-ligne-de-defense",
+      "ordre": 284,
+      "nom": "Ligne de défense",
+      "famille": "Cybersécurité",
+      "secteur": "cabinet de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype E (deux demi-pages). Noir et jaune acide : à gauche le message en lettres condensées géantes, à droite les boutons de signalement et d'audit, liens soulignés qui se remplissent, coordonnées."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "deux moitiés",
+        "noir",
+        "jaune",
+        "condensé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-285-alerte-rouge",
+      "ordre": 285,
+      "nom": "Alerte rouge",
+      "famille": "Cybersécurité",
+      "secteur": "éditeur de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype F (bandeau XXL + colonne étroite). Bandeau rouge sirène aux lettres Anton énormes avec bouton blanc ; dessous, coordonnées à gauche et une seule colonne étroite de liens à droite, sur aubergine."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "appel à l'action",
+        "rouge",
+        "bandeau",
+        "colonne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-286-salle-des-operations",
+      "ordre": 286,
+      "nom": "Salle des opérations",
+      "famille": "Cybersécurité",
+      "secteur": "centre de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype H (mosaïque asymétrique). Indigo, cyan et lavande : trois petites cases-liens empilées à gauche, grande case à droite (nom, phrase, lettre, contact) ; cases séparées de 6 px qui se soulèvent."
+      },
+      "typographies": {
+        "titre": "Chivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "mosaïque",
+        "indigo",
+        "cyan",
+        "lettre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-287-cabinet-de-securite",
+      "ordre": 287,
+      "nom": "Cabinet de sécurité",
+      "famille": "Cybersécurité",
+      "secteur": "conseil en sécurité des systèmes d'information",
+      "directionArtistique": {
+        "texte": "Archétype J (papier à en-tête). Crème, marine et bordeaux : filets doubles, nom serif centré, cartouche d'adresse, liens en ligne centrée séparés de carrés, lettre centrée et sceau carré qui respire, barre marine de mentions."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "cabinet",
+        "papier à en-tête",
+        "centré",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-288-veille-permanente",
+      "ordre": 288,
+      "nom": "Veille permanente",
+      "famille": "Cybersécurité",
+      "secteur": "éditeur de sécurité",
+      "directionArtistique": {
+        "texte": "Archétype D (ligne unique compacte). Barre noir graphite à filet ambre : nom, quatre liens et voyant « statut » qui respire sur une seule ligne, mentions dessous. Aucun bloc supplémentaire."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "compact",
+        "barre",
+        "ambre",
+        "statut",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-289-paliers-de-confinement",
+      "ordre": 289,
+      "nom": "Paliers de confinement",
+      "famille": "Cybersécurité",
+      "secteur": "entreprise de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype L (escalier). Quatre marches alignées à gauche de 100, 85, 70 et 52 % de largeur, du gris acier à l'encre : message, liens et bouton, coordonnées, mentions. Un carré orange respire."
+      },
+      "typographies": {
+        "titre": "Teko",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "escalier",
+        "acier",
+        "orange",
+        "marches",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-290-invite-de-commande",
+      "ordre": 290,
+      "nom": "Invite de commande",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "plateforme de données",
+      "directionArtistique": {
+        "texte": "Pour une plateforme de données : le pied est une fenêtre de terminal noire à barre de titre (trois carrés, le dernier vert citron qui respire), commentaires # produit et # ressources, liens-commandes qui se surlignent et s'indentent, lettre d'information intégrée et ligne d'état. Inspiré de la capture 07 (logo, colonnes de liens, lettre). Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "données",
+        "plateforme",
+        "console",
+        "terminal",
+        "mono",
+        "vert citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-291-barre-d-inference",
+      "ordre": 291,
+      "nom": "Barre d'inférence",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "IA appliquée",
+      "directionArtistique": {
+        "texte": "Pour un service d'IA appliquée : pied de poche sur une seule rangée sous un filet cobalt (marque dans une cellule blanche, six liens, mentions dessous, bouton Essayer). Inspiré de la barre basse de la capture 07. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intelligence artificielle",
+        "compact",
+        "une ligne",
+        "cobalt",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-292-appel-au-corpus",
+      "ordre": 292,
+      "nom": "Appel au corpus",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "conseil en données",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de conseil en données : bandeau d'appel à l'action démesuré en serif (« Parlons de vos données. ») avec bouton pêche, puis une seule colonne étroite de sept liens à filets fins à droite. Inspiré du bandeau de la capture 08. Archétype : F appel XXL + colonne étroite."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "appel à l'action",
+        "grande typographie",
+        "colonne étroite",
+        "aubergine",
+        "pêche",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-293-deux-modeles",
+      "ordre": 293,
+      "nom": "Deux modèles",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "IA explicable",
+      "directionArtistique": {
+        "texte": "Pour une entreprise d'IA explicable : deux demi-pages bord à bord, ambre à gauche (message « Chaque réponse a sa preuve. » et lettre) et noir à droite (quatre grandes lignes d'action à filets). Inspiré du bandeau et du formulaire à contour de la capture 08. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "IA explicable",
+        "demi-pages",
+        "ambre",
+        "noir",
+        "lettre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-294-glossaire-vivant",
+      "ordre": 294,
+      "nom": "Glossaire vivant",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "lexique de la donnée",
+      "directionArtistique": {
+        "texte": "Pour un éditeur de contenus sur la donnée : titre à gauche et sommaire de glossaire en cinq grandes lignes (lettre, terme en italique, définition) qui noircissent et s'indentent au survol. Inspiré des index de liens de la capture 09. Archétype : G index en lignes pleine largeur."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "glossaire",
+        "lexique",
+        "index",
+        "serif",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-295-chaine-de-traitement",
+      "ordre": 295,
+      "nom": "Chaîne de traitement",
+      "famille": "Données et intelligence artificielle",
+      "secteur": "ingénierie de la donnée",
+      "directionArtistique": {
+        "texte": "Pour une société d'ingénierie de la donnée : frise horizontale en cinq étapes à points carrés reliés par un filet menthe, deux liens par étape (cinq colonnes comme dans la capture 09), puis marque et mentions. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pipeline",
+        "frise",
+        "étapes",
+        "points carrés",
+        "vert profond",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-296-rail-d-application",
+      "ordre": 296,
+      "nom": "Rail d'application",
+      "famille": "Applications mobiles",
+      "secteur": "application grand public",
+      "directionArtistique": {
+        "texte": "Pour une application grand public : haute colonne bleue à droite (marque, promesse, deux boutons de boutique, réseaux), zone claire à gauche avec lettre et trois rangées de liens. Inspiré de la colonne logo + description de la capture 07. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "application",
+        "grand public",
+        "colonne latérale",
+        "boutons de boutique",
+        "bleu électrique",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-297-mosaique-de-poche",
+      "ordre": 297,
+      "nom": "Mosaïque de poche",
+      "famille": "Applications mobiles",
+      "secteur": "application de services",
+      "directionArtistique": {
+        "texte": "Pour une application de services : mosaïque asymétrique, trois petites cases à gauche (aide, nouveautés, lettre) et une grande case orange à droite (« Dans votre poche. » et boutons de boutique). Inspiré du bloc de téléchargement de la capture 07. Archétype : H mosaïque."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "boutons de boutique",
+        "orange",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-298-lune-en-grand",
+      "ordre": 298,
+      "nom": "Lune en grand",
+      "famille": "Applications mobiles",
+      "secteur": "application de sommeil",
+      "directionArtistique": {
+        "texte": "Pour une application de méditation ou de sommeil : le nom en immense serif au centre d'un grand vide lilas, deux liens de boutique et une ligne de mentions. Inspiré du logo isolé de la capture 08. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bien-être",
+        "nom monumental",
+        "minimal",
+        "lilas",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-299-damier-des-ecrans",
+      "ordre": 299,
+      "nom": "Damier des écrans",
+      "famille": "Applications mobiles",
+      "secteur": "application multiplateforme",
+      "directionArtistique": {
+        "texte": "Pour une application multiplateforme : damier de six cases charbon et cyan, chacune un lien ou une information (marque, iPhone et iPad, Android, version web, lettre, aide). Inspiré de la grille de liens de la capture 09. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "multiplateforme",
+        "damier",
+        "cyan",
+        "charbon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-300-papier-de-premiere-version",
+      "ordre": 300,
+      "nom": "Papier de première version",
+      "famille": "Applications mobiles",
+      "secteur": "application de lecture",
+      "directionArtistique": {
+        "texte": "Pour une application de lecture : papier à en-tête ivoire centré (filet, nom en Cormorant, ligne de boutiques, rubriques centrées), puis bande de lettre et mentions. Inspiré du titre centré et du pied centré de la capture 09. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lecture",
+        "papier à en-tête",
+        "centré",
+        "serif",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-301-escalier-du-lancement",
+      "ordre": 301,
+      "nom": "Escalier du lancement",
+      "famille": "Applications mobiles",
+      "secteur": "application de transport",
+      "directionArtistique": {
+        "texte": "Pour une application de transport : quatre marches alignées à gauche de largeurs décroissantes (100, 78, 56, 34 %) en rouge brique, corail et rose pâle : marque, rubriques, boutiques, mentions. Inspiré des étages de la capture 08. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Rubik",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "transport",
+        "escalier",
+        "marches",
+        "rouge brique",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-302-appel-de-plateau",
+      "ordre": 302,
+      "nom": "Appel de plateau",
+      "famille": "Studios créatifs",
+      "secteur": "studio de design graphique",
+      "directionArtistique": {
+        "texte": "Pour un studio de design graphique : un bandeau orange brûlé XXL avec une phrase d'appel gigantesque (« On fait quoi ensemble ? ») et un bouton blanc, puis sur crème les coordonnées et une seule colonne étroite de liens à droite. Inspiré de la capture 10 (grande phrase d'appel centrée puis logo et liens) mais recomposé en bandeau plein. Archétype : F bandeau d'appel XXL."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio",
+        "design graphique",
+        "appel à l'action",
+        "phrase géante",
+        "crème",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-303-tirages-en-damier",
+      "ordre": 303,
+      "nom": "Tirages en damier",
+      "famille": "Studios créatifs",
+      "secteur": "studio photo et de marque",
+      "directionArtistique": {
+        "texte": "Pour un studio photo : un damier de huit cases carrées sur noir graphite (nom, portfolio, journal, projet, coordonnées, Instagram, questions, espace client) qui virent au lime acide au survol. Les colonnes de la capture 11 deviennent des cases. Archétype : C grille de cases égales."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Space Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio photo",
+        "damier",
+        "cases",
+        "noir",
+        "lime",
+        "grille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-304-console-de-montage",
+      "ordre": 304,
+      "nom": "Console de montage",
+      "famille": "Studios créatifs",
+      "secteur": "studio de motion design et de jeu",
+      "directionArtistique": {
+        "texte": "Pour un studio de motion design : une fenêtre de terminal posée sur un aplat violet, barre de titre à trois carrés, commandes cliquables (« $ ouvrir portfolio »), sortie des coordonnées et curseur qui respire. La carte sombre de la capture 11 devient une fenêtre d'interface. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "motion design",
+        "jeu",
+        "console",
+        "terminal",
+        "violet",
+        "menthe",
+        "monospace",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-305-signature-du-studio",
+      "ordre": 305,
+      "nom": "Signature du studio",
+      "famille": "Studios créatifs",
+      "secteur": "studio de lettrage",
+      "directionArtistique": {
+        "texte": "Pour un studio de lettrage : le nom du site en immense serif centré sur jaune moutarde, un carré qui respire, trois liens soulignés et la ligne légale. Presque rien d'autre : le vide fait la signature. La marque monumentale de la capture 10, sans le reste. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lettrage",
+        "nom monumental",
+        "moutarde",
+        "serif",
+        "minimal",
+        "centré",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-306-plateau-et-regie",
+      "ordre": 306,
+      "nom": "Plateau et régie",
+      "famille": "Studios créatifs",
+      "secteur": "studio de production",
+      "directionArtistique": {
+        "texte": "Pour un studio de production : deux demi-pages bord à bord, crème (venir au studio, adresse, horaires) et brique (lettre d'information, liens rapides sur deux colonnes, réseaux), puis une barre brique foncé. Reprend la logique de la capture 12 (accueil, lettre, liens rapides) en deux panneaux. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "production",
+        "deux panneaux",
+        "brique",
+        "crème",
+        "lettre d'information",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-307-du-brief-a-la-livraison",
+      "ordre": 307,
+      "nom": "Du brief à la livraison",
+      "famille": "Studios créatifs",
+      "secteur": "agence de marque",
+      "directionArtistique": {
+        "texte": "Pour une agence de marque : une frise de cinq points carrés sur menthe pâle (brief, esquisses, épreuves, production, livraison), chaque étape menant à une page utile, puis le titre, un bouton rouille et les coordonnées, et une bande vert forêt pour la ligne légale. Archétype : I frise en étapes."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Lexend",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence de marque",
+        "frise",
+        "étapes",
+        "menthe",
+        "vert forêt",
+        "processus",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-308-montant-d-agence",
+      "ordre": 308,
+      "nom": "Montant d'agence",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence d'architecture",
+      "directionArtistique": {
+        "texte": "Pour une agence d'architecture : une colonne graphite pleine hauteur à gauche (nom, liens, coordonnées) et, sur béton clair, une grande phrase en serif, un bouton terre cuite et les horaires d'accueil. Logo à gauche et liens de la capture 10, recomposés en montant de cloison. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "colonne latérale",
+        "graphite",
+        "béton",
+        "terre cuite",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-309-maquette-en-blocs",
+      "ordre": 309,
+      "nom": "Maquette en blocs",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "architecte d'intérieur",
+      "directionArtistique": {
+        "texte": "Pour un architecte d'intérieur : une mosaïque asymétrique, une grande case bleu Klein avec l'appel en Bodoni et trois petites cases (réalisations sur ivoire, coordonnées sur jaune, lettre d'information sur nuit). Carte d'appel de la capture 11 découpée en volumes de maquette. Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecte d'intérieur",
+        "mosaïque",
+        "bleu Klein",
+        "jaune",
+        "ivoire",
+        "cases",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-310-en-tete-d-agence",
+      "ordre": 310,
+      "nom": "En-tête d'agence",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence de design d'espace",
+      "directionArtistique": {
+        "texte": "Pour une agence de design d'espace : un papier à en-tête sauge, adresse à gauche, nom centré en grand serif, horaires à droite, entre doubles filets, puis une ligne de liens centrée et la ligne légale. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "design d'espace",
+        "papier à en-tête",
+        "centré",
+        "sauge",
+        "serif",
+        "doubles filets",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-311-cote-unique",
+      "ordre": 311,
+      "nom": "Cote unique",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "bureau d'architecture",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'architecture : un filet rouge de 4 px puis une seule ligne blanche en monospace (point, nom du site, quatre liens en capitales, e-mail) et la ligne légale dessous. Très compact, façon cote de plan. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "ligne unique",
+        "compact",
+        "monospace",
+        "rouge",
+        "blanc",
+        "cote",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-312-gradins-d-atelier",
+      "ordre": 312,
+      "nom": "Gradins d'atelier",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "atelier de design d'intérieur",
+      "directionArtistique": {
+        "texte": "Pour un atelier de design d'intérieur : quatre gradins alignés à gauche, de plus en plus étroits et foncés, du sable clair au brun (nom et bouton, pages, coordonnées, accueil), chacun sur une seule ligne, sur papier blanc. Archétype : L pied en escalier."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Zilla Slab",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "design d'intérieur",
+        "escalier",
+        "gradins",
+        "sable",
+        "brun",
+        "étagé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-313-table-des-realisations",
+      "ordre": 313,
+      "nom": "Table des réalisations",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence d'architecture et d'aménagement",
+      "directionArtistique": {
+        "texte": "Pour une agence d'architecture : un sommaire de cinq lignes pleine largeur en grandes capitales condensées sur vert nuit, chacune terminée par une flèche, qui virent au vert vif au survol, avec une ligne de coordonnées et la ligne légale. Rubriques d'exemple. Archétype : G index en lignes."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Schibsted Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "sommaire",
+        "index",
+        "vert nuit",
+        "vert vif",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-314-orme-monumental",
+      "ordre": 314,
+      "nom": "Orme monumental",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "marque de prêt-à-porter",
+      "directionArtistique": {
+        "texte": "Inspiré d'une capture au nom de marque géant en bas de page : phrase d'accueil et deux colonnes de liens sobres sur fond gris papier, puis le nom « orme&co » en lettres monumentales sur toute la largeur, un carré orange qui respire. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "prêt-à-porter",
+        "nom monumental",
+        "minimal",
+        "gris",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-315-deux-saisons",
+      "ordre": 315,
+      "nom": "Deux saisons",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Deux demi-pages bord à bord : terre cuite avec la grande phrase « Habillez la saison » et un bouton qui respire, crème avec liens des rayons, aide et lettre d'information. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "deux panneaux",
+        "terre cuite",
+        "crème",
+        "collection",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-316-barre-de-cintre",
+      "ordre": 316,
+      "nom": "Barre de cintre",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "maison de maille",
+      "directionArtistique": {
+        "texte": "Haute barre noire à gauche (nom en Bodoni, phrase, réseaux, mentions) et zone ivoire à droite avec quatre colonnes de liens qui s'indentent ; l'idée de marque à gauche, colonnes à droite vient d'une capture. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maille",
+        "barre latérale",
+        "noir",
+        "ivoire",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-317-damier-des-rayons",
+      "ordre": 317,
+      "nom": "Damier des rayons",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "mode urbaine",
+      "directionArtistique": {
+        "texte": "Damier de huit cases carrées cobalt dont une jaune avec le nom ; chaque case est un lien (rayons, services) qui se remplit de jaune au survol. Archétype : C grille de cases."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "Epilogue",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mode urbaine",
+        "damier",
+        "cobalt",
+        "jaune",
+        "cases",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-318-ligne-de-caisse",
+      "ordre": 318,
+      "nom": "Ligne de caisse",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Barre compacte vert sapin : nom, six liens et bouton or sur une ligne, puis réseaux et mentions sur une seconde ligne fine. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "barre compacte",
+        "vert sapin",
+        "or",
+        "une ligne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-319-soldes-en-grand",
+      "ordre": 319,
+      "nom": "Soldes en grand",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Inspiré d'un grand appel centré en tête de page : bandeau rose poudré avec phrase géante en Gloock et très gros bouton bleu nuit qui respire, puis bande bleu nuit avec phrase de marque et une seule colonne étroite de liens à filets à droite. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "appel à l'action",
+        "rose",
+        "bleu nuit",
+        "colonne étroite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-320-index-des-essences",
+      "ordre": 320,
+      "nom": "Index des essences",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "maison de parfum",
+      "directionArtistique": {
+        "texte": "Sommaire en six grandes lignes pleine largeur (Cormorant 40 px, flèche, filet) qui s'indentent et se remplissent de vin au survol, sans cartes. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parfumerie",
+        "index",
+        "sommaire",
+        "ivoire",
+        "vin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-321-mosaique-d-ambre",
+      "ordre": 321,
+      "nom": "Mosaïque d'ambre",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "cosmétique naturelle",
+      "directionArtistique": {
+        "texte": "Inspiré d'une capture (marque, coordonnées et réseaux à gauche, colonnes à droite) : une grande case vert sapin avec nom et lettre, et trois cases sable, sauge et pêche (contact, horaires, liens et réseaux). Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cosmétique naturelle",
+        "mosaïque",
+        "contact",
+        "horaires",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-322-quatre-gestes",
+      "ordre": 322,
+      "nom": "Quatre gestes",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "soin et beauté",
+      "directionArtistique": {
+        "texte": "Frise horizontale en quatre étapes (choisir, essayer, offrir, prendre soin) reliées par un filet doré à points carrés ; chaque étape est un lien avec sa phrase. Archétype : I frise en étapes."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "soin",
+        "frise",
+        "étapes",
+        "bleu nuit",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-323-papier-de-parfumeur",
+      "ordre": 323,
+      "nom": "Papier de parfumeur",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "parfumeur indépendant",
+      "directionArtistique": {
+        "texte": "Papier à en-tête : filets doubles, nom en petites capitales Cormorant, coordonnées centrées, liens en capitales sur une ligne, mentions centrées. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant SC",
+        "corps": "Libre Caslon Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parfumeur",
+        "papier à en-tête",
+        "centré",
+        "serif",
+        "encre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-324-console-du-laboratoire",
+      "ordre": 324,
+      "nom": "Console du laboratoire",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "laboratoire de cosmétique",
+      "directionArtistique": {
+        "texte": "Le pied est une fenêtre à bord menthe : barre de titre à trois carrés, lignes de commande pour les liens avec curseur qui respire, formulaire d'abonnement à droite. Texte monospace. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "laboratoire",
+        "console",
+        "fenêtre",
+        "monospace",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-325-gradins-de-rosee",
+      "ordre": 325,
+      "nom": "Gradins de rosée",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "marque de soin",
+      "directionArtistique": {
+        "texte": "Pied en escalier : quatre bandes alignées à gauche de 100, 80, 60 et 40 % de largeur, de rose clair à rose profond (nom, liens, contact et horaires, mentions). Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "soin",
+        "rose",
+        "escalier",
+        "gradins",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-326-flanc-de-la-maison",
+      "ordre": 326,
+      "nom": "Flanc de la maison",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "joaillerie",
+      "directionArtistique": {
+        "texte": "Pour une joaillerie : une colonne champagne pleine hauteur à gauche (nom de la maison, description, coordonnées, rendez-vous, réseaux) et, sur noir, les quatre collections en très grands mots fins puis deux colonnes de liens. Archétype : A colonne latérale. Inspiration : capture à grands mots légers."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "joaillerie",
+        "colonne latérale",
+        "noir",
+        "champagne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-327-lettres-d-or",
+      "ordre": 327,
+      "nom": "Lettres d'or",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "haute joaillerie",
+      "directionArtistique": {
+        "texte": "Pour une haute joaillerie : presque rien. Un cadre carré fin bordeaux et or rose contenant un monogramme géant, le nom espacé, une phrase et trois liens. Archétype : B monogramme. Inspiration : marque monumentale."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Tenor Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "haute joaillerie",
+        "monogramme",
+        "minimal",
+        "bordeaux",
+        "or rose",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-328-mosaique-d-atelier",
+      "ordre": 328,
+      "nom": "Mosaïque d'atelier",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "bijoutier créateur",
+      "directionArtistique": {
+        "texte": "Pour un bijoutier créateur : une grande case marine (titre, guide des pierres, bouton) à gauche ; à droite deux cases moyennes (horaires, coordonnées) et une case large (lettre). Archétype : H mosaïque asymétrique. Inspiration : carte d'appel à droite du titre."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Display",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bijoutier",
+        "mosaïque",
+        "marine",
+        "ivoire",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-329-papier-du-joaillier",
+      "ordre": 329,
+      "nom": "Papier du joaillier",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "bijouterie de tradition",
+      "directionArtistique": {
+        "texte": "Pour une bijouterie de tradition : un pied en papier à lettres, filets doubles, nom en italique centré, cartouche d'adresse, liens en une ligne centrée, réseaux. Archétype : J papier à en-tête. Inspiration : logo, description et réseaux."
+      },
+      "typographies": {
+        "titre": "Cormorant",
+        "corps": "Spectral",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bijouterie",
+        "tradition",
+        "centré",
+        "filets doubles",
+        "crème",
+        "prune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-330-barre-de-cadran",
+      "ordre": 330,
+      "nom": "Barre de cadran",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "horlogerie",
+      "directionArtistique": {
+        "texte": "Pour un horloger : un pied compact en deux lignes sur gris acier ; nom en capitales condensées et bouton d'entretien turquoise, liens séparés par de petits carrés, réseaux et mentions. Archétype : D barre unique. Inspiration : barre basse à séparateur."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "horlogerie",
+        "barre compacte",
+        "acier",
+        "turquoise",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-331-fiche-de-calibre",
+      "ordre": 331,
+      "nom": "Fiche de calibre",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "horlogerie d'art",
+      "directionArtistique": {
+        "texte": "Pour une horlogerie d'art : le pied est une fenêtre d'interface à angles droits, barre de titre verte à trois carrés, commandes en police mono à gauche, adresse, horaires et lettre à droite. Archétype : K fenêtre. Inspiration : colonnes de liens sur panneau."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "horlogerie d'art",
+        "fenêtre",
+        "console",
+        "mono",
+        "vert sapin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-332-damier-du-marche",
+      "ordre": 332,
+      "nom": "Damier du marché",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "épicerie fine",
+      "directionArtistique": {
+        "texte": "Pour une épicerie fine : huit cases à angles droits sur charbon, chacune un lien ou une information (rayons, horaires, coordonnées, lettre) ; la case survolée vire à la tomate. Archétype : C damier. Inspiration : marques du groupe en pastilles."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "épicerie fine",
+        "damier",
+        "tomate",
+        "charbon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-333-deux-assiettes",
+      "ordre": 333,
+      "nom": "Deux assiettes",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "traiteur",
+      "directionArtistique": {
+        "texte": "Pour un traiteur : deux demi-pages bord à bord, olive à gauche (grande phrase, devis, coordonnées), crème à droite (formules en lignes à filet, horaires, lettre). Archétype : E deux demi-pages. Inspiration : titre et carte d'appel."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traiteur",
+        "deux panneaux",
+        "olive",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-334-panier-xxl",
+      "ordre": 334,
+      "nom": "Panier XXL",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "produits du terroir en ligne",
+      "directionArtistique": {
+        "texte": "Pour une boutique de terroir en ligne : bandeau moutarde monumental avec un énorme bouton de commande, puis bande brun café avec le nom et une seule colonne étroite de liens. Archétype : F appel XXL. Inspiration : grande carte d'appel."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "terroir",
+        "appel à l'action",
+        "moutarde",
+        "brun café",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-335-sommaire-gourmand",
+      "ordre": 335,
+      "nom": "Sommaire gourmand",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "cave à manger",
+      "directionArtistique": {
+        "texte": "Pour une cave à manger : cinq lignes pleine largeur en très grands mots fins, flèche et filet, qui glissent et passent à l'orange ; dessous une ligne de coordonnées, horaires et mentions. Archétype : G index. Inspiration : liste de grands mots légers."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cave à manger",
+        "index",
+        "grands mots",
+        "noir",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-336-du-champ-a-la-table",
+      "ordre": 336,
+      "nom": "Du champ à la table",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "producteur-boutique",
+      "directionArtistique": {
+        "texte": "Pour un producteur-boutique : une frise horizontale à quatre étapes reliées par un filet à carrés (producteurs, atelier, boutique, votre table), puis coordonnées et horaires. Archétype : I frise. Inspiration : colonnes aérées."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "producteur",
+        "frise",
+        "étapes",
+        "sauge",
+        "vert forêt",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-337-escalier-de-cave",
+      "ordre": 337,
+      "nom": "Escalier de cave",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "caviste",
+      "directionArtistique": {
+        "texte": "Pour un caviste : quatre paliers de largeurs décroissantes alignés à gauche, de la crème au bordeaux presque noir : nom et liens, rayons, lettre, mentions. Archétype : L escalier. Inspiration : nom monumental et cartes en retrait."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "caviste",
+        "escalier",
+        "paliers",
+        "grenat",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-338-chai-de-nuit",
+      "ordre": 338,
+      "nom": "Chai de nuit",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "cave à vins",
+      "directionArtistique": {
+        "texte": "Mosaïque asymétrique bordeaux inspirée d'une capture à cartes sombres : une grande case de bienvenue avec rayons et trois cases (horaires, adresse, signature) à angles droits ; les cases se soulèvent au survol. Archétype : H mosaïque."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cave à vins",
+        "caviste",
+        "mosaïque",
+        "sombre",
+        "bordeaux",
+        "champagne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-339-mousse-haute",
+      "ordre": 339,
+      "nom": "Mousse haute",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "brasserie",
+      "directionArtistique": {
+        "texte": "Bandeau jaune d'inscription XXL en tête (inspiré du bandeau newsletter de la capture), puis bande anthracite avec horaires, adresse et une seule colonne étroite de liens qui glissent. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "brasserie",
+        "bière",
+        "lettre d'information",
+        "jaune",
+        "anthracite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-340-damier-du-comptoir",
+      "ordre": 340,
+      "nom": "Damier du comptoir",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "boutique de spiritueux",
+      "directionArtistique": {
+        "texte": "Grille de huit cases égales à filets noirs sur papier : quatre rayons, horaires, adresse, retrait, conseils. Chaque case se remplit de vert bouteille au survol. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spiritueux",
+        "whisky",
+        "damier",
+        "grille",
+        "papier",
+        "vert bouteille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-341-sommaire-des-vignes",
+      "ordre": 341,
+      "nom": "Sommaire des vignes",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "caviste",
+      "directionArtistique": {
+        "texte": "Index en grandes lignes pleine largeur sur crème, libellés en italique serif, ligne qui se remplit de lie-de-vin au survol, puis horaires, adresse et réseaux. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vin",
+        "caviste",
+        "sommaire",
+        "index",
+        "crème",
+        "lie-de-vin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-342-tourbe-et-fut",
+      "ordre": 342,
+      "nom": "Tourbe et fût",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "distillerie de whisky",
+      "directionArtistique": {
+        "texte": "Nom monumental centré dans un grand vide noir, carré de cuivre qui respire, deux petites colonnes de liens et d'adresse. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Abril Fatface",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "whisky",
+        "distillerie",
+        "nom monumental",
+        "noir",
+        "cuivre",
+        "minimal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-343-barre-de-comptoir",
+      "ordre": 343,
+      "nom": "Barre de comptoir",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "cidrerie",
+      "directionArtistique": {
+        "texte": "Barre rouge compacte sur une ou deux lignes : nom avec point qui respire, liens, bloc blanc Commander pleine hauteur, puis adresse et mentions. Archétype : D barre unique."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cidre",
+        "bière",
+        "barre",
+        "compact",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-344-le-zinc",
+      "ordre": 344,
+      "nom": "Le zinc",
+      "famille": "Cafés et boulangeries",
+      "secteur": "café-torréfacteur",
+      "directionArtistique": {
+        "texte": "Colonne espresso pleine hauteur à droite (nom, horaires, adresse) et zone crème avec trois colonnes de liens, lettre et réseaux. Liens qui avancent au survol. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "café",
+        "torréfaction",
+        "colonne latérale",
+        "espresso",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-345-deux-fournees",
+      "ordre": 345,
+      "nom": "Deux fournées",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie",
+      "directionArtistique": {
+        "texte": "Deux demi-pages bord à bord : crème avec phrase et horaires, bleu profond avec énorme bouton Passer commande, contact et lettre. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Red Hat Display",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "pain",
+        "deux moitiés",
+        "crème",
+        "bleu",
+        "commande",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-346-papier-a-en-tete",
+      "ordre": 346,
+      "nom": "Salon sur papier",
+      "famille": "Cafés et boulangeries",
+      "secteur": "salon de thé",
+      "directionArtistique": {
+        "texte": "Papier à lettres : filets doubles, nom en italique centré, losange qui respire, cartouche adresse et horaires, liens en ligne centrée. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Source Serif 4",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "salon de thé",
+        "papier à lettres",
+        "centré",
+        "filets doubles",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-347-console-du-fournil",
+      "ordre": 347,
+      "nom": "Console du fournil",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie",
+      "directionArtistique": {
+        "texte": "Fenêtre de console noire sur fond beurre : commandes horaires, adresse, liens et lettre, curseur carré qui bat. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "console",
+        "fenêtre",
+        "monospace",
+        "jaune",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-348-du-moulin-au-comptoir",
+      "ordre": 348,
+      "nom": "Du moulin au comptoir",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie artisanale",
+      "directionArtistique": {
+        "texte": "Frise horizontale à points carrés en cinq étapes cliquables sur rose farine, dernier point qui respire, puis horaires et lettre. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "frise",
+        "étapes",
+        "artisan",
+        "rose",
+        "brun",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-349-escalier-du-grain",
+      "ordre": 349,
+      "nom": "Escalier du grain",
+      "famille": "Cafés et boulangeries",
+      "secteur": "café-boulangerie",
+      "directionArtistique": {
+        "texte": "Quatre bandes vertes de largeur décroissante alignées à gauche (nom, liens, horaires et adresse, lettre) comme un escalier. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "café",
+        "boulangerie",
+        "escalier",
+        "bandes",
+        "vert",
+        "étagé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-350-programme-de-salle",
+      "ordre": 350,
+      "nom": "Programme de salle",
+      "famille": "Musique et spectacle",
+      "secteur": "maison de musique",
+      "directionArtistique": {
+        "texte": "Pour une maison de musique : à gauche un titre « La saison au programme. » en serif Bodoni, un bouton d'or qui respire et les coordonnées ; à droite six lignes de programme en deux colonnes à filets d'or qui se remplissent d'or et s'indentent au survol. Noir velours et or. Archétype G : index en lignes pleine largeur. Inspiré de la liste à filets de la capture 23."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musique",
+        "salle de concert",
+        "programme",
+        "index",
+        "noir",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-351-rideau-rouge",
+      "ordre": 351,
+      "nom": "Rideau rouge",
+      "famille": "Musique et spectacle",
+      "secteur": "théâtre",
+      "directionArtistique": {
+        "texte": "Pour un théâtre : deux demi-pages bord à bord. À gauche un rideau bordeaux (plis en bandes, « Le rideau se lève. » en Abril Fatface, lettre d'information) ; à droite un panneau crème avec un énorme bouton de réservation qui respire, quatre liens à filets et les horaires de billetterie. Archétype E : deux demi-pages. Inspiré du bloc marque + bouton de la capture 22."
+      },
+      "typographies": {
+        "titre": "Abril Fatface",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "théâtre",
+        "spectacle",
+        "réservation",
+        "deux panneaux",
+        "bordeaux",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-352-console-de-mixage",
+      "ordre": 352,
+      "nom": "Console de mixage",
+      "famille": "Musique et spectacle",
+      "secteur": "club de musiques actuelles",
+      "directionArtistique": {
+        "texte": "Pour un club : le pied est une fenêtre de console, barre de titre à trois carrés, invite de commande avec curseur vert qui respire, cinq onglets de commandes qui s'allument au survol, lettre d'information et coordonnées en barre d'état. Mono, graphite et vert phosphore. Archétype K : fenêtre / console. Inspiré de l'ambiance nuit et des notes de la capture 24."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "club",
+        "musiques actuelles",
+        "console",
+        "fenêtre",
+        "mono",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-353-affiche-en-mosaique",
+      "ordre": 353,
+      "nom": "Affiche en mosaïque",
+      "famille": "Musique et spectacle",
+      "secteur": "festival",
+      "directionArtistique": {
+        "texte": "Pour un festival : une grande case jaune « EN SCÈNE » en Anton avec billetterie et coordonnées, et trois cases empilées (programme rose, artistes bleu électrique, infos pratiques noir cerné de blanc) qui virent au jaune au survol. Réseaux et mentions sous la mosaïque. Archétype H : mosaïque asymétrique. Inspiré de l'illustration monumentale de la capture 24, traduite en aplats."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "festival",
+        "concerts",
+        "billetterie",
+        "mosaïque",
+        "jaune",
+        "rose",
+        "bleu",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-354-saison-en-frise",
+      "ordre": 354,
+      "nom": "Saison en frise",
+      "famille": "Musique et spectacle",
+      "secteur": "orchestre",
+      "directionArtistique": {
+        "texte": "Pour un orchestre : un titre « La saison en quatre temps. » en Fraunces, puis une frise horizontale à quatre étapes (automne, hiver, printemps, été) sur un trait marine, points carrés orange dont le premier respire, liens de programme qui glissent. Aucune date inventée. Gris bleuté, marine, orange. Archétype I : frise en étapes. Inspiré de la silhouette alignée sur un trait de la capture 23."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "orchestre",
+        "saison",
+        "frise",
+        "chronologie",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-355-coulisses",
+      "ordre": 355,
+      "nom": "Coulisses",
+      "famille": "Musique et spectacle",
+      "secteur": "compagnie de théâtre",
+      "directionArtistique": {
+        "texte": "Pour une compagnie : une zone crème (grande phrase « La maison est ouverte à tous. », liens soulignés, lettre en boîte à contour net) et, à droite, une barre verticale vert-de-gris pleine hauteur (nom, phrase, bouton ambre qui respire, réseaux). Archétype A : colonne latérale pleine hauteur. Inspiré du bloc logo + phrase + bouton de la capture 22."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "compagnie",
+        "théâtre",
+        "colonne latérale",
+        "vert-de-gris",
+        "crème",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-356-cimaise",
+      "ordre": 356,
+      "nom": "Cimaise",
+      "famille": "Galeries et musées",
+      "secteur": "galerie d'art contemporain",
+      "directionArtistique": {
+        "texte": "Pour une galerie : un seul mot monumental « Cimaise. » centré en Italiana sur blanc cassé, un fin filet, une légende avec un point vermillon qui respire, trois liens seulement et la ligne légale. Grand vide. Archétype B : nom monumental. Inspiré du grand vide de la capture 24 et du logo isolé de la capture 22."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "galerie",
+        "art contemporain",
+        "minimal",
+        "nom monumental",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-357-cartel",
+      "ordre": 357,
+      "nom": "Cartel",
+      "famille": "Galeries et musées",
+      "secteur": "musée de l'estampe",
+      "directionArtistique": {
+        "texte": "Pour un musée : un pied en papier à en-tête. Double filet, cartouche centré à double cadre fin (nom en Marcellus, adresse et horaires centrés), ligne de liens centrée séparés de points, double filet, mentions centrées. Papier chaud et rouge sang de bœuf. Archétype J : papier à en-tête. Inspiré du bloc d'identité central de la capture 23."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Literata",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "papier à en-tête",
+        "cartouche",
+        "centré",
+        "filets",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-358-damier-d-exposition",
+      "ordre": 358,
+      "nom": "Damier d'exposition",
+      "famille": "Galeries et musées",
+      "secteur": "centre d'art",
+      "directionArtistique": {
+        "texte": "Pour un centre d'art : un damier de huit cases égales à filets noirs en quatre piles de deux, chaque case est un lien ou une information (expositions, collections, visite, boutique, horaires, accès, lettre, mécénat). Gris pierre, noir, orange signal ; la case mécénat respire. Archétype C : grille de cases égales. Inspiré des colonnes à titres courts des captures 23 et 24."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre d'art",
+        "damier",
+        "grille",
+        "cases",
+        "horaires",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-359-grand-accrochage",
+      "ordre": 359,
+      "nom": "Grand accrochage",
+      "famille": "Galeries et musées",
+      "secteur": "musée",
+      "directionArtistique": {
+        "texte": "Pour un musée : un bandeau corail XXL « Entrez dans l'œuvre. » en Syne géant avec un énorme bouton noir qui respire, et à droite une seule colonne étroite de liens à filets noirs qui s'inversent au survol ; dessous une fine bande noire avec coordonnées et horaires. Archétype F : bandeau d'appel XXL + colonne étroite. Inspiré du bloc d'appel et de la colonne de liens de la capture 23."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "appel à l'action",
+        "bandeau XXL",
+        "colonne étroite",
+        "corail",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-360-rail-de-cimaise",
+      "ordre": 360,
+      "nom": "Rail de cimaise",
+      "famille": "Galeries et musées",
+      "secteur": "fondation d'art",
+      "directionArtistique": {
+        "texte": "Pour une fondation : tout sur une barre compacte de deux niveaux. Nom précédé d'un point bleu qui respire et bouton « Visiter » sur la première ligne ; liens soulignés d'un trait épais au survol et réseaux sur la seconde. Pierre claire, noir, bleu outremer. Archétype D : barre unique compacte. Inspiré du pied en une ligne sous l'illustration de la capture 24."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Newsreader",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fondation",
+        "barre compacte",
+        "liens",
+        "pierre",
+        "bleu",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-361-escalier-des-salles",
+      "ordre": 361,
+      "nom": "Escalier des salles",
+      "famille": "Galeries et musées",
+      "secteur": "musée",
+      "directionArtistique": {
+        "texte": "Pour un musée : quatre bandes alignées à gauche qui rétrécissent comme des marches (100 %, 78 %, 56 %, 34 %) : nom géant « Les Salles du Levant. » sur vert forêt, liens sur vert moyen, coordonnées sur vert sauge, lettre sur vert pâle. Archétype L : escalier étagé. Inspiré de la silhouette en gradins de la capture 23."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "escalier",
+        "bandes étagées",
+        "vert",
+        "sauge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-362-marque-page",
+      "ordre": 362,
+      "nom": "Marque-page",
+      "famille": "Édition et librairie",
+      "secteur": "maison d'édition et librairie",
+      "directionArtistique": {
+        "texte": "Archétype A (inspiré de la capture « logo + colonnes ») : colonne de marque bordeaux pleine hauteur à gauche (monogramme Maison Verso, phrase, lettre d'information, carré doré qui respire), grande zone crème à droite en trois colonnes (catalogue, horaires de la librairie, la maison). Bordeaux, crème, or."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maison d'édition",
+        "librairie",
+        "colonne latérale",
+        "bordeaux",
+        "crème"
+      ]
+    },
+    {
+      "id": "c-363-epilogue",
+      "ordre": 363,
+      "nom": "Épilogue",
+      "famille": "Édition et librairie",
+      "secteur": "maison d'édition de romans et de poésie",
+      "directionArtistique": {
+        "texte": "Archétype B (capture « marque monumentale ») : grand vide vert nuit, nom Épilogue géant en Instrument Serif rogné par le bas, trois liens seulement, un carré pistache qui respire devant la phrase. Vert nuit, pistache."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maison d'édition",
+        "nom monumental",
+        "minimal",
+        "vert nuit",
+        "pistache"
+      ]
+    },
+    {
+      "id": "c-364-table-des-matieres",
+      "ordre": 364,
+      "nom": "Table des matières",
+      "famille": "Édition et librairie",
+      "secteur": "éditeur d'essais",
+      "directionArtistique": {
+        "texte": "Archétype G : le pied est une table des matières ; six rubriques en lignes pleine largeur (numéro, grand titre Newsreader, précision, flèche) séparées par des filets, qui se remplissent de jaune au survol. Blanc, noir, jaune."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "éditeur d'essais",
+        "sommaire",
+        "index",
+        "noir et blanc",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-365-papier-d-alinea",
+      "ordre": 365,
+      "nom": "Papier d'Alinéa",
+      "famille": "Édition et librairie",
+      "secteur": "librairie-papeterie",
+      "directionArtistique": {
+        "texte": "Archétype J : papier à en-tête ivoire, double filet, nom Alinéa centré en Cardo entre deux volets (horaires à gauche, adresse à droite, Données de l'entreprise), carré qui respire, ligne de rubriques centrée entre doubles filets. Sans lettre. Ivoire et bleu marine."
+      },
+      "typographies": {
+        "titre": "Cardo",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "librairie",
+        "papeterie",
+        "papier à en-tête",
+        "double filet",
+        "ivoire",
+        "marine"
+      ]
+    },
+    {
+      "id": "c-366-rayonnage",
+      "ordre": 366,
+      "nom": "Rayonnage",
+      "famille": "Édition et librairie",
+      "secteur": "librairie indépendante",
+      "directionArtistique": {
+        "texte": "Archétype H : mosaïque asymétrique de cases à angles droits, une grande case moutarde (« Lisez. » en DM Serif Display et lettre d'information) et trois petites (catalogue canard, horaires écru, contact noir) qui se soulèvent au survol. Moutarde, canard, écru."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "librairie",
+        "mosaïque",
+        "cases",
+        "moutarde",
+        "canard"
+      ]
+    },
+    {
+      "id": "c-367-page-double",
+      "ordre": 367,
+      "nom": "Page double",
+      "famille": "Édition et librairie",
+      "secteur": "éditeur de livres d'art",
+      "directionArtistique": {
+        "texte": "Archétype E : un livre ouvert, deux demi-pages bord à bord de couleurs opposées ; page gauche indigo avec le message en grand Fraunces, page droite pêche avec deux boutons (le premier respire), liste de liens à filets et contact. Indigo et pêche."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "livres d'art",
+        "deux demi-pages",
+        "indigo",
+        "pêche",
+        "bord à bord"
+      ]
+    },
+    {
+      "id": "c-368-super-cases",
+      "ordre": 368,
+      "nom": "Super cases",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "média de jeux vidéo",
+      "directionArtistique": {
+        "texte": "Archétype C : damier de huit cases carrées égales (bleu électrique, jaune, blanc, noir) ; la première porte la marque en Press Start 2P (carré qui respire), six sont des liens qui s'inversent au survol, la dernière contient la lettre d'information. Style arcade."
+      },
+      "typographies": {
+        "titre": "Press Start 2P",
+        "corps": "Chakra Petch",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "jeux vidéo",
+        "damier",
+        "arcade",
+        "bleu électrique",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-369-barre-hud",
+      "ordre": 369,
+      "nom": "Barre HUD",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "plateforme de jeux",
+      "directionArtistique": {
+        "texte": "Archétype D : une seule ligne type barre de console : nom en Orbitron, six liens en ligne, bouton Se connecter qui respire ; filet cyan en haut, ligne légale dessous. Compact. Violet nuit et cyan."
+      },
+      "typographies": {
+        "titre": "Orbitron",
+        "corps": "Exo 2",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "plateforme de jeux",
+        "barre",
+        "compact",
+        "violet",
+        "cyan"
+      ]
+    },
+    {
+      "id": "c-370-pret-joueur",
+      "ordre": 370,
+      "nom": "Prêt, joueur ?",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "studio de jeux indépendant",
+      "directionArtistique": {
+        "texte": "Archétype F (capture « grande phrase ») : bandeau orange avec « Prêt, joueur ? » en Anton géant et énorme bouton noir qui respire ; dessous, noir : un mot du studio à gauche et une seule colonne étroite de liens à filets qui glissent au survol. Orange vif et noir."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio de jeux",
+        "appel à l'action",
+        "bandeau XXL",
+        "orange",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-371-carte-du-jeu",
+      "ordre": 371,
+      "nom": "Carte du jeu",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "communauté de joueurs",
+      "directionArtistique": {
+        "texte": "Archétype I : frise horizontale de cinq niveaux (découvrir, jouer, rejoindre, concourir, contribuer) qui monte comme une courbe de progression, points carrés ambre sur une ligne marine, chaque étape se remplit au survol. Bleu glacier, marine, ambre."
+      },
+      "typographies": {
+        "titre": "Oxanium",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communauté",
+        "frise",
+        "étapes",
+        "glacier",
+        "ambre"
+      ]
+    },
+    {
+      "id": "c-372-terminal-quartz",
+      "ordre": 372,
+      "nom": "Terminal Quartz",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "équipe d'esport",
+      "directionArtistique": {
+        "texte": "Archétype K : le pied est une fenêtre de terminal à angles droits (barre de titre menthe à trois carrés, contour menthe), lignes de commande qui s'inversent au survol, champ e-mail en ligne de commande, curseur bloc qui bat lentement. Vert terminal et menthe, monospace."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "esport",
+        "terminal",
+        "console",
+        "menthe",
+        "monospace"
+      ]
+    },
+    {
+      "id": "c-373-next-level",
+      "ordre": 373,
+      "nom": "Next level",
+      "famille": "Jeux vidéo et esport",
+      "secteur": "éditeur de jeux mobiles",
+      "directionArtistique": {
+        "texte": "Archétype L (capture « marque monumentale ») : pied en escalier, quatre marches de largeurs décroissantes alignées à gauche (rose avec NEXT LEVEL géant en Bowlby One, noir pour les liens, jaune pour la lettre, violet pour les réseaux). Crème, rose, noir, jaune, violet."
+      },
+      "typographies": {
+        "titre": "Bowlby One",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "jeux mobiles",
+        "escalier",
+        "marches",
+        "rose",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-374-damier-des-facultes",
+      "ordre": 374,
+      "nom": "Damier des facultés",
+      "famille": "Universités et recherche",
+      "secteur": "université",
+      "directionArtistique": {
+        "texte": "Archétype C, inspiré de la capture 28 (grille de cases à filets fins, flèche à droite). Damier 4 × 2 de huit cases égales à angles droits sur papier crème, filets bordeaux de 1 px ; chaque case est un lien vers une faculté et se remplit de bordeaux au survol. Adresse et mentions dessous."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "université",
+        "damier",
+        "grille",
+        "crème",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-375-amphi-et-couloirs",
+      "ordre": 375,
+      "nom": "Amphi et couloirs",
+      "famille": "Universités et recherche",
+      "secteur": "université",
+      "directionArtistique": {
+        "texte": "Archétype E, inspiré de la capture 29 (phrase à gauche, colonnes de liens à droite). Deux demi-pages bord à bord : à gauche bleu nuit avec grande phrase serif et appel Candidater, à droite pierre claire avec deux colonnes de liens (étudier, chercher), mentions et adresse."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "université",
+        "deux moitiés",
+        "bleu nuit",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-376-guichet-du-chercheur",
+      "ordre": 376,
+      "nom": "Guichet du chercheur",
+      "famille": "Universités et recherche",
+      "secteur": "centre de recherche",
+      "directionArtistique": {
+        "texte": "Archétype K, inspiré de la capture 30 (formulaire sombre). Le pied est une fenêtre de console à angles droits : barre de titre à trois carrés (un carré vert respire), liste de commandes-liens à gauche, formulaire d'abonnement aux appels à projets et coordonnées à droite, ligne d'état avec les mentions."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recherche",
+        "console",
+        "formulaire",
+        "monospace",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-377-index-des-laboratoires",
+      "ordre": 377,
+      "nom": "Index des laboratoires",
+      "famille": "Universités et recherche",
+      "secteur": "institut de recherche",
+      "directionArtistique": {
+        "texte": "Archétype G, inspiré de la capture 28 (libellé, flèche, filets). Cinq lignes pleine largeur en très gros caractères sur jaune acide, filets noirs de 2 px ; la ligne se remplit de noir au survol. Aucune carte ; adresse et mentions en pied."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "institut",
+        "index",
+        "jaune acide",
+        "noir",
+        "grande typographie",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-378-annales",
+      "ordre": 378,
+      "nom": "Annales monumentales",
+      "famille": "Universités et recherche",
+      "secteur": "école doctorale",
+      "directionArtistique": {
+        "texte": "Archétype B, inspiré du mot géant de la capture 30. Le mot ANNALES démesuré, lilas sur violet profond, rogné par le bas du pied ; trois liens soulignés et une phrase courte au-dessus, grand vide."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "école doctorale",
+        "nom monumental",
+        "violet",
+        "lilas",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-379-gradins-du-savoir",
+      "ordre": 379,
+      "nom": "Gradins du savoir",
+      "famille": "Universités et recherche",
+      "secteur": "bibliothèque universitaire",
+      "directionArtistique": {
+        "texte": "Archétype L, inspiré de la capture 28 (pied en bandes sous un bandeau). Quatre gradins alignés à gauche de largeurs décroissantes (100, 78, 56, 34 %) en turquoises de plus en plus clairs : nom, services, coordonnées, mentions ; le second gradin s'élargit au survol."
+      },
+      "typographies": {
+        "titre": "Fira Sans Condensed",
+        "corps": "Fira Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bibliothèque",
+        "étagé",
+        "gradins",
+        "turquoise",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-380-barre-du-don",
+      "ordre": 380,
+      "nom": "Barre du don",
+      "famille": "ONG et solidarité",
+      "secteur": "association d'aide humanitaire",
+      "directionArtistique": {
+        "texte": "Archétype A, inspiré de la capture 29 (phrase à gauche, colonnes de liens à droite). Zone sable avec grande phrase slab et deux colonnes de liens ; barre verticale terre cuite à droite avec « Agir. », trois façons d'aider qui s'indentent et bouton Faire un don ; ligne d'adresse et de mentions dessous."
+      },
+      "typographies": {
+        "titre": "Bitter",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "association",
+        "humanitaire",
+        "barre latérale",
+        "terre cuite",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-381-appel-a-agir",
+      "ordre": 381,
+      "nom": "Appel à agir",
+      "famille": "ONG et solidarité",
+      "secteur": "ONG de défense des droits",
+      "directionArtistique": {
+        "texte": "Archétype F, inspiré de la capture 30 (grand appel et bouton). Bandeau XXL jaune tournesol : appel démesuré en capitales condensées et gros bouton noir ; dessous sur noir lettre d'information et coordonnées à gauche, une seule colonne étroite de liens à droite."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ONG",
+        "droits",
+        "appel",
+        "jaune",
+        "noir",
+        "condensé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-382-mosaique-solidaire",
+      "ordre": 382,
+      "nom": "Mosaïque solidaire",
+      "famille": "ONG et solidarité",
+      "secteur": "association d'entraide locale",
+      "directionArtistique": {
+        "texte": "Archétype H, inspiré de la capture 30 (blocs sur fond sombre). Grande case verte pleine largeur (mission et lettre) puis trois petites cases franches rose, paille et blanche qui se soulèvent au survol ; barre d'adresse et de mentions."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entraide",
+        "mosaïque",
+        "vert",
+        "rose",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-383-barre-d-entraide",
+      "ordre": 383,
+      "nom": "Barre d'entraide",
+      "famille": "ONG et solidarité",
+      "secteur": "fondation",
+      "directionArtistique": {
+        "texte": "Archétype D, inspiré de la capture 29 (copyright et liens sur une ligne). Ligne unique compacte bleu roi : nom, liens à repères carrés ambre et bouton Faire un don ; fine bande de mention en haut, ligne de mentions en bas."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": null,
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fondation",
+        "ligne unique",
+        "compact",
+        "bleu roi",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-384-le-chemin-du-don",
+      "ordre": 384,
+      "nom": "Le chemin du don",
+      "famille": "ONG et solidarité",
+      "secteur": "ONG de santé",
+      "directionArtistique": {
+        "texte": "Archétype I, inspiré des trois chiffres alignés de la capture 30 (sans chiffres). Titre à gauche et frise de trois étapes à repères carrés magenta reliés par un filet noir sur fond blanc ; bande noire de liens, bouton, adresse et mentions."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ONG",
+        "santé",
+        "frise",
+        "étapes",
+        "blanc",
+        "magenta",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-385-papier-de-l-association",
+      "ordre": 385,
+      "nom": "Papier de l'association",
+      "famille": "ONG et solidarité",
+      "secteur": "association caritative",
+      "directionArtistique": {
+        "texte": "Archétype J, inspiré de la capture 29 (texte sobre sur aplat). Cartouche à filet sur terre brune : doubles filets or, nom en grand serif centré, devise en italique, ligne centrée de liens ; adresse et mentions centrées dessous."
+      },
+      "typographies": {
+        "titre": "EB Garamond",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "association",
+        "caritatif",
+        "papier à en-tête",
+        "brun",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-386-facade-de-mairie",
+      "ordre": 386,
+      "nom": "Façade de mairie",
+      "famille": "Collectivités et services publics",
+      "secteur": "mairie",
+      "directionArtistique": {
+        "texte": "Pour une commune : le nom de la mairie en capitales géantes et centrées sur papier chaud, une barre terracotta pleine largeur, puis trois liens essentiels et la ligne légale. Un seul geste : le nom. Inspiré d'une capture à nom monumental sur fond blanc. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mairie",
+        "commune",
+        "nom monumental",
+        "papier",
+        "bleu",
+        "terracotta",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-387-guichet-lateral",
+      "ordre": 387,
+      "nom": "Guichet latéral",
+      "famille": "Collectivités et services publics",
+      "secteur": "communauté de communes",
+      "directionArtistique": {
+        "texte": "Pour une communauté de communes : une haute colonne vert sapin à gauche (carré jaune qui respire, nom, réseaux) et à droite sur crème huit rubriques en cases blanches, horaires et contact. Inspiré d'une capture à logo et réseaux à gauche, colonnes à droite. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communauté de communes",
+        "colonne latérale",
+        "démarches",
+        "horaires",
+        "vert",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-388-demarche-en-ligne",
+      "ordre": 388,
+      "nom": "Démarche en ligne",
+      "famille": "Collectivités et services publics",
+      "secteur": "ville",
+      "directionArtistique": {
+        "texte": "Pour une ville : un énorme bandeau ambre avec « Une démarche à faire ? Commencez en ligne. » et deux boutons, puis sur bleu nuit le nom de la ville et une seule colonne étroite de liens à filets. Inspiré d'une capture à grande phrase serif et boutons. Archétype : F bandeau XXL + colonne étroite."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ville",
+        "démarches en ligne",
+        "bandeau d'appel",
+        "bleu nuit",
+        "ambre",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-389-sommaire-citoyen",
+      "ordre": 389,
+      "nom": "Sommaire citoyen",
+      "famille": "Collectivités et services publics",
+      "secteur": "mairie",
+      "directionArtistique": {
+        "texte": "Pour une mairie : six rubriques en lignes pleine largeur à grand titre serif, flèche et précision dessous, qui se teintent et se décalent au survol, puis le contact. Inspiré des listes de rubriques d'une capture à colonnes. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mairie",
+        "sommaire",
+        "index",
+        "rubriques",
+        "serif",
+        "sable",
+        "rouge brique",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-390-tableau-d-affichage",
+      "ordre": 390,
+      "nom": "Tableau d'affichage",
+      "famille": "Collectivités et services publics",
+      "secteur": "ville",
+      "directionArtistique": {
+        "texte": "Pour une ville : un damier de huit cases égales à angles droits, horaires et contact de l'hôtel de ville, six services en cases qui se remplissent de violet au survol. Inspiré des grilles de rubriques d'une capture. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ville",
+        "damier",
+        "cases égales",
+        "services",
+        "horaires",
+        "violet",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-391-courrier-de-la-commune",
+      "ordre": 391,
+      "nom": "Courrier de la commune",
+      "famille": "Collectivités et services publics",
+      "secteur": "commune",
+      "directionArtistique": {
+        "texte": "Pour une commune : un pied en courrier officiel, double filet, nom en grand serif italique, coordonnées et horaires centrés, ligne de liens centrée et sceau d'or qui respire. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "commune",
+        "courrier officiel",
+        "centré",
+        "filets doubles",
+        "serif",
+        "crème",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-392-deux-consultations",
+      "ordre": 392,
+      "nom": "Deux consultations",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "cabinet connecté",
+      "directionArtistique": {
+        "texte": "Pour un cabinet connecté : un liseré menthe, deux demi-pages bord à bord, un panneau sarcelle avec « Se soigner, simplement. » en grand serif, un panneau crème avec quatre actions en rangées à flèche. Inspiré d'une capture à grande phrase serif et actions. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cabinet",
+        "téléconsultation",
+        "deux panneaux",
+        "grand serif",
+        "sarcelle",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-393-enseigne-verte",
+      "ordre": 393,
+      "nom": "Enseigne verte",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une pharmacie : une barre verte très compacte, croix blanche qui respire, nom et quatre liens en capitales séparés par des filets sur une seule ligne, puis une ligne sombre pour les mentions. Archétype : D barre unique."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "barre compacte",
+        "une ligne",
+        "croix",
+        "vert",
+        "jaune citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-394-console-patient",
+      "ordre": 394,
+      "nom": "Console patient",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé numérique",
+      "directionArtistique": {
+        "texte": "Pour un service de santé numérique : une fenêtre étroite à angles droits, barre de titre à trois carrés, commandes-liens en police mono, curseur menthe qui respire, lettre d'information en champ de formulaire, barre d'état. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "santé numérique",
+        "fenêtre",
+        "console",
+        "police mono",
+        "graphite",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-395-parcours-de-soin",
+      "ordre": 395,
+      "nom": "Parcours de soin",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé en ligne",
+      "directionArtistique": {
+        "texte": "Pour un service de santé en ligne : une frise de quatre étapes sur bleu ciel, chaque titre-lien sous un point carré et un filet épais (le premier respire), puis une bande marine avec mention d'urgence, coordonnées et mentions. Archétype : I frise à points carrés."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "frise",
+        "étapes",
+        "parcours patient",
+        "points carrés",
+        "bleu ciel",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-396-mosaique-sante",
+      "ordre": 396,
+      "nom": "Mosaïque santé",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "service de santé",
+      "directionArtistique": {
+        "texte": "Pour un service de santé : une grande case pêche avec « Votre santé, en clair. » et un bouton, trois petites cases (annuaire ardoise qui se remplit au survol, contact blanc, réseaux miel). Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "cases",
+        "annuaire",
+        "pêche",
+        "ardoise",
+        "miel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-397-etages-du-cabinet",
+      "ordre": 397,
+      "nom": "Étages du cabinet",
+      "famille": "Santé numérique et pharmacie",
+      "secteur": "plateforme de santé",
+      "directionArtistique": {
+        "texte": "Pour une plateforme de santé : quatre marches de plus en plus étroites et sombres alignées à gauche, le nom monumental sur lavande, les services, horaires et contact sur violet vif, les mentions sur nuit. Inspiré d'une capture à nom monumental. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "escalier",
+        "bandes",
+        "nom monumental",
+        "lavande",
+        "violet",
+        "nuit",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-398-souffle-du-matin",
+      "ordre": 398,
+      "nom": "Souffle du matin",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "studio de yoga",
+      "directionArtistique": {
+        "texte": "Pour un studio de yoga : colonne verte pleine hauteur à gauche (nom, phrase, réseaux, bouton de réservation qui respire) et zone crème à droite avec pratiques, journal à puces et coordonnées sous des titres soulignés d'un court trait. Inspiré des captures 34/35. Archétype A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Tenor Sans",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "yoga",
+        "studio",
+        "colonne latérale",
+        "sauge",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-399-fonte",
+      "ordre": 399,
+      "nom": "Fonte",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "salle de musculation",
+      "directionArtistique": {
+        "texte": "Pour une salle de musculation : le nom FONTE en énormes capitales condensées vert volt, rogné par le bord de la bande, puis coordonnées, repère carré avec bouton d'inscription, réseaux et liens. Inspiré de la capture 36. Archétype B nom monumental."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "Chakra Petch",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musculation",
+        "nom monumental",
+        "graphite",
+        "vert volt",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-400-casier-souple",
+      "ordre": 400,
+      "nom": "Casier souple",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "studio de pilates",
+      "directionArtistique": {
+        "texte": "Pour un studio de pilates : enseigne puis damier de huit cases égales en violet et menthe, liens numérotés qui se remplissent au survol, horaires, coordonnées, réseaux et case d'inscription qui respire. Inspiré des colonnes de liens des captures 34/35. Archétype C damier."
+      },
+      "typographies": {
+        "titre": "Gabarito",
+        "corps": "Spline Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pilates",
+        "damier",
+        "cases",
+        "violet",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-401-cap-vitalite",
+      "ordre": 401,
+      "nom": "Cap vitalité",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "coaching nutrition et forme",
+      "directionArtistique": {
+        "texte": "Pour un coach en nutrition : une barre corail compacte (nom, réseaux, bouton marine), une ligne de quatre liens numérotés et une ligne marine de mentions. Archétype D ligne unique compacte."
+      },
+      "typographies": {
+        "titre": "Kanit",
+        "corps": "Kumbh Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coaching",
+        "nutrition",
+        "barre compacte",
+        "corail",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-402-rive-thermale",
+      "ordre": 402,
+      "nom": "Rive thermale",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "spa et massages",
+      "directionArtistique": {
+        "texte": "Pour un spa : deux demi-pages bord à bord, panneau vert thermal (phrase en capitales, liens, lettre d'information) et panneau sable (énorme bouton de réservation, horaires, coordonnées, réseaux), mentions en bande basse. Inspiré de la capture 36 (blocs aux deux bords). Archétype E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Cinzel",
+        "corps": "Raleway",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spa",
+        "massage",
+        "deux panneaux",
+        "vert thermal",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-403-dernier-round",
+      "ordre": 403,
+      "nom": "Dernier round",
+      "famille": "Fitness, yoga et bien-être",
+      "secteur": "club de boxe",
+      "directionArtistique": {
+        "texte": "Pour un club de boxe : bandeau magenta d'appel à l'action en très grandes capitales avec énorme bouton blanc, puis bande noire avec horaires, coordonnées et une seule colonne étroite de liens à filets. Archétype F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Bowlby One",
+        "corps": "Gabarito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boxe",
+        "bandeau XXL",
+        "colonne de liens",
+        "magenta",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-404-carnet-de-sentier",
+      "ordre": 404,
+      "nom": "Carnet de sentier",
+      "famille": "Outdoor et aventure",
+      "secteur": "randonnée",
+      "directionArtistique": {
+        "texte": "Pour un site de randonnée : index de six rubriques en lignes pleine largeur (grand libellé en slab, numéro, filet) qui glissent et passent à l'ocre au survol, puis coordonnées, réseaux et mentions. Inspiré de la capture 36. Archétype G index."
+      },
+      "typographies": {
+        "titre": "Alfa Slab One",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "randonnée",
+        "index",
+        "lignes",
+        "vert forêt",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-405-cordee",
+      "ordre": 405,
+      "nom": "Cordée",
+      "famille": "Outdoor et aventure",
+      "secteur": "alpinisme et matériel",
+      "directionArtistique": {
+        "texte": "Pour une boutique d'alpinisme : une grande case marine (nom, phrase, bouton orange qui respire) accompagnée de trois petites cases franches (liens, coordonnées, horaires et réseaux) en mosaïque asymétrique. Archétype H mosaïque."
+      },
+      "typographies": {
+        "titre": "Saira Condensed",
+        "corps": "Be Vietnam Pro",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "alpinisme",
+        "mosaïque",
+        "asymétrique",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-406-frise-du-bivouac",
+      "ordre": 406,
+      "nom": "Frise du bivouac",
+      "famille": "Outdoor et aventure",
+      "secteur": "voyage en autonomie",
+      "directionArtistique": {
+        "texte": "Pour un site de voyage en autonomie : frise horizontale de quatre étapes reliées par un filet à repères carrés, puis bande rouille avec coordonnées, réseaux et mentions. Inspiré des captures 34/35. Archétype I frise."
+      },
+      "typographies": {
+        "titre": "Yeseva One",
+        "corps": "Josefin Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bivouac",
+        "frise",
+        "étapes",
+        "sable",
+        "rouille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-407-bureau-des-guides",
+      "ordre": 407,
+      "nom": "Bureau des guides",
+      "famille": "Outdoor et aventure",
+      "secteur": "guides de haute montagne",
+      "directionArtistique": {
+        "texte": "Pour un bureau de guides : papier à en-tête crème, filets doubles, nom en capitales, horaires et coordonnées centrés, liens en ligne séparés par des carrés, réseaux. Archétype J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Crimson Pro",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "guides",
+        "papier à en-tête",
+        "centré",
+        "crème",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-408-console-de-sentier",
+      "ordre": 408,
+      "nom": "Console de sentier",
+      "famille": "Outdoor et aventure",
+      "secteur": "application de trail",
+      "directionArtistique": {
+        "texte": "Pour une application de trail : le pied est une fenêtre de terminal à bords nets avec barre de titre à trois carrés, rubriques en liste, coordonnées et lettre d'information en invites. Tout en monospace, bleu nuit et cyan. Archétype K console."
+      },
+      "typographies": {
+        "titre": "Martian Mono",
+        "corps": "Martian Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "trail",
+        "console",
+        "terminal",
+        "monospace",
+        "bleu nuit",
+        "cyan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-409-denivele",
+      "ordre": 409,
+      "nom": "Dénivelé",
+      "famille": "Outdoor et aventure",
+      "secteur": "cyclo-voyage",
+      "directionArtistique": {
+        "texte": "Pour un site de cyclo-voyage : quatre bandes en escalier alignées à gauche, de largeurs décroissantes (100, 72, 48, 32 %) et de plus en plus sombres : nom et bouton, liens, coordonnées, réseaux et mentions. Archétype L escalier."
+      },
+      "typographies": {
+        "titre": "Oxanium",
+        "corps": "Oxanium",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vélo",
+        "escalier",
+        "bandes",
+        "ambre",
+        "cuivre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-410-lin-et-terre",
+      "ordre": 410,
+      "nom": "Lin et Terre",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "linge de maison et poterie",
+      "directionArtistique": {
+        "texte": "Archétype B (inspiré de la capture 37 : nom de marque monumental) : aplat terre cuite, nom en très grandes lettres rognées, quelques liens discrets, réseaux en texte, bande basse plus sombre. Carré qui respire. Aucune photo."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "linge",
+        "poterie",
+        "nom monumental",
+        "terre cuite"
+      ]
+    },
+    {
+      "id": "c-411-verdier-interieurs",
+      "ordre": 411,
+      "nom": "Verdier Intérieurs",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "magasin de meubles",
+      "directionArtistique": {
+        "texte": "Archétype E (capture 38 : lettre d'information en tête) : deux demi-pages bord à bord, vert sapin à gauche (phrase, lettre, engagements), lin clair à droite (contact, rubriques par pièce, réseaux, bouton de rendez-vous qui respire)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "meubles",
+        "demi-pages",
+        "vert sapin",
+        "lettre"
+      ]
+    },
+    {
+      "id": "c-412-casa-quadra",
+      "ordre": 412,
+      "nom": "Casa Quadra",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "showroom de design d'intérieur",
+      "directionArtistique": {
+        "texte": "Archétype C (capture 39 : carte sombre sur aplat vif) : damier de huit cases noir encre dans un cadre sur aplat ocre ; chaque case est un lien ou une information (horaires, contact, lettre). Carré qui respire."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "showroom",
+        "damier",
+        "ocre",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-413-atelier-sorel",
+      "ordre": 413,
+      "nom": "Atelier Sorel",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "mobilier sur mesure",
+      "directionArtistique": {
+        "texte": "Archétype G (capture 37 : grands libellés) : sommaire en cinq lignes pleine largeur en serif monumental ; la ligne survolée se remplit de vermillon et se décale. Blanc cassé, noir, vermillon."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mobilier sur mesure",
+        "index",
+        "serif",
+        "vermillon"
+      ]
+    },
+    {
+      "id": "c-414-maison-delorme",
+      "ordre": 414,
+      "nom": "Maison Delorme",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "décoration et art de la table",
+      "directionArtistique": {
+        "texte": "Archétype J (capture 38 : bloc logo + lettre) : papier à en-tête rose poudré dans un cadre à double filet, nom en Cormorant, cartouche adresse et horaires, rubriques en italique, lettre centrée, bouton de rendez-vous."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Lora",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "décoration",
+        "art de la table",
+        "papier à en-tête",
+        "rose poudré"
+      ]
+    },
+    {
+      "id": "c-415-brasse-et-noyer",
+      "ordre": 415,
+      "nom": "Brasse et Noyer",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "ébénisterie et meubles en bois",
+      "directionArtistique": {
+        "texte": "Archétype L (capture 39 : carte sur aplat) : quatre marches de largeurs décroissantes alignées à gauche, noyer foncé, noyer moyen, laiton (lettre) et sable (mentions). Chaque marche s'éclaircit au survol."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ébéniste",
+        "escalier",
+        "noyer",
+        "laiton"
+      ]
+    },
+    {
+      "id": "c-416-volt-atelier",
+      "ordre": 416,
+      "nom": "Volt Atelier",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "vélociste électrique",
+      "directionArtistique": {
+        "texte": "Archétype A (capture 37 : nom en grand) : barre verticale citron vif pleine hauteur (nom, réseaux), zone principale charbon (trois colonnes de liens, lettre, horaires). Carré qui respire."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vélos électriques",
+        "colonne latérale",
+        "citron",
+        "charbon"
+      ]
+    },
+    {
+      "id": "c-417-pedale-urbaine",
+      "ordre": 417,
+      "nom": "Pédale Urbaine",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "vélos en libre-service",
+      "directionArtistique": {
+        "texte": "Archétype D (capture 38 : réseaux en bout de ligne) : barre compacte turquoise en deux lignes (nom en capitales condensées, rubriques, bouton, réseaux, mentions). Bouton qui respire."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Rubik",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "libre-service",
+        "barre compacte",
+        "turquoise"
+      ]
+    },
+    {
+      "id": "c-418-kilowatt-club",
+      "ordre": 418,
+      "nom": "Kilowatt Club",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "scooters et motos électriques",
+      "directionArtistique": {
+        "texte": "Archétype F (capture 37 : nom monumental) : bandeau d'appel orange XXL « Roulez électrique » avec bouton d'essai, puis graphite : lettre et contact à gauche, une colonne étroite de liens à droite."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Epilogue",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "scooters",
+        "bandeau d'appel",
+        "orange",
+        "graphite"
+      ]
+    },
+    {
+      "id": "c-419-borne-et-cie",
+      "ordre": 419,
+      "nom": "Borne et Cie",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "bornes de recharge et installation",
+      "directionArtistique": {
+        "texte": "Archétype H (capture 39 : cartes sur aplat) : mosaïque asymétrique, grande case violette (nom, lettre) et trois petites cases jaune, graphite et blanche (horaires, contact, rubriques)."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Outfit",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bornes",
+        "mosaïque",
+        "violet",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-420-trajet",
+      "ordre": 420,
+      "nom": "Trajet",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "concessionnaire vélos et trottinettes",
+      "directionArtistique": {
+        "texte": "Archétype I (capture 38 : colonnes de liens) : frise horizontale de quatre étapes à points carrés (choisir, essayer, acheter, entretenir) sur bleu océan, accents corail ; adresse et lettre dessous. Premier point qui respire."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Red Hat Display",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "concessionnaire",
+        "frise",
+        "bleu océan",
+        "corail"
+      ]
+    },
+    {
+      "id": "c-421-console-wattmetre",
+      "ordre": 421,
+      "nom": "Console Wattmètre",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "suivi de recharge et flottes",
+      "directionArtistique": {
+        "texte": "Archétype K (capture 39 : carte sombre) : fenêtre de console à angles droits, barre de titre à trois carrés, lignes de commande en monospace, curseur ambre qui respire, lettre et contact à droite."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "console",
+        "monospace",
+        "ambre"
+      ]
+    },
+    {
+      "id": "c-422-tour-de-controle",
+      "ordre": 422,
+      "nom": "Tour de contrôle",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aéronautique",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'études aéronautique : grande colonne ambre pleine hauteur (nom, signal qui respire, lettre technique) à gauche ; à droite, sur marine profond, cinq colonnes de liens à petit filet d'accent, adresse et mentions. Les liens s'indentent d'un cran au survol."
+      },
+      "typographies": {
+        "titre": "Exo 2",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aéronautique",
+        "colonne latérale",
+        "lettre",
+        "marine",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-423-orbite-silencieuse",
+      "ordre": 423,
+      "nom": "Orbite silencieuse",
+      "famille": "Aéronautique et spatial",
+      "secteur": "spatial",
+      "directionArtistique": {
+        "texte": "Pour une entreprise spatiale : nom monumental en deux tons au centre d'un grand vide noir, légende, trois liens empilés, carré orange qui respire et ligne de mentions. Rien d'autre."
+      },
+      "typographies": {
+        "titre": "Syncopate",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spatial",
+        "nom monumental",
+        "minimal",
+        "noir",
+        "orange",
+        "centré",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-424-tableau-des-departs",
+      "ordre": 424,
+      "nom": "Tableau des départs",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aviation commerciale",
+      "directionArtistique": {
+        "texte": "Pour une compagnie ou un aéroport : titre en capitales condensées puis damier de huit cases carrées à joint noir (quatre liens colorés qui se soulèvent, adresse, horaires, lettre, mentions), comme un tableau d'affichage."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aviation",
+        "damier",
+        "cases",
+        "acier",
+        "rouge signal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-425-plan-de-vol-compact",
+      "ordre": 425,
+      "nom": "Plan de vol compact",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aéroclub",
+      "directionArtistique": {
+        "texte": "Pour un aéroclub ou une compagnie régionale : deux lignes cobalt seulement ; sur la première le nom, cinq liens séparés par des carrés dont un respire et deux réseaux, sur la seconde l'adresse en ligne et les mentions."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aéroclub",
+        "compact",
+        "barre",
+        "cobalt",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-426-ciel-et-nuit",
+      "ordre": 426,
+      "nom": "Ciel et nuit",
+      "famille": "Aéronautique et spatial",
+      "secteur": "constructeur aéronautique",
+      "directionArtistique": {
+        "texte": "Pour un constructeur : deux demi-pages bord à bord, ciel pâle (grande phrase en serif, coordonnées) et nuit (lettre, cinq grands liens, réseaux), puis fine bande de mentions."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "constructeur",
+        "deux moitiés",
+        "grande phrase",
+        "bleu nuit",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-427-compte-a-rebours",
+      "ordre": 427,
+      "nom": "Compte à rebours",
+      "famille": "Aéronautique et spatial",
+      "secteur": "lancement spatial",
+      "directionArtistique": {
+        "texte": "Pour un service de lancement : bandeau d'appel violet géant (jusqu'à 170 px) avec bouton lime qui respire, puis bande sombre avec adresse, mentions et une colonne étroite de liens numérotés bordée de lime."
+      },
+      "typographies": {
+        "titre": "Big Shoulders",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lancement",
+        "appel à l'action",
+        "bandeau géant",
+        "violet",
+        "lime",
+        "colonne étroite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-428-registre-des-maisons",
+      "ordre": 428,
+      "nom": "Registre des maisons",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "palace",
+      "directionArtistique": {
+        "texte": "Pour un palace : en-tête (nom, réseaux), six grandes lignes pleine largeur en Cormorant 40 px avec filet qui s'indentent en or au survol, puis adresse en ligne et mentions. Ivoire, encre, or."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "palace",
+        "index",
+        "sommaire",
+        "ivoire",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-429-mosaique-de-la-maison",
+      "ordre": 429,
+      "nom": "Mosaïque de la maison",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "maison d'exception",
+      "directionArtistique": {
+        "texte": "Pour une maison d'exception : grande case champagne (phrase en Bodoni, réservation) et trois cases empilées (adresse, lettre, liens et mentions) à joints d'émeraude."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Raleway",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "émeraude",
+        "champagne",
+        "réservation",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-430-chronologie-du-sejour",
+      "ordre": 430,
+      "nom": "Chronologie du séjour",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "hôtel de charme",
+      "directionArtistique": {
+        "texte": "Pour un hôtel de charme : chronologie verticale sur filet d'or à cinq points carrés (arrivée, suites, table, bien-être, départ) à droite ; grande phrase, adresse et mentions à gauche. Bordeaux, or pâle, crème."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "chronologie",
+        "séjour",
+        "points carrés",
+        "bordeaux",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-431-papier-du-palace",
+      "ordre": 431,
+      "nom": "Papier du palace",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "maison historique",
+      "directionArtistique": {
+        "texte": "Pour une maison historique : papier à en-tête centré, règle cuivre avec carré qui respire, monogramme carré, nom en grandes capitales, cartouche à double bordure (adresse, horaires), liens en ligne, filet et mentions."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "EB Garamond",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "papier à en-tête",
+        "centré",
+        "cartouche",
+        "cuivre",
+        "bleu nuit",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-432-console-du-concierge",
+      "ordre": 432,
+      "nom": "Console du concierge",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "conciergerie",
+      "directionArtistique": {
+        "texte": "Pour une conciergerie : pied en fenêtre anthracite, barre de titre platine, onglets verticaux qui s'allument en or rose, panneau de demande (bouton qui respire, adresse, horaires, lettre) et barre d'état de mentions."
+      },
+      "typographies": {
+        "titre": "Tenor Sans",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conciergerie",
+        "fenêtre",
+        "onglets",
+        "anthracite",
+        "or rose",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-433-marches-du-palace",
+      "ordre": 433,
+      "nom": "Marches du palace",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "grand hôtel",
+      "directionArtistique": {
+        "texte": "Pour un grand hôtel : quatre marches alignées à gauche, 100 %, 78 %, 56 %, 34 % de largeur et de plus en plus claires en prune (nom, liens, adresse et horaires, lettre et mentions) sur fond ivoire."
+      },
+      "typographies": {
+        "titre": "Prata",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "escalier",
+        "étagé",
+        "prune",
+        "ivoire",
+        "or",
+        "angles droits"
+      ]
+    }
+  ]
+}
