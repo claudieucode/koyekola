@@ -1,0 +1,243 @@
+{
+  "concepts": [
+    {
+      "id": "c-126-cartouche-d-entreprise",
+      "ordre": 126,
+      "nom": "Cartouche d'entreprise",
+      "famille": "Entreprises et PME",
+      "secteur": "PME / société de services",
+      "directionArtistique": {
+        "texte": "Pied de dossier d'entreprise : nom et deux boutons carrés, puis un cartouche à contour marine en quatre cellules numérotées (coordonnées, horaires, liens, engagements d'exemple) qui s'éclaircissent au survol, et une bande marine pour la lettre. Gris papier, marine, bleu acier ; carré de statut qui respire."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "PME",
+        "entreprise",
+        "cartouche",
+        "tableau à filets",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-127-engagements-en-bloc",
+      "ordre": 127,
+      "nom": "Engagements en bloc",
+      "famille": "Entreprises et PME",
+      "secteur": "entreprise à valeurs",
+      "directionArtistique": {
+        "texte": "Quatre blocs contigus de bord à bord (qualité, environnement, sécurité, formation) à filet ocre qui s'épaissit et au soulèvement doux au survol, puis un pied vert forêt (nom, liens, contact et horaires, lettre). Aucun chiffre ni certificat inventé."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entreprise",
+        "valeurs",
+        "vert forêt",
+        "ocre",
+        "blocs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-128-parlons-de-votre-projet",
+      "ordre": 128,
+      "nom": "Parlons de votre projet",
+      "famille": "Entreprises et PME",
+      "secteur": "conseil / services",
+      "directionArtistique": {
+        "texte": "Deux panneaux de bord à bord : aplat carmin avec la phrase d'invitation en grandes capitales blanches et bouton carré qui devient noir, face à des colonnes blanches (liens, contact, horaires, lettre) ; barre noire de mentions."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "services",
+        "carmin",
+        "deux panneaux",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-129-annuaire-des-services",
+      "ordre": 129,
+      "nom": "Annuaire des services",
+      "famille": "Entreprises et PME",
+      "secteur": "société de services / bureau d'études",
+      "directionArtistique": {
+        "texte": "Index de catalogue : titre en serif et bouton cuivre à gauche, six rangées numérotées à droite dont le retrait s'élargit au survol, barre ardoise (contact, horaires, lettre). Sable, ardoise, cuivre."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "services",
+        "index numéroté",
+        "sable",
+        "ardoise",
+        "cuivre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-130-equipes-joignables",
+      "ordre": 130,
+      "nom": "Équipes joignables",
+      "famille": "Entreprises et PME",
+      "secteur": "PME à plusieurs services",
+      "directionArtistique": {
+        "texte": "Annuaire des équipes : nom et lettre à gauche, quatre cartes carrées (commercial, comptabilité, recrutement, assistance) à liseré turquoise vertical qui s'épaissit et se soulève au survol ; bas avec contact, horaires, liens, filet noir épais. Pierre claire, noir, turquoise."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "PME",
+        "équipes",
+        "cartes carrées",
+        "turquoise",
+        "pierre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-131-plan-d-atelier",
+      "ordre": 131,
+      "nom": "Plan d'atelier",
+      "famille": "Industrie et logistique",
+      "secteur": "usine / atelier de fabrication",
+      "directionArtistique": {
+        "texte": "Plan de fabrication : bleu de plan, cadre à filet clair, nom en chasse fixe, légende de repères numérotés dont les liens glissent au survol, cartouche à trois cases (pièce, révision, feuille) décoratif, voyant carré qui respire. Contact et horaires dessous."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "usine",
+        "atelier",
+        "plan technique",
+        "cartouche",
+        "bleu de plan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-132-quai-de-chargement",
+      "ordre": 132,
+      "nom": "Quai de chargement",
+      "famille": "Industrie et logistique",
+      "secteur": "transport / entrepôt",
+      "directionArtistique": {
+        "texte": "Quai : noir profond, bande de carrés jaune et anthracite (sécurité sobre), phrase géante « Chargé. Expédié. » en capitales condensées, bouton jaune qui s'inverse, quatre rubriques à filet jaune qui s'épaissit, contact, horaires avec voyant, lettre."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "logistique",
+        "transport",
+        "noir et jaune",
+        "bande de sécurité",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-133-pupitre-de-controle",
+      "ordre": 133,
+      "nom": "Pupitre de contrôle",
+      "famille": "Industrie et logistique",
+      "secteur": "site de production / centre de tri",
+      "directionArtistique": {
+        "texte": "Pupitre : bandeau d'état avec voyant vert qui respire, quatre modules à en-tête (contact, horaires, liens, bulletin) à filet haut vert qui s'épaissit au survol. Charbon et vert signal, chasse fixe."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "production",
+        "pupitre",
+        "modules",
+        "charbon",
+        "vert signal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-134-chaine-logistique",
+      "ordre": 134,
+      "nom": "Chaîne logistique",
+      "famille": "Industrie et logistique",
+      "secteur": "transport / distribution",
+      "directionArtistique": {
+        "texte": "Chaîne en cinq étapes (commande, préparation, expédition, transport, livraison) tracée comme un plan : trait épais bleu pétrole qui devient orange et se soulève au survol ; bande blanche (contact, horaires, lettre). Aucun délai chiffré."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "logistique",
+        "étapes",
+        "chaîne",
+        "bleu pétrole",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-135-beton-et-securite",
+      "ordre": 135,
+      "nom": "Béton et sécurité",
+      "famille": "Industrie et logistique",
+      "secteur": "entrepôt / manutention",
+      "directionArtistique": {
+        "texte": "Mur de béton : mot d'ordre monumental en Anton sur trois lignes, index de quatre rubriques à barre noire qui s'élargit et vire au rouge, bande de carrés de sécurité, bas noir (contact, horaires, liens, lettre)."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entrepôt",
+        "manutention",
+        "béton",
+        "rouge sécurité",
+        "capitales géantes",
+        "angles droits"
+      ]
+    }
+  ]
+}

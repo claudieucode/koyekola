@@ -1,0 +1,259 @@
+{
+  "meta": {
+    "titre": "10 pieds « carrés » : énergie et environnement, transport et déménagement",
+    "date": "2026-11-11",
+    "nombre": 10
+  },
+  "concepts": [
+    {
+      "id": "c-146-plein-soleil",
+      "ordre": 146,
+      "nom": "Plein soleil",
+      "famille": "Énergie et environnement",
+      "secteur": "installateur solaire",
+      "directionArtistique": {
+        "texte": "Pour un installateur solaire : grand bandeau ambre « Produisez votre lumière » avec bouton d'étude et barre d'énergie dont une cellule respire, puis bande bleu nuit (horaires, contact, ressources, lettre)."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "solaire",
+        "photovoltaïque",
+        "ambre",
+        "bleu nuit",
+        "barre d'énergie",
+        "angles droits",
+        "devis"
+      ]
+    },
+    {
+      "id": "c-147-etiquette-energie",
+      "ordre": 147,
+      "nom": "Étiquette énergie",
+      "famille": "Énergie et environnement",
+      "secteur": "rénovation énergétique",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de rénovation énergétique : phrase « Consommer moins, vivre mieux », étiquette A à G en escalier à angles droits (le bloc B respire), puis bande vert pâle avec horaires, contact, ressources et lettre."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Plus Jakarta Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "rénovation énergétique",
+        "isolation",
+        "étiquette énergie",
+        "vert",
+        "blanc",
+        "angles droits",
+        "escalier"
+      ]
+    },
+    {
+      "id": "c-148-note-de-synthese",
+      "ordre": 148,
+      "nom": "Note de synthèse",
+      "famille": "Énergie et environnement",
+      "secteur": "bureau d'études environnement",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'études en environnement : phrase « Mesurer, comprendre, agir », bouton citron et tableau de quatre cases numérotées (contact, horaires, ressources, lettre) à filets fins, ardoise sombre et monospace."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bureau d'études",
+        "environnement",
+        "diagnostic",
+        "ardoise",
+        "citron vert",
+        "monospace",
+        "tableau numéroté"
+      ]
+    },
+    {
+      "id": "c-149-boucle-de-tri",
+      "ordre": 149,
+      "nom": "Boucle de tri",
+      "famille": "Énergie et environnement",
+      "secteur": "recyclage et déchets",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de recyclage ou de collecte : trois grands carrés « Réduire, Réutiliser, Recycler » qui se soulèvent au survol, sur fond kraft, puis bande noire avec contact, horaires, liens et lettre."
+      },
+      "typographies": {
+        "titre": "Staatliches",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recyclage",
+        "déchets",
+        "tri",
+        "kraft",
+        "vert",
+        "carrés",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-150-niveau-d-eau",
+      "ordre": 150,
+      "nom": "Niveau d'eau",
+      "famille": "Énergie et environnement",
+      "secteur": "service de l'eau",
+      "directionArtistique": {
+        "texte": "Pour un service de l'eau : grand panneau bleu profond avec phrase et lettre d'information, et quatre strates sur ciel pâle (contact, horaires, ressources, réseaux) séparées par des filets de bleus croissants."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Outfit",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "eau",
+        "service de l'eau",
+        "assainissement",
+        "bleu",
+        "strates",
+        "angles droits",
+        "ciel pâle"
+      ]
+    },
+    {
+      "id": "c-151-panneau-directionnel",
+      "ordre": 151,
+      "nom": "Panneau directionnel",
+      "famille": "Transport et déménagement",
+      "secteur": "transporteur routier",
+      "directionArtistique": {
+        "texte": "Pour un transporteur routier : cartouche blanc « Zone de service » façon panneau de direction, quatre plaques numérotées vers les pages utiles, ligne de route en pointillés puis bande bleu foncé (horaires, contact, lettre)."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "transporteur",
+        "transport routier",
+        "signalétique",
+        "bleu",
+        "plaques numérotées",
+        "zone de service",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-152-bande-de-chargement",
+      "ordre": 152,
+      "nom": "Bande de chargement",
+      "famille": "Transport et déménagement",
+      "secteur": "déménageur",
+      "directionArtistique": {
+        "texte": "Pour un déménageur : bande de chantier rouge et carton, phrase « Votre déménagement, étape par étape », trois cartons à ruban (devis, emballage, livraison) qui se soulèvent au survol, puis bande brune avec zone, horaires et contact."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "déménagement",
+        "déménageur",
+        "carton",
+        "ruban rouge",
+        "étapes",
+        "bande de chantier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-153-station-de-taxis",
+      "ordre": 153,
+      "nom": "Station de taxis",
+      "famille": "Transport et déménagement",
+      "secteur": "taxi / VTC",
+      "directionArtistique": {
+        "texte": "Pour un taxi ou un VTC : damier noir et blanc, « Où allez-vous ? » avec numéro en grand et bouton de réservation, panneau jaune taxi (horaires, contact), puis liens séparés de filets, réseaux et mentions."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Sora",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "taxi",
+        "VTC",
+        "réservation",
+        "damier",
+        "jaune",
+        "noir et blanc",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-154-tournee-du-jour",
+      "ordre": 154,
+      "nom": "Tournée du jour",
+      "famille": "Transport et déménagement",
+      "secteur": "coursier / livraison express",
+      "directionArtistique": {
+        "texte": "Pour un coursier ou une livraison express : mot « Livré. » géant sur orange franc, parcours en trois nœuds carrés (collecte, transit, livraison) dont le premier respire, puis bande noire avec zone, horaires et contact."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Lexend",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coursier",
+        "livraison",
+        "express",
+        "orange",
+        "noir",
+        "parcours",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-155-poste-de-controle",
+      "ordre": 155,
+      "nom": "Poste de contrôle",
+      "famille": "Transport et déménagement",
+      "secteur": "gestionnaire de flotte",
+      "directionArtistique": {
+        "texte": "Pour un gestionnaire de flotte : tableau de bord graphite et vert signal, grille de cases à filets fins (phrase, horaires avec repère qui respire, zone, contact, ressources, lettre) qui s'éclaircissent au survol."
+      },
+      "typographies": {
+        "titre": "Titillium Web",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "logistique",
+        "tableau de bord",
+        "graphite",
+        "vert signal",
+        "monospace",
+        "angles droits"
+      ]
+    }
+  ]
+}

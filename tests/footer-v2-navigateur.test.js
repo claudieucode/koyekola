@@ -13,6 +13,7 @@ const { startServer, loginInstructor } = require("./helpers");
 const H = require("./helpers-footer-isolation");
 const Catalog = require("../src/themeBuilder/catalog");
 
+const CARRE = (key) => Number((/^ft2-(\d+)/.exec(key) || [])[1]) >= 126;   // les 60 pieds « carrés » : aucun arrondi
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const ONLY = process.env.FOOTER_V2_ONLY ? process.env.FOOTER_V2_ONLY.split(",") : null;
 const KEYS = Catalog.entries("footer").filter((e) => e.v2 && (!ONLY || ONLY.includes(e.key))).map((e) => e.key);
@@ -35,7 +36,9 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
     // on teste la graisse et le style réellement employés (un modèle peut n'utiliser une police qu'en 700 italique)
     const notLoaded = [...new Set([...faces].filter(([d, n]) => !/^(sans-serif|serif|monospace|system-ui)$/.test(n) && !document.fonts.check(d)).map(([, n]) => n))];
     const fl = [...document.fonts].filter((x) => x.status === "loaded").map((x) => x.family.replace(/["']/g, ""));
-    return { count: document.querySelectorAll("footer").length, solo: f.getAttribute("data-kw-ft"), parentBody: f.parentElement === document.body, afterMain: Boolean(main.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING), w: f.getBoundingClientRect().width, vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth, fams: [...fams], notLoaded, loadedFaces: fl };
+    // ANGLES DROITS (modèles « carrés » ft2-126 et suivants) : aucun rayon de bordure non nul sur le pied, pseudo-éléments compris
+    const arrondis = []; for (const e of f.querySelectorAll("*")) for (const ps of [null, "::before", "::after"]) { const cs = getComputedStyle(e, ps); if (ps && cs.content === "none") continue; if (["borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius"].some((c) => parseFloat(cs[c]) > 0)) arrondis.push(`${e.tagName.toLowerCase()}.${String(e.className).split(" ")[0]}${ps || ""} ${cs.borderTopLeftRadius}`); }
+    return { arrondis: arrondis.slice(0, 5), count: document.querySelectorAll("footer").length, solo: f.getAttribute("data-kw-ft"), parentBody: f.parentElement === document.body, afterMain: Boolean(main.compareDocumentPosition(f) & Node.DOCUMENT_POSITION_FOLLOWING), w: f.getBoundingClientRect().width, vw: document.documentElement.clientWidth, sw: document.documentElement.scrollWidth, fams: [...fams], notLoaded, loadedFaces: fl };
   });
 
   for (const key of KEYS) {
@@ -55,6 +58,7 @@ describe("Pieds v2 : vrai Chrome, page publiée", { skip: Chrome.SKIP || (KEYS.l
           await pg.goto(A.url); await wait(700);
           const i = await info(pg);
           const t = `${avecForm ? "avec" : "sans"} formulaire ${w}px`;
+          if (CARRE(key) && i.arrondis.length) probs.push(`${t} : angles non droits ${i.arrondis.join(" ; ")}`);
           if (i.count !== 1 || i.solo !== "solo" || !i.parentBody || !i.afterMain) probs.push(`${t} : structure ${JSON.stringify({ c: i.count, s: i.solo, b: i.parentBody, a: i.afterMain })}`);
           if (Math.abs(i.w - i.vw) > 1) probs.push(`${t} : pied ${i.w} px pour une fenêtre de ${i.vw}`);
           if (i.sw > i.vw + 1) probs.push(`${t} : défilement horizontal ${i.sw} > ${i.vw}`);

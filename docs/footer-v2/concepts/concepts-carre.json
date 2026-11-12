@@ -1,0 +1,1502 @@
+{
+  "meta": {
+    "titre": "60 pieds « carrés » standard très pro (extension du Footer v2)",
+    "date": "2026-11-11",
+    "nombre": 60
+  },
+  "concepts": [
+    {
+      "id": "c-126-cartouche-d-entreprise",
+      "ordre": 126,
+      "nom": "Cartouche d'entreprise",
+      "famille": "Entreprises et PME",
+      "secteur": "PME / société de services",
+      "directionArtistique": {
+        "texte": "Pied de dossier d'entreprise : nom et deux boutons carrés, puis un cartouche à contour marine en quatre cellules numérotées (coordonnées, horaires, liens, engagements d'exemple) qui s'éclaircissent au survol, et une bande marine pour la lettre. Gris papier, marine, bleu acier ; carré de statut qui respire."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "PME",
+        "entreprise",
+        "cartouche",
+        "tableau à filets",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-127-engagements-en-bloc",
+      "ordre": 127,
+      "nom": "Engagements en bloc",
+      "famille": "Entreprises et PME",
+      "secteur": "entreprise à valeurs",
+      "directionArtistique": {
+        "texte": "Quatre blocs contigus de bord à bord (qualité, environnement, sécurité, formation) à filet ocre qui s'épaissit et au soulèvement doux au survol, puis un pied vert forêt (nom, liens, contact et horaires, lettre). Aucun chiffre ni certificat inventé."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entreprise",
+        "valeurs",
+        "vert forêt",
+        "ocre",
+        "blocs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-128-parlons-de-votre-projet",
+      "ordre": 128,
+      "nom": "Parlons de votre projet",
+      "famille": "Entreprises et PME",
+      "secteur": "conseil / services",
+      "directionArtistique": {
+        "texte": "Deux panneaux de bord à bord : aplat carmin avec la phrase d'invitation en grandes capitales blanches et bouton carré qui devient noir, face à des colonnes blanches (liens, contact, horaires, lettre) ; barre noire de mentions."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "services",
+        "carmin",
+        "deux panneaux",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-129-annuaire-des-services",
+      "ordre": 129,
+      "nom": "Annuaire des services",
+      "famille": "Entreprises et PME",
+      "secteur": "société de services / bureau d'études",
+      "directionArtistique": {
+        "texte": "Index de catalogue : titre en serif et bouton cuivre à gauche, six rangées numérotées à droite dont le retrait s'élargit au survol, barre ardoise (contact, horaires, lettre). Sable, ardoise, cuivre."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "services",
+        "index numéroté",
+        "sable",
+        "ardoise",
+        "cuivre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-130-equipes-joignables",
+      "ordre": 130,
+      "nom": "Équipes joignables",
+      "famille": "Entreprises et PME",
+      "secteur": "PME à plusieurs services",
+      "directionArtistique": {
+        "texte": "Annuaire des équipes : nom et lettre à gauche, quatre cartes carrées (commercial, comptabilité, recrutement, assistance) à liseré turquoise vertical qui s'épaissit et se soulève au survol ; bas avec contact, horaires, liens, filet noir épais. Pierre claire, noir, turquoise."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "PME",
+        "équipes",
+        "cartes carrées",
+        "turquoise",
+        "pierre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-131-plan-d-atelier",
+      "ordre": 131,
+      "nom": "Plan d'atelier",
+      "famille": "Industrie et logistique",
+      "secteur": "usine / atelier de fabrication",
+      "directionArtistique": {
+        "texte": "Plan de fabrication : bleu de plan, cadre à filet clair, nom en chasse fixe, légende de repères numérotés dont les liens glissent au survol, cartouche à trois cases (pièce, révision, feuille) décoratif, voyant carré qui respire. Contact et horaires dessous."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "usine",
+        "atelier",
+        "plan technique",
+        "cartouche",
+        "bleu de plan",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-132-quai-de-chargement",
+      "ordre": 132,
+      "nom": "Quai de chargement",
+      "famille": "Industrie et logistique",
+      "secteur": "transport / entrepôt",
+      "directionArtistique": {
+        "texte": "Quai : noir profond, bande de carrés jaune et anthracite (sécurité sobre), phrase géante « Chargé. Expédié. » en capitales condensées, bouton jaune qui s'inverse, quatre rubriques à filet jaune qui s'épaissit, contact, horaires avec voyant, lettre."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "logistique",
+        "transport",
+        "noir et jaune",
+        "bande de sécurité",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-133-pupitre-de-controle",
+      "ordre": 133,
+      "nom": "Pupitre de contrôle",
+      "famille": "Industrie et logistique",
+      "secteur": "site de production / centre de tri",
+      "directionArtistique": {
+        "texte": "Pupitre : bandeau d'état avec voyant vert qui respire, quatre modules à en-tête (contact, horaires, liens, bulletin) à filet haut vert qui s'épaissit au survol. Charbon et vert signal, chasse fixe."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "production",
+        "pupitre",
+        "modules",
+        "charbon",
+        "vert signal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-134-chaine-logistique",
+      "ordre": 134,
+      "nom": "Chaîne logistique",
+      "famille": "Industrie et logistique",
+      "secteur": "transport / distribution",
+      "directionArtistique": {
+        "texte": "Chaîne en cinq étapes (commande, préparation, expédition, transport, livraison) tracée comme un plan : trait épais bleu pétrole qui devient orange et se soulève au survol ; bande blanche (contact, horaires, lettre). Aucun délai chiffré."
+      },
+      "typographies": {
+        "titre": "Barlow Semi Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "logistique",
+        "étapes",
+        "chaîne",
+        "bleu pétrole",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-135-beton-et-securite",
+      "ordre": 135,
+      "nom": "Béton et sécurité",
+      "famille": "Industrie et logistique",
+      "secteur": "entrepôt / manutention",
+      "directionArtistique": {
+        "texte": "Mur de béton : mot d'ordre monumental en Anton sur trois lignes, index de quatre rubriques à barre noire qui s'élargit et vire au rouge, bande de carrés de sécurité, bas noir (contact, horaires, liens, lettre)."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "entrepôt",
+        "manutention",
+        "béton",
+        "rouge sécurité",
+        "capitales géantes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-136-rapport-annuel",
+      "ordre": 136,
+      "nom": "Rapport annuel",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "cabinet de conseil en stratégie",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de conseil en stratégie : phrase en serif sur papier ivoire, introduction et deux actions, puis quatre colonnes numérotées 01 à 04 sous un filet épais d'encre qui rougit (bordeaux) au survol. Angles droits, aucun chiffre de performance : les grands numéros sont de la structure."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "stratégie",
+        "cabinet",
+        "éditorial",
+        "ivoire",
+        "bordeaux",
+        "colonnes numérotées"
+      ]
+    },
+    {
+      "id": "c-137-salle-du-conseil",
+      "ordre": 137,
+      "nom": "Salle du conseil",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil en gouvernance et finance d'entreprise",
+      "directionArtistique": {
+        "texte": "Marine nuit et laiton : phrase en Cormorant avec barre verticale de laiton, cartouche « premier échange » dont le carré respire, cinq domaines (I à V) en cellules à filets qui se soulèvent au survol, puis horaires, contact, ressources et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "gouvernance",
+        "finance d'entreprise",
+        "marine",
+        "laiton",
+        "cartouche",
+        "domaines"
+      ]
+    },
+    {
+      "id": "c-138-tableau-de-controle",
+      "ordre": 138,
+      "nom": "Tableau de contrôle",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "cabinet d'audit et de conformité",
+      "directionArtistique": {
+        "texte": "Deux volets comme un dossier d'audit : volet vert sapin pleine hauteur (phrase « Auditer, mesurer, corriger. », coordonnées) et quatre cartouches blancs numérotés I à IV sur gris vert clair qui montent et verdissent au survol ; horaires, lettre et mentions en bas. Angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "audit",
+        "conformité",
+        "contrôle interne",
+        "vert sapin",
+        "deux volets",
+        "cartouches",
+        "numéros romains"
+      ]
+    },
+    {
+      "id": "c-139-sommaire",
+      "ordre": 139,
+      "nom": "Sommaire",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil et accompagnement des entreprises",
+      "directionArtistique": {
+        "texte": "Table des matières d'un ouvrage : quatre rangées géantes numérotées en capitales condensées sur blanc et noir, qui se remplissent d'orange et glissent de 28 px au survol ; dessous horaires, coordonnées et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Roboto Condensed",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "accompagnement",
+        "sommaire",
+        "rangées",
+        "capitales",
+        "blanc",
+        "noir",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-140-deux-voix",
+      "ordre": 140,
+      "nom": "Deux voix",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil en ressources humaines et organisation",
+      "directionArtistique": {
+        "texte": "Pied coupé en deux aplats pleine largeur : aubergine avec phrase en serif « Bien conseiller, c'est d'abord bien écouter. » et bouton sable, sable avec ressources, horaires, coordonnées et lettre ; barre de mentions. Carré lilas qui respire. Angles droits."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "ressources humaines",
+        "organisation",
+        "aubergine",
+        "sable",
+        "deux aplats",
+        "serif"
+      ]
+    },
+    {
+      "id": "c-141-terminal-d-etat",
+      "ordre": 141,
+      "nom": "Terminal d'état",
+      "famille": "Services informatiques",
+      "secteur": "infogérance et supervision",
+      "directionArtistique": {
+        "texte": "Fenêtre de terminal à angles droits sur noir et vert : barre de titre avec trois carrés, nom de fichier et carré de statut qui respire (indicateur de design, aucun état affirmé), phrase « Votre parc, supervisé_ » en chasse fixe, quatre colonnes commentées « // »."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "infogérance",
+        "supervision",
+        "terminal",
+        "chasse fixe",
+        "noir",
+        "vert",
+        "statut"
+      ]
+    },
+    {
+      "id": "c-142-atelier-octet",
+      "ordre": 142,
+      "nom": "Atelier Octet",
+      "famille": "Services informatiques",
+      "secteur": "agence web",
+      "directionArtistique": {
+        "texte": "Affiche jaune et noire : nom monumental « octet » (marque fictive) et bouton noir sur aplat jaune vif, quatre rangées numérotées qui se remplissent de noir au survol, bande noire avec contact, horaires, lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence web",
+        "création de sites",
+        "jaune",
+        "noir",
+        "affiche",
+        "nom monumental",
+        "rangées"
+      ]
+    },
+    {
+      "id": "c-143-baie-de-serveurs",
+      "ordre": 143,
+      "nom": "Baie de serveurs",
+      "famille": "Services informatiques",
+      "secteur": "hébergeur et noms de domaine",
+      "directionArtistique": {
+        "texte": "Barre de support marine avec carré de statut qui respire, phrase sur gris acier, puis grille de cinq cases à filets de 1 px numérotées en chasse fixe (plateforme, assistance, horaires, coordonnées, lettre) qui s'éclairent au survol."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "hébergeur",
+        "noms de domaine",
+        "support",
+        "grille",
+        "gris acier",
+        "marine",
+        "bleu"
+      ]
+    },
+    {
+      "id": "c-144-zero-confiance",
+      "ordre": 144,
+      "nom": "Zéro confiance",
+      "famille": "Services informatiques",
+      "secteur": "cybersécurité",
+      "directionArtistique": {
+        "texte": "Barre d'alerte rouge-orangé pleine largeur « Signaler un incident » (devient noire au survol), phrase « Zéro confiance. » géante sur graphite, trois cartes empilées (Détecter, Protéger, Répondre) dont la barre verticale s'allume au survol. Angles droits, aucun chiffre de sécurité."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "sécurité informatique",
+        "alerte",
+        "graphite",
+        "rouge",
+        "cartes",
+        "barre verticale"
+      ]
+    },
+    {
+      "id": "c-145-centre-d-aide",
+      "ordre": 145,
+      "nom": "Centre d'aide",
+      "famille": "Services informatiques",
+      "secteur": "support informatique",
+      "directionArtistique": {
+        "texte": "Phrase centrale « Besoin d'aide ? Nous sommes là. », grand champ de recherche carré, quatre tuiles à contour épais (FAQ, demande, guides, espace client) qui se soulèvent au survol sur lilas clair, puis bande indigo profond avec horaires du support, coordonnées, lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "support informatique",
+        "assistance",
+        "centre d'aide",
+        "recherche",
+        "tuiles",
+        "lilas",
+        "indigo"
+      ]
+    },
+    {
+      "id": "c-146-plein-soleil",
+      "ordre": 146,
+      "nom": "Plein soleil",
+      "famille": "Énergie et environnement",
+      "secteur": "installateur solaire",
+      "directionArtistique": {
+        "texte": "Pour un installateur solaire : grand bandeau ambre « Produisez votre lumière » avec bouton d'étude et barre d'énergie dont une cellule respire, puis bande bleu nuit (horaires, contact, ressources, lettre)."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "solaire",
+        "photovoltaïque",
+        "ambre",
+        "bleu nuit",
+        "barre d'énergie",
+        "angles droits",
+        "devis"
+      ]
+    },
+    {
+      "id": "c-147-etiquette-energie",
+      "ordre": 147,
+      "nom": "Étiquette énergie",
+      "famille": "Énergie et environnement",
+      "secteur": "rénovation énergétique",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de rénovation énergétique : phrase « Consommer moins, vivre mieux », étiquette A à G en escalier à angles droits (le bloc B respire), puis bande vert pâle avec horaires, contact, ressources et lettre."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Plus Jakarta Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "rénovation énergétique",
+        "isolation",
+        "étiquette énergie",
+        "vert",
+        "blanc",
+        "angles droits",
+        "escalier"
+      ]
+    },
+    {
+      "id": "c-148-note-de-synthese",
+      "ordre": 148,
+      "nom": "Note de synthèse",
+      "famille": "Énergie et environnement",
+      "secteur": "bureau d'études environnement",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'études en environnement : phrase « Mesurer, comprendre, agir », bouton citron et tableau de quatre cases numérotées (contact, horaires, ressources, lettre) à filets fins, ardoise sombre et monospace."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bureau d'études",
+        "environnement",
+        "diagnostic",
+        "ardoise",
+        "citron vert",
+        "monospace",
+        "tableau numéroté"
+      ]
+    },
+    {
+      "id": "c-149-boucle-de-tri",
+      "ordre": 149,
+      "nom": "Boucle de tri",
+      "famille": "Énergie et environnement",
+      "secteur": "recyclage et déchets",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de recyclage ou de collecte : trois grands carrés « Réduire, Réutiliser, Recycler » qui se soulèvent au survol, sur fond kraft, puis bande noire avec contact, horaires, liens et lettre."
+      },
+      "typographies": {
+        "titre": "Staatliches",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recyclage",
+        "déchets",
+        "tri",
+        "kraft",
+        "vert",
+        "carrés",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-150-niveau-d-eau",
+      "ordre": 150,
+      "nom": "Niveau d'eau",
+      "famille": "Énergie et environnement",
+      "secteur": "service de l'eau",
+      "directionArtistique": {
+        "texte": "Pour un service de l'eau : grand panneau bleu profond avec phrase et lettre d'information, et quatre strates sur ciel pâle (contact, horaires, ressources, réseaux) séparées par des filets de bleus croissants."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Outfit",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "eau",
+        "service de l'eau",
+        "assainissement",
+        "bleu",
+        "strates",
+        "angles droits",
+        "ciel pâle"
+      ]
+    },
+    {
+      "id": "c-151-panneau-directionnel",
+      "ordre": 151,
+      "nom": "Panneau directionnel",
+      "famille": "Transport et déménagement",
+      "secteur": "transporteur routier",
+      "directionArtistique": {
+        "texte": "Pour un transporteur routier : cartouche blanc « Zone de service » façon panneau de direction, quatre plaques numérotées vers les pages utiles, ligne de route en pointillés puis bande bleu foncé (horaires, contact, lettre)."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "transporteur",
+        "transport routier",
+        "signalétique",
+        "bleu",
+        "plaques numérotées",
+        "zone de service",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-152-bande-de-chargement",
+      "ordre": 152,
+      "nom": "Bande de chargement",
+      "famille": "Transport et déménagement",
+      "secteur": "déménageur",
+      "directionArtistique": {
+        "texte": "Pour un déménageur : bande de chantier rouge et carton, phrase « Votre déménagement, étape par étape », trois cartons à ruban (devis, emballage, livraison) qui se soulèvent au survol, puis bande brune avec zone, horaires et contact."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "déménagement",
+        "déménageur",
+        "carton",
+        "ruban rouge",
+        "étapes",
+        "bande de chantier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-153-station-de-taxis",
+      "ordre": 153,
+      "nom": "Station de taxis",
+      "famille": "Transport et déménagement",
+      "secteur": "taxi / VTC",
+      "directionArtistique": {
+        "texte": "Pour un taxi ou un VTC : damier noir et blanc, « Où allez-vous ? » avec numéro en grand et bouton de réservation, panneau jaune taxi (horaires, contact), puis liens séparés de filets, réseaux et mentions."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Sora",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "taxi",
+        "VTC",
+        "réservation",
+        "damier",
+        "jaune",
+        "noir et blanc",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-154-tournee-du-jour",
+      "ordre": 154,
+      "nom": "Tournée du jour",
+      "famille": "Transport et déménagement",
+      "secteur": "coursier / livraison express",
+      "directionArtistique": {
+        "texte": "Pour un coursier ou une livraison express : mot « Livré. » géant sur orange franc, parcours en trois nœuds carrés (collecte, transit, livraison) dont le premier respire, puis bande noire avec zone, horaires et contact."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Lexend",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coursier",
+        "livraison",
+        "express",
+        "orange",
+        "noir",
+        "parcours",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-155-poste-de-controle",
+      "ordre": 155,
+      "nom": "Poste de contrôle",
+      "famille": "Transport et déménagement",
+      "secteur": "gestionnaire de flotte",
+      "directionArtistique": {
+        "texte": "Pour un gestionnaire de flotte : tableau de bord graphite et vert signal, grille de cases à filets fins (phrase, horaires avec repère qui respire, zone, contact, ressources, lettre) qui s'éclaircissent au survol."
+      },
+      "typographies": {
+        "titre": "Titillium Web",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "logistique",
+        "tableau de bord",
+        "graphite",
+        "vert signal",
+        "monospace",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-156-registre-de-la-ferme",
+      "ordre": 156,
+      "nom": "Registre de la ferme",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "exploitation agricole",
+      "directionArtistique": {
+        "texte": "Pour une exploitation agricole : phrase en capitales sur sol brun, quatre parcelles numérotées à angles droits qui dorent leur filet au survol, horaires, contact et lettre d'information. Terre et blé, net et sobre."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "exploitation agricole",
+        "ferme",
+        "parcelles",
+        "vente à la ferme",
+        "brun",
+        "blé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-157-cercle-des-adherents",
+      "ordre": 157,
+      "nom": "Cercle des adhérents",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "coopérative agricole",
+      "directionArtistique": {
+        "texte": "Pour une coopérative agricole : phrase en serif bordée d'une barre verte, trois lignes d'accès (espace adhérent, devenir client ou fournisseur, actualités) qui glissent au survol, puis bande verte avec horaires, contact et lettre."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coopérative",
+        "adhérents",
+        "agriculture",
+        "espace adhérent",
+        "vert forêt",
+        "institutionnel",
+        "serif"
+      ]
+    },
+    {
+      "id": "c-158-etiquette-du-producteur",
+      "ordre": 158,
+      "nom": "Étiquette du producteur",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "producteur en vente directe",
+      "directionArtistique": {
+        "texte": "Pour un producteur en vente directe : « Direct du champ. » centré en grandes capitales, trois étiquettes carrées à entête tomate (paniers, marchés, commande) qui se soulèvent au survol, bande tomate avec horaires, contact et lettre."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "producteur",
+        "vente directe",
+        "paniers",
+        "marché",
+        "circuit court",
+        "tomate",
+        "étiquettes"
+      ]
+    },
+    {
+      "id": "c-159-etiquette-de-cuvee",
+      "ordre": 159,
+      "nom": "Étiquette de cuvée",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "vigneron",
+      "directionArtistique": {
+        "texte": "Pour un vigneron : cartouche à double filet façon étiquette de bouteille, index en chiffres romains (cuvées, visite, caveau, commande) qui glisse au survol, puis horaires du caveau, contact et lettre. Bordeaux, ivoire et cuivre."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vigneron",
+        "domaine viticole",
+        "cuvées",
+        "dégustation",
+        "caveau",
+        "bordeaux",
+        "cuivre"
+      ]
+    },
+    {
+      "id": "c-160-fiche-technique",
+      "ordre": 160,
+      "nom": "Fiche technique",
+      "famille": "Agriculture et agroalimentaire",
+      "secteur": "transformation agroalimentaire",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de transformation agroalimentaire : filet de contrôle coloré, phrase en police mono, tableau de quatre cellules à filets fins (qualité, traçabilité, catalogue, espace pro), boutons pros, contact et bande bleu nuit."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agroalimentaire",
+        "transformation",
+        "industrie alimentaire",
+        "professionnels",
+        "fiche technique",
+        "bleu nuit",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-161-quatre-etapes",
+      "ordre": 161,
+      "nom": "Quatre étapes",
+      "famille": "Recrutement et formation",
+      "secteur": "cabinet de recrutement",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de recrutement : phrase nette, deux boutons francs (déposer une offre, candidater), quatre étapes numérotées à filet qui devient cobalt au survol, bande bleu nuit avec contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cabinet de recrutement",
+        "recrutement",
+        "étapes numérotées",
+        "offre",
+        "candidature",
+        "cobalt",
+        "blanc"
+      ]
+    },
+    {
+      "id": "c-162-mission-suivante",
+      "ordre": 162,
+      "nom": "Mission suivante",
+      "famille": "Recrutement et formation",
+      "secteur": "agence d'intérim",
+      "directionArtistique": {
+        "texte": "Pour une agence d'intérim : bloc jaune « On vous place. » avec deux gros boutons noirs (chercher une mission, recruter), trois pas numérotés, puis bande noire avec agence, horaires, métiers et lettre."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "agence d'emploi",
+        "mission",
+        "candidats",
+        "entreprises",
+        "jaune",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-163-catalogue-des-formations",
+      "ordre": 163,
+      "nom": "Catalogue des formations",
+      "famille": "Recrutement et formation",
+      "secteur": "organisme de formation professionnelle",
+      "directionArtistique": {
+        "texte": "Pour un organisme de formation professionnelle : « Se former, c'est avancer. », deux boutons, sommaire de cinq domaines numérotés qui blanchissent au survol, puis bande sapin avec horaires, contact et lettre d'information."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "organisme de formation",
+        "formation professionnelle",
+        "catalogue",
+        "stages",
+        "vert d'eau",
+        "orange",
+        "sommaire"
+      ]
+    },
+    {
+      "id": "c-164-escalier-de-niveaux",
+      "ordre": 164,
+      "nom": "Escalier de niveaux",
+      "famille": "Recrutement et formation",
+      "secteur": "centre de compétences",
+      "directionArtistique": {
+        "texte": "Pour un centre de compétences : phrase « Montez d'un niveau. », deux boutons, trois marches de hauteurs croissantes avec jauge (découvrir, pratiquer, maîtriser) qui s'éclairent au survol, puis contact, horaires et lettre. Indigo et citron."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre de compétences",
+        "montée en compétences",
+        "niveaux",
+        "parcours",
+        "indigo",
+        "citron",
+        "escalier"
+      ]
+    },
+    {
+      "id": "c-165-rendez-vous-de-carriere",
+      "ordre": 165,
+      "nom": "Rendez-vous de carrière",
+      "famille": "Recrutement et formation",
+      "secteur": "coaching professionnel",
+      "directionArtistique": {
+        "texte": "Pour un coach professionnel : phrase serif centrée « Et si la suite commençait ici ? », deux boutons francs, trois colonnes à filets (bilan, prise de poste, transition) qui prennent la couleur terracotta au survol, contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coaching professionnel",
+        "bilan de carrière",
+        "prise de poste",
+        "transition",
+        "pierre",
+        "terracotta",
+        "serif"
+      ]
+    },
+    {
+      "id": "c-166-parcours-de-soins",
+      "ordre": 166,
+      "nom": "Parcours de soins",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "clinique",
+      "directionArtistique": {
+        "texte": "Pour une clinique : bandeau d'urgence sobre, phrase en serif, carte d'horaires, rendez-vous, puis quatre colonnes nettes (services, patients, contact, lettre). Blanc et bleu clinique, angles droits."
+      },
+      "typographies": {
+        "titre": "IBM Plex Serif",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "clinique",
+        "urgence",
+        "horaires",
+        "rendez-vous",
+        "bleu clinique",
+        "angles droits",
+        "santé"
+      ]
+    },
+    {
+      "id": "c-167-planche-d-analyses",
+      "ordre": 167,
+      "nom": "Planche d'analyses",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "laboratoire d'analyses",
+      "directionArtistique": {
+        "texte": "Pour un laboratoire d'analyses : accès aux résultats en évidence, quatre cartouches numérotés en police mono dont le cadre passe au vert au survol, horaires, contact et lettre d'information. Gris-vert clair, rigoureux."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "laboratoire",
+        "analyses",
+        "résultats en ligne",
+        "vert",
+        "mono",
+        "numérotation",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-168-salle-de-lecture",
+      "ordre": 168,
+      "nom": "Salle de lecture",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "centre d'imagerie",
+      "directionArtistique": {
+        "texte": "Pour un centre d'imagerie : « Voir clair. » en grandes lettres, carte d'horaires, index d'examens dont les lignes s'illuminent au survol, carré cyan qui respire. Bleu nuit et cyan, angles droits, très net."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imagerie",
+        "radiologie",
+        "bleu nuit",
+        "cyan",
+        "index d'examens",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-169-croix-verte",
+      "ordre": 169,
+      "nom": "Croix verte",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une pharmacie : grand panneau vert avec carré « + » qui respire, lignes de services qui s'illuminent au survol, rappel de la pharmacie de garde, horaires, contact et lettre d'information. Vert et blanc, angles droits."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "vert",
+        "ordonnances",
+        "pharmacie de garde",
+        "horaires",
+        "angles droits",
+        "santé"
+      ]
+    },
+    {
+      "id": "c-170-fil-des-soins",
+      "ordre": 170,
+      "nom": "Fil des soins",
+      "famille": "Cliniques et laboratoires",
+      "secteur": "centre dentaire",
+      "directionArtistique": {
+        "texte": "Pour un centre dentaire : phrase centrée, frise de trois étapes (consultation, devis, soins) avec carrés qui respirent à tour de rôle, panneau marine avec rendez-vous et horaires, contact et lettre. Glacier et marine, angles droits."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "centre dentaire",
+        "frise",
+        "étapes",
+        "bleu glacier",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-171-rayon-clair",
+      "ordre": 171,
+      "nom": "Rayon clair",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique généraliste",
+      "directionArtistique": {
+        "texte": "Pour une boutique généraliste : quatre cases de garanties en texte, colonnes aide, livraison, paiement et compte, étiquettes de paiement en texte, lettre d'information et barre noire des mentions. Blanc, noir et rouge vif."
+      },
+      "typographies": {
+        "titre": "Work Sans",
+        "corps": null,
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique",
+        "e-commerce",
+        "garanties",
+        "livraison",
+        "paiement",
+        "colonnes",
+        "blanc noir rouge"
+      ]
+    },
+    {
+      "id": "c-172-marche-vert",
+      "ordre": 172,
+      "nom": "Marché vert",
+      "famille": "Boutique en ligne standard",
+      "secteur": "épicerie fine en ligne",
+      "directionArtistique": {
+        "texte": "Pour une épicerie fine en ligne : grand panneau vert avec phrase en serif et lettre d'information, quatre colonnes à filet vert qui vire à la terre cuite au survol, trois garanties en phrases. Crème, forêt, terre cuite."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "épicerie",
+        "marché",
+        "boutique",
+        "crème",
+        "vert forêt",
+        "terre cuite",
+        "serif",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-173-console",
+      "ordre": 173,
+      "nom": "Console",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique high-tech",
+      "directionArtistique": {
+        "texte": "Pour une boutique high-tech : « Besoin d'aide ? » en grand, lettre d'information, tableau de quatre lignes (aide, livraison, paiement, compte) qui s'illuminent au survol, garanties entre crochets. Noir bleuté, police mono."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "high-tech",
+        "électronique",
+        "boutique",
+        "mono",
+        "noir",
+        "bleu électrique",
+        "tableau",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-174-maison-ivoire",
+      "ordre": 174,
+      "nom": "Maison ivoire",
+      "famille": "Boutique en ligne standard",
+      "secteur": "mode et décoration",
+      "directionArtistique": {
+        "texte": "Pour une boutique de mode ou de décoration : pied centré, « Entrez dans la maison » en serif léger, lettre d'information centrée, quatre colonnes centrées et garanties entre filets. Ivoire, encre et bordeaux, très calme."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mode",
+        "décoration",
+        "boutique",
+        "centré",
+        "ivoire",
+        "bordeaux",
+        "serif",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-175-bons-plans",
+      "ordre": 175,
+      "nom": "Bons plans",
+      "famille": "Boutique en ligne standard",
+      "secteur": "boutique de promotions",
+      "directionArtistique": {
+        "texte": "Pour une boutique de promotions : bande jaune « Ne ratez rien » avec lettre d'information, quatre colonnes à titres jaunes sur marine, barre sombre avec étiquettes de paiement en texte et garanties. Marine et jaune vif, franc et lisible."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "promotions",
+        "bons plans",
+        "boutique",
+        "marine",
+        "jaune",
+        "lettre d'information",
+        "e-commerce"
+      ]
+    },
+    {
+      "id": "c-176-une-de-journal",
+      "ordre": 176,
+      "nom": "Une de journal",
+      "famille": "Blogs et actualités",
+      "secteur": "magazine d'actualités",
+      "directionArtistique": {
+        "texte": "Pour un magazine d'actualités : triple filet de presse, nom du site en grandes capitales Playfair, ligne de rubriques qui s'encrent au survol, puis quatre colonnes séparées par des filets (derniers articles avec carré rouge qui respire, rubriques, rédaction, lettre du matin). Papier blanc cassé, encre noire, rouge presse. Angles droits."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "magazine",
+        "actualités",
+        "presse",
+        "rubriques",
+        "derniers articles",
+        "papier",
+        "rouge"
+      ]
+    },
+    {
+      "id": "c-177-cahier-d-idees",
+      "ordre": 177,
+      "nom": "Cahier d'idées",
+      "famille": "Blogs et actualités",
+      "secteur": "blog d'entreprise",
+      "directionArtistique": {
+        "texte": "Pour un blog d'entreprise : grande bande cobalt avec la phrase « Ce qu'on apprend, on le partage. » et une carte blanche de lettre d'information qui se soulève ; bande blanche avec derniers articles et thèmes en étiquettes carrées qui se remplissent de bleu ; bande marine pour les mentions. Aplats francs, angles droits."
+      },
+      "typographies": {
+        "titre": "Inter Tight",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "blog d'entreprise",
+        "blog de marque",
+        "lettre d'information",
+        "thèmes",
+        "bleu",
+        "jaune",
+        "aplats"
+      ]
+    },
+    {
+      "id": "c-178-gazette-du-coin",
+      "ordre": 178,
+      "nom": "Gazette du coin",
+      "famille": "Blogs et actualités",
+      "secteur": "journal local",
+      "directionArtistique": {
+        "texte": "Pour un journal local : papier kraft, grand titre en Libre Caslon « Ici, on parle de chez nous. », bloc encadré d'un filet épais avec panneau vert bouteille de la rédaction (contact, bouton) et grille de six rubriques numérotées qui se remplissent de vert au survol ; articles de la semaine et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "journal local",
+        "presse locale",
+        "quartier",
+        "rubriques",
+        "rédaction",
+        "kraft",
+        "vert"
+      ]
+    },
+    {
+      "id": "c-179-rayon-des-guides",
+      "ordre": 179,
+      "nom": "Rayon des guides",
+      "famille": "Blogs et actualités",
+      "secteur": "site de ressources",
+      "directionArtistique": {
+        "texte": "Pour un site de ressources : fond vert-noir, grand champ de recherche à angles droits, index de six catégories en lignes pleines dont la barre latérale menthe s'allume et qui glissent de 6 px au survol, derniers guides avec carré menthe qui respire, lettre d'information. Typographie mono documentaire."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ressources",
+        "guides",
+        "documentation",
+        "recherche",
+        "index",
+        "sombre",
+        "menthe"
+      ]
+    },
+    {
+      "id": "c-180-edition-speciale",
+      "ordre": 180,
+      "nom": "Édition spéciale",
+      "famille": "Blogs et actualités",
+      "secteur": "média spécialisé",
+      "directionArtistique": {
+        "texte": "Pour un média spécialisé : bande orange vif avec « Ne ratez rien. » monumental et lettre d'information en noir sur orange, bande noire avec six rubriques en cases qui virent à l'orange, derniers articles, liens de collaboration et réseaux, fine bande de mentions soulignée d'un filet orange. Franc et contrasté, angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Archivo",
+        "accent": "Space Mono",
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "média",
+        "média spécialisé",
+        "lettre d'information",
+        "rubriques",
+        "orange",
+        "noir",
+        "bandes franches"
+      ]
+    },
+    {
+      "id": "c-181-tribune-rouge",
+      "ordre": 181,
+      "nom": "Tribune rouge",
+      "famille": "Sport et clubs",
+      "secteur": "club de sport",
+      "directionArtistique": {
+        "texte": "Pour un club de sport : barres franches rouge et blanc, bande noire avec « Tous sur le terrain. » en capitales Oswald et boutons d'inscription (carré rouge qui respire), puis quatre sections en cases numérotées qui virent au noir en se soulevant, horaires, contact, liens et lettre sur fond clair ; bande noire de mentions. Angles droits."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "club de sport",
+        "club sportif",
+        "inscription",
+        "sections",
+        "horaires",
+        "rouge",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-182-haute-intensite",
+      "ordre": 182,
+      "nom": "Haute intensité",
+      "famille": "Sport et clubs",
+      "secteur": "salle de fitness",
+      "directionArtistique": {
+        "texte": "Pour une salle de fitness : « Bouge. » en capitales Bebas Neue géantes, panneau d'horaires de la salle à barre verte avec carré qui respire, grille de six cours numérotés qui se remplissent de vert acide au survol, contact, liens, lettre. Anthracite et vert acide, angles droits."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fitness",
+        "salle de sport",
+        "cours collectifs",
+        "horaires",
+        "inscription",
+        "anthracite",
+        "vert acide"
+      ]
+    },
+    {
+      "id": "c-183-feu-vert",
+      "ordre": 183,
+      "nom": "Feu vert",
+      "famille": "Sport et clubs",
+      "secteur": "auto-école",
+      "directionArtistique": {
+        "texte": "Pour une auto-école : bande bleu route avec « Prêt pour la route ? », bouton jaune d'inscription qui respire et quatre panneaux carrés blancs cerclés de jaune (formations) qui se soulèvent au survol, bande claire avec horaires du bureau, contact, liens et lettre, bande marine de mentions. Angles droits."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "permis de conduire",
+        "formations",
+        "inscription",
+        "horaires",
+        "bleu",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-184-court-central",
+      "ordre": 184,
+      "nom": "Court central",
+      "famille": "Sport et clubs",
+      "secteur": "club de tennis",
+      "directionArtistique": {
+        "texte": "Pour un club de tennis : « Jeu, set et match. » en DM Serif Display sur ivoire, grand rectangle à filets verts de 3 px découpé comme un court en trois cases (horaires, contact, réservation avec bouton qui respire et lettre) puis une ligne de liens en filet ; liens qui se teintent de terre battue au survol. Angles droits."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "tennis",
+        "club de tennis",
+        "réservation",
+        "horaires",
+        "ivoire",
+        "vert",
+        "terre battue"
+      ]
+    },
+    {
+      "id": "c-185-barre-et-pointes",
+      "ordre": 185,
+      "nom": "Barre et pointes",
+      "famille": "Sport et clubs",
+      "secteur": "école de danse",
+      "directionArtistique": {
+        "texte": "Pour une école de danse : fond rose poudré, « Danse. » en Instrument Serif géant posé sur trois filets comme une barre, liste de cinq disciplines en lignes à filets qui glissent de 8 px et rosissent au survol, bouton d'inscription framboise qui respire ; bande prune avec horaires des cours, contact, liens et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "école de danse",
+        "danse",
+        "disciplines",
+        "cours",
+        "inscription",
+        "rose",
+        "prune"
+      ]
+    }
+  ]
+}

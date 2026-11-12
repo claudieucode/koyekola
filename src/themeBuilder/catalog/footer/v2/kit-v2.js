@@ -235,7 +235,7 @@ function abonnement(o = {}) {
       intro: { styles: { desktop: { fontFamily: S.font, color: S.mute, fontSize: "15px", lineHeight: 1.6 } } },
       input: { styles: { desktop: champ, mobile: { height: "56px" } }, states: { focus: { outlineStyle: "solid", outlineWidth: "2px", outlineColor: accent, outlineOffset: "4px" } } },
       button: { styles: { desktop: bouton, mobile: { minHeight: "56px" } }, states: { hover: { backgroundColor: o.survolBouton || texte, color: o.survolTexte || S.bg }, focus: focus(texte) } },
-      consent: { styles: { desktop: { fontFamily: S.font, color: S.mute, fontSize: "13px" } } },
+      consent: { styles: { desktop: { fontFamily: S.font, color: o.consentCouleur || (o.texte ? o.texte : S.mute), fontSize: "13px" } } },
       missing: { styles: { desktop: { fontFamily: S.font, color: S.fg, fontSize: "15px", lineHeight: 1.5, fontStyle: "italic", paddingTop: "4px", paddingBottom: "4px" } } }, // la partie « message » n'accepte que texte et espacement (pas de bordure)
     };
     return n;

@@ -36,3 +36,10 @@
 - 5 familles de 5 : artisans et bâtiment, commerces de proximité, services à la personne, professions libérales, vie locale et associations (liste : `CATALOGUE_QUOTIDIEN.md`, fiches : `concepts/concepts-quotidien.json`). La bibliothèque passe à **125 modèles**.
 - Animations : survols et focus soignés, pulsations lentes, effets liés au défilement et à la souris, rubans défilants ; tout est coupé sous « mouvement réduit ».
 - Limites : pas d'animation d'entrée (le moteur la remplace par un fondu de 300 ms en mouvement réduit, refusé par le test « 0 animation ») ; les rubans défilants (106, 109, 105) sont signalés par l'audit comme « hors écran » (faux positif, comme ft2-021).
+
+## Extension « carrés » : 60 modèles (ft2-126 à ft2-185), total 185
+- 12 familles de 5 (PME, industrie, conseil, informatique, énergie, transport, agriculture, recrutement, cliniques, boutique en ligne, blogs, sport) ; brief dans `BRIEF_CARRE.md`, liste dans `CATALOGUE_CARRE.md`.
+- **Angles droits** : aucun `border-radius` non nul, mesuré en Chrome sur tous les éléments et pseudo-éléments (nouveau contrôle dans `footer-v2-navigateur`, 390 / 820 / 1280 / 1920, avec et sans formulaire publié). Le point rond « ouvert maintenant » du widget Horaires (CSS partagé) est désactivé dans ces modèles.
+- **Résultats** : bibliothèque 569 réussis, bascule 2, comportements réels 19, reconstruction 128, navigateur 60 modèles = 120 réussis, isolation v2 3, ancien catalogue 5.
+- Corrigés à l'intégration : contraste du texte de consentement (kit : couleur du texte du widget), listes de widgets déclarés, ressemblance ft2-156 / ft2-167 (lettre déplacée dans la tête).
+- Limites : pas d'animation d'entrée ni de défilement continu (moteur) ; mouvements validés par test, pas vus en direct ; Figtree et Bricolage Grotesque évitées (non chargées sur le site de test) ; numéros 15 / 112 / 3237 cités dans les pieds de santé.

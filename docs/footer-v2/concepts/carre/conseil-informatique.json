@@ -1,0 +1,255 @@
+{
+  "concepts": [
+    {
+      "id": "c-136-rapport-annuel",
+      "ordre": 136,
+      "nom": "Rapport annuel",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "cabinet de conseil en stratégie",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de conseil en stratégie : phrase en serif sur papier ivoire, introduction et deux actions, puis quatre colonnes numérotées 01 à 04 sous un filet épais d'encre qui rougit (bordeaux) au survol. Angles droits, aucun chiffre de performance : les grands numéros sont de la structure."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "stratégie",
+        "cabinet",
+        "éditorial",
+        "ivoire",
+        "bordeaux",
+        "colonnes numérotées"
+      ]
+    },
+    {
+      "id": "c-137-salle-du-conseil",
+      "ordre": 137,
+      "nom": "Salle du conseil",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil en gouvernance et finance d'entreprise",
+      "directionArtistique": {
+        "texte": "Marine nuit et laiton : phrase en Cormorant avec barre verticale de laiton, cartouche « premier échange » dont le carré respire, cinq domaines (I à V) en cellules à filets qui se soulèvent au survol, puis horaires, contact, ressources et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "gouvernance",
+        "finance d'entreprise",
+        "marine",
+        "laiton",
+        "cartouche",
+        "domaines"
+      ]
+    },
+    {
+      "id": "c-138-tableau-de-controle",
+      "ordre": 138,
+      "nom": "Tableau de contrôle",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "cabinet d'audit et de conformité",
+      "directionArtistique": {
+        "texte": "Deux volets comme un dossier d'audit : volet vert sapin pleine hauteur (phrase « Auditer, mesurer, corriger. », coordonnées) et quatre cartouches blancs numérotés I à IV sur gris vert clair qui montent et verdissent au survol ; horaires, lettre et mentions en bas. Angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "audit",
+        "conformité",
+        "contrôle interne",
+        "vert sapin",
+        "deux volets",
+        "cartouches",
+        "numéros romains"
+      ]
+    },
+    {
+      "id": "c-139-sommaire",
+      "ordre": 139,
+      "nom": "Sommaire",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil et accompagnement des entreprises",
+      "directionArtistique": {
+        "texte": "Table des matières d'un ouvrage : quatre rangées géantes numérotées en capitales condensées sur blanc et noir, qui se remplissent d'orange et glissent de 28 px au survol ; dessous horaires, coordonnées et lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Roboto Condensed",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "accompagnement",
+        "sommaire",
+        "rangées",
+        "capitales",
+        "blanc",
+        "noir",
+        "orange"
+      ]
+    },
+    {
+      "id": "c-140-deux-voix",
+      "ordre": 140,
+      "nom": "Deux voix",
+      "famille": "Conseil et services aux entreprises",
+      "secteur": "conseil en ressources humaines et organisation",
+      "directionArtistique": {
+        "texte": "Pied coupé en deux aplats pleine largeur : aubergine avec phrase en serif « Bien conseiller, c'est d'abord bien écouter. » et bouton sable, sable avec ressources, horaires, coordonnées et lettre ; barre de mentions. Carré lilas qui respire. Angles droits."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil",
+        "ressources humaines",
+        "organisation",
+        "aubergine",
+        "sable",
+        "deux aplats",
+        "serif"
+      ]
+    },
+    {
+      "id": "c-141-terminal-d-etat",
+      "ordre": 141,
+      "nom": "Terminal d'état",
+      "famille": "Services informatiques",
+      "secteur": "infogérance et supervision",
+      "directionArtistique": {
+        "texte": "Fenêtre de terminal à angles droits sur noir et vert : barre de titre avec trois carrés, nom de fichier et carré de statut qui respire (indicateur de design, aucun état affirmé), phrase « Votre parc, supervisé_ » en chasse fixe, quatre colonnes commentées « // »."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "infogérance",
+        "supervision",
+        "terminal",
+        "chasse fixe",
+        "noir",
+        "vert",
+        "statut"
+      ]
+    },
+    {
+      "id": "c-142-atelier-octet",
+      "ordre": 142,
+      "nom": "Atelier Octet",
+      "famille": "Services informatiques",
+      "secteur": "agence web",
+      "directionArtistique": {
+        "texte": "Affiche jaune et noire : nom monumental « octet » (marque fictive) et bouton noir sur aplat jaune vif, quatre rangées numérotées qui se remplissent de noir au survol, bande noire avec contact, horaires, lettre. Angles droits."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence web",
+        "création de sites",
+        "jaune",
+        "noir",
+        "affiche",
+        "nom monumental",
+        "rangées"
+      ]
+    },
+    {
+      "id": "c-143-baie-de-serveurs",
+      "ordre": 143,
+      "nom": "Baie de serveurs",
+      "famille": "Services informatiques",
+      "secteur": "hébergeur et noms de domaine",
+      "directionArtistique": {
+        "texte": "Barre de support marine avec carré de statut qui respire, phrase sur gris acier, puis grille de cinq cases à filets de 1 px numérotées en chasse fixe (plateforme, assistance, horaires, coordonnées, lettre) qui s'éclairent au survol."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "hébergeur",
+        "noms de domaine",
+        "support",
+        "grille",
+        "gris acier",
+        "marine",
+        "bleu"
+      ]
+    },
+    {
+      "id": "c-144-zero-confiance",
+      "ordre": 144,
+      "nom": "Zéro confiance",
+      "famille": "Services informatiques",
+      "secteur": "cybersécurité",
+      "directionArtistique": {
+        "texte": "Barre d'alerte rouge-orangé pleine largeur « Signaler un incident » (devient noire au survol), phrase « Zéro confiance. » géante sur graphite, trois cartes empilées (Détecter, Protéger, Répondre) dont la barre verticale s'allume au survol. Angles droits, aucun chiffre de sécurité."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "sécurité informatique",
+        "alerte",
+        "graphite",
+        "rouge",
+        "cartes",
+        "barre verticale"
+      ]
+    },
+    {
+      "id": "c-145-centre-d-aide",
+      "ordre": 145,
+      "nom": "Centre d'aide",
+      "famille": "Services informatiques",
+      "secteur": "support informatique",
+      "directionArtistique": {
+        "texte": "Phrase centrale « Besoin d'aide ? Nous sommes là. », grand champ de recherche carré, quatre tuiles à contour épais (FAQ, demande, guides, espace client) qui se soulèvent au survol sur lilas clair, puis bande indigo profond avec horaires du support, coordonnées, lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "support informatique",
+        "assistance",
+        "centre d'aide",
+        "recherche",
+        "tuiles",
+        "lilas",
+        "indigo"
+      ]
+    }
+  ]
+}
