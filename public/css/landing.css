@@ -1912,3 +1912,7 @@ html.kw-pgal-lock { overflow: hidden; }
 .kw-ss-select { min-height: 40px; padding: 0 12px; border: 1px solid currentColor; border-radius: 8px; background: transparent; color: inherit; font: inherit; }
 .kw-searchcount { margin: 0; font-size: 15px; }
 .kw-sc-n { font-weight: 700; }
+
+/* BARRE DU BAS ajoutée par la plateforme sous un pied indépendant (« nom · Cookies · Confidentialité ») : chaque modèle v2 peut la présenter autrement (alignement, capitales, filet, séparateurs, empilement) via des jetons --ft-legal-* posés sur sa racine (footer/v2/bas.js). Sans jeton : rendu historique (centré, filet fin). */
+[data-kw-ft="solo"] .lp-foot-legal { display: flex; flex-wrap: wrap; align-items: var(--ft-legal-items, center); justify-content: var(--ft-legal-justify, center); flex-direction: var(--ft-legal-dir, row); gap: var(--ft-legal-gap, 0); text-align: var(--ft-legal-align, center); font-size: var(--ft-legal-size, 13px); text-transform: var(--ft-legal-case, none); letter-spacing: var(--ft-legal-track, normal); padding: var(--ft-legal-pad, 12px 20px 16px); border-top: var(--ft-legal-rule, 1px solid rgba(127, 127, 127, .25)); opacity: var(--ft-legal-opacity, .9); }
+[data-kw-ft="solo"] .lp-foot-legal .lp-foot-sep { display: var(--ft-legal-sep, inline); white-space: pre; }

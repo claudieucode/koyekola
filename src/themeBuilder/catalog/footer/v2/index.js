@@ -3,6 +3,7 @@
 // et fournit toutesConstruites() : la bibliothèque (footer.js) ne bascule sur la v2 QUE quand les 14 familles sont `built` (100 modèles). Jamais de mélange v2 / actuel dans la liste publique.
 const { wrap } = require("../moteur");
 const KitV2 = require("./kit-v2");
+const Bas = require("./bas");   // bas de page varié : ligne © + barre de la plateforme, combinaison unique par modèle
 const { G } = KitV2;
 
 const FAMILLES_V2_CLES = ["corporate-institutions", "finance-assurance", "saas-tech-startup", "ecommerce-mode-luxe", "medias", "agences-portfolios-art", "restauration-hotellerie-tourisme", "immobilier-architecture", "education-universite", "sante-bienetre", "culture-evenementiel", "associatif-ong", "auto-sport-mobilite", "minimalisme-experimental", "artisans-batiment", "commerce-proximite", "services-personne", "professions-liberales", "vie-locale", "pme-entreprise", "industrie-logistique", "conseil-b2b", "services-informatiques", "energie-environnement", "transport-demenagement", "agri-agroalimentaire", "recrutement-formation", "cliniques-laboratoires", "boutique-en-ligne", "blog-actualites", "sport-clubs", "restaurants-brasseries", "hotels-gites", "coiffure-beaute", "droit-notariat", "experts-comptables", "assurance-courtage", "agences-immobilieres", "btp-construction", "ecoles-etablissements", "cours-soutien", "evenements-receptions", "voyage-tourisme", "garages-concessions", "paysagisme-jardin", "photo-video", "veterinaires-animaux"];
@@ -33,7 +34,7 @@ function assemble({ familles = FAMILLES_V2_CLES.map(charger) } = {}) {
     const resp = m.responsive || {};
     const rows = m.structure ? m.structure.rows.map((r) => ({ ...r, ...(resp.tablet || r.tablet ? { tablet: { ...(resp.tablet || {}), ...(r.tablet || {}) } } : {}), ...(resp.mobile || r.mobile ? { mobile: { ...(resp.mobile || {}), ...(r.mobile || {}) } } : {}) })) : null;
     nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, version: m.version ?? VERSION_DEFAUT, addedAt: m.addedAt ?? AJOUT_DEFAUT, model: m,
-      ftMode: "solo", ftVars: skin.ftVars, ...(m.racine ? { racine: m.racine } : {}), v2: true, build: (k, env) => (m.compose ? m.compose(k, env || {}, G) : [wrap(k.S, rows, env || {})]) });
+      ftMode: "solo", ftVars: { ...skin.ftVars, ...Bas.varsBarre(m.id, m.bas) }, ...(m.racine ? { racine: m.racine } : {}), v2: true, build: (k, env) => { const arbre = m.compose ? m.compose(k, env || {}, G) : [wrap(k.S, rows, env || {})]; return Bas.appliquerBas(arbre, m.id, k.S, m.bas).arbre; } });
   }
   const familleDe = (f) => ({ key: f.key, label: f.label, description: f.description || "", built: f.built === true, target: f.target ?? CIBLE_V2[f.key] });
   const construites = [...parCle.values()].filter((f) => f.built === true);
