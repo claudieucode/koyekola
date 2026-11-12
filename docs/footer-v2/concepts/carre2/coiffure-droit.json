@@ -1,0 +1,264 @@
+{
+  "concepts": [
+    {
+      "id": "c-196-carnet-de-rendez-vous",
+      "ordre": 196,
+      "nom": "Carnet de rendez-vous",
+      "famille": "Coiffure et beauté",
+      "secteur": "salon de coiffure",
+      "directionArtistique": {
+        "texte": "Pour un salon de coiffure : deux demi-pages bord à bord, un panneau prune avec le nom du salon et un énorme bouton cuivre de rendez-vous, un panneau crème avec les prestations en rangées à filet et les horaires. Un seul geste : réserver. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coiffure",
+        "salon",
+        "rendez-vous",
+        "deux panneaux",
+        "prune",
+        "cuivre",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-197-barre-d-enseigne",
+      "ordre": 197,
+      "nom": "Barre d'enseigne",
+      "famille": "Coiffure et beauté",
+      "secteur": "barbier",
+      "directionArtistique": {
+        "texte": "Pour un barbier : une haute barre rouge d'enseigne à gauche (nom en capitales, bouton de réservation, coordonnées) et une zone noir charbon à droite avec trois barres franches, les soins en grandes rangées et les horaires. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "barbier",
+        "barbe",
+        "enseigne",
+        "barre latérale",
+        "noir",
+        "rouge",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-198-papier-de-l-institut",
+      "ordre": 198,
+      "nom": "Papier de l'institut",
+      "famille": "Coiffure et beauté",
+      "secteur": "institut de beauté",
+      "directionArtistique": {
+        "texte": "Pour un institut de beauté : un pied « papier à en-tête », cadre à double filet eucalyptus, nom en serif fin, adresse et horaires centrés, une seule ligne de soins séparés par des points carrés. Calme, symétrique, sans colonnes. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "institut",
+        "beauté",
+        "papier à en-tête",
+        "double filet",
+        "centré",
+        "sauge",
+        "eucalyptus",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-199-nuancier-d-onglerie",
+      "ordre": 199,
+      "nom": "Nuancier d'onglerie",
+      "famille": "Coiffure et beauté",
+      "secteur": "onglerie",
+      "directionArtistique": {
+        "texte": "Pour une onglerie : un damier de huit cases carrées bord à bord, quatre prestations en couleurs franches, une case horaires, une case coordonnées, une case réseaux et une case de rendez-vous. Chaque case est un lien ou une information. Archétype : C damier de cases."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "onglerie",
+        "ongles",
+        "nuancier",
+        "damier",
+        "cases",
+        "couleurs",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-200-le-temps-du-rituel",
+      "ordre": 200,
+      "nom": "Le temps du rituel",
+      "famille": "Coiffure et beauté",
+      "secteur": "spa",
+      "directionArtistique": {
+        "texte": "Pour un spa : sur ardoise bleutée, une frise horizontale reliant quatre points carrés (accueil, soin, repos, départ) dont le premier respire, puis une bande sable avec bouton de réservation, horaires et coordonnées. Archétype : I frise en étapes."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spa",
+        "bien-être",
+        "frise",
+        "étapes",
+        "ardoise",
+        "sable",
+        "sauge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-201-index-des-domaines",
+      "ordre": 201,
+      "nom": "Index des domaines",
+      "famille": "Droit et notariat",
+      "secteur": "cabinet d'avocats",
+      "directionArtistique": {
+        "texte": "Pour un cabinet d'avocats : un sommaire de cinq grandes lignes pleine largeur en serif (domaines d'intervention d'exemple) qui s'éclairent au survol, le nom du cabinet, un bouton bordeaux, et une bande avec coordonnées et note déontologique. Archétype : G index en lignes."
+      },
+      "typographies": {
+        "titre": "EB Garamond",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "avocat",
+        "cabinet",
+        "droit",
+        "sommaire",
+        "index",
+        "bordeaux",
+        "ivoire",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-202-marches-de-l-etude",
+      "ordre": 202,
+      "nom": "Marches de l'étude",
+      "famille": "Droit et notariat",
+      "secteur": "étude notariale",
+      "directionArtistique": {
+        "texte": "Pour une étude notariale : un pied en escalier, trois marches alignées à gauche de plus en plus étroites (nom de l'étude et sceau rouge carré, liens et adresse, note sur les mentions professionnelles), puis une fine barre pour les mentions légales. Archétype : L pied en escalier."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "notaire",
+        "étude",
+        "escalier",
+        "marches",
+        "bleu encre",
+        "parchemin",
+        "sceau",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-203-barre-du-commissaire",
+      "ordre": 203,
+      "nom": "Barre du commissaire",
+      "famille": "Droit et notariat",
+      "secteur": "commissaire de justice (huissier)",
+      "directionArtistique": {
+        "texte": "Pour un commissaire de justice (huissier) : un pied compact en deux lignes sur gris pierre, nom de l'étude à gauche, liens au centre, bouton brique « Nous contacter » à droite, puis les mentions. L'inverse d'un pied qui s'étale. Archétype : D barre unique compacte."
+      },
+      "typographies": {
+        "titre": "Roboto Condensed",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "commissaire de justice",
+        "huissier",
+        "barre",
+        "compact",
+        "une ligne",
+        "gris pierre",
+        "brique",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-204-terrain-d-entente",
+      "ordre": 204,
+      "nom": "Terrain d'entente",
+      "famille": "Droit et notariat",
+      "secteur": "médiation",
+      "directionArtistique": {
+        "texte": "Pour un cabinet de médiation : une mosaïque asymétrique de cases qui se touchent, une grande case bleu givré avec le message et le bouton, trois petites (horaires sur sable, coordonnées sur teal, liens utiles sur blanc), sans arrondi. Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "médiation",
+        "médiateur",
+        "mosaïque",
+        "cases",
+        "bleu givré",
+        "sable",
+        "teal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-205-question-posee",
+      "ordre": 205,
+      "nom": "Question posée",
+      "famille": "Droit et notariat",
+      "secteur": "conseil juridique",
+      "directionArtistique": {
+        "texte": "Pour un conseil juridique : un énorme bandeau bleu pétrole « Une question juridique ? » en capitales blanches avec soulignement safran et bouton carré, une seule colonne étroite de liens et de coordonnées à droite, puis une fine bande de mentions. Archétype : F bandeau d'appel XXL."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil juridique",
+        "juriste",
+        "appel à l'action",
+        "bandeau",
+        "bleu pétrole",
+        "safran",
+        "angles droits",
+        "coordonnées"
+      ]
+    }
+  ]
+}

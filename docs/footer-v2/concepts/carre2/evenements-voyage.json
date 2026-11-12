@@ -1,0 +1,243 @@
+{
+  "concepts": [
+    {
+      "id": "c-236-faire-part",
+      "ordre": 236,
+      "nom": "Faire-part",
+      "famille": "Événements et réceptions",
+      "secteur": "organisateur de mariages",
+      "directionArtistique": {
+        "texte": "Pour un organisateur de mariages : papier à en-tête, cadre à double filet sur greige, nom en capitales fines, trois liens centrés et coordonnées, carré central qui respire. Greige, vieux rose et prune. Angles droits."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mariage",
+        "organisateur",
+        "faire-part",
+        "double filet",
+        "greige",
+        "vieux rose"
+      ]
+    },
+    {
+      "id": "c-237-deroule-de-soiree",
+      "ordre": 237,
+      "nom": "Déroulé de soirée",
+      "famille": "Événements et réceptions",
+      "secteur": "salle de réception",
+      "directionArtistique": {
+        "texte": "Pour une salle de réception : phrase en serif, bouton de visite, coordonnées, puis frise horizontale de cinq moments reliés par des points carrés argent sur bleu paon. Angles droits."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "salle de réception",
+        "frise",
+        "soirée",
+        "bleu paon",
+        "argent",
+        "visite"
+      ]
+    },
+    {
+      "id": "c-238-la-carte-du-traiteur",
+      "ordre": 238,
+      "nom": "La carte du traiteur",
+      "famille": "Événements et réceptions",
+      "secteur": "traiteur événementiel",
+      "directionArtistique": {
+        "texte": "Pour un traiteur événementiel : cinq grandes lignes pleine largeur comme une carte de restaurant, filets grenat, flèches qui glissent ; bande grenat avec lettre et coordonnées. Pistache et grenat."
+      },
+      "typographies": {
+        "titre": "Literata",
+        "corps": "Commissioner",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traiteur",
+        "carte",
+        "index",
+        "pistache",
+        "grenat",
+        "devis"
+      ]
+    },
+    {
+      "id": "c-239-regie-son",
+      "ordre": 239,
+      "nom": "Régie son",
+      "famille": "Événements et réceptions",
+      "secteur": "DJ et sonorisation",
+      "directionArtistique": {
+        "texte": "Pour un DJ ou une sonorisation : fenêtre de console à cadre turquoise, quatre canaux à niveau, égaliseur dont les barres respirent, champ de lettre intégré. Bordeaux noir et turquoise néon."
+      },
+      "typographies": {
+        "titre": "Big Shoulders",
+        "corps": "Familjen Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "DJ",
+        "sonorisation",
+        "console",
+        "égaliseur",
+        "turquoise",
+        "fenêtre"
+      ]
+    },
+    {
+      "id": "c-240-cahier-des-charges",
+      "ordre": 240,
+      "nom": "Cahier des charges",
+      "famille": "Événements et réceptions",
+      "secteur": "séminaires d'entreprise",
+      "directionArtistique": {
+        "texte": "Pour des séminaires d'entreprise : barre olive pleine hauteur à gauche (nom, devis, coordonnées) et fiche technique en tableau (lieux, restauration, animation, hébergement, horaires) sur brume. Prune en accent."
+      },
+      "typographies": {
+        "titre": "Schibsted Grotesk",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "séminaire",
+        "tableau",
+        "barre latérale",
+        "olive",
+        "prune",
+        "fiche technique"
+      ]
+    },
+    {
+      "id": "c-241-damier-des-destinations",
+      "ordre": 241,
+      "nom": "Damier des destinations",
+      "famille": "Voyages et tourisme",
+      "secteur": "agence de voyages",
+      "directionArtistique": {
+        "texte": "Pour une agence de voyages : huit cases carrées en damier de bord à bord (nom sur papaye, cinq destinations en exemples, coordonnées, horaires) sur encre azur. Angles droits."
+      },
+      "typographies": {
+        "titre": "Chivo Mono",
+        "corps": "Geologica",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence de voyages",
+        "destinations",
+        "damier",
+        "papaye",
+        "encre"
+      ]
+    },
+    {
+      "id": "c-242-deux-accueils",
+      "ordre": 242,
+      "nom": "Deux accueils",
+      "famille": "Voyages et tourisme",
+      "secteur": "office de tourisme",
+      "directionArtistique": {
+        "texte": "Pour un office de tourisme : deux demi-pages bord à bord, bienvenue sur lichen avec horaires d'accueil, face à un vert profond avec recherche, six accès et coordonnées. Coquelicot en accent."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Overpass",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "office de tourisme",
+        "accueil",
+        "recherche",
+        "lichen",
+        "vert",
+        "coquelicot"
+      ]
+    },
+    {
+      "id": "c-243-depart-immediat",
+      "ordre": 243,
+      "nom": "Départ immédiat",
+      "famille": "Voyages et tourisme",
+      "secteur": "circuits organisés",
+      "directionArtistique": {
+        "texte": "Pour des circuits : bandeau glacier XXL avec capitales géantes et gros bouton noir, puis basalte avec garanties d'exemple, lettre et colonne étroite de liens à droite."
+      },
+      "typographies": {
+        "titre": "Antonio",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "circuits",
+        "bandeau",
+        "colonne étroite",
+        "basalte",
+        "glacier",
+        "garanties"
+      ]
+    },
+    {
+      "id": "c-244-nom-de-la-maison",
+      "ordre": 244,
+      "nom": "Nom de la maison",
+      "famille": "Voyages et tourisme",
+      "secteur": "location de vacances",
+      "directionArtistique": {
+        "texte": "Pour une location de vacances : nom monumental en serif pervenche au centre d'un grand vide chaux, frise de huit carrés du samedi au samedi, trois liens, bande tournesol."
+      },
+      "typographies": {
+        "titre": "Yeseva One",
+        "corps": "Urbanist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location de vacances",
+        "gîte",
+        "nom monumental",
+        "chaux",
+        "tournesol",
+        "pervenche"
+      ]
+    },
+    {
+      "id": "c-245-plan-du-pont",
+      "ordre": 245,
+      "nom": "Plan du pont",
+      "famille": "Voyages et tourisme",
+      "secteur": "croisières",
+      "directionArtistique": {
+        "texte": "Pour des croisières : grande case teal avec appel à embarquer, accolée à trois petites cases (garanties en texte d'exemple, coordonnées sur cuivre, mers à explorer). Perle, teal et cuivre."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Josefin Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "croisière",
+        "mosaïque",
+        "garanties",
+        "teal",
+        "cuivre",
+        "perle"
+      ]
+    }
+  ]
+}

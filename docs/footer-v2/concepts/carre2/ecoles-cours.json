@@ -1,0 +1,249 @@
+{
+  "concepts": [
+    {
+      "id": "c-226-papier-a-en-tete",
+      "ordre": 226,
+      "nom": "Papier à en-tête",
+      "famille": "Écoles et établissements",
+      "secteur": "école privée",
+      "directionArtistique": {
+        "texte": "Archétype J. Cartouche centré entre deux doubles filets sauge : nom de l'école en grand serif, devise, adresse, ligne de liens (inscriptions, portes ouvertes sans date, espace parents). Bleu nuit ; carré qui respire devant « Portes ouvertes ». Ni horaires ni lettre."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "école privée",
+        "papier à en-tête",
+        "centré",
+        "doubles filets",
+        "bleu nuit",
+        "sauge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-227-barre-des-niveaux",
+      "ordre": 227,
+      "nom": "Barre des niveaux",
+      "famille": "Écoles et établissements",
+      "secteur": "lycée",
+      "directionArtistique": {
+        "texte": "Archétype A. Barre verticale violette de 320 px sur toute la hauteur : « Lycée. » en capitales condensées, quatre niveaux empilés qui s'indentent, bouton d'inscription ; zone claire avec grande phrase, adresse et lettre."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lycée",
+        "barre latérale",
+        "niveaux",
+        "violet",
+        "béton",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-228-du-dossier-a-la-rentree",
+      "ordre": 228,
+      "nom": "Du dossier à la rentrée",
+      "famille": "Écoles et établissements",
+      "secteur": "centre de formation",
+      "directionArtistique": {
+        "texte": "Archétype I. Grand titre d'invitation puis frise de quatre étapes à repères carrés corail reliés par un filet (information, dossier, financement, entrée en formation) ; ligne d'adresse. Pétrole et corail."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Noto Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre de formation",
+        "frise",
+        "étapes",
+        "pétrole",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-229-campus",
+      "ordre": 229,
+      "nom": "Campus monumental",
+      "famille": "Écoles et établissements",
+      "secteur": "école de commerce",
+      "directionArtistique": {
+        "texte": "Archétype B. Le mot « Campus. » immense en serif saumon centré dans un grand vide indigo, bouton Candidater, une ligne de quatre liens au-dessus, mentions dessous."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "école de commerce",
+        "nom monumental",
+        "centré",
+        "indigo",
+        "saumon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-230-les-gros-blocs",
+      "ordre": 230,
+      "nom": "Les gros blocs",
+      "famille": "Écoles et établissements",
+      "secteur": "crèche",
+      "directionArtistique": {
+        "texte": "Archétype H. Mosaïque asymétrique de blocs de jeu : grande case jaune (nom, phrase, horaires d'accueil) et trois cases plus petites pêche, menthe et blanche (inscrire, visiter, espace parents) qui se soulèvent ; barre marine pour l'adresse."
+      },
+      "typographies": {
+        "titre": "Fredoka",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "crèche",
+        "mosaïque",
+        "blocs",
+        "jaune",
+        "pêche",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-231-cahier-de-textes",
+      "ordre": 231,
+      "nom": "Cahier de textes",
+      "famille": "Cours et soutien scolaire",
+      "secteur": "soutien scolaire",
+      "directionArtistique": {
+        "texte": "Archétype G. Sommaire de cahier : cinq lignes pleine largeur (primaire, collège, lycée, supérieur, essai gratuit) en grand serif, flèche qui glisse, marge rouge à gauche ; ligne d'adresse et de mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "soutien scolaire",
+        "index",
+        "niveaux",
+        "essai gratuit",
+        "marine",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-232-damier-des-langues",
+      "ordre": 232,
+      "nom": "Damier des langues",
+      "famille": "Cours et soutien scolaire",
+      "secteur": "cours de langues",
+      "directionArtistique": {
+        "texte": "Archétype C. Damier de huit cases égales sans espace : six langues aux codes géants (EN, ES, DE, IT, FR, ZH) qui s'inversent au survol, case planning et case adresse. Papier, bleu et rouge."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cours de langues",
+        "damier",
+        "codes géants",
+        "planning",
+        "bleu",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-233-lecteur-de-cours",
+      "ordre": 233,
+      "nom": "Lecteur de cours",
+      "famille": "Cours et soutien scolaire",
+      "secteur": "cours de musique",
+      "directionArtistique": {
+        "texte": "Archétype K. Le pied est une fenêtre de lecteur audio à contour laiton : barre de titre à voyant qui pulse, playlist de cinq instruments qui s'allument, planning et adresse en pied de fenêtre, trois touches carrées. Aubergine et laiton."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cours de musique",
+        "fenêtre",
+        "playlist",
+        "planning",
+        "aubergine",
+        "laiton",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-234-commencez-maintenant",
+      "ordre": 234,
+      "nom": "Commencez maintenant",
+      "famille": "Cours et soutien scolaire",
+      "secteur": "auto-formation en ligne",
+      "directionArtistique": {
+        "texte": "Archétype F. Bandeau XXL « Apprenez à votre rythme » avec énorme bouton rose qui respire, colonne étroite de liens à droite (catalogue, mon espace, certificats, aide, contact), lettre sur une ligne. Ardoise nuit et rose vif."
+      },
+      "typographies": {
+        "titre": "Inter Tight",
+        "corps": "Space Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "formation en ligne",
+        "bandeau d'appel",
+        "colonne de liens",
+        "ardoise",
+        "rose",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-235-barre-de-prepa",
+      "ordre": 235,
+      "nom": "Barre de prépa",
+      "famille": "Cours et soutien scolaire",
+      "secteur": "préparation aux concours",
+      "directionArtistique": {
+        "texte": "Archétype D. Pied compact en deux lignes : nom en slab serif, quatre concours en cases à cocher carrées, bouton d'essai gratuit qui respire, puis adresse et mentions sous un filet orange. Gris acier et orange."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "préparation aux concours",
+        "barre compacte",
+        "cases à cocher",
+        "gris acier",
+        "orange",
+        "angles droits"
+      ]
+    }
+  ]
+}

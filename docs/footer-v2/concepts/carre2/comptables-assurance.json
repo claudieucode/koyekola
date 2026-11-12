@@ -1,0 +1,254 @@
+{
+  "concepts": [
+    {
+      "id": "c-206-sommaire-du-cabinet",
+      "ordre": 206,
+      "nom": "Sommaire du cabinet",
+      "famille": "Experts-comptables et gestion",
+      "secteur": "expert-comptable",
+      "directionArtistique": {
+        "texte": "Sommaire en cinq grandes lignes pleine largeur sur papier jaune pâle : folio, titre serif, pointillés, flèche ; retrait qui grandit au survol ; une barre encre pour contact et mentions. Archétype G."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "expert-comptable",
+        "sommaire",
+        "index",
+        "papier jaune",
+        "rouge comptable",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-207-bulletin-de-paie",
+      "ordre": 207,
+      "nom": "Bulletin de paie",
+      "famille": "Experts-comptables et gestion",
+      "secteur": "gestion de paie",
+      "directionArtistique": {
+        "texte": "Colonne menthe pleine hauteur à gauche (nom, phrase, lettre, contact, mentions) face à un bulletin graphite : en-tête et six lignes zébrées en mono qui se remplissent de menthe au survol. Archétype A."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "gestion de paie",
+        "bulletin",
+        "colonne latérale",
+        "zèbre",
+        "graphite",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-208-echeancier",
+      "ordre": 208,
+      "nom": "Échéancier",
+      "famille": "Experts-comptables et gestion",
+      "secteur": "conseil fiscal",
+      "directionArtistique": {
+        "texte": "Damier de douze carrés de bord à bord, janvier à décembre, chiffres géants, « À renseigner » (aucune date inventée), remplissage marine au survol ; ligne de titre et barre de contact. Archétype C."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Onest",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conseil fiscal",
+        "calendrier",
+        "damier",
+        "glacier",
+        "marine",
+        "chiffres géants",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-209-deux-demi-pages",
+      "ordre": 209,
+      "nom": "Deux demi-pages",
+      "famille": "Experts-comptables et gestion",
+      "secteur": "centre de gestion",
+      "directionArtistique": {
+        "texte": "Deux demi-pages de couleurs opposées : message en grand serif sur prune à gauche, actions en grandes lignes flèchées sur sable rosé à droite, mentions en bas. Archétype E."
+      },
+      "typographies": {
+        "titre": "DM Serif Text",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre de gestion",
+        "adhérents",
+        "deux demi-pages",
+        "prune",
+        "sable",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-210-marches-de-l-audit",
+      "ordre": 210,
+      "nom": "Marches de l'audit",
+      "famille": "Experts-comptables et gestion",
+      "secteur": "audit",
+      "directionArtistique": {
+        "texte": "Escalier de quatre marches alignées à gauche et de plus en plus étroites (100, 76, 52, 30 %), AUDIT en capitales étroites sur saumon, liste de contrôle à cases carrées, contact puis lettre. Archétype L."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "audit",
+        "escalier",
+        "liste de contrôle",
+        "nuit",
+        "saumon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-211-trois-etapes",
+      "ordre": 211,
+      "nom": "Trois étapes",
+      "famille": "Assurance et courtage",
+      "secteur": "courtier en assurance",
+      "directionArtistique": {
+        "texte": "Frise de trois étapes (décrire, comparer, choisir) reliées par un trait épais, ouvertes par des carrés pleins ; barre aubergine avec contact, note ORIAS à renseigner (aucun numéro) et mentions. Archétype I."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "courtier",
+        "assurance",
+        "frise",
+        "étapes",
+        "devis",
+        "pêche",
+        "aubergine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-212-sinistre-d-abord",
+      "ordre": 212,
+      "nom": "Sinistre, d'abord",
+      "famille": "Assurance et courtage",
+      "secteur": "agence d'assurance",
+      "directionArtistique": {
+        "texte": "Bandeau XXL orange « Déclarer un sinistre » avec grand bouton ; dessous, nom de l'agence, horaires et note d'assistance (aucun numéro inventé) à gauche, colonne étroite de liens produits à droite. Archétype F."
+      },
+      "typographies": {
+        "titre": "Bitter",
+        "corps": "Hind",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence d'assurance",
+        "sinistre",
+        "bandeau XXL",
+        "assistance",
+        "menthe",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-213-fenetre-adherent",
+      "ordre": 213,
+      "nom": "Fenêtre adhérent",
+      "famille": "Assurance et courtage",
+      "secteur": "mutuelle",
+      "directionArtistique": {
+        "texte": "Pied dessiné comme une fenêtre d'application : barre de titre encre à trois carrés, menu de quatre entrées, panneau d'aide avec coordonnées et horaires, barre d'état pour les mentions. Archétype K."
+      },
+      "typographies": {
+        "titre": "Literata",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mutuelle",
+        "adhérent",
+        "fenêtre",
+        "interface",
+        "taupe",
+        "vert sapin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-214-mosaique-de-protection",
+      "ordre": 214,
+      "nom": "Mosaïque de protection",
+      "famille": "Assurance et courtage",
+      "secteur": "prévoyance",
+      "directionArtistique": {
+        "texte": "Mosaïque asymétrique : une grande case « Protéger » et trois petites (anticiper, transmettre, nous joindre) qui se soulèvent au survol ; une ligne d'assistance et de mentions. Archétype H."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "prévoyance",
+        "mosaïque",
+        "asymétrique",
+        "vert nuit",
+        "or pâle",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-215-rendez-vous-prive",
+      "ordre": 215,
+      "nom": "Rendez-vous privé",
+      "famille": "Assurance et courtage",
+      "secteur": "gestion de patrimoine",
+      "directionArtistique": {
+        "texte": "Le nom du cabinet en serif monumental au centre d'un grand vide ivoire entre deux doubles filets, un bouton de rendez-vous, deux liens discrets et une ligne de mentions réglementaires à renseigner. Archétype B."
+      },
+      "typographies": {
+        "titre": "Prata",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "gestion de patrimoine",
+        "nom monumental",
+        "minimal",
+        "ivoire",
+        "marine",
+        "or vieilli",
+        "angles droits"
+      ]
+    }
+  ]
+}
