@@ -218,11 +218,10 @@ const noteSynthese = modeleV2({
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-149 « Boucle de tri » — recyclage et gestion des déchets
-// Idée : le geste de TRI en trois temps. Fond kraft, encre presque noire, vert de recyclage. Trois grands carrés à filet épais : « 1 Réduire », « 2 Réutiliser », « 3 Recycler » ; au survol le carré s'éclaircit,
-// se soulève de 6 px et la flèche → glisse. Le premier carré respire lentement. Sous les carrés, une bande noire : contact, horaires, liens, lettre. Les trois carrés pointent vers
-// les pages du site (conseils, questions, contact) : intitulés d'exemple à renommer dans l'éditeur. Polices : Staatliches (titres, capitales) et Work Sans (texte). Mobile : carrés en pile.
+// ft2-149 « Boucle de tri » — recyclage et gestion des déchets — REFONTE (archétype L : pied en escalier, bandes de largeurs décroissantes alignées à gauche)
+// Idée : la hiérarchie du TRI en marches. Sous la phrase kraft « Ce qui se trie se transforme. », trois bandes alignées à gauche dont la largeur DÉCROÎT : 1 Réduire (la plus large, vert), 2 Réutiliser (kraft foncé), 3 Recycler (la plus étroite,
+// crème à filet épais). Chaque marche est un lien : au survol elle glisse de 10 px et s'éclaircit ; le petit carré de la première respire lentement. Une base noire pleine largeur porte horaires, contact et lettre ; liens et mentions dessous.
+// Les trois marches pointent vers les pages du site (conseils, questions, contact) : intitulés d'exemple à renommer dans l'éditeur. Polices : Staatliches (titres, capitales) et Work Sans (texte). Angles droits. Mobile : marches de 100, 90 et 80 %.
 const tri = identite({
   key: "c149", label: "Kraft, encre et vert recyclage", humeur: "light",
   fond: "#e8d9b9", texte: "#1b1a16", discret: "#4c4638", accent: "#14672e", surface: "#d9c69d", encre: "#1b1a16", surEncre: "#ffffff",
@@ -234,48 +233,47 @@ const KRAFT = "#e8d9b9", ENCRE = "#1b1a16", VERTR = "#14672e", VERTC = "#8fe07a"
 const boucleDeTri = modeleV2({
   id: identifiantV2(149, "boucle-de-tri"), concept: "c-149-boucle-de-tri",
   name: "Boucle de tri", family: FAM,
-  description: "Pour une entreprise de recyclage ou de collecte : trois grands carrés « Réduire, Réutiliser, Recycler » qui se soulèvent au survol, sur fond kraft, puis bande noire avec contact, horaires, liens et lettre.",
-  tags: ["recyclage", "déchets", "tri", "kraft", "vert", "carrés", "angles droits"],
+  description: "Pour une entreprise de recyclage ou de collecte : trois marches de largeur décroissante (Réduire, Réutiliser, Recycler) alignées à gauche sur fond kraft, qui glissent au survol, puis base noire avec horaires, contact et lettre.",
+  tags: ["recyclage", "déchets", "tri", "kraft", "vert", "escalier", "marches", "angles droits"],
   identity: tri,
   racine: racineDe(ENCRE, "#f4ecd8"),
   widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
-    const S = k.S;
+    const S = k.S, NBSP = "\u00a0";
     const phrase = G.geant(`<p>Ce qui se trie<br>se transforme.</p>`, { taille: [44, 96], tablette: { taille: [64, 84] }, mobile: { taille: [44, 60] }, lh: 1.0, suivi: "0.01em", poids: "400", police: S.head, couleur: ENCRE, extra: { textTransform: "uppercase" } })(k, env);
-    const intro = k.T("<p>Collecte, déchèterie, conseils de tri : trois gestes simples pour que chaque matière retrouve une seconde vie.</p>", { fontSize: "17px", lineHeight: 1.55, color: ENCRE, fontFamily: S.font, maxWidth: "420px" });
-    const gauche = G.colonne(k, [phrase], { poids: 7, min: "300px" });
-    const droite = G.colonne(k, [intro], { poids: 4, min: "280px", soi: "flex-end" });
-    const tete = G.bande(k, [gauche, droite], { fond: KRAFT, gap: "32px 64px", aligne: "flex-end", padV: ["88px", "68px", "48px"], padB: ["40px", "36px", "28px"], padH: ["48px", "32px", "20px"], nom: "Tri" });
-    // trois carrés à filet épais
-    const carre = (num, titre, sous, url) => {
-      const nombre = k.T(`<p>${num}</p>`, { fontFamily: S.head, fontSize: "20px", color: VERTR, lineHeight: 1 });
-      const n = num === "1" ? k.row([nombre, souffle(aplat(k, VERTR, "10px", { l: "10px", grow: 0, base: "10px" }), 3200)], { gap: "10px", alignItems: "center", flexWrap: "nowrap" }) : nombre;
-      const l = k.LINK(`${titre} →`, url, { fontFamily: S.head, fontSize: "36px", fontWeight: "400", color: ENCRE, textDecoration: "none", lineHeight: 1.05, textTransform: "uppercase", letterSpacing: "0.02em", display: "flex", alignItems: "center", minHeight: "44px", transitionDuration: DUREE, borderRadius: "0px" });
-      Moteur.finishNode(S, l);
-      l.states = { hover: { transform: { x: 6 } }, focus: GK.focus(VERTR) };
-      l.styles.desktop = { ...l.styles.desktop, minHeight: "44px" };
-      const s = k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.5, color: ENCRE, fontFamily: S.font });
-      const c = k.col([n, l, s], { backgroundColor: KRAFT, borderStyle: "solid", borderWidth: "3px", borderColor: ENCRE, paddingTop: "26px", paddingBottom: "30px", paddingLeft: "26px", paddingRight: "26px", gap: "12px", flexGrow: 1, flexBasis: "0px", minWidth: "240px", minHeight: "170px", transitionDuration: DUREE, borderRadius: "0px" });
-      c.states = { hover: { backgroundColor: "#f3e8cf", transform: { y: -6 } } };
-      return c;
+    const tete = G.bande(k, [phrase], { fond: KRAFT, colonne: true, padV: ["80px", "64px", "44px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "Tri" });
+    // une marche : bande à gauche, largeur propre (bureau, tablette, mobile) ; lien-titre + phrase ; glisse au survol
+    const marche = (num, titre, sous, url, largeurs, o) => {
+      const titreLien = k.LINK(`${num}${NBSP}${NBSP}${titre} →`, url, { fontFamily: S.head, fontSize: "fluid:30-44", fontWeight: "400", color: o.texte, textDecoration: "none", lineHeight: 1.05, textTransform: "uppercase", letterSpacing: "0.02em", display: "flex", alignItems: "center", minHeight: "44px", transitionDuration: DUREE, borderRadius: "0px" });
+      Moteur.finishNode(S, titreLien);
+      titreLien.states = { hover: { transform: { x: 4 } }, focus: GK.focus(o.texte) };
+      titreLien.styles.desktop = { ...titreLien.styles.desktop, minHeight: "44px" };
+      const phraseMarche = k.T(`<p>${sous}</p>`, { fontSize: "16px", lineHeight: 1.5, color: o.texte, fontFamily: S.font, maxWidth: "420px", flexGrow: 1, flexBasis: "260px", minWidth: "0px" });
+      const enfants = o.souffle ? [k.row([titreLien, souffle(aplat(k, o.texte, "10px", { l: "10px", grow: 0, base: "10px" }), 3200)], { gap: "14px", flexWrap: "nowrap", alignItems: "center" }), phraseMarche] : [titreLien, phraseMarche];
+      const b = G.bande(k, enfants, { fond: o.fond, gap: "14px 40px", aligne: "center", max: "100%", padV: ["34px", "30px", "26px"], padH: ["48px", "32px", "20px"], nom: `Marche ${num}`, ...(o.cadre ? { filetHaut: { epaisseur: "4px", couleur: ENCRE } } : {}) });
+      Object.assign(b.styles.desktop, { width: largeurs[0], alignSelf: "flex-start", boxSizing: "border-box", transitionDuration: DUREE, ...(o.cadre ? { borderBottomWidth: "4px", borderRightWidth: "4px", borderStyle: "solid", borderColor: ENCRE } : {}) });
+      b.styles.tablet = { ...(b.styles.tablet || {}), width: largeurs[1] };
+      b.styles.mobile = { ...(b.styles.mobile || {}), width: largeurs[2] };
+      b.states = { hover: { transform: { x: 10 }, backgroundColor: o.survol } };
+      return b;
     };
-    const c1 = carre("1", "Réduire", "Moins d'emballages, moins de déchets : les bons réflexes à la maison et au bureau.", "/blog");
-    const c2 = carre("2", "Réutiliser", "Donner, réparer, emprunter : ce qui sert encore n'a pas à partir à la benne.", "/faq");
-    const c3 = carre("3", "Recycler", "Où déposer quoi, à quel moment : consignes de tri et horaires de collecte.", "/contact");
-    const carres = G.ligne(k, [c1, c2, c3], { gap: "20px", aligne: "stretch", largeur: "100%" });
-    const bandeCarres = G.bande(k, [carres], { fond: KRAFT, colonne: true, padV: ["16px", "16px", "12px"], padB: ["72px", "56px", "40px"], padH: ["48px", "32px", "20px"], nom: "Carrés" });
-    // bande noire
+    const m1 = marche("1", "Réduire", "Moins d'emballages, moins de déchets : les bons réflexes à la maison et au bureau.", "/blog", ["92%", "92%", "100%"], { fond: VERTR, texte: "#ffffff", survol: "#1b7f3a", souffle: true });
+    const m2 = marche("2", "Réutiliser", "Donner, réparer, emprunter : ce qui sert encore n'a pas à partir à la benne.", "/faq", ["68%", "76%", "90%"], { fond: "#d9c69d", texte: ENCRE, survol: "#cdb784" });
+    const m3 = marche("3", "Recycler", "Où déposer quoi, à quel moment : consignes de tri.", "/contact", ["44%", "58%", "80%"], { fond: "#f6edd6", texte: ENCRE, survol: "#ffffff", cadre: true });
+    // la base : noire, pleine largeur ; horaires, contact et lettre, puis liens, réseaux et mentions
     const colHoraires = bloc(k, "Horaires de collecte", [horaires(k, { couleur: "#f4ecd8" })], { couleurTitre: VERTC, poids: 1.1 });
     const colContact = bloc(k, "Nous joindre", [coordonnees(k, { couleur: "#f4ecd8", lien: "#f4ecd8", survol: VERTC, focus: VERTC })], { couleurTitre: VERTC, poids: 1.1 });
-    const colLiens = bloc(k, "Liens utiles", listeLiens(k, [["Conseils de tri", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"], ["Contact", "/contact"]], { couleur: "#f4ecd8", survol: { color: VERTC, transform: { x: 4 } }, focus: VERTC }), { couleurTitre: VERTC, gap: "0px", min: "200px" });
     const abo = abonnement(k, env, { titre: "La lettre du tri", intro: "Jours de collecte, nouvelles consignes : un message de temps en temps.", accent: VERTC, texte: "#f4ecd8", couleurTitre: VERTC, couleurIntro: "#cfc6ae", couleurBouton: ENCRE, survolBouton: "#ffffff", survolTexte: ENCRE });
-    const colLettre = G.colonne(k, [abo], { poids: 1.5, min: "260px" });
-    const grille = G.ligne(k, [colHoraires, colContact, colLiens, colLettre], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const reseaux = G.reseauxTexte(reseauxEx, { couleur: "#f4ecd8", survol: VERTC, focus: VERTC, taille: 14 })(k, env);
+    const colLettre = G.colonne(k, [abo], { poids: 1.6, min: "260px" });
+    const grille = G.ligne(k, [colHoraires, colContact, colLettre], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const liens = G.ligne(k, [...listeLiens(k, [["Conseils de tri", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"], ["Contact", "/contact"]], { couleur: "#f4ecd8", taille: 15, survol: { color: VERTC, transform: { y: -2 } }, focus: VERTC }).map((l) => { l.styles.desktop.display = "inline-flex"; return l; }), G.reseauxTexte(reseauxEx, { couleur: "#f4ecd8", survol: VERTC, focus: VERTC, taille: 14 })(k, env)], { gap: "0px 32px", aligne: "center", largeur: "100%" });
     const mentions = GK.ligneLegale({ taille: 13, sansCookies: true, couleur: "#cfc6ae", liens: "#f4ecd8" })(k, env);
-    const noir = G.bande(k, [grille, trait(k, "#f4ecd833"), k.row([reseaux], { width: "100%" }), mentions], { colonne: true, gap: "32px", fond: ENCRE, padV: ["72px", "56px", "48px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Contact" });
+    const noir = G.bande(k, [grille, liens, trait(k, "#f4ecd833"), mentions], { colonne: true, gap: "32px", fond: ENCRE, padV: ["72px", "56px", "48px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Contact" });
     noir.styles.desktop.color = "#f4ecd8"; // la ligne légale de la plateforme reprend la couleur de texte de la dernière bande
-    return [G.racine(k, [tete, bandeCarres, noir])];
+    // le fond kraft derrière les marches étroites : la racine du pied (ligne légale de la plateforme) reste noire, le conteneur des bandes est kraft
+    const bandes = G.racine(k, [tete, m1, m2, m3, noir]);
+    bandes.styles.desktop.backgroundColor = KRAFT;
+    return [bandes];
   },
 }, FAM);
 

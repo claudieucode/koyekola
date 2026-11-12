@@ -218,7 +218,7 @@
       "famille": "Commerces de proximité",
       "secteur": "épicerie",
       "directionArtistique": {
-        "texte": "Pied d'épicerie fine ou de primeur : jaune citron et vert feuille, grand ruban qui défile, trois étals en cartes penchées (horaires, retrait en magasin, adresse) qui se redressent au survol."
+        "texte": "Pied d'épicerie fine ou de primeur en MOSAÏQUE asymétrique : une grande case vert feuille (« Du frais, tous les jours. », rayons, bouton « Préparer mon panier ») et trois petites cases jaunes à filet vert (horaires, adresse, liens) qui se soulèvent au survol. Angles droits, petit carré qui respire."
       },
       "typographies": {
         "titre": "Archivo",
@@ -232,7 +232,7 @@
         "marché",
         "jaune",
         "vert",
-        "ruban",
+        "mosaïque",
         "retrait en magasin",
         "commerce de proximité"
       ]

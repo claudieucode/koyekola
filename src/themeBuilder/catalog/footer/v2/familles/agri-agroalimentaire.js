@@ -50,9 +50,10 @@ function cartouche(k, enfants, o) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-156 « Registre de la ferme » — exploitation agricole
-// Idée : le pied est un CADASTRE. Sol labouré brun foncé, phrase en capitales « De la parcelle à votre table. », puis quatre parcelles numérotées (cultures, élevage, vente à la ferme, visites) dont le filet
-// du haut s'épaissit en blé doré et le fond se réchauffe au survol ; sous la grille, horaires (avec un carré qui « respire »), contact, liens et lettre. Polices : Archivo (titres) et Work Sans.
+// ft2-156 « Registre de la ferme » — exploitation agricole · archétype C (damier de cases égales)
+// Idée : le pied est un CADASTRE. Sol labouré brun foncé ; une ligne d'en-tête (phrase en capitales + bouton), puis un DAMIER de huit cases égales à angles droits, damé comme un parcellaire :
+// quatre parcelles-liens (cultures, élevage, vente à la ferme, visites), puis horaires (carré qui « respire »), adresse, liens rapides et lettre. Chaque case est une information ou un lien ; elles se
+// teintent au survol. Polices : Archivo (titres) et Work Sans.
 const sol = identite({
   key: "c156", label: "Sol labouré et blé doré", humeur: "dark",
   fond: "#2a1f17", texte: "#f3ead8", discret: "#cdbfa6", accent: "#e3b448", surface: "#382a20", encre: "#2a1f17", surEncre: "#f3ead8",
@@ -64,33 +65,44 @@ const SOL = "#2a1f17", SOL2 = "#382a20", SOL3 = "#46352a", BLE = "#e3b448", PAIL
 const registreFerme = modeleV2({
   id: identifiantV2(156, "registre-de-la-ferme"), concept: "c-156-registre-de-la-ferme",
   name: "Registre de la ferme", family: FAM,
-  description: "Pour une exploitation agricole : phrase en capitales sur sol brun, quatre parcelles numérotées à angles droits qui dorent leur filet au survol, horaires, contact et lettre d'information. Terre et blé, net et sobre.",
-  tags: ["exploitation agricole", "ferme", "parcelles", "vente à la ferme", "brun", "blé", "angles droits"],
+  description: "Pour une exploitation agricole : un damier de huit cases égales à angles droits, comme un cadastre. Parcelles-liens (cultures, élevage, vente, visites), horaires, adresse, liens et lettre, sur sol brun et blé doré.",
+  tags: ["exploitation agricole", "ferme", "damier", "cadastre", "vente à la ferme", "brun", "blé", "angles droits"],
   identity: sol,
   racine: racineDe(SOL),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["text", "link", "button", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>De la parcelle<br><span style="color:${BLE}">à votre table.</span></p>`, { taille: [44, 104], tablette: { taille: [52, 68] }, mobile: { taille: [40, 56] }, lh: 1.0, suivi: "-0.02em", poids: "800", police: S.head, couleur: PAILLE, extra: { textTransform: "uppercase" } })(k, env);
-    const mot = k.T("<p>Cultures, élevage, vente à la ferme : tout ce que nous produisons, et comment venir le chercher.</p>", { fontSize: "17px", lineHeight: 1.6, color: S.mute, fontFamily: S.font, maxWidth: "420px" });
-    const gauche = G.colonne(k, [caps(k, "Exploitation agricole", { couleur: BLE, suivi: "0.22em" }), phrase], { poids: 8, min: "300px", gap: "20px" });
-    const droite = G.colonne(k, [mot, btn(k, "Nous contacter", "/contact", { texte: SOL, fond: BLE, survolFond: PAILLE, survolTexte: SOL, focus: PAILLE, extra: { alignSelf: "flex-start" } })], { poids: 4, min: "280px", gap: "22px", soi: "flex-end" });
-    const tete = G.bande(k, [gauche, droite], { fond: SOL, gap: "40px 64px", aligne: "flex-end", padV: ["96px", "72px", "52px"], padB: ["56px", "48px", "36px"], padH: ["48px", "32px", "20px"], nom: "Phrase" });
-    const parcelle = (num, titre, sous, url) => {
-      const t = lien(k, titre, url, { taille: 22, poids: "800", police: S.head, bloc: true, survol: { color: BLE, transform: { x: 4 } }, focus: BLE, h: "44px", extra: { textTransform: "uppercase", letterSpacing: "0.02em" } });
-      return cartouche(k, [k.T(`<p>${num}</p>`, { fontFamily: S.head, fontSize: "40px", fontWeight: "800", color: BLE, lineHeight: 1 }), t, k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.5, color: S.mute, fontFamily: S.font })], { fond: SOL2, bord: "#f3ead833", bordHaut: "#f3ead833", haut: "4px", survolFond: SOL3, survolHaut: BLE, survolBord: "#f3ead866", hauteur: "200px", min: "230px", leve: -4 });
+    const phrase = G.geant(`<p>De la parcelle <span style="color:${BLE}">à votre table.</span></p>`, { taille: [30, 60], tablette: { taille: [36, 48] }, mobile: { taille: [30, 38] }, lh: 1.05, suivi: "-0.01em", poids: "800", police: S.head, couleur: PAILLE, extra: { textTransform: "uppercase" } })(k, env);
+    const gauche = G.colonne(k, [caps(k, "Registre · exploitation agricole", { couleur: BLE, suivi: "0.22em" }), phrase], { poids: 1, min: "280px", gap: "10px" });
+    const droite = k.B("Nous contacter", "/contact", "solid", { backgroundColor: BLE, color: SOL, fontFamily: S.font, fontWeight: "700", minHeight: "52px", borderRadius: "0px", transitionDuration: 320 });
+    droite.states = { hover: { backgroundColor: PAILLE, color: SOL }, focus: GK.focus(PAILLE) };
+    const tete = G.bande(k, [gauche, droite], { fond: SOL, gap: "24px 48px", aligne: "flex-end", padV: ["72px", "56px", "44px"], padB: ["36px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "En-tête" });
+    // Case : angles droits, filet à droite et en bas (le cadre est posé sur le damier), fond qui alterne comme un échiquier
+    const case_ = (enfants, i, o = {}) => {
+      const alt = i % 2 === 0 ? SOL2 : SOL3;
+      const c = k.col(enfants, { backgroundColor: alt, borderStyle: "solid", borderWidth: "0px", borderRightWidth: "1px", borderBottomWidth: "1px", borderColor: "#f3ead855", borderRadius: "0px", paddingTop: "26px", paddingBottom: "26px", paddingLeft: "24px", paddingRight: "24px", gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "220px", minHeight: o.h || "190px", justifyContent: o.justifie, transitionDuration: 380 });
+      c.states = { hover: { backgroundColor: "#574231" } };
+      return c;
     };
-    const parcelles = G.ligne(k, [parcelle("01", "Cultures", "Céréales, légumes et fourrages de l'exploitation.", "/blog"), parcelle("02", "Élevage", "Les animaux, leur alimentation, leur rythme.", "/blog"), parcelle("03", "Vente à la ferme", "Les produits disponibles et où les trouver.", "/contact"), parcelle("04", "Visites", "Accueil des groupes et des écoles sur demande.", "/contact")], { gap: "16px", aligne: "stretch", largeur: "100%" });
-    const bandeParcelles = G.bande(k, [parcelles], { fond: SOL, colonne: true, padV: ["16px", "16px", "8px"], padB: ["56px", "48px", "40px"], padH: ["48px", "32px", "20px"], nom: "Parcelles" });
+    const num = (n) => k.T(`<p>${n}</p>`, { fontFamily: S.head, fontSize: "34px", fontWeight: "800", color: BLE, lineHeight: 1 });
+    const parcelle = (n, titre, sous, url, i) => case_([num(n), lien(k, titre, url, { taille: 21, poids: "800", police: S.head, bloc: true, survol: { color: BLE, transform: { x: 4 } }, focus: BLE, extra: { textTransform: "uppercase", letterSpacing: "0.02em" } }), k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.5, color: S.mute, fontFamily: S.font })], i);
+    const rangee1 = k.row([parcelle("01", "Cultures", "Céréales, légumes et fourrages de l'exploitation.", "/blog", 0), parcelle("02", "Élevage", "Les animaux, leur alimentation, leur rythme.", "/blog", 1), parcelle("03", "Vente à la ferme", "Les produits disponibles et où les trouver.", "/contact", 2), parcelle("04", "Visites", "Accueil des groupes et des écoles sur demande.", "/contact", 3)], { gap: "0px", alignItems: "stretch", width: "100%", flexWrap: "wrap" });
     const titreH = k.row([souffle(carre(k, BLE), 2800), caps(k, "Horaires de la boutique", { couleur: BLE })], { gap: "10px", alignItems: "center" });
-    const colH = G.colonne(k, [titreH, horaires(k, { taille: 15 })], { poids: 1.2, min: "240px", gap: "14px" });
-    const colC = bloc(k, "Nous trouver", [coordonnees(k, { taille: 15, lien: S.fg, survol: BLE, focus: BLE })], { couleurTitre: BLE, poids: 1.2 });
-    const colL = bloc(k, "Liens rapides", [["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", survol: { color: BLE, transform: { x: 4 } }, focus: BLE })), { couleurTitre: BLE, gap: "0px", min: "200px" });
-    const colN = lettre(k, env, G, { titre: "La lettre de la ferme", intro: "Les saisons, les récoltes, les jours de vente : un message de temps en temps.", accent: BLE, survolBouton: PAILLE, survolTexte: SOL, couleurTitre: BLE });
-    const grille = G.ligne(k, [colH, colC, colL, colN], { gap: "40px 48px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
+    const caseH = case_([titreH, horaires(k, { taille: 15 })], 1);
+    const caseA = case_([caps(k, "Nous trouver", { couleur: BLE }), coordonnees(k, { taille: 15, lien: S.fg, survol: BLE, focus: BLE })], 0);
+    const caseL = case_([caps(k, "Liens rapides", { couleur: BLE }), k.col([["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", survol: { color: BLE, transform: { x: 4 } }, focus: BLE })), { gap: "0px" })], 1);
+    const abo = G.abonnement({ titre: "La lettre de la ferme", intro: "Les saisons, les récoltes, les jours de vente.", bouton: "S'abonner", largeur: "100%", accent: BLE, texte: S.fg, rayonBouton: "0px", rayonChamp: "0px", soulignement: "2px", survolBouton: PAILLE, survolTexte: SOL })(k, env);
+    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, color: BLE, lineHeight: 1.4 };
+    abo.parts.missing.styles.desktop = { ...abo.parts.missing.styles.desktop, color: S.fg }; abo.parts.intro.styles.desktop = { ...abo.parts.intro.styles.desktop, color: S.mute }; abo.parts.consent.styles.desktop = { ...abo.parts.consent.styles.desktop, color: S.mute };
+    abo.parts.button.styles.desktop = { ...abo.parts.button.styles.desktop, color: SOL };
+    const caseN = case_([abo], 0);
+    const rangee2 = k.row([caseH, caseA, caseL, caseN], { gap: "0px", alignItems: "stretch", width: "100%", flexWrap: "wrap" });
+    // Le damier : cadre posé en haut et à gauche, les cases ferment à droite et en bas
+    const damier = k.col([rangee1, rangee2], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderLeftWidth: "1px", borderColor: "#f3ead855", borderRadius: "0px" });
+    const bandeD = G.bande(k, [damier], { fond: SOL, colonne: true, padV: ["8px", "8px", "4px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Damier" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true })(k, env);
-    const bas = G.bande(k, [grille, trait(k, S.line), mentions], { fond: SOL, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, filetHaut: { epaisseur: "1px", couleur: "#f3ead840" }, nom: "Infos" });
-    return [G.racine(k, [tete, bandeParcelles, bas])];
+    const bas = G.bande(k, [trait(k, S.line), mentions], { fond: SOL, colonne: true, gap: "20px", padV: ["8px", "8px", "8px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
+    return [G.racine(k, [tete, bandeD, bas])];
   },
 }, FAM);
 
@@ -243,50 +255,67 @@ const etiquetteCuvee = modeleV2({
 }, FAM);
 
 // ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-160 « Fiche technique » — transformation agroalimentaire
-// Idée : une FICHE PRODUIT industrielle. Fond gris clair, filet de contrôle en quatre segments colorés, phrase en police mono « De la matière au produit. », puis un tableau de quatre cellules à filets fins
-// (qualité, traçabilité, catalogue, espace pro) dont le fond s'éclaircit et le filet du haut devient orange au survol ; deux boutons pros, contact, horaires et bande bleu nuit avec la lettre.
-// Polices : IBM Plex Sans (texte) et IBM Plex Mono (titres, libellés). Aucune certification ni chiffre inventé.
+// ft2-160 « Fiche technique » — transformation agroalimentaire · archétype K (fenêtre / console / formulaire)
+// Idée : le pied ressemble à une FENÊTRE de logiciel de gestion. Fond graphite, une fenêtre à angles droits : barre de titre à trois carrés, puis des lignes « champ / valeur » en police mono (nom, qualité,
+// traçabilité, catalogue, espace pro, horaires, adresse, lettre, actions), barre d'état dont le carré « respire ». Les lignes-liens s'éclairent au survol. Aucune certification ni chiffre inventé.
+// Polices : IBM Plex Sans (texte) et IBM Plex Mono (titres, champs).
 const usine = identite({
-  key: "c160", label: "Gris clair, bleu nuit et orange", humeur: "light",
-  fond: "#eef1f3", texte: "#0f2a43", discret: "#3f566b", accent: "#0f2a43", surface: "#ffffff", encre: "#ffffff",
+  key: "c160", label: "Graphite, acier et orange", humeur: "dark",
+  fond: "#0c1319", texte: "#e8eef4", discret: "#a6b8c9", accent: "#f28c28", surface: "#131e28", encre: "#0c1319", surEncre: "#e8eef4",
   police: "font.ibm-plex-sans", titres: "font.ibm-plex-mono",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#0f2a4333",
+  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#a6b8c944",
 });
-const GRIS = "#eef1f3", NUIT = "#0f2a43", NUIT2 = "#0a1d30", ORANGE = "#f28c28", SAUGE = "#7ea58a", ACIER = "#9aa9b6";
+const GRAPH = "#0c1319", PANNEAU = "#131e28", BARRE = "#1b2a38", ACIER = "#3a5068", ORANGE = "#f28c28", NEIGE = "#e8eef4";
 
 const ficheTechnique = modeleV2({
   id: identifiantV2(160, "fiche-technique"), concept: "c-160-fiche-technique",
   name: "Fiche technique", family: FAM,
-  description: "Pour une entreprise de transformation agroalimentaire : filet de contrôle coloré, phrase en police mono, tableau de quatre cellules à filets fins (qualité, traçabilité, catalogue, espace pro), boutons pros, contact et bande bleu nuit.",
-  tags: ["agroalimentaire", "transformation", "industrie alimentaire", "professionnels", "fiche technique", "bleu nuit", "orange"],
+  description: "Pour une entreprise de transformation agroalimentaire : le pied est une fenêtre de logiciel à angles droits, barre de titre et lignes champ / valeur en police mono (qualité, traçabilité, catalogue, espace pro, horaires, contact, lettre).",
+  tags: ["agroalimentaire", "transformation", "fenêtre", "console", "fiche technique", "graphite", "orange", "mono"],
   identity: usine,
-  racine: racineDe(NUIT2, "#ffffff"),
-  widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  racine: racineDe(GRAPH, NEIGE),
+  widgets: ["text", "link", "sitetitle", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
-    const seg = (c) => k.col([], { flexGrow: 1, flexBasis: "0px", height: "8px", backgroundColor: c, borderRadius: "0px" });
-    const controle = { type: "container", props: { full: true }, children: [k.row([seg(NUIT), seg(ORANGE), seg(SAUGE), seg(ACIER)], { gap: "0px", flexWrap: "nowrap", width: "100%", alignItems: "stretch" })], ...sty({ display: "flex", flexDirection: "column", width: "100%", backgroundColor: GRIS, gap: "0px" }) };
-    const phrase = G.geant(`<p>De la matière<br>au <span style="color:#b95a00">produit.</span></p>`, { taille: [36, 92], tablette: { taille: [56, 80] }, mobile: { taille: [34, 48] }, lh: 1.08, suivi: "-0.03em", poids: "700", police: S.head, couleur: NUIT })(k, env);
-    const gauche = G.colonne(k, [caps(k, "Transformation agroalimentaire", { couleur: S.mute, suivi: "0.2em", police: S.head }), phrase], { poids: 7, min: "300px", gap: "18px" });
+    const barre = k.row([k.row([carre(k, ORANGE, "10px"), carre(k, ACIER, "10px"), carre(k, ACIER, "10px")], { gap: "6px", flexWrap: "nowrap" }), caps(k, "fiche_produit · transformation agroalimentaire", { couleur: S.mute, police: S.head, taille: "12px", suivi: "0.06em" })], { gap: "16px", alignItems: "center", flexWrap: "nowrap", backgroundColor: BARRE, paddingTop: "12px", paddingBottom: "12px", paddingLeft: "16px", paddingRight: "16px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: ACIER, borderRadius: "0px", width: "100%" });
+    // Une ligne champ / valeur : étiquette mono orange à gauche, valeur à droite ; le bloc passe en deux lignes quand la place manque
+    const champ = (etiquette, valeur, o = {}) => {
+      const e = k.T(`<p>${etiquette}</p>`, { fontFamily: S.head, fontSize: "13px", fontWeight: "600", color: ORANGE, textTransform: "uppercase", letterSpacing: "0.08em", lineHeight: 1.5, flexBasis: "190px", flexGrow: 0, flexShrink: 0, paddingTop: o.pt || "12px" });
+      const v = k.col(Array.isArray(valeur) ? valeur : [valeur], { gap: "6px", flexBasis: "260px", flexGrow: 1, minWidth: "0px", alignItems: "flex-start" });
+      const r = k.row([e, v], { rowGap: "4px", columnGap: "24px", alignItems: "flex-start", flexWrap: "wrap", width: "100%", paddingTop: "10px", paddingBottom: "10px", paddingLeft: "20px", paddingRight: "20px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#3a506866", borderRadius: "0px", transitionDuration: 360 });
+      if (o.survol) r.states = { hover: { backgroundColor: BARRE } };
+      return r;
+    };
+    const phrase = G.geant(`<p>De la matière <span style="color:${ORANGE}">au produit.</span></p>`, { taille: [30, 64], tablette: { taille: [40, 54] }, mobile: { taille: [28, 36] }, lh: 1.1, suivi: "-0.03em", poids: "700", police: S.head, couleur: NEIGE })(k, env);
+    const lienLigne = (t, sous, url) => lien(k, `${t}  →`, url, { taille: 17, poids: "600", police: S.head, bloc: true, survol: { color: ORANGE, transform: { x: 6 } }, focus: ORANGE, extra: { flexWrap: "wrap" } });
+    const ligneLien = (etiquette, t, sous, url) => champ(etiquette, [lienLigne(t, sous, url), k.T(`<p>${sous}</p>`, { fontSize: "14px", lineHeight: 1.5, color: S.mute, fontFamily: S.font })], { survol: true, pt: "10px" });
     const boutons = k.row([
-      btn(k, "Contacter le service pro", "/contact", { texte: NUIT, fond: ORANGE, survolFond: NUIT, survolTexte: "#ffffff", focus: NUIT, taille: 15 }),
-      btn(k, "Demander la documentation", "/contact", { texte: NUIT, fond: undefined, bord: NUIT, survolFond: NUIT, survolTexte: "#ffffff", focus: ORANGE, taille: 15 }),
+      btn(k, "Contacter le service pro", "/contact", { texte: GRAPH, fond: ORANGE, survolFond: NEIGE, survolTexte: GRAPH, focus: NEIGE, taille: 15 }),
+      btn(k, "Demander la documentation", "/contact", { texte: NEIGE, fond: undefined, bord: ACIER, survolFond: NEIGE, survolTexte: GRAPH, focus: ORANGE, taille: 15 }),
     ], { gap: "12px" });
-    const droite = G.colonne(k, [k.T("<p>Cahiers des charges, fiches produits, échantillons : indiquez votre besoin, un interlocuteur vous répond.</p>", { fontSize: "16px", lineHeight: 1.6, color: S.mute, fontFamily: S.font }), boutons], { poids: 5, min: "290px", gap: "20px", soi: "flex-end" });
-    const tete = G.bande(k, [gauche, droite], { fond: GRIS, gap: "36px 64px", aligne: "flex-end", padV: ["72px", "56px", "40px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Fiche" });
-    const cellule = (code, titre, sous, url) => cartouche(k, [caps(k, code, { couleur: "#b95a00", police: S.head, suivi: "0.08em" }), lien(k, `${titre}  →`, url, { taille: 19, poids: "700", police: S.head, bloc: true, couleur: NUIT, survol: { color: "#b95a00", transform: { x: 4 } }, focus: NUIT }), k.T(`<p>${sous}</p>`, { fontSize: "15px", lineHeight: 1.5, color: S.mute, fontFamily: S.font })], { fond: "#ffffff", bord: "#0f2a4333", bordHaut: NUIT, haut: "4px", survolFond: "#fff6ea", survolBord: "#0f2a4333", survolHaut: ORANGE, hauteur: "176px", min: "230px", leve: -3 });
-    const tableau = G.ligne(k, [cellule("A1", "Qualité", "Nos engagements et nos contrôles, expliqués simplement.", "/faq"), cellule("A2", "Traçabilité", "D'où viennent les matières premières et comment on les suit.", "/faq"), cellule("A3", "Catalogue", "Les gammes et les formats proposés.", "/blog"), cellule("A4", "Espace pro", "Commandes et documents des clients professionnels.", "/connexion")], { gap: "0px", aligne: "stretch", largeur: "100%" });
-    const bandeT = G.bande(k, [tableau], { fond: GRIS, colonne: true, padV: ["8px", "8px", "4px"], padB: ["64px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "Tableau" });
-    const titreH = k.row([souffle(carre(k, ORANGE, "10px"), 3000), caps(k, "Horaires", { couleur: ORANGE, police: S.head })], { gap: "10px", alignItems: "center" });
-    const colH = G.colonne(k, [titreH, horaires(k, { taille: 15, couleur: "#ffffff" })], { poids: 1.2, min: "240px", gap: "14px" });
-    const colC = bloc(k, "Contact", [coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: ORANGE, focus: ORANGE })], { couleurTitre: ORANGE, police: S.head, poids: 1.2 });
-    const colN = lettre(k, env, G, { titre: "Actualités de l'entreprise", intro: "Nouveaux produits et informations pour les clients, par courriel.", accent: ORANGE, texte: "#ffffff", survolBouton: "#ffffff", survolTexte: NUIT, couleurTitre: ORANGE, surBouton: NUIT });
-    const grille = G.ligne(k, [colH, colC, colN], { gap: "40px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b7c4d1", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [grille, trait(k, "#ffffff40"), mentions], { fond: NUIT2, colonne: true, gap: "40px", padV: ["56px", "48px", "40px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "32px" }, nom: "Bande bleu nuit" });
-    bas.styles.desktop.color = "#ffffff"; // la ligne légale de la plateforme reprend la couleur de la dernière bande
-    return [G.racine(k, [controle, tete, bandeT, bas])];
+    const abo = G.abonnement({ titre: "Actualités de l'entreprise", intro: "Nouveaux produits et informations pour les clients, par courriel.", bouton: "S'abonner", largeur: "440px", accent: ORANGE, texte: NEIGE, rayonBouton: "0px", rayonChamp: "0px", soulignement: "2px", survolBouton: NEIGE, survolTexte: GRAPH })(k, env);
+    abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, color: NEIGE, lineHeight: 1.4 };
+    abo.parts.missing.styles.desktop = { ...abo.parts.missing.styles.desktop, color: NEIGE }; abo.parts.intro.styles.desktop = { ...abo.parts.intro.styles.desktop, color: S.mute }; abo.parts.consent.styles.desktop = { ...abo.parts.consent.styles.desktop, color: S.mute };
+    abo.parts.button.styles.desktop = { ...abo.parts.button.styles.desktop, color: GRAPH };
+    const corps = [
+      champ("nom", phrase, { pt: "14px" }),
+      ligneLien("qualité", "Qualité", "Nos engagements et nos contrôles, expliqués simplement.", "/faq"),
+      ligneLien("traçabilité", "Traçabilité", "D'où viennent les matières premières et comment on les suit.", "/faq"),
+      ligneLien("catalogue", "Catalogue", "Les gammes et les formats proposés.", "/blog"),
+      ligneLien("espace_pro", "Espace pro", "Commandes et documents des clients professionnels.", "/connexion"),
+      champ("société", G.code("title:20")(k, env)),
+      champ("horaires", horaires(k, { taille: 15 })),
+      champ("adresse", coordonnees(k, { taille: 15, lien: NEIGE, survol: ORANGE, focus: ORANGE })),
+      champ("lettre", abo),
+      champ("actions", boutons),
+    ];
+    const etat = k.row([souffle(carre(k, ORANGE, "8px"), 3000), caps(k, "Prêt · fiche à jour", { couleur: S.mute, police: S.head, taille: "11px", suivi: "0.08em" })], { gap: "10px", alignItems: "center", flexWrap: "nowrap", backgroundColor: BARRE, paddingTop: "10px", paddingBottom: "10px", paddingLeft: "16px", paddingRight: "16px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: ACIER, borderRadius: "0px", width: "100%" });
+    const fenetre = k.col([barre, ...corps, etat], { gap: "0px", width: "100%", backgroundColor: PANNEAU, borderStyle: "solid", borderWidth: "1px", borderColor: ACIER, borderRadius: "0px" });
+    const bandeF = G.bande(k, [fenetre], { fond: GRAPH, colonne: true, padV: ["72px", "56px", "36px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "16px"], max: "1100px", nom: "Fenêtre" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#a6b8c9", liens: NEIGE })(k, env);
+    const bas = G.bande(k, [trait(k, "#ffffff33"), mentions], { fond: GRAPH, colonne: true, gap: "20px", max: "1100px", padV: ["8px", "8px", "8px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "16px"], nom: "Mentions" });
+    bas.styles.desktop.color = NEIGE; // la ligne légale de la plateforme reprend la couleur de la dernière bande
+    return [G.racine(k, [bandeF, bas])];
   },
 }, FAM);
 
