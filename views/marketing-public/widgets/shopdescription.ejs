@@ -1,0 +1,4 @@
+<%# Description du produit (widgets/shop.js) : texte brut échappé, retours à la ligne conservés %>
+<% if (d && d.closed || !d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Description : s'affiche sur une fiche produit publiée.</p></section><% } %>
+<% } else if (!String(d.text || "").trim()) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Ce produit n'a pas encore de description.</p></section><% } %>
+<% } else { %><div class="<%= cls %> kw-shdesc"<%- attrs %>><% String(d.text).split(/\n{2,}/).forEach((para) => { %><p><%- String(para).split("\n").map((l) => l.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]))).join("<br>") %></p><% }) %></div><% } %>

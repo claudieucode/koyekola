@@ -277,3 +277,48 @@ module.exports.push(
   pageWidget("shoporderpage", "confirmation", "Confirmation de commande", "Récapitulatif de la commande, statut, téléchargements, factures : la vraie page de confirmation", "confirmation merci commande reçue facture téléchargement order received"),
   pageWidget("shopaccountpage", ["compte", "compte-connexion"], "Espace client", "Connexion ou espace du client (commandes, données personnelles) : la vraie page Compte", "compte client connexion mes commandes account login"),
 );
+// ── Éléments de la fiche produit (un élément = une donnée réelle du produit de la page) ──
+// Mêmes règles que les autres éléments boutique : module « Commerce » activé et boutique ouverte, produit publié de CE site, aperçu = données d'exemple annoncées.
+const DEMO_PRODUCT = { name: "Produit d'exemple", short: "Description courte du produit d'exemple.", description: "Description détaillée du produit d'exemple.", priceCents: 4900, regularCents: 5900, onSale: true, isVariable: false, inStock: true, sku: "REF-EXEMPLE", categories: [{ name: "Catégorie", slug: "categorie" }], tags: ["exemple"] };
+const productData = (fn) => (ctx, p, env) => {
+  if (env.page && env.page.demoShop === true) return { demo: true, ...fn({ ...DEMO_PRODUCT, currency: "eur" }, p, env, { count: 0, average: null }) };
+  const sh = shopOf(ctx, env);
+  if (sh.closed) return { closed: sh.closed };
+  const cur = env.scope && env.scope.product;
+  const pr = cur && cur.id ? catalog.productById(sh.s, cur.id) : null;
+  if (!pr || pr.status !== "published") return { product: null };
+  const view_ = { name: pr.name, short: pr.short_description || "", description: pr.description || "", priceCents: pr.priceFromCents, regularCents: pr.regularFromCents, onSale: pr.onSale, isVariable: pr.isVariable, inStock: pr.inStock, sku: pr.sku || "", categories: pr.categories.map((c) => ({ name: c.name, slug: c.slug })), tags: Array.isArray(pr.tags) ? pr.tags : [], currency: sh.settings.currency, slug: pr.slug };
+  return fn(view_, p, env, (env.scope && env.scope.reviews) || { count: 0, average: null });
+};
+const money_ = (c, cur) => view.money(c, cur);
+const productWidget = (type, label, icon, description, keywords, schema, fn) => ({ type, label, group: "commerce", icon, version: 1, style: "box", status: "operational", dependencies: DEP, description, keywords, schema, data: productData(fn) });
+module.exports.push(
+  productWidget("shoptitle", "Titre du produit", "heading", "Le nom du produit de la page (titre de niveau réglable)", "titre nom produit boutique fiche product title name",
+    [{ key: "tag", kind: "select", label: "Niveau du titre", options: [["h1", "h1"], ["h2", "h2"], ["h3", "h3"], ["p", "Paragraphe"]], default: "h1" }],
+    (pr) => ({ name: pr.name })),
+  productWidget("shopprice", "Prix du produit", "tag", "Prix réel (promotion barrée, « à partir de » pour un produit à variantes)", "prix tarif promotion produit boutique fiche price sale",
+    [bool("showRegular", "Afficher l'ancien prix barré en promotion", true), { key: "fromLabel", kind: "text", label: "Mot devant le prix d'un produit à variantes", max: 30, default: "À partir de" }, { key: "taxNote", kind: "text", label: "Mention sous le prix (ex. TTC)", max: 60, default: "" }],
+    (pr, p) => ({ price: money_(pr.priceCents, pr.currency), regular: pr.onSale && p.showRegular && pr.regularCents > pr.priceCents ? money_(pr.regularCents, pr.currency) : "", from: pr.isVariable })),
+  productWidget("shoprating", "Note du produit", "star", "Note moyenne et nombre d'avis publiés (jamais d'avis d'exemple)", "note etoiles avis evaluations produit boutique fiche rating stars",
+    [bool("showCount", "Afficher le nombre d'avis", true), { key: "noneLabel", kind: "text", label: "Texte s'il n'y a aucun avis (vide = rien)", max: 80, default: "Aucun avis" }],
+    (pr, p, env, r) => ({ average: r.average, count: r.count || 0 })),
+  productWidget("shopdescription", "Description du produit", "text", "Description courte ou détaillée du produit (texte brut, retours à la ligne conservés)", "description texte produit boutique fiche resume short description",
+    [{ key: "which", kind: "select", label: "Texte à afficher", options: [["short", "Description courte"], ["long", "Description détaillée"]], default: "short" }],
+    (pr, p) => ({ text: p.which === "long" ? pr.description : pr.short })),
+  productWidget("shopstock", "Disponibilité", "box", "En stock / rupture de stock du produit de la page", "disponibilite stock rupture produit boutique fiche availability",
+    [{ key: "inLabel", kind: "text", label: "Texte « en stock »", max: 60, default: "En stock" }, { key: "outLabel", kind: "text", label: "Texte « rupture »", max: 60, default: "Rupture de stock" }],
+    (pr) => ({ inStock: pr.inStock })),
+  productWidget("shopmeta", "Références du produit", "list", "Référence (SKU), catégories et étiquettes du produit, avec liens vers la boutique", "sku reference categories etiquettes tags produit boutique fiche meta",
+    [bool("showSku", "Référence (SKU)", true), bool("showCategories", "Catégories (liens)", true), bool("showTags", "Étiquettes (liens)", true)],
+    (pr, p) => ({ sku: p.showSku ? pr.sku : "", categories: p.showCategories ? pr.categories : [], tags: p.showTags ? pr.tags : [] })),
+  productWidget("shopbreadcrumb", "Fil d'Ariane du produit", "chevron", "Accueil › Boutique › catégorie › produit, avec les vraies adresses", "fil ariane breadcrumb navigation produit boutique fiche",
+    [{ key: "separator", kind: "text", label: "Séparateur", max: 4, default: "›" }, bool("showHome", "Afficher « Accueil »", true)],
+    (pr) => ({ name: pr.name, category: pr.categories[0] || null })),
+  {
+    type: "shopminicart", label: "Mini-panier", group: "commerce", icon: "cart", version: 1, style: "box", status: "operational", dependencies: DEP,
+    description: "Nombre d'articles et total du panier réel du visiteur, avec lien vers le panier et la commande (lu sur le serveur, jamais en cache partagé)",
+    keywords: "mini panier cart total articles bouton commander boutique header",
+    schema: [{ key: "label", kind: "text", label: "Texte du lien panier", max: 40, required: true, default: "Panier" }, bool("showTotal", "Afficher le total", true), { key: "checkoutLabel", kind: "text", label: "Bouton « commander » (vide = aucun)", max: 40, default: "Commander" }],
+    data(ctx, p, env) { if (env.page && env.page.demoShop === true) return { open: true, demo: true }; const sh = shopOf(ctx, env); return sh.closed ? { closed: sh.closed } : { open: true }; },
+  },
+);

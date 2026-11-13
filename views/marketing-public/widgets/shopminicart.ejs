@@ -1,0 +1,7 @@
+<%# Mini-panier (widgets/shop.js) : nombre et total lus sur le serveur (/boutique/panier.json), jamais dans la page mise en cache %>
+<% if (d && d.closed) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Boutique fermée : mini-panier masqué au public.</p></section><% } %>
+<% } else { %><div class="<%= cls %> kw-shmini"<%- attrs %> data-sh-mini>
+  <a class="kw-shmini-link" href="/boutique/panier"><%= p.label %> <span class="kw-sc-badge" data-sh-cart-count>0</span><% if (p.showTotal) { %> <span class="kw-shmini-total" data-sh-cart-total></span><% } %></a>
+  <% if (p.checkoutLabel) { %><a class="kw-pb-btn kw-shmini-checkout" href="/boutique/commande"><%= p.checkoutLabel %></a><% } %>
+  <% if (!isBuilder && !(d && d.demo)) { %><script src="/js/boutique.js" defer></script><% } %>
+</div><% } %>
