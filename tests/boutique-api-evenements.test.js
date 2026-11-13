@@ -26,7 +26,7 @@ async function mkSite(name, host) {
   return { id, base, host, pid: one("SELECT id FROM mk_shop_products WHERE site_id = ?", id).id };
 }
 before(async () => {
-  srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
+  srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "", SHOP_SWEEP_INTERVAL_MS: "0" });
   boss = await loginInstructor(srv); db = srv.db();
   A = await mkSite("API Un", HA); B = await mkSite("API Deux", HB);
   org = one("SELECT id FROM mk_organizations ORDER BY id").id;
@@ -80,4 +80,50 @@ test("clients et rapport par l'API ; module désactivé = 403", async () => {
   const r = await api(keyA, "/shop/reports/summary"); assert.equal(r.status, 200); assert.equal(r.body.data.orders, 1);
   await boss.post(`/marketing/site-web/sites/${B.id}/modules/commerce`, { etat: "desactiver" });
   assert.equal((await api(keyB, "/shop/products")).status, 403);
+});
+
+test("paniers abandonnés : repérés après inactivité, événement une fois, reprise par lien signé, relance seulement aux comptes si activée", async () => {
+  const cli = new Client(srv.base), h = hdr(HA);
+  assert.equal((await cli.post("/boutique/compte/inscription", { email: "fidele@example.test", password: "motdepasse-solide", name: "Fidèle" }, h)).status, 303);
+  await cli.post("/boutique/panier/ajouter", { product_id: String(A.pid), quantity: "1" }, h);
+  const cart = one("SELECT * FROM mk_shop_carts WHERE site_id = ? AND status = 'open' ORDER BY id DESC", A.id);
+  await boss.post(`${A.base}/rapports/paniers`, { minutes: "30", reminder: "1" });
+  db.prepare("UPDATE mk_shop_carts SET updated_at = datetime('now','-2 hours'), customer_id = (SELECT id FROM mk_shop_customers WHERE email = 'fidele@example.test' AND site_id = ?) WHERE id = ?").run(A.id, cart.id);
+  await new Client(srv.base).get("/boutique", h); // déclenche le passage (intervalle 0 en test)
+  const row = one("SELECT * FROM mk_shop_carts WHERE id = ?", cart.id);
+  assert.ok(row.abandoned_at && row.email === "fidele@example.test");
+  assert.equal(one("SELECT COUNT(*) n FROM mk_events WHERE name = 'shop.cart_abandoned' AND object_id = ?", String(cart.id)).n, 1);
+  assert.ok(row.reminder_sent_at, "relance mise en file pour un compte");
+  assert.match((await boss.get(`${A.base}/rapports`)).text, /fidele@example\.test/);
+  const mail = one("SELECT body FROM mail_outbox WHERE to_email = 'fidele@example.test' ORDER BY id DESC");
+  const m = String(mail && mail.body).match(/panier\/reprendre\/(\d+-[0-9a-f]{32})/);
+  assert.ok(m, "lien de reprise dans le message");
+  const back = new Client(srv.base);
+  assert.equal((await back.get(`/boutique/panier/reprendre/${m[1]}`, h)).status, 303);
+  assert.match((await back.get("/boutique/panier", h)).text, /Tasse/, "le panier est retrouvé dans un autre navigateur");
+  assert.equal((await new Client(srv.base).get(`/boutique/panier/reprendre/${cart.id}-${"0".repeat(32)}`, h)).status, 303);
+});
+
+test("RGPD : le client exporte ses données, refus d'effacement avec commande en cours, puis effacement (commandes conservées), mot de passe exigé", async () => {
+  const cli = new Client(srv.base), h = hdr(HA);
+  assert.equal((await cli.post("/boutique/compte/inscription", { email: "rgpd@example.test", password: "motdepasse-solide", name: "Rita" }, h)).status, 303);
+  await cli.post("/boutique/panier/ajouter", { product_id: String(A.pid), quantity: "1" }, h);
+  const page = await cli.get("/boutique/commande?pays=FR", h);
+  const f = (n) => page.text.match(new RegExp(`name="${n}" value="([^"]+)"`))[1];
+  assert.equal((await cli.post("/boutique/commande", { email: "rgpd@example.test", ship_name: "Rita", ship_line1: "1 rue", ship_postal_code: "75001", ship_city: "Paris", ship_country: "FR", same_billing: "1", idempotency_key: f("idempotency_key"), shipping_method: f("shipping_method"), payment_method: "manual", expected_total: f("expected_total") }, h)).status, 303);
+  const exp = await cli.get("/boutique/compte/donnees", h);
+  assert.equal(exp.status, 200); assert.match(exp.headers.get("content-disposition"), /attachment/);
+  const data = JSON.parse(exp.text); assert.equal(data.customer.email, "rgpd@example.test"); assert.equal(data.orders.length, 1); assert.ok(!/password|hash/i.test(exp.text));
+  assert.equal((await new Client(srv.base).get("/boutique/compte/donnees", h)).status, 303, "export réservé au client connecté");
+  const refused = await cli.post("/boutique/compte/supprimer", { password: "motdepasse-solide" }, h);
+  assert.match(decodeURIComponent(refused.location), /en cours/);
+  assert.equal((await cli.post("/boutique/compte/supprimer", { password: "mauvais" }, h)).status, 303);
+  const o = one("SELECT id FROM mk_shop_orders WHERE email = 'rgpd@example.test'");
+  assert.equal((await boss.post(`${A.base}/commandes/${o.id}/statut`, { statut: "cancelled" })).status, 302);
+  const ok = await cli.post("/boutique/compte/supprimer", { password: "motdepasse-solide" }, h);
+  assert.match(ok.location, /compte=supprime/);
+  const c = one("SELECT * FROM mk_shop_customers WHERE id = (SELECT customer_id FROM mk_shop_orders WHERE id = ?)", o.id);
+  assert.match(c.email, /^effacé-\d+@invalide\.local$/); assert.equal(c.name, null); assert.equal(c.password_hash, null);
+  assert.ok(one("SELECT id FROM mk_shop_orders WHERE id = ?", o.id), "commande conservée");
+  assert.equal((await new Client(srv.base).post("/boutique/compte/connexion", { email: "rgpd@example.test", password: "motdepasse-solide" }, h)).status === 303, false, "plus de connexion possible");
 });

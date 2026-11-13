@@ -14,5 +14,11 @@
 <% customerOrders.forEach((o) => { %><tr><th scope="row"><a href="<%= shop.base %>/commande/confirmation/<%= encodeURIComponent(o.number) %>?k=<%= o.key %>"><%= o.number %></a></th><td><%= String(o.created_at).slice(0, 10) %></td><td><%= statusLabels[o.status] %></td><td><%= money(o.total_cents) %></td></tr><% }) %>
 </tbody></table>
 <% } %>
+<h2>Mes données</h2>
+<p><a class="sh-btn" href="<%= shop.base %>/compte/donnees">Télécharger mes données (JSON)</a></p>
+<details><summary>Supprimer mon compte</summary>
+  <p>Votre compte, vos listes et vos paniers seront effacés. Vos commandes et factures sont conservées (obligation légale de conservation comptable) mais ne sont plus rattachées à un compte. Action irréversible.</p>
+  <form class="sh-form" method="post" action="<%= shop.base %>/compte/supprimer"><label>Votre mot de passe<input type="password" name="password" required autocomplete="current-password"></label><button class="sh-btn" type="submit">Supprimer définitivement mon compte</button></form>
+</details>
 <form method="post" action="<%= shop.base %>/compte/deconnexion"><button class="sh-btn" type="submit">Se déconnecter</button></form>
 <%- include("_bottom") %>

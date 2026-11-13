@@ -61,6 +61,7 @@ module.exports = ({ db }) => {
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "La boutique est momentanément indisponible." });
     const siteId = req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null;
     const s = { db, organizationId: marketing.organizationId, siteId };
+    require("../shop/abandoned").sweep(db); // paniers inactifs : repérés (au plus toutes les 10 min)
     orders.expireAll(db); // commandes en attente trop anciennes : annulées, stock rendu (au plus toutes les 10 min)
     if (!siteModules.isEnabled(db, s.organizationId, siteId, "commerce")) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const settings = store.getSettings(s);
@@ -406,12 +407,26 @@ module.exports = ({ db }) => {
   router.post(`${BASE}/panier/ligne/:id(\\d+)/supprimer`, cartAction((req, k) => cart.removeItem(req.shop.s, k, Number(req.params.id), req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/coupon`, cartAction((req, k) => cart.setCoupon(req.shop.s, k, req.body.retirer ? "" : req.body.code), () => `${BASE}/panier`));
 
+  // Reprise d'un panier par le lien signé d'un e-mail de relance : le panier est rattaché à CE navigateur (jeton renouvelé) ; lien invalide ou panier clos → panier vide, sans indication
+  router.get(`${BASE}/panier/reprendre/:t`, (req, res) => {
+    const { s } = req.shop;
+    const id = require("../shop/abandoned").parseRestore(req.params.t);
+    const row = id ? db.prepare("SELECT id FROM mk_shop_carts WHERE id = ? AND organization_id = ? AND status = 'open' AND " + (s.siteId == null ? "site_id IS NULL" : "site_id = ?")).get(id, s.organizationId, ...(s.siteId == null ? [] : [s.siteId])) : null;
+    if (row) {
+      const token = require("node:crypto").randomBytes(32).toString("hex");
+      db.prepare("UPDATE mk_shop_carts SET token_hash = ?, abandoned_at = NULL, updated_at = datetime('now') WHERE id = ?").run(require("node:crypto").createHash("sha256").update(token).digest("hex"), row.id);
+      view.setCookie(req, res, CART_COOKIE, token);
+    }
+    res.redirect(303, `${BASE}/panier`);
+  });
+
   // ── Commande ──
   const checkoutPage = (req, res, { error = null, values = {}, status = 200 } = {}) => {
     const { s, settings } = req.shop;
     const k = myCart(req, res);
     if (!k) return res.redirect(303, `${BASE}/panier`);
     orders.expireStale(s, 60);
+    try { require("../shop/abandoned").rememberEmail(s, k.id, values.email || (req.shopCustomer && req.shopCustomer.email)); } catch { /* jamais bloquant */ }
     const country = String(values.country || req.query.pays || (req.shopCustomer && "") || settings.default_country || "").toUpperCase().slice(0, 2);
     const priced = cart.priceCart(s, k, { dest: { country, region: values.region, postcode: values.ship_postal_code || undefined }, customerId: req.shopCustomer ? req.shopCustomer.id : null, shippingMethodId: values.shippingMethodId || req.query.livraison || null, email: values.email || (req.shopCustomer && req.shopCustomer.email) });
     if (!priced.lines.length) return res.redirect(303, `${BASE}/panier`);
@@ -535,7 +550,7 @@ module.exports = ({ db }) => {
   router.get(`${BASE}/compte`, (req, res) => {
     if (!req.shopCustomer) return loginPage(req, res);
     const list = orders.listOrders(req.shop.s, { customerId: req.shopCustomer.id, perPage: 50 });
-    render(req, res, "compte", { title: "Mon compte", customerOrders: list.items.map((o) => ({ ...o, key: view.orderToken(o) })), statusLabels: orders.STATUS_LABELS, info: req.query.ok ? "Modifications enregistrées." : null, hasSubscriptions: subscriptions.hasAny(req.shop.s) });
+    render(req, res, "compte", { title: "Mon compte", customerOrders: list.items.map((o) => ({ ...o, key: view.orderToken(o) })), statusLabels: orders.STATUS_LABELS, info: req.query.ok ? "Modifications enregistrées." : (req.query.erreur ? String(req.query.erreur).slice(0, 200) : null), hasSubscriptions: subscriptions.hasAny(req.shop.s) });
   });
   router.post(`${BASE}/compte/connexion`, (req, res) => {
     const key = `${req.ip}|${req.shop.s.siteId}|${String(req.body.email || "").toLowerCase()}`;
@@ -571,6 +586,30 @@ module.exports = ({ db }) => {
       if (!(error instanceof MarketingError)) throw error;
       loginPage(req, res, { error: error.message, values: { email: req.body.email, name: req.body.name } }, 422);
     }
+  });
+  // Vos données (droit d'accès) : export JSON de ce que CETTE boutique détient sur le client connecté
+  router.get(`${BASE}/compte/donnees`, (req, res) => {
+    if (!req.shopCustomer) return res.redirect(303, `${BASE}/compte`);
+    const data = require("../shop/privacy").exportData(req.shop.s, req.shopCustomer.id);
+    res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Disposition": 'attachment; filename="mes-donnees.json"', "Cache-Control": "no-store" });
+    res.send(JSON.stringify(data, null, 2));
+  });
+  // Effacement du compte (droit à l'effacement) : mot de passe exigé ; refusé si commande en cours ou abonnement actif ; commandes et factures conservées (obligation comptable)
+  router.post(`${BASE}/compte/supprimer`, (req, res, next) => {
+    try {
+      if (!req.shopCustomer) return res.redirect(303, `${BASE}/compte`);
+      const key = `erase|${req.ip}|${req.shop.s.siteId}`;
+      if (authLimiter.isLimited(key)) return res.status(429).render("error", { message: "Trop de tentatives. Réessayez dans quelques minutes." });
+      authLimiter.hit(key);
+      const c = customers.byId(req.shop.s, req.shopCustomer.id);
+      if (!c || !c.password_hash || !customers.verifyPassword(String(req.body.password || ""), c.password_hash)) return res.redirect(303, `${BASE}/compte?erreur=${encodeURIComponent("Mot de passe incorrect : le compte n'a pas été supprimé.")}`);
+      try { require("../shop/privacy").erase(req.shop.s, c.id, { actor: "customer" }); } catch (error) {
+        if (!(error instanceof MarketingError)) throw error;
+        return res.redirect(303, `${BASE}/compte?erreur=${encodeURIComponent(error.message)}`);
+      }
+      view.clearCookie(res, CUSTOMER_COOKIE);
+      res.redirect(303, `${BASE}?compte=supprime`);
+    } catch (error) { next(error); }
   });
   router.post(`${BASE}/compte/deconnexion`, (req, res) => {
     customers.logout(req.shop.s, view.readCookie(req, CUSTOMER_COOKIE));

@@ -26,7 +26,7 @@ function findCart(s, token) {
   return s.db.prepare(`SELECT * FROM mk_shop_carts WHERE token_hash = ? AND organization_id = ? AND ${siteCond(s)} AND status = 'open'`).get(hash(token), s.organizationId, ...siteArgs(s)) || null;
 }
 function touch(s, cart) {
-  s.db.prepare("UPDATE mk_shop_carts SET version = version + 1, updated_at = datetime('now') WHERE id = ?").run(cart.id);
+  s.db.prepare("UPDATE mk_shop_carts SET version = version + 1, updated_at = datetime('now'), abandoned_at = NULL, reminder_sent_at = NULL WHERE id = ?").run(cart.id);
 }
 function checkVersion(cart, expected) {
   if (expected !== undefined && expected !== null && expected !== "" && Number(expected) !== cart.version) {

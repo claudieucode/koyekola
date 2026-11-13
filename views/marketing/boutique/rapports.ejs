@@ -51,6 +51,18 @@
     <% rep.low.forEach((l) => { %><tr><th scope="row"><a href="<%= base %>/produits/<%= l.id %>"><%= l.name %></a></th><td><%= l.sku || "—" %></td><td><%= l.stock_qty %></td></tr><% }) %>
   </tbody></table></div><% } %>
 </section>
+<section class="mk-panel" id="paniers">
+  <h2>Paniers abandonnés</h2>
+  <p class="mk-sub">Un panier est « abandonné » quand il contient des articles et n'a pas bougé depuis <%= cartSettings.abandoned_minutes %> minutes. Actuellement : <strong><%= carts.abandoned %></strong> panier(s) abandonné(s), <%= carts.converted %> converti(s) en commande.</p>
+  <% if (carts.items.length) { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Paniers abandonnés</caption><thead><tr><th scope="col">Abandonné le</th><th scope="col">Client</th><th scope="col">Articles</th><th scope="col">Relance</th></tr></thead><tbody>
+    <% carts.items.forEach((c) => { %><tr><th scope="row"><%= String(c.abandoned_at).slice(0, 16) %></th><td><%= c.email || "inconnu" %></td><td><%= c.quantity %> — <%= c.names %></td><td><%= c.reminder_sent_at ? "envoyée" : "—" %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/rapports/paniers">
+    <div class="field-group"><label for="ca-m">Inactivité avant « abandonné » (minutes)</label><input id="ca-m" name="minutes" inputmode="numeric" value="<%= cartSettings.abandoned_minutes %>"></div>
+    <div class="field-group"><label><input type="checkbox" name="reminder" value="1"<%= cartSettings.abandoned_reminder ? " checked" : "" %>> Envoyer un e-mail de rappel aux clients qui ont un compte</label></div>
+    <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+  </form><p class="field-hint">L'événement « Boutique : un panier est abandonné » est aussi disponible pour les automatisations et les webhooks. Les invités ne reçoivent jamais de rappel automatique.</p><% } %>
+</section>
 <section class="mk-panel">
   <h2>Exports CSV</h2>
   <p class="mk-sub">Fichiers lisibles dans Excel (séparateur « ; », montants en euros avec virgule). La période ci-dessus s'applique aux commandes et lignes.</p>

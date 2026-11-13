@@ -37,4 +37,8 @@ function stockLow(s, productId, name, qty, threshold) {
   if (!bus) return;
   emitSafe({ organizationId: s.organizationId, siteId: s.siteId ?? null, name: "shop.stock_low", objectType: "shop_product", objectId: productId, metadata: { productId, name, stock: qty, threshold }, idempotencyKey: `shop:stock_low:${productId}:${qty}` });
 }
-module.exports = { attach, fromOrderEvent, customerRegistered, stockLow };
+function cartAbandoned(s, cartId, email, info) {
+  if (!bus) return;
+  emitSafe({ organizationId: s.organizationId, siteId: s.siteId ?? null, name: "shop.cart_abandoned", email: email || undefined, objectType: "shop_cart", objectId: cartId, metadata: { cartId, items: info.items, products: info.names }, idempotencyKey: `shop:cart:${cartId}:${Date.now() > 0 ? Math.floor(Date.now() / 86400000) : 0}` });
+}
+module.exports = { attach, fromOrderEvent, customerRegistered, stockLow, cartAbandoned };
