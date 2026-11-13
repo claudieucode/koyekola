@@ -36,10 +36,19 @@ function byId(s, id) {
 function register(s, { email, password, name }) {
   const e = normEmail(email); checkEmail(e); checkPassword(password);
   const existing = byEmail(s, e);
-  // Un client « invité » (créé par une commande) peut activer son compte ; un compte existant n'est jamais écrasé.
   if (existing && existing.password_hash) throw new MarketingError("conflict", "Un compte existe déjà avec cette adresse. Connectez-vous.");
-  if (existing) { s.db.prepare("UPDATE mk_shop_customers SET password_hash = ?, name = COALESCE(?, name), updated_at = datetime('now') WHERE id = ?").run(hashPassword(password), name ? String(name).slice(0, 120) : null, existing.id); return existing.id; }
-  return Number(s.db.prepare("INSERT INTO mk_shop_customers (organization_id, site_id, email, password_hash, name) VALUES (?,?,?,?,?)").run(s.organizationId, s.siteId ?? null, e, hashPassword(password), name ? String(name).slice(0, 120) : null).lastInsertRowid);
+  // Un client « invité » (créé par une commande) ne peut PAS être activé par simple saisie de son adresse : n'importe qui verrait ses commandes.
+  // On renvoie un jeton d'activation, à envoyer à l'adresse e-mail ; le mot de passe n'est posé qu'après ouverture du lien (même circuit que la réinitialisation).
+  if (existing) return { activation: requestActivation(s, existing) };
+  const id = Number(s.db.prepare("INSERT INTO mk_shop_customers (organization_id, site_id, email, password_hash, name) VALUES (?,?,?,?,?)").run(s.organizationId, s.siteId ?? null, e, hashPassword(password), name ? String(name).slice(0, 120) : null).lastInsertRowid);
+  return { id };
+}
+// Jeton d'activation d'un compte invité (valable comme un jeton de réinitialisation)
+function requestActivation(s, customer) {
+  const token = crypto.randomBytes(32).toString("hex");
+  s.db.prepare("DELETE FROM mk_shop_customer_tokens WHERE customer_id = ? AND kind = 'reset'").run(customer.id);
+  s.db.prepare("INSERT INTO mk_shop_customer_tokens (customer_id, site_id, kind, token_hash, expires_at) VALUES (?,?, 'reset', ?, ?)").run(customer.id, s.siteId ?? null, sha(token), inFuture(RESET_MINUTES * 60000));
+  return { token, customer };
 }
 // Client « invité » : créé ou retrouvé au passage de la commande (sans mot de passe).
 function ensureGuest(s, email, name) {
@@ -115,4 +124,4 @@ function setStatus(s, id, status) {
   if (status === "disabled") s.db.prepare("DELETE FROM mk_shop_customer_tokens WHERE customer_id = ? AND kind = 'session'").run(id);
 }
 
-module.exports = { hashPassword, verifyPassword, byEmail, byId, register, ensureGuest, login, fromSession, logout, requestReset, resetPassword, updateProfile, listCustomers, setStatus };
+module.exports = { hashPassword, verifyPassword, byEmail, byId, register, requestActivation, ensureGuest, login, fromSession, logout, requestReset, resetPassword, updateProfile, listCustomers, setStatus };

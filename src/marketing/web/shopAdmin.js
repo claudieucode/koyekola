@@ -17,6 +17,7 @@ const reviews = require("../shop/reviews");
 const access = require("../shop/access");
 const personalization = require("../shop/personalization");
 const giftLists = require("../shop/giftLists");
+const refunds = require("../shop/refunds");
 const deliverySlots = require("../shop/deliverySlots");
 const age = require("../shop/age");
 const compare = require("../shop/compare");
@@ -237,13 +238,20 @@ module.exports = () => {
     const { order } = orderCtx(req, s);
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
     const detail = orders.orderDetail(s, order);
-    const next = orders.TRANSITIONS[order.status].filter((t) => t !== "paid" || order.payment_method === "manual");
+    const next = orders.TRANSITIONS[order.status].filter((t) => (t !== "paid" || order.payment_method === "manual") && t !== "refunded");
     render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next });
   });
-  route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s) => {
+  route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s, next) => {
     const { order } = orderCtx(req, s);
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
     const to = String(req.body.statut || "");
+    if (to === "refunded") { // « Remboursée » = remboursement TOTAL réel du reste (fournisseur de paiement inclus), jamais un simple changement d'étiquette
+      if (!req.mk.can("shop.payments")) throw new MarketingError("forbidden", "Vous n'avez pas le droit d'enregistrer un remboursement.");
+      const back = `${req.shopSpace.base}/boutique/commandes/${order.id}`;
+      return void refunds.create(s, order.id, { reason: req.body.note, actor: actor(req), idempotencyKey: req.body.idempotency_key })
+        .then((r) => { audit(req, s, "shop_order.refunded", "shop_order", order.id, { refund: r.refund.id, amount_cents: r.refund.amount_cents, full: r.full }); if (r.full && !r.duplicate) notify.notify(s, r.order, "order_refunded"); flashOk(req, `Commande ${order.number} : remboursée.`); res.redirect(back); })
+        .catch((error) => { if (!(error instanceof MarketingError)) return next(error); flashError(req, error.message); return res.redirect(back); });
+    }
     if ((to === "paid" || to === "refunded") && !req.mk.can("shop.payments")) throw new MarketingError("forbidden", "Vous n'avez pas le droit de confirmer un paiement ou d'enregistrer un remboursement.");
     const updated = orders.changeStatus(s, order.id, to, { actor: actor(req), note: req.body.note, canMarkPaid: req.mk.can("shop.payments"), tracking: req.body.tracking });
     audit(req, s, "shop_order.status_changed", "shop_order", order.id, { from: order.status, to });
@@ -251,6 +259,24 @@ module.exports = () => {
     if (event) notify.notify(s, updated, event);
     flashOk(req, `Commande ${order.number} : ${orders.STATUS_LABELS[to].toLowerCase()}.`);
     res.redirect(`${req.shopSpace.base}/boutique/commandes/${order.id}`);
+  }, { write: true });
+
+  // Remboursement réel (total ou partiel) : appelle le fournisseur de paiement, remet les articles en stock si demandé. Droit « shop.payments ».
+  route("post", "/commandes/:oid(\\d+)/remboursement", "shop.payments", (req, res, s, next) => {
+    const { order } = orderCtx(req, s);
+    if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
+    const b = req.body || {};
+    const back = `${req.shopSpace.base}/boutique/commandes/${order.id}`;
+    const amount = String(b.amount || "").trim() === "" ? null : euros(b.amount);
+    const items = Object.keys(b).filter((k) => /^qty_\d+$/.test(k)).map((k) => ({ order_item_id: Number(k.slice(4)), quantity: Number(b[k]) })).filter((i) => i.quantity >= 1);
+    Promise.resolve().then(() => refunds.create(s, order.id, { amountCents: amount, items, restock: b.restock === "1", shippingToo: b.shipping === "1", reason: b.reason, actor: actor(req), idempotencyKey: b.idempotency_key }))
+      .then((r) => {
+        audit(req, s, "shop_order.refunded", "shop_order", order.id, { refund: r.refund.id, amount_cents: r.refund.amount_cents, full: r.full });
+        if (r.full && !r.duplicate) notify.notify(s, r.order, "order_refunded");
+        flashOk(req, r.duplicate ? "Ce remboursement avait déjà été enregistré." : r.full ? `Commande ${order.number} : remboursée.` : `Remboursement partiel de ${view.money(r.refund.amount_cents, order.currency)} enregistré.`);
+        res.redirect(back);
+      })
+      .catch((error) => { if (!(error instanceof MarketingError)) return next(error); flashError(req, error.message); return res.redirect(back); });
   }, { write: true });
 
   // ── Clients ──

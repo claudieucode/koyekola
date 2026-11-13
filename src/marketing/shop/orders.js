@@ -155,6 +155,7 @@ function orderDetail(s, order) {
     items: s.db.prepare("SELECT * FROM mk_shop_order_items WHERE order_id = ? ORDER BY id").all(order.id),
     events: s.db.prepare("SELECT * FROM mk_shop_order_events WHERE order_id = ? ORDER BY id").all(order.id),
     payments: s.db.prepare("SELECT id, provider, provider_ref, amount_cents, currency, status, failure_reason, created_at FROM mk_shop_payments WHERE order_id = ? ORDER BY id").all(order.id),
+    refunds: s.db.prepare("SELECT * FROM mk_shop_refunds WHERE order_id = ? ORDER BY id").all(order.id),
   };
 }
 function listOrders(s, { status, q, customerId, page = 1, perPage = 25 } = {}) {

@@ -27,10 +27,10 @@ function encodeForm(value, prefix = "", out = []) {
   return out;
 }
 
-async function stripeRequest(method, path, params) {
+async function stripeRequest(method, path, params, extraHeaders) {
   const response = await fetch(`${apiBase()}${path}`, {
     method,
-    headers: { authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(params ? { "content-type": "application/x-www-form-urlencoded" } : {}) },
+    headers: { authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(params ? { "content-type": "application/x-www-form-urlencoded" } : {}), ...(extraHeaders || {}) },
     body: params ? encodeForm(params).join("&") : undefined,
     signal: AbortSignal.timeout(15000),
   });
