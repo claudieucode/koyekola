@@ -17,7 +17,7 @@ const MAX_URLS = 45000; // sous la limite de 50 000 adresses par fichier
 const metaIndex = (type, key) => { const m = meta.get(type, key); return { index: m.robots_index, canonical: m.canonical_url }; };
 
 // Groupes de sous-plans (sitemap-<groupe>.xml) : extensible, un type de contenu de plus = une ligne ici
-const GROUPS = { pages: ["Page", "Page web"], articles: ["Article"], formations: ["Formation"], taxonomies: ["Catégorie d'articles", "Étiquette", "Auteur", "Catégorie de formations"] };
+const GROUPS = { pages: ["Page", "Page web"], articles: ["Article"], formations: ["Formation"], boutique: ["Boutique", "Produit", "Catégorie de boutique"], taxonomies: ["Catégorie d'articles", "Étiquette", "Auteur", "Catégorie de formations"] };
 const groupOf = (type) => Object.keys(GROUPS).find((g) => GROUPS[g].includes(type)) || "pages";
 const SPLIT_AT = Number(process.env.SITEMAP_SPLIT_AT) > 0 ? Number(process.env.SITEMAP_SPLIT_AT) : 5000; // au-delà, /sitemap.xml devient un index de sous-plans (la limite d'un fichier est de 50 000 adresses)
 
@@ -90,6 +90,18 @@ function entries({ hostSite = null } = {}) {
     else if (seo.canonical && !seo.canonical.endsWith(e.path === "/" ? "/" : e.path)) excluded.push({ ...e, reason: `Canonical vers ${seo.canonical}` });
     else included.push(e);
   }
+  // Boutique (module « Commerce ») : accueil, catégories et produits PUBLIÉS des boutiques ouvertes, sous l'adresse du site qui les sert (jamais les brouillons, archivés ou supprimés)
+  try {
+    const siteModules = require("../marketing/siteModules");
+    for (const sh of db.prepare("SELECT organization_id, site_id FROM mk_shop_settings WHERE enabled = 1").all()) {
+      if (!siteModules.isEnabled(db, sh.organization_id, sh.site_id ?? null, "commerce")) continue;
+      const tag = siteTag(sh.site_id ?? null);
+      const where = sh.site_id == null ? "site_id IS NULL" : "site_id = ?", args = sh.site_id == null ? [] : [sh.site_id];
+      add({ path: "/boutique", type: "Boutique", ...tag }, null);
+      for (const c of db.prepare(`SELECT slug FROM mk_shop_categories WHERE organization_id = ? AND ${where} ORDER BY id`).all(sh.organization_id, ...args)) add({ path: `/boutique/categorie/${c.slug}`, type: "Catégorie de boutique", ...tag }, null);
+      for (const p of db.prepare(`SELECT slug, name, updated_at, created_at, image_url FROM mk_shop_products WHERE organization_id = ? AND ${where} AND status = 'published' AND deleted_at IS NULL ORDER BY id DESC LIMIT 5000`).all(sh.organization_id, ...args)) add({ path: `/boutique/produit/${p.slug}`, type: "Produit", lastmod: isoDate(p.updated_at || p.created_at), title: p.name, ...tag }, null);
+    }
+  } catch (error) { if (!/no such (table|column)/.test(error.message)) throw error; } // module marketing pas encore migré : aucune boutique
   // Étiquettes et auteurs : seulement si leur indexation est activée dans les Réglages
   const tags = new Map(taxonomy.publicTerms("tag").map((t) => [t.slug, t]));
   for (const slug of tags.keys()) {

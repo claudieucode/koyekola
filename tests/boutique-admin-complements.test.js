@@ -100,3 +100,15 @@ test("actions groupées sur les produits et les commandes ; commande manuelle ; 
   const bad = await boss.post(`${base}/commandes`, { line_1: "", email: "x@example.test", name: "X", line1: "1", postal_code: "1", city: "P", country: "FR" });
   assert.equal(bad.status, 302); assert.doesNotMatch(String(bad.location), /commandes\/\d+$/);
 });
+
+test("plan du site (sitemap.xml) du domaine du site : produits publiés et catégories, jamais les brouillons ni les produits d'un autre site", async () => {
+  await boss.post(`${base}/produits`, { name: "Brouillon secret", type: "simple", status: "draft", price: "9,00" });
+  await boss.post(`${base}/categories`, { name: "Luminaires" });
+  const slug = one("SELECT slug FROM mk_shop_products WHERE id = ?", pid).slug; const secret = one("SELECT slug FROM mk_shop_products WHERE name = 'Brouillon secret' AND site_id = ?", site).slug;
+  const x = (await new Client(srv.base).get("/sitemap.xml", hh));
+  assert.equal(x.status, 200);
+  assert.match(x.text, new RegExp(`/boutique/produit/${slug}<`)); assert.match(x.text, /\/boutique<\//); assert.match(x.text, /\/boutique\/categorie\/luminaires</);
+  assert.doesNotMatch(x.text, new RegExp(secret));
+  const main = await new Client(srv.base).get("/sitemap.xml");
+  assert.doesNotMatch(main.text, new RegExp(`/boutique/produit/${slug}<`), "le plan du domaine principal ne liste pas les produits d'un site");
+});
