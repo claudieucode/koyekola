@@ -118,7 +118,7 @@ function evaluateCoupon(s, code, lines, email) {
 
 // Calcule le panier COMPLET depuis la base. `dest` : { country, region } de livraison/facturation ; `shippingMethodId` facultatif.
 // → { lines, issues, canCheckout, settings, totals, coupon, couponError, shipping:{ required, options, chosen, error }, currency, weightGrams }
-function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, now = new Date() } = {}) {
+function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, customerId = null, now = new Date() } = {}) {
   const settings = store.getSettings(s);
   const items = s.db.prepare("SELECT * FROM mk_shop_cart_items WHERE cart_id = ? ORDER BY id").all(cart.id);
   const issues = [];
@@ -139,12 +139,14 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
     const stock = catalog.stockOf(p, v);
     const label = v ? Object.values(v.options).join(" / ") : null;
     const perso = personalization.get(s.db, p.id);
+    const cls = (() => { const r = s.db.prepare("SELECT tax_class_id, shipping_class_id FROM mk_shop_products WHERE id = ?").get(p.id); return r ? { taxClassId: r.tax_class_id, shippingClassId: r.shipping_class_id } : null; })();
     if (stock !== null && it.quantity > stock) issues.push({ itemId: it.id, kind: "stock", available: stock, message: stock > 0 ? `« ${p.name} » : seulement ${stock} en stock.` : `« ${p.name} » est en rupture de stock.` });
     lines.push({
       key: `${it.id}`, itemId: it.id, productId: p.id, variantId: v ? v.id : null, name: p.name, variantLabel: label, sku: (v && v.sku) || p.sku, slug: p.slug, image: (v && v.image_url) || p.image_url,
       customText: perso && it.custom_text ? it.custom_text : null, customLabel: perso ? perso.label : null,
       quantity: it.quantity, unitCents: price.unitCents, regularCents: price.regularCents, onSale: price.onSale, requiresShipping: p.requires_shipping === 1,
       weightGrams: (v && v.weight_grams != null ? v.weight_grams : p.weight_grams) || 0, categoryIds: p.categories.map((c) => c.id), stock,
+      ...(cls || {}),
     });
   }
 
@@ -163,12 +165,12 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
   const shipping = { required: physical.length > 0, options: [], chosen: null, error: null, zone: null };
   let shippingCents = 0;
   if (shipping.required) {
-    const zone = country ? calc.pickZone(store.listZones(s), country) : null;
+    const zone = country ? calc.pickZone(store.listZones(s), country, dest.postcode) : null;
     shipping.zone = zone ? zone.name : null;
     if (!country) shipping.error = "Indiquez le pays de livraison.";
     else if (!zone) shipping.error = "Nous ne livrons pas dans ce pays.";
     else {
-      shipping.options = calc.shippingOptions(zone.methods, { subtotalCents: afterDiscount, weightGrams });
+      shipping.options = calc.shippingOptions(zone.methods, { subtotalCents: afterDiscount, weightGrams, classIds: physical.map((l) => l.shippingClassId).filter((x) => x != null) });
       if (!shipping.options.length) shipping.error = "Aucune méthode de livraison ne correspond à ce panier.";
       else if (shippingMethodId != null) {
         shipping.chosen = shipping.options.find((o) => o.id === Number(shippingMethodId)) || null;
@@ -178,17 +180,24 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
     }
   }
 
-  // Taxes : règle choisie selon la destination ; sans destination ou sans règle, aucune taxe n'est inventée.
+  // Taxes : une règle par CLASSE de taxe de produit, choisie selon la destination (pays, région, code postal) ; sans destination ou sans règle, aucune taxe n'est inventée.
+  // Un client connecté marqué « exonéré » ne paie pas de taxe (jamais déduit d'un simple e-mail saisi : seul l'identifiant du client connecté compte).
   const taxCountry = country;
-  const rule = settings.tax_enabled && taxCountry ? calc.pickTaxRule(store.listTaxRules(s), taxCountry, dest.region) : null;
+  const rules = settings.tax_enabled && taxCountry ? store.listTaxRules(s) : [];
+  const exempt = Boolean(customerId && s.db.prepare("SELECT 1 FROM mk_shop_customers WHERE id = ? AND organization_id = ? AND tax_exempt = 1 AND password_hash IS NOT NULL").get(Number(customerId), s.organizationId));
+  const ruleOf = (classId) => (rules.length ? calc.pickTaxRule(rules, taxCountry, dest.region, dest.postcode, classId) : null);
+  const rule = ruleOf(null) || null;
+  for (const l of lines) { const r = ruleOf(l.taxClassId == null ? null : l.taxClassId); l.taxBp = r ? r.rate_bp : 0; l.taxName = r ? r.name : undefined; }
+  const shipRule = rule || (lines.map((l) => ruleOf(l.taxClassId == null ? null : l.taxClassId)).find(Boolean) || null);
+  const anyRule = lines.some((l) => l.taxBp > 0 || l.taxName) || Boolean(rule);
   const tax = {
-    enabled: Boolean(settings.tax_enabled && rule), includesTax: settings.prices_include_tax === 1,
-    lineRuleBp: rule ? rule.rate_bp : 0, shippingRuleBp: rule && rule.applies_to_shipping ? rule.rate_bp : 0, ruleName: rule ? rule.name : "Taxe",
+    enabled: Boolean(settings.tax_enabled && anyRule), exempt, includesTax: settings.prices_include_tax === 1,
+    lineRuleBp: rule ? rule.rate_bp : 0, shippingRuleBp: shipRule && shipRule.applies_to_shipping ? shipRule.rate_bp : 0, ruleName: rule ? rule.name : shipRule ? shipRule.name : "Taxe", shippingRuleName: shipRule ? shipRule.name : undefined,
   };
   const totals = calc.computeTotals({ lines, discount, shippingCents, tax });
   return {
     lines, issues, settings, totals, coupon, couponError, shipping, currency: settings.currency, weightGrams, country, version: cart.version,
-    taxRule: rule, canCheckout: lines.length > 0 && issues.length === 0,
+    taxRule: rule || shipRule, taxExempt: exempt, canCheckout: lines.length > 0 && issues.length === 0,
   };
 }
 

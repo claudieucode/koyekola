@@ -413,7 +413,7 @@ module.exports = ({ db }) => {
     if (!k) return res.redirect(303, `${BASE}/panier`);
     orders.expireStale(s, 60);
     const country = String(values.country || req.query.pays || (req.shopCustomer && "") || settings.default_country || "").toUpperCase().slice(0, 2);
-    const priced = cart.priceCart(s, k, { dest: { country, region: values.region }, shippingMethodId: values.shippingMethodId || req.query.livraison || null, email: values.email || (req.shopCustomer && req.shopCustomer.email) });
+    const priced = cart.priceCart(s, k, { dest: { country, region: values.region, postcode: values.ship_postal_code || undefined }, customerId: req.shopCustomer ? req.shopCustomer.id : null, shippingMethodId: values.shippingMethodId || req.query.livraison || null, email: values.email || (req.shopCustomer && req.shopCustomer.email) });
     if (!priced.lines.length) return res.redirect(303, `${BASE}/panier`);
     const giftLines = giftLists.cartGiftLines(s, k.id);
     const giftInfo = giftLines.length ? { titles: [...new Set(giftLines.map((g) => g.title))], canDeliver: giftLines.length === priced.lines.length && new Set(giftLines.map((g) => g.list_id)).size === 1 && Boolean(giftLines[0].allow_recipient_delivery && giftLines[0].recipient_address) } : null;

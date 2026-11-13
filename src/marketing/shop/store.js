@@ -41,22 +41,31 @@ function saveSettings(s, input) {
 }
 
 // ── Livraison ───────────────────────────────────────────────────────────────────────────────
+// Motifs de code postal : 75*, 13000-13999, 1000 (séparés par des virgules) ; seuls lettres, chiffres, *, - et , sont gardés
+function cleanPostcodes(v) {
+  const list = String(v == null ? "" : v).split(/[,;\n]+/).map((x) => x.trim().toUpperCase().replace(/\s+/g, "")).filter(Boolean);
+  for (const x of list) if (!/^[A-Z0-9*-]{1,20}$/.test(x)) throw new MarketingError("invalid_field", `Motif de code postal invalide : « ${x} ». Exemples : 75*, 13000-13999, 1000.`);
+  return list.slice(0, 200).join(", ");
+}
 function listZones(s) {
   const zones = s.db.prepare(`SELECT * FROM mk_shop_shipping_zones WHERE organization_id = ? AND ${siteCond(s)} ORDER BY position, id`).all(s.organizationId, ...siteArgs(s)).map((z) => ({ ...z, countries: json(z.countries, []) }));
   const methods = zones.length ? s.db.prepare(`SELECT * FROM mk_shop_shipping_methods WHERE zone_id IN (${zones.map(() => "?").join(",")}) ORDER BY position, id`).all(...zones.map((z) => z.id)) : [];
-  return zones.map((z) => ({ ...z, methods: methods.filter((m) => m.zone_id === z.id) }));
+  const costs = methods.length ? s.db.prepare(`SELECT method_id, class_id, cost_cents FROM mk_shop_shipping_class_costs WHERE method_id IN (${methods.map(() => "?").join(",")})`).all(...methods.map((m) => m.id)) : [];
+  const withCosts = methods.map((m) => ({ ...m, class_costs: Object.fromEntries(costs.filter((c) => c.method_id === m.id).map((c) => [c.class_id, c.cost_cents])) }));
+  return zones.map((z) => ({ ...z, methods: withCosts.filter((m) => m.zone_id === z.id) }));
 }
 function saveZone(s, input, id = null) {
   const name = String(input.name || "").trim();
   if (!name || name.length > 80) throw new MarketingError("invalid_field", "Le nom de la zone est obligatoire (80 caractères au maximum).");
   const list = (Array.isArray(input.countries) ? input.countries : String(input.countries || "").split(/[\s,;]+/)).filter(Boolean).map((c) => country(c));
   const countries = JSON.stringify([...new Set(list)]);
+  const postcodes = cleanPostcodes(input.postcodes);
   if (id) {
     if (!s.db.prepare(`SELECT 1 FROM mk_shop_shipping_zones WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(id, s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Zone introuvable.");
-    s.db.prepare("UPDATE mk_shop_shipping_zones SET name = ?, countries = ? WHERE id = ?").run(name, countries, id);
+    s.db.prepare("UPDATE mk_shop_shipping_zones SET name = ?, countries = ?, postcodes = ? WHERE id = ?").run(name, countries, postcodes, id);
     return id;
   }
-  return Number(s.db.prepare("INSERT INTO mk_shop_shipping_zones (organization_id, site_id, name, countries) VALUES (?,?,?,?)").run(s.organizationId, s.siteId ?? null, name, countries).lastInsertRowid);
+  return Number(s.db.prepare("INSERT INTO mk_shop_shipping_zones (organization_id, site_id, name, countries, postcodes) VALUES (?,?,?,?,?)").run(s.organizationId, s.siteId ?? null, name, countries, postcodes).lastInsertRowid);
 }
 function deleteZone(s, id) {
   const r = s.db.prepare(`DELETE FROM mk_shop_shipping_zones WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).run(id, s.organizationId, ...siteArgs(s));
@@ -91,12 +100,51 @@ function saveTaxRule(s, input) {
   const c = String(input.country || "").trim() === "*" ? "*" : country(input.country);
   const rate = Number(input.rate_bp);
   if (!Number.isInteger(rate) || rate < 0 || rate > 10000) throw new MarketingError("invalid_field", "Le taux est exprimé en points de base (2000 = 20 %), entre 0 et 10000.");
-  return Number(s.db.prepare("INSERT INTO mk_shop_tax_rules (organization_id, site_id, name, country, region, rate_bp, applies_to_shipping, priority) VALUES (?,?,?,?,?,?,?,?)")
-    .run(s.organizationId, s.siteId ?? null, name, c, String(input.region || "").trim().slice(0, 60) || null, rate, Number(input.applies_to_shipping) ? 1 : 0, Number(input.priority) || 0).lastInsertRowid);
+  let classId = null;
+  if (input.tax_class_id !== undefined && input.tax_class_id !== null && input.tax_class_id !== "" && Number(input.tax_class_id) !== 0) {
+    classId = Number(input.tax_class_id);
+    if (!s.db.prepare(`SELECT 1 FROM mk_shop_tax_classes WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(classId, s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Classe de taxe introuvable.");
+  }
+  return Number(s.db.prepare("INSERT INTO mk_shop_tax_rules (organization_id, site_id, name, country, region, rate_bp, applies_to_shipping, priority, tax_class_id, postcode) VALUES (?,?,?,?,?,?,?,?,?,?)")
+    .run(s.organizationId, s.siteId ?? null, name, c, String(input.region || "").trim().slice(0, 60) || null, rate, Number(input.applies_to_shipping) ? 1 : 0, Number(input.priority) || 0, classId, cleanPostcodes(input.postcode) || null).lastInsertRowid);
 }
 function deleteTaxRule(s, id) {
   const r = s.db.prepare(`DELETE FROM mk_shop_tax_rules WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).run(id, s.organizationId, ...siteArgs(s));
   if (!r.changes) throw new MarketingError("not_found", "Règle introuvable.");
+}
+
+// ── Classes de taxe et d'expédition ─────────────────────────────────────────────────────────
+const CLASS_TABLES = { tax: "mk_shop_tax_classes", shipping: "mk_shop_shipping_classes" };
+function listClasses(s, kind) {
+  return s.db.prepare(`SELECT * FROM ${CLASS_TABLES[kind]} WHERE organization_id = ? AND ${siteCond(s)} ORDER BY name`).all(s.organizationId, ...siteArgs(s));
+}
+function saveClass(s, kind, name) {
+  const n = String(name || "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 60);
+  if (!n) throw new MarketingError("invalid_field", "Le nom de la classe est obligatoire (60 caractères au maximum).");
+  if (s.db.prepare(`SELECT 1 FROM ${CLASS_TABLES[kind]} WHERE organization_id = ? AND ${siteCond(s)} AND name = ?`).get(s.organizationId, ...siteArgs(s), n)) throw new MarketingError("conflict", "Cette classe existe déjà.");
+  return Number(s.db.prepare(`INSERT INTO ${CLASS_TABLES[kind]} (organization_id, site_id, name) VALUES (?,?,?)`).run(s.organizationId, s.siteId ?? null, n).lastInsertRowid);
+}
+function deleteClass(s, kind, id) {
+  const r = s.db.prepare(`DELETE FROM ${CLASS_TABLES[kind]} WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).run(Number(id), s.organizationId, ...siteArgs(s));
+  if (!r.changes) throw new MarketingError("not_found", "Classe introuvable.");
+  // Les produits et règles qui y étaient rattachés retombent sur la classe standard (aucune suppression de produit)
+  if (kind === "tax") { s.db.prepare("UPDATE mk_shop_products SET tax_class_id = NULL WHERE tax_class_id = ? AND organization_id = ?").run(Number(id), s.organizationId); s.db.prepare("DELETE FROM mk_shop_tax_rules WHERE tax_class_id = ? AND organization_id = ?").run(Number(id), s.organizationId); }
+  else s.db.prepare("UPDATE mk_shop_products SET shipping_class_id = NULL WHERE shipping_class_id = ? AND organization_id = ?").run(Number(id), s.organizationId);
+}
+// Classes d'un produit (NULL = standard / aucune)
+function setProductClasses(s, productId, { taxClassId, shippingClassId }) {
+  if (!s.db.prepare(`SELECT 1 FROM mk_shop_products WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(Number(productId), s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Produit introuvable.");
+  const check = (kind, v) => { if (v === undefined || v === null || v === "" || Number(v) === 0) return null; if (!s.db.prepare(`SELECT 1 FROM ${CLASS_TABLES[kind]} WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(Number(v), s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Classe introuvable."); return Number(v); };
+  s.db.prepare("UPDATE mk_shop_products SET tax_class_id = ?, shipping_class_id = ? WHERE id = ?").run(check("tax", taxClassId), check("shipping", shippingClassId), Number(productId));
+}
+// Supplément d'une méthode de livraison pour une classe (0 ou vide = aucun supplément)
+function setClassCost(s, methodId, classId, cents) {
+  if (!s.db.prepare(`SELECT 1 FROM mk_shop_shipping_methods WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(Number(methodId), s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Méthode introuvable.");
+  if (!s.db.prepare(`SELECT 1 FROM mk_shop_shipping_classes WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(Number(classId), s.organizationId, ...siteArgs(s))) throw new MarketingError("not_found", "Classe introuvable.");
+  const c = Number(cents);
+  if (cents === "" || cents == null || c === 0) { s.db.prepare("DELETE FROM mk_shop_shipping_class_costs WHERE method_id = ? AND class_id = ?").run(Number(methodId), Number(classId)); return; }
+  if (!Number.isInteger(c) || c < 0 || c > 1e9) throw new MarketingError("invalid_field", "Montant invalide.");
+  s.db.prepare("INSERT INTO mk_shop_shipping_class_costs (method_id, class_id, cost_cents) VALUES (?,?,?) ON CONFLICT(method_id, class_id) DO UPDATE SET cost_cents = excluded.cost_cents").run(Number(methodId), Number(classId), c);
 }
 
 // ── Coupons ─────────────────────────────────────────────────────────────────────────────────
@@ -130,6 +178,6 @@ function couponByCode(s, code) {
 }
 
 module.exports = {
-  METHODS, normCode, getSettings, saveSettings, listZones, saveZone, deleteZone, saveMethod, deleteMethod,
+  METHODS, normCode, listClasses, saveClass, deleteClass, setProductClasses, setClassCost, cleanPostcodes, getSettings, saveSettings, listZones, saveZone, deleteZone, saveMethod, deleteMethod,
   listTaxRules, saveTaxRule, deleteTaxRule, listCoupons, saveCoupon, setCouponActive, couponByCode,
 };
