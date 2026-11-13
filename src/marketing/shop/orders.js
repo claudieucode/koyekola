@@ -36,6 +36,7 @@ function address(input, label, { required }) {
 
 function addEvent(db, orderId, { kind, from = null, to = null, actor, note = null }) {
   db.prepare("INSERT INTO mk_shop_order_events (order_id, kind, from_status, to_status, actor, note) VALUES (?,?,?,?,?,?)").run(orderId, kind, from, to, actor, note ? String(note).slice(0, 500) : null);
+  try { require("./events").fromOrderEvent(db, orderId, { kind, from, to }); } catch { /* un événement manqué n'interrompt jamais une commande */ }
 }
 
 function nextNumber(s, settings) {
@@ -52,6 +53,12 @@ function reserve(s, line, orderId) {
   const r = s.db.prepare(`UPDATE ${table} SET stock_qty = stock_qty - ? WHERE id = ? AND manage_stock = 1 AND stock_qty >= ?`).run(line.quantity, id, line.quantity);
   if (!r.changes) throw new MarketingError("stock", `Stock insuffisant pour « ${line.name} ».`);
   s.db.prepare("INSERT INTO mk_shop_stock_movements (organization_id, site_id, product_id, variant_id, delta, reason, order_id) VALUES (?,?,?,?,?, 'order', ?)").run(s.organizationId, s.siteId ?? null, line.productId, line.variantId, -line.quantity, orderId);
+  // Alerte de stock bas : l'événement part quand le stock passe SOUS (ou sur) le seuil de la boutique à cause de cette ligne
+  try {
+    const left = s.db.prepare(`SELECT stock_qty n FROM ${table} WHERE id = ?`).get(id).n;
+    const th = store.getSettings(s).low_stock_threshold;
+    if (Number.isInteger(th) && th >= 0 && left <= th && left + line.quantity > th) require("./events").stockLow(s, line.productId, line.name, left, th);
+  } catch { /* l'alerte ne bloque jamais la commande */ }
 }
 
 // Rend le stock d'une commande (annulation, paiement échoué, expiration). Idempotent grâce à stock_released.
