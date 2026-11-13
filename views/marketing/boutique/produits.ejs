@@ -8,13 +8,15 @@
     <% if (canWrite) { %><a class="btn btn-primary btn-sm" href="<%= base %>/produits/nouveau">Nouveau produit</a><% } %>
   </form>
   <% if (!list.items.length) { %><div class="mk-empty"><%- illu("boutique", { className: "kx-empty-ill" }) %><p>Aucun produit pour l'instant.</p></div><% } else { %>
+  <form method="post" action="<%= base %>/produits/lot" id="bulk-p">
   <div class="mk-table-wrap"><table class="mk-table">
     <caption class="sr-only">Produits de la boutique</caption>
-    <thead><tr><th scope="col">Produit</th><th scope="col">Type</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col">Statut</th></tr></thead>
+    <thead><tr><% if (canWrite) { %><th scope="col"><span class="sr-only">Sélection</span></th><% } %><th scope="col">Produit</th><th scope="col">Type</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col">Statut</th></tr></thead>
     <tbody>
     <% const ST = { published: "En ligne", draft: "Brouillon", archived: "Archivé" }; const TY = { simple: "Simple", variable: "Variable", digital: "Numérique" }; %>
     <% list.items.forEach((p) => { const low = p.manage_stock && p.type !== "variable" && p.stock_qty <= shopSettings.low_stock_threshold; %>
       <tr>
+        <% if (canWrite) { %><td><input type="checkbox" name="ids" value="<%= p.id %>" aria-label="Sélectionner <%= p.name %>"></td><% } %>
         <th scope="row"><a href="<%= base %>/produits/<%= p.id %>"><%= p.name %></a><% if (p.sku) { %> <span class="mk-sub">· <%= p.sku %></span><% } %></th>
         <td><%= TY[p.type] || p.type %></td>
         <td><%= p.onSale ? money(p.priceFromCents) + " (promo)" : money(p.priceFromCents) %><%= p.isVariable ? " et +" : "" %></td>
@@ -23,6 +25,8 @@
       </tr>
     <% }) %>
     </tbody></table></div>
+  <% if (canWrite) { %><p class="mk-inline-form"><label for="bulk-a">Pour les produits cochés :</label> <select id="bulk-a" name="action"><option value="published">Publier</option><option value="draft">Passer en brouillon</option><option value="archived">Archiver</option><option value="delete">Supprimer</option></select> <button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="Appliquer cette action aux produits cochés ?" data-mk-confirm-ok="Appliquer">Appliquer</button></p><% } %>
+  </form>
   <% if (list.pages > 1) { %><p class="mk-sub">Page <%= list.page %> sur <%= list.pages %> — <% if (list.page > 1) { %><a href="?page=<%= list.page - 1 %>">précédente</a> <% } %><% if (list.page < list.pages) { %><a href="?page=<%= list.page + 1 %>">suivante</a><% } %></p><% } %>
   <% } %>
 </section>

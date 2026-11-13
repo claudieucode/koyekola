@@ -104,6 +104,7 @@
   <% } %>
 </section>
 <% } %>
+<% if (canWrite) { %><section class="mk-panel"><form method="post" action="<%= base %>/produits/<%= product.id %>/dupliquer"><button class="btn btn-outline btn-sm" type="submit">Dupliquer ce produit (brouillon)</button></form></section><% } %>
 <section class="mk-panel" aria-labelledby="cl-h"><h2 id="cl-h">Classes de taxe et d'expédition</h2>
   <p class="field-hint">Une classe de taxe applique son propre taux (ex. taux réduit) ; une classe d'expédition ajoute son supplément de livraison. Créez-les dans « Taxes et expédition ». Sans classe, le produit suit les règles standard.</p>
   <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/classes">
@@ -113,6 +114,11 @@
   </form><% } %>
 </section>
 <section class="mk-panel" aria-labelledby="var-h"><h2 id="var-h">Variantes</h2>
+  <% if (canWrite && product.type === "variable" && product.attributes.length) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/generer-variantes">
+    <p class="field-hint">Crée toutes les combinaisons des attributs qui n'existent pas encore (200 au plus).</p>
+    <div class="field-group"><label for="gv-s">Stock initial de chaque variante</label><input id="gv-s" name="stock" type="number" min="0" value="0"></div>
+    <div class="field-group"><label><input type="checkbox" name="manage_stock" value="1" checked> Suivre le stock</label></div>
+    <button class="btn btn-outline btn-sm" type="submit">Générer les variantes</button></form><% } %>
   <% if (!product.attributes.length) { %><p class="mk-empty">Définissez d'abord les attributs (ex. « Taille: S, M, L »), enregistrez, puis ajoutez les variantes.</p><% } else { %>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Variantes</caption><thead><tr><th scope="col">Combinaison</th><th scope="col">SKU</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
   <% variants.forEach((x) => { %><tr><th scope="row"><%= Object.values(x.options).join(" / ") %></th><td><%= x.sku || "—" %></td><td><%= x.price_cents != null ? money(x.price_cents) : "prix du produit" %></td><td><%= x.manage_stock ? x.stock_qty : "illimité" %></td>

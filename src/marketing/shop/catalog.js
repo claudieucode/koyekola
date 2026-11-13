@@ -259,6 +259,48 @@ function deleteVariant(s, productId, variantId) {
   if (!r.changes) throw new MarketingError("not_found", "Variante introuvable.");
 }
 
+// Duplique un produit : brouillon « Copie de … », SKU vidé (un SKU est unique), catégories, étiquettes, attributs et variantes copiés (SKU des variantes vidés, stock conservé), historique et ventes NON copiés.
+function duplicateProduct(s, productId, userId = null) {
+  return transaction(s.db, () => {
+    const p = getProduct(s, productId);
+    if (!p) throw new MarketingError("not_found", "Produit introuvable.");
+    const cats = s.db.prepare("SELECT category_id FROM mk_shop_product_categories WHERE product_id = ?").all(p.id).map((r) => r.category_id);
+    const id = createProduct(s, {
+      type: p.type, status: "draft", name: `Copie de ${p.name}`.slice(0, 200), short_description: p.short_description, description: p.description, sku: "",
+      price_cents: p.price_cents, sale_price_cents: p.sale_price_cents, sale_starts_at: p.sale_starts_at, sale_ends_at: p.sale_ends_at, manage_stock: p.manage_stock, stock_qty: p.stock_qty,
+      weight_grams: p.weight_grams, length_mm: p.length_mm, width_mm: p.width_mm, height_mm: p.height_mm, requires_shipping: p.requires_shipping, image_url: p.image_url,
+      gallery: json(p.gallery, []), tags: json(p.tags, []), attributes: json(p.attributes, []), is_featured: 0, seo_title: p.seo_title, seo_description: p.seo_description, category_ids: cats,
+    }, userId);
+    if (p.type === "variable") {
+      for (const v of s.db.prepare("SELECT * FROM mk_shop_variants WHERE product_id = ? ORDER BY id").all(p.id)) {
+        saveVariant(s, id, { sku: "", options: json(v.options, {}), price_cents: v.price_cents, sale_price_cents: v.sale_price_cents, manage_stock: v.manage_stock, stock_qty: v.stock_qty, weight_grams: v.weight_grams, image_url: v.image_url, active: v.active });
+      }
+    }
+    s.db.prepare("UPDATE mk_shop_products SET tax_class_id = ?, shipping_class_id = ? WHERE id = ?").run(p.tax_class_id ?? null, p.shipping_class_id ?? null, id);
+    return id;
+  });
+}
+// Générateur de variantes : toutes les combinaisons des attributs qui n'existent pas encore (prix = prix du produit, stock initial réglable) ; 200 au plus en une fois.
+function generateVariants(s, productId, { stock = 0, manageStock = 1 } = {}) {
+  return transaction(s.db, () => {
+    const p = getProduct(s, productId);
+    if (!p) throw new MarketingError("not_found", "Produit introuvable.");
+    if (p.type !== "variable") throw new MarketingError("invalid_field", "Seul un produit variable possède des variantes.");
+    const attrs = json(p.attributes, []);
+    if (!attrs.length) throw new MarketingError("invalid_field", "Définissez d'abord les attributs du produit (ex. Taille : S, M, L).");
+    let combos = [{}];
+    for (const a of attrs) combos = combos.flatMap((c) => a.values.map((v) => ({ ...c, [a.name]: v })));
+    if (combos.length > 200) throw new MarketingError("invalid_field", `Trop de combinaisons (${combos.length}) : 200 au plus à la fois.`);
+    let created = 0;
+    for (const options of combos) {
+      if (s.db.prepare("SELECT 1 FROM mk_shop_variants WHERE product_id = ? AND options_key = ?").get(p.id, optionsKey(options))) continue;
+      saveVariant(s, p.id, { options, manage_stock: manageStock ? 1 : 0, stock_qty: Math.max(0, Math.floor(Number(stock)) || 0), active: 1 });
+      created += 1;
+    }
+    return { created, total: combos.length };
+  });
+}
+
 // Ajustement manuel du stock (journalisé). `delta` positif ou négatif ; le stock ne descend jamais sous zéro.
 function adjustStock(s, productId, variantId, delta, userId = null) {
   return transaction(s.db, () => {
@@ -381,5 +423,5 @@ module.exports = {
   OPERATIONAL_TYPES, STATUSES, slugify, priceOf, stockOf, saleActive, nowSql,
   listCategories, categoryBySlug, categoryById, saveCategory, deleteCategory, descendantIds,
   createProduct, updateProduct, deleteProduct, getProduct, productById, publicProduct, relatedProducts, adminList, hydrate, setProductCategories,
-  listVariants, saveVariant, deleteVariant, adjustStock, catalogQuery,
+  listVariants, saveVariant, deleteVariant, duplicateProduct, generateVariants, adjustStock, catalogQuery,
 };
