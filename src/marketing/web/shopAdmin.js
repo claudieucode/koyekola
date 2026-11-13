@@ -25,6 +25,7 @@ const reports = require("../shop/reports");
 const abandoned = require("../shop/abandoned");
 const gateways = require("../shop/gateways");
 const privacy = require("../shop/privacy");
+const cartSvc = require("../shop/cart");
 const invoices = require("../shop/invoices");
 const downloads = require("../shop/downloads");
 const multer = require("multer");
@@ -153,6 +154,27 @@ module.exports = () => {
     s.db.prepare("UPDATE mk_shop_products SET download_limit = ?, download_days = ? WHERE id = ? AND organization_id = ?").run(lim, days, Number(req.params.pid), s.organizationId);
     flashOk(req, "Règles de téléchargement enregistrées (elles s'appliquent aux prochaines commandes).");
     res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/dupliquer", "shop.write", (req, res, s) => {
+    const id = catalog.duplicateProduct(s, Number(req.params.pid), req.mk.ctx.userId ?? null);
+    audit(req, s, "shop_product.duplicated", "shop_product", id, { from: req.params.pid });
+    flashOk(req, "Produit dupliqué en brouillon : vérifiez-le puis publiez-le."); res.redirect(`${req.shopSpace.base}/boutique/produits/${id}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/generer-variantes", "shop.write", (req, res, s) => {
+    const r = catalog.generateVariants(s, Number(req.params.pid), { stock: req.body.stock, manageStock: req.body.manage_stock ? 1 : 0 });
+    audit(req, s, "shop_variants.generated", "shop_product", req.params.pid, r);
+    flashOk(req, r.created ? `${r.created} variante(s) créée(s) sur ${r.total} combinaison(s).` : "Toutes les combinaisons existent déjà."); res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  // Actions groupées sur les produits
+  route("post", "/produits/lot", "shop.write", (req, res, s) => {
+    const ids = [].concat(req.body.ids || []).map(Number).filter((x) => Number.isInteger(x) && x > 0).slice(0, 100);
+    const action = String(req.body.action || "");
+    if (!["published", "draft", "archived", "delete"].includes(action)) throw new MarketingError("invalid_field", "Action inconnue.");
+    if (!ids.length) throw new MarketingError("invalid_field", "Cochez au moins un produit.");
+    let ok = 0, ko = 0;
+    for (const id of ids) { try { if (action === "delete") catalog.deleteProduct(s, id); else catalog.updateProduct(s, id, { status: action }); ok += 1; } catch { ko += 1; } }
+    audit(req, s, "shop_product.bulk", "shop_product", ids.join(",").slice(0, 100), { action, ok, ko });
+    flashOk(req, `${ok} produit(s) mis à jour${ko ? `, ${ko} refusé(s)` : ""}.`); res.redirect(`${req.shopSpace.base}/boutique`);
   }, { write: true });
   route("post", "/produits/:pid(\\d+)/supprimer", "shop.write", (req, res, s) => {
     catalog.deleteProduct(s, Number(req.params.pid));
@@ -288,6 +310,56 @@ module.exports = () => {
     const next = orders.TRANSITIONS[order.status].filter((t) => (t !== "paid" || order.payment_method === "manual") && t !== "refunded");
     render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next, docs: invoices.forOrder(s, order.id) });
   });
+  // ── Création manuelle d'une commande (vente par téléphone, boutique physique) ──
+  route("get", "/commandes/nouvelle", "shop.orders", (req, res, s) => {
+    const products = catalog.adminList(s, { status: "published", perPage: 100 }).items;
+    const choices = [];
+    for (const p of products) {
+      if (p.type === "variable") for (const v of p.variants) choices.push({ value: `${p.id}:${v.id}`, label: `${p.name} — ${Object.values(v.options).join(" / ")}` });
+      else choices.push({ value: `${p.id}:`, label: p.name });
+    }
+    const methods = store.listZones(s).flatMap((z) => z.methods.filter((m) => m.active).map((m) => ({ id: m.id, label: `${z.name} — ${m.name}` })));
+    render(req, res, "commande-nouvelle", "Boutique — nouvelle commande", "boutique/commandes", { choices, methods, values: req.query.erreur ? {} : {}, error: req.query.erreur ? String(req.query.erreur).slice(0, 300) : null });
+  });
+  route("post", "/commandes", "shop.orders", (req, res, s) => {
+    const b = req.body;
+    const k0 = cartSvc.createCart(s, null); const k = cartSvc.findCart(s, k0.token);
+    let n = 0;
+    for (let i = 1; i <= 8; i += 1) {
+      const raw = String(b[`line_${i}`] || ""); if (!raw) continue;
+      const [pid, vid] = raw.split(":");
+      cartSvc.addItem(s, k, { productId: Number(pid), variantId: vid ? Number(vid) : null, quantity: b[`qty_${i}`] || 1, ageConfirmed: 99 });
+      n += 1;
+    }
+    if (!n) throw new MarketingError("invalid_field", "Ajoutez au moins un article.");
+    const addr = { name: b.name, line1: b.line1, line2: b.line2, postal_code: b.postal_code, city: b.city, region: b.region, country: b.country, phone: b.phone };
+    const fresh = cartSvc.findCart(s, k0.token);
+    const { order } = orders.createFromCart(s, fresh, { email: b.email, billing: addr, shipping: addr, shippingMethodId: b.shipping_method || null, paymentMethod: "manual", idempotencyKey: require("node:crypto").randomBytes(12).toString("hex") });
+    const cid = customers.ensureGuest(s, order.email, addr.name); s.db.prepare("UPDATE mk_shop_orders SET customer_id = ? WHERE id = ? AND customer_id IS NULL").run(cid, order.id);
+    orders.addEvent(s.db, order.id, { kind: "note", actor: actor(req), note: `Commande créée à la main par l'équipe.${b.note ? " " + String(b.note).slice(0, 300) : ""}` });
+    audit(req, s, "shop_order.created_manually", "shop_order", order.id);
+    flashOk(req, `Commande ${order.number} créée (paiement manuel : à confirmer quand l'argent est reçu).`);
+    res.redirect(`${req.shopSpace.base}/boutique/commandes/${order.id}`);
+  }, { write: true });
+  route("post", "/commandes/:oid(\\d+)/note", "shop.orders", (req, res, s) => {
+    const { order } = orderCtx(req, s);
+    if (!order) throw new MarketingError("not_found", "Commande introuvable.");
+    const note = String(req.body.note || "").replace(/[\u0000-\u0008\u000b-\u001f\u007f]+/g, " ").trim().slice(0, 500);
+    if (!note) throw new MarketingError("invalid_field", "La note est vide.");
+    orders.addEvent(s.db, order.id, { kind: "note", actor: actor(req), note });
+    flashOk(req, "Note ajoutée à l'historique."); res.redirect(`${req.shopSpace.base}/boutique/commandes/${order.id}`);
+  }, { write: true });
+  // Actions groupées sur les commandes (statuts de traitement seulement : payer et rembourser restent des actes individuels)
+  route("post", "/commandes/lot", "shop.orders", (req, res, s) => {
+    const ids = [].concat(req.body.ids || []).map(Number).filter((x) => Number.isInteger(x) && x > 0).slice(0, 100);
+    const to = String(req.body.action || "");
+    if (!["processing", "shipped", "completed", "cancelled"].includes(to)) throw new MarketingError("invalid_field", "Action inconnue.");
+    if (!ids.length) throw new MarketingError("invalid_field", "Cochez au moins une commande.");
+    let ok = 0, ko = 0;
+    for (const id of ids) { try { orders.changeStatus(s, id, to, { actor: actor(req), canMarkPaid: false }); ok += 1; } catch { ko += 1; } }
+    audit(req, s, "shop_order.bulk", "shop_order", ids.join(",").slice(0, 100), { action: to, ok, ko });
+    flashOk(req, `${ok} commande(s) mise(s) à jour${ko ? `, ${ko} ignorée(s) (transition impossible)` : ""}.`); res.redirect(`${req.shopSpace.base}/boutique/commandes`);
+  }, { write: true });
   route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s, next) => {
     const { order } = orderCtx(req, s);
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
@@ -451,6 +523,13 @@ module.exports = () => {
     store.saveZone(s, { name: z.name, countries: z.countries, postcodes: req.body.postcodes }, z.id);
     flashOk(req, "Codes postaux de la zone enregistrés."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
   }, { write: true });
+  route("get", "/clients/:cid(\\d+)", "shop.read", (req, res, s) => {
+    const c = s.db.prepare(`SELECT id, email, name, phone, status, tax_exempt, marketing_opt_in, created_at, addresses, (password_hash IS NOT NULL) AS has_account FROM mk_shop_customers WHERE id = ? AND organization_id = ? AND ${s.siteId == null ? "site_id IS NULL" : "site_id = ?"}`).get(Number(req.params.cid), s.organizationId, ...(s.siteId == null ? [] : [s.siteId]));
+    if (!c) return res.status(404).render("error", { message: "Client introuvable." });
+    const list = orders.listOrders(s, { customerId: c.id, perPage: 50 });
+    const spent = list.items.filter((o) => o.paid_at && o.status !== "cancelled").reduce((a, o) => a + o.total_cents, 0);
+    render(req, res, "client", `Client ${c.email}`, "boutique/clients", { customer: c, addresses: (() => { try { return JSON.parse(c.addresses); } catch { return []; } })(), custOrders: list.items, spent, statusLabels: orders.STATUS_LABELS, canPeople: req.mk.can("shop.orders") });
+  });
   route("get", "/clients/:cid(\\d+)/donnees", "shop.orders", (req, res, s) => {
     const data = privacy.exportData(s, Number(req.params.cid));
     audit(req, s, "shop_customer.exported", "shop_customer", req.params.cid);
@@ -468,11 +547,28 @@ module.exports = () => {
     audit(req, s, "shop_customer.tax_exempt", "shop_customer", req.params.cid, { exempt: Boolean(req.body.exempt) });
     flashOk(req, req.body.exempt ? "Client exonéré de taxe (compte connecté uniquement)." : "Exonération retirée."); res.redirect(`${req.shopSpace.base}/boutique/clients`);
   }, { write: true });
+  const couponInput = (b) => ({ code: b.code, kind: b.kind, value: b.kind === "fixed" ? euros(b.value) : Number(b.value), min_subtotal_cents: euros(b.min_subtotal), starts_at: b.starts_at, ends_at: b.ends_at, max_uses: int(b.max_uses), per_customer_limit: int(b.per_customer_limit),
+    product_ids: [].concat(b.product_ids || []).map(Number), category_ids: [].concat(b.category_ids || []).map(Number), free_shipping: b.free_shipping ? 1 : 0, shipping_only: b.shipping_only ? 1 : 0, auto_apply: b.auto_apply ? 1 : 0, label: b.label });
   route("post", "/coupons", "shop.write", (req, res, s) => {
     const b = req.body;
-    store.saveCoupon(s, { code: b.code, kind: b.kind, value: b.kind === "fixed" ? euros(b.value) : Number(b.value), min_subtotal_cents: euros(b.min_subtotal), starts_at: b.starts_at, ends_at: b.ends_at, max_uses: int(b.max_uses), per_customer_limit: int(b.per_customer_limit), product_ids: [].concat(b.product_ids || []).map(Number) });
+    store.saveCoupon(s, couponInput(b));
     audit(req, s, "shop_coupon.created", "shop_coupon", b.code);
     flashOk(req, "Coupon créé."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`);
+  }, { write: true });
+  route("get", "/coupons/:kid(\\d+)", "shop.read", (req, res, s) => {
+    const coupon = store.couponById(s, Number(req.params.kid));
+    if (!coupon) return res.status(404).render("error", { message: "Coupon introuvable." });
+    render(req, res, "coupon", `Coupon ${coupon.code}`, "boutique", { coupon, products: catalog.adminList(s, { perPage: 100 }).items, categories: catalog.listCategories(s) });
+  });
+  route("post", "/coupons/:kid(\\d+)", "shop.write", (req, res, s) => {
+    store.updateCoupon(s, Number(req.params.kid), couponInput(req.body));
+    audit(req, s, "shop_coupon.updated", "shop_coupon", req.params.kid);
+    flashOk(req, "Coupon modifié (le code et le nombre d'utilisations ne changent pas)."); res.redirect(`${req.shopSpace.base}/boutique/coupons/${req.params.kid}`);
+  }, { write: true });
+  route("post", "/coupons/:kid(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    const r = store.deleteCoupon(s, Number(req.params.kid));
+    audit(req, s, "shop_coupon.deleted", "shop_coupon", req.params.kid, r);
+    flashOk(req, r.deleted ? "Coupon supprimé." : "Ce coupon a déjà servi : il est désactivé (les commandes passées gardent leur référence)."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`);
   }, { write: true });
   route("post", "/coupons/:kid(\\d+)/etat", "shop.write", (req, res, s) => { store.setCouponActive(s, Number(req.params.kid), Boolean(req.body.actif)); flashOk(req, "Coupon mis à jour."); res.redirect(`${req.shopSpace.base}/boutique/reglages#coupons`); }, { write: true });
 

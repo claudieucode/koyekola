@@ -1,0 +1,25 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Nouvelle commande" }) %>
+<section class="mk-panel">
+  <p class="mk-sub">Pour une vente par téléphone ou en boutique. Les prix, le stock, les taxes et la livraison sont calculés par le serveur comme pour une commande en ligne ; le paiement est « manuel » (à confirmer quand l'argent est reçu). Le moyen « paiement manuel » doit être activé dans Réglages.</p>
+  <% if (error) { %><p class="mk-callout mk-callout-warn" role="alert"><span><%= error %></span></p><% } %>
+  <form class="mk-form" method="post" action="<%= base %>/commandes">
+    <fieldset><legend>Articles</legend>
+      <% for (let i = 1; i <= 8; i++) { %><div class="field-group mk-inline-form"><label for="l<%= i %>" class="sr-only">Article <%= i %></label><select id="l<%= i %>" name="line_<%= i %>"><option value="">— Article <%= i %> —</option><% choices.forEach((c) => { %><option value="<%= c.value %>"><%= c.label %></option><% }) %></select> <label for="q<%= i %>" class="sr-only">Quantité <%= i %></label><input id="q<%= i %>" name="qty_<%= i %>" type="number" min="1" max="99" value="1" style="width:5em"></div><% } %>
+    </fieldset>
+    <fieldset><legend>Client et livraison</legend>
+      <div class="field-group"><label for="n-e">E-mail</label><input id="n-e" name="email" type="email" required maxlength="200"></div>
+      <div class="field-group"><label for="n-n">Nom</label><input id="n-n" name="name" required maxlength="120"></div>
+      <div class="field-group"><label for="n-a">Adresse</label><input id="n-a" name="line1" required maxlength="160"></div>
+      <div class="field-group"><label for="n-a2">Complément</label><input id="n-a2" name="line2" maxlength="160"></div>
+      <div class="field-group"><label for="n-p">Code postal</label><input id="n-p" name="postal_code" required maxlength="20"></div>
+      <div class="field-group"><label for="n-v">Ville</label><input id="n-v" name="city" required maxlength="100"></div>
+      <div class="field-group"><label for="n-c">Pays (code, ex. FR)</label><input id="n-c" name="country" required maxlength="2" minlength="2" pattern="[A-Za-z]{2}" value="<%= shopSettings.default_country || "" %>"></div>
+      <div class="field-group"><label for="n-t">Téléphone</label><input id="n-t" name="phone" maxlength="30"></div>
+      <div class="field-group"><label for="n-m">Méthode de livraison</label><select id="n-m" name="shipping_method"><option value="">Aucune (articles sans livraison)</option><% methods.forEach((m) => { %><option value="<%= m.id %>"><%= m.label %></option><% }) %></select></div>
+      <div class="field-group"><label for="n-o">Note interne (facultatif)</label><input id="n-o" name="note" maxlength="300"></div>
+    </fieldset>
+    <button class="btn btn-primary" type="submit">Créer la commande</button>
+  </form>
+</section>
+<%- include("../partials/bottom") %>

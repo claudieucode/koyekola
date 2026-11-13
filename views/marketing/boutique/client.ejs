@@ -1,0 +1,23 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: customer.name || customer.email }) %>
+<section class="mk-panel"><h2>Fiche client</h2>
+  <dl>
+    <div><dt>E-mail</dt><dd><%= customer.email %></dd></div>
+    <div><dt>Téléphone</dt><dd><%= customer.phone || "—" %></dd></div>
+    <div><dt>Compte</dt><dd><%= customer.has_account ? "Oui" : "Invité (sans compte)" %> — <%= customer.status === "active" ? "actif" : "désactivé" %><%= customer.tax_exempt ? " — exonéré de taxe" : "" %></dd></div>
+    <div><dt>Client depuis</dt><dd><%= String(customer.created_at).slice(0, 10) %></dd></div>
+    <div><dt>Accepte les e-mails marketing</dt><dd><%= customer.marketing_opt_in ? "oui" : "non" %></dd></div>
+    <div><dt>Total dépensé (commandes payées)</dt><dd><strong><%= money(spent) %></strong> sur <%= custOrders.length %> commande(s)</dd></div>
+  </dl>
+  <% if (canPeople) { %><p><a class="btn btn-outline btn-sm" href="<%= base %>/clients/<%= customer.id %>/donnees">Exporter ses données (JSON)</a></p><% } %>
+</section>
+<section class="mk-panel"><h2>Adresses enregistrées</h2>
+  <% if (!addresses.length) { %><p class="mk-empty">Aucune adresse enregistrée.</p><% } else { %><ul><% addresses.forEach((a) => { %><li><%= [a.name, a.line1, a.line2, a.postal_code, a.city, a.country].filter(Boolean).join(", ") %></li><% }) %></ul><% } %>
+</section>
+<section class="mk-panel"><h2>Commandes</h2>
+  <% if (!custOrders.length) { %><p class="mk-empty">Aucune commande.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Commandes du client</caption><thead><tr><th scope="col">Commande</th><th scope="col">Date</th><th scope="col">Statut</th><th scope="col">Total</th></tr></thead><tbody>
+    <% custOrders.forEach((o) => { %><tr><th scope="row"><a href="<%= base %>/commandes/<%= o.id %>"><%= o.number %></a></th><td><%= String(o.created_at).slice(0, 16) %></td><td><%= statusLabels[o.status] %></td><td><%= money(o.total_cents) %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+</section>
+<%- include("../partials/bottom") %>

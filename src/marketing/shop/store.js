@@ -152,11 +152,11 @@ const normCode = (c) => String(c || "").trim().toUpperCase().slice(0, 40);
 function listCoupons(s) {
   return s.db.prepare(`SELECT * FROM mk_shop_coupons WHERE organization_id = ? AND ${siteCond(s)} ORDER BY id DESC`).all(s.organizationId, ...siteArgs(s)).map((c) => ({ ...c, product_ids: json(c.product_ids, []), category_ids: json(c.category_ids, []) }));
 }
-function saveCoupon(s, input) {
-  const code = normCode(input.code);
-  if (!/^[A-Z0-9_-]{3,40}$/.test(code)) throw new MarketingError("invalid_field", "Le code : 3 à 40 lettres, chiffres, tirets.");
+// Valide et normalise les champs d'un coupon (création ET modification)
+function couponFields(s, input, { creating }) {
+  const shippingOnly = Number(input.shipping_only) ? 1 : 0;
   if (!["percent", "fixed"].includes(input.kind)) throw new MarketingError("invalid_field", "Type de réduction inconnu.");
-  const value = Number(input.value);
+  const value = shippingOnly ? 1 : Number(input.value);
   if (!Number.isInteger(value) || value < 1 || (input.kind === "percent" && value > 100)) throw new MarketingError("invalid_field", "Valeur invalide (pourcentage entre 1 et 100, ou montant en centimes).");
   const opt = (v, f) => { if (v === undefined || v === null || v === "") return null; const x = Number(v); if (!Number.isInteger(x) || x < 0) throw new MarketingError("invalid_field", `${f} invalide.`); return x; };
   const ids = (v) => [...new Set([].concat(v || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
@@ -164,10 +164,42 @@ function saveCoupon(s, input) {
   for (const p of pids) if (!catalog.getProduct(s, p)) throw new MarketingError("not_found", "Produit de restriction introuvable.");
   for (const c of cids) if (!catalog.categoryById(s, c)) throw new MarketingError("not_found", "Catégorie de restriction introuvable.");
   const d = (v) => { if (!v) return null; const t = new Date(String(v).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(v)) ? "" : "Z")); if (Number.isNaN(t.getTime())) throw new MarketingError("invalid_field", "Date invalide."); return catalog.nowSql(t); };
-  if (s.db.prepare(`SELECT 1 FROM mk_shop_coupons WHERE organization_id = ? AND ${siteCond(s)} AND code = ?`).get(s.organizationId, ...siteArgs(s), code)) throw new MarketingError("conflict", "Ce code existe déjà.");
-  return Number(s.db.prepare("INSERT INTO mk_shop_coupons (organization_id, site_id, code, kind, value, min_subtotal_cents, starts_at, ends_at, max_uses, per_customer_limit, product_ids, category_ids) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)")
-    .run(s.organizationId, s.siteId ?? null, code, input.kind, value, opt(input.min_subtotal_cents, "Le minimum"), d(input.starts_at), d(input.ends_at), opt(input.max_uses, "La limite"), opt(input.per_customer_limit, "La limite par client"), JSON.stringify(pids), JSON.stringify(cids)).lastInsertRowid);
+  const starts = d(input.starts_at), ends = d(input.ends_at);
+  if (starts && ends && ends < starts) throw new MarketingError("invalid_field", "La fin précède le début.");
+  const auto = Number(input.auto_apply) ? 1 : 0;
+  const freeShipping = shippingOnly || Number(input.free_shipping) ? 1 : 0;
+  return { kind: input.kind, value, min: opt(input.min_subtotal_cents, "Le minimum"), starts, ends, maxUses: opt(input.max_uses, "La limite"), perCustomer: opt(input.per_customer_limit, "La limite par client"), pids: JSON.stringify(pids), cids: JSON.stringify(cids), freeShipping, shippingOnly, auto, label: String(input.label || "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 80) || null };
 }
+function saveCoupon(s, input) {
+  const code = normCode(input.code);
+  if (!/^[A-Z0-9_-]{3,40}$/.test(code)) throw new MarketingError("invalid_field", "Le code : 3 à 40 lettres, chiffres, tirets.");
+  const f = couponFields(s, input, { creating: true });
+  if (s.db.prepare(`SELECT 1 FROM mk_shop_coupons WHERE organization_id = ? AND ${siteCond(s)} AND code = ?`).get(s.organizationId, ...siteArgs(s), code)) throw new MarketingError("conflict", "Ce code existe déjà.");
+  return Number(s.db.prepare("INSERT INTO mk_shop_coupons (organization_id, site_id, code, kind, value, min_subtotal_cents, starts_at, ends_at, max_uses, per_customer_limit, product_ids, category_ids, free_shipping, shipping_only, auto_apply, label) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+    .run(s.organizationId, s.siteId ?? null, code, f.kind, f.value, f.min, f.starts, f.ends, f.maxUses, f.perCustomer, f.pids, f.cids, f.freeShipping, f.shippingOnly, f.auto, f.label).lastInsertRowid);
+}
+// Modification : le CODE ne change jamais (les commandes passées y renvoient) ; le nombre d'utilisations est conservé
+function updateCoupon(s, id, input) {
+  if (!couponById(s, id)) throw new MarketingError("not_found", "Coupon introuvable.");
+  const f = couponFields(s, input, { creating: false });
+  s.db.prepare(`UPDATE mk_shop_coupons SET kind=?, value=?, min_subtotal_cents=?, starts_at=?, ends_at=?, max_uses=?, per_customer_limit=?, product_ids=?, category_ids=?, free_shipping=?, shipping_only=?, auto_apply=?, label=? WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`)
+    .run(f.kind, f.value, f.min, f.starts, f.ends, f.maxUses, f.perCustomer, f.pids, f.cids, f.freeShipping, f.shippingOnly, f.auto, f.label, Number(id), s.organizationId, ...siteArgs(s));
+}
+function couponById(s, id) {
+  const c = s.db.prepare(`SELECT * FROM mk_shop_coupons WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).get(Number(id), s.organizationId, ...siteArgs(s));
+  return c ? { ...c, product_ids: json(c.product_ids, []), category_ids: json(c.category_ids, []) } : null;
+}
+// Suppression : seulement un coupon jamais utilisé ; sinon désactivation (les commandes passées gardent leur référence)
+function deleteCoupon(s, id) {
+  const c = couponById(s, id);
+  if (!c) throw new MarketingError("not_found", "Coupon introuvable.");
+  const used = s.db.prepare("SELECT COUNT(*) n FROM mk_shop_coupon_redemptions WHERE coupon_id = ?").get(c.id).n;
+  if (used || c.used_count) { setCouponActive(s, id, false); return { deleted: false, deactivated: true }; }
+  s.db.prepare("DELETE FROM mk_shop_coupons WHERE id = ?").run(c.id);
+  return { deleted: true };
+}
+// Promotions automatiques actives (sans code)
+const listAutoCoupons = (s) => s.db.prepare(`SELECT * FROM mk_shop_coupons WHERE organization_id = ? AND ${siteCond(s)} AND auto_apply = 1 AND active = 1 ORDER BY id`).all(s.organizationId, ...siteArgs(s)).map((c) => ({ ...c, product_ids: json(c.product_ids, []), category_ids: json(c.category_ids, []) }));
 function setCouponActive(s, id, active) {
   const r = s.db.prepare(`UPDATE mk_shop_coupons SET active = ? WHERE id = ? AND organization_id = ? AND ${siteCond(s)}`).run(active ? 1 : 0, id, s.organizationId, ...siteArgs(s));
   if (!r.changes) throw new MarketingError("not_found", "Coupon introuvable.");
@@ -179,5 +211,5 @@ function couponByCode(s, code) {
 
 module.exports = {
   METHODS, normCode, listClasses, saveClass, deleteClass, setProductClasses, setClassCost, cleanPostcodes, getSettings, saveSettings, listZones, saveZone, deleteZone, saveMethod, deleteMethod,
-  listTaxRules, saveTaxRule, deleteTaxRule, listCoupons, saveCoupon, setCouponActive, couponByCode,
+  listTaxRules, saveTaxRule, deleteTaxRule, listCoupons, saveCoupon, updateCoupon, deleteCoupon, couponById, listAutoCoupons, setCouponActive, couponByCode,
 };

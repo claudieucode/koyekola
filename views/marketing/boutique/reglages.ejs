@@ -73,18 +73,21 @@
 
 <section class="mk-panel" id="coupons"><h2>Coupons</h2>
   <% if (coupons.length) { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Coupons</caption><thead><tr><th scope="col">Code</th><th scope="col">Réduction</th><th scope="col">Utilisations</th><th scope="col">Validité</th><th scope="col">État</th></tr></thead><tbody>
-  <% coupons.forEach((c) => { %><tr><th scope="row"><%= c.code %></th><td><%= c.kind === "percent" ? c.value + " %" : money(c.value) %></td><td><%= c.used_count %><%= c.max_uses != null ? " / " + c.max_uses : "" %></td><td><%= c.starts_at ? String(c.starts_at).slice(0, 10) : "…" %> → <%= c.ends_at ? String(c.ends_at).slice(0, 10) : "…" %></td>
+  <% coupons.forEach((c) => { %><tr><th scope="row"><a href="<%= base %>/coupons/<%= c.id %>"><%= c.code %></a><%= c.auto_apply ? " (automatique)" : "" %></th><td><%= c.shipping_only ? "Livraison offerte" : (c.kind === "percent" ? c.value + " %" : money(c.value)) + (c.free_shipping ? " + livraison offerte" : "") %></td><td><%= c.used_count %><%= c.max_uses != null ? " / " + c.max_uses : "" %></td><td><%= c.starts_at ? String(c.starts_at).slice(0, 10) : "…" %> → <%= c.ends_at ? String(c.ends_at).slice(0, 10) : "…" %></td>
     <td><%= c.active ? "Actif" : "Inactif" %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/coupons/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Désactiver" : "Activer" %></button></form><% } %></td></tr><% }) %></tbody></table></div><% } else { %><p class="mk-empty">Aucun coupon.</p><% } %>
   <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/coupons"><h3>Nouveau coupon</h3>
     <div class="field-group"><label for="k-c">Code</label><input id="k-c" name="code" required maxlength="40"></div>
     <div class="field-group"><label for="k-k">Type</label><select id="k-k" name="kind"><option value="percent">Pourcentage</option><option value="fixed">Montant fixe</option></select></div>
-    <div class="field-group"><label for="k-v">Valeur (% ou montant)</label><input id="k-v" name="value" inputmode="decimal" required></div>
+    <div class="field-group"><label for="k-v">Valeur (% ou montant)</label><input id="k-v" name="value" inputmode="decimal"></div>
     <div class="field-group"><label for="k-m">Panier minimum</label><input id="k-m" name="min_subtotal" inputmode="decimal"></div>
     <div class="field-group"><label for="k-s">Début</label><input id="k-s" name="starts_at" placeholder="AAAA-MM-JJ"></div>
     <div class="field-group"><label for="k-e">Fin</label><input id="k-e" name="ends_at" placeholder="AAAA-MM-JJ"></div>
     <div class="field-group"><label for="k-u">Utilisations maximales</label><input id="k-u" name="max_uses" type="number" min="1"></div>
     <div class="field-group"><label for="k-pc">Limite par client</label><input id="k-pc" name="per_customer_limit" type="number" min="1"></div>
     <div class="field-group"><label for="k-p">Limiter à certains produits</label><select id="k-p" name="product_ids" multiple size="4"><% products.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>
+    <div class="field-group"><label><input type="checkbox" name="free_shipping" value="1"> Livraison offerte avec cette remise</label></div>
+    <div class="field-group"><label><input type="checkbox" name="shipping_only" value="1"> Livraison offerte seulement (aucune remise sur les articles)</label></div>
+    <div class="field-group"><label><input type="checkbox" name="auto_apply" value="1"> Promotion automatique (appliquée sans saisir le code quand les conditions sont remplies)</label></div>
     <button class="btn btn-primary btn-sm" type="submit">Créer</button></form><% } %>
 </section>
 <%- include("../partials/bottom") %>

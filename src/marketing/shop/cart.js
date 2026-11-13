@@ -100,6 +100,9 @@ function setCoupon(s, cart, code) {
 function evaluateCoupon(s, code, lines, email) {
   const c = store.couponByCode(s, code);
   if (!c || !c.active) return { error: "Ce code promotionnel n'est pas valide." };
+  return evaluateCouponRow(s, c, lines, email);
+}
+function evaluateCouponRow(s, c, lines, email) {
   const t = catalog.nowSql();
   if (c.starts_at && c.starts_at > t) return { error: "Ce code n'est pas encore valable." };
   if (c.ends_at && c.ends_at < t) return { error: "Ce code a expiré." };
@@ -113,7 +116,7 @@ function evaluateCoupon(s, code, lines, email) {
   const base = eligible.reduce((a, l) => a + l.unitCents * l.quantity, 0);
   if (!eligible.length) return { error: "Ce code ne s'applique à aucun article du panier." };
   if (c.min_subtotal_cents != null && base < c.min_subtotal_cents) return { error: `Ce code exige un panier d'au moins ${(c.min_subtotal_cents / 100).toFixed(2)}.` };
-  return { coupon: c, eligibleKeys: new Set(eligible.map((l) => l.key)), amountCents: calc.couponAmount(c, base) };
+  return { coupon: c, eligibleKeys: new Set(eligible.map((l) => l.key)), amountCents: c.shipping_only === 1 ? 0 : calc.couponAmount(c, base) };
 }
 
 // Calcule le panier COMPLET depuis la base. `dest` : { country, region } de livraison/facturation ; `shippingMethodId` facultatif.
@@ -155,6 +158,15 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
     const r = evaluateCoupon(s, cart.coupon_code, lines, email);
     if (r.error) couponError = r.error; else { coupon = r.coupon; discount = { amountCents: r.amountCents, eligibleKeys: r.eligibleKeys }; }
   }
+  // Promotion automatique (sans code) : appliquée seulement si aucun code valide n'est en jeu ; la plus avantageuse l'emporte, jamais de cumul
+  if (!coupon && lines.length) {
+    let best = null;
+    for (const c of store.listAutoCoupons(s)) {
+      const r = evaluateCouponRow(s, c, lines, email);
+      if (!r.error && (!best || r.amountCents > best.amountCents || (r.amountCents === best.amountCents && c.free_shipping > best.coupon.free_shipping))) best = r;
+    }
+    if (best) { coupon = { ...best.coupon, auto: true }; discount = { amountCents: best.amountCents, eligibleKeys: best.eligibleKeys }; }
+  }
 
   // Livraison : seulement si au moins une ligne est physique.
   const physical = lines.filter((l) => l.requiresShipping);
@@ -176,6 +188,12 @@ function priceCart(s, cart, { dest = {}, shippingMethodId = null, email = null, 
         shipping.chosen = shipping.options.find((o) => o.id === Number(shippingMethodId)) || null;
         if (!shipping.chosen) shipping.error = "La méthode de livraison choisie n'est pas disponible pour ce panier.";
       } else if (shipping.options.length === 1) shipping.chosen = shipping.options[0];
+      // Coupon « livraison offerte » : la méthode la moins chère devient gratuite (les autres gardent leur prix)
+      if (coupon && coupon.free_shipping && shipping.options.length) {
+        const cheapest = shipping.options[0];
+        shipping.options = shipping.options.map((o) => (o.id === cheapest.id ? { ...o, costCents: 0, freeByCoupon: true } : o));
+        if (shipping.chosen) shipping.chosen = shipping.options.find((o) => o.id === shipping.chosen.id) || shipping.chosen;
+      }
       if (shipping.chosen) shippingCents = shipping.chosen.costCents;
     }
   }

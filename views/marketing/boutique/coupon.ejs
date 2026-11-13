@@ -1,0 +1,24 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Coupon " + coupon.code }) %>
+<% const dis = canWrite ? "" : " disabled"; const d10 = (v) => (v ? String(v).slice(0, 10) : ""); %>
+<section class="mk-panel">
+  <p class="mk-sub">Le code ne se modifie pas (les commandes passées y renvoient). Utilisé <strong><%= coupon.used_count %></strong> fois<%= coupon.max_uses != null ? " sur " + coupon.max_uses : "" %>.</p>
+  <form class="mk-form" method="post" action="<%= base %>/coupons/<%= coupon.id %>">
+    <div class="field-group"><label for="c-l">Nom interne (facultatif)</label><input id="c-l" name="label" maxlength="80" value="<%= coupon.label || "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-k">Type</label><select id="c-k" name="kind"<%= dis %>><option value="percent"<%= coupon.kind === "percent" ? " selected" : "" %>>Pourcentage</option><option value="fixed"<%= coupon.kind === "fixed" ? " selected" : "" %>>Montant fixe</option></select></div>
+    <div class="field-group"><label for="c-v">Valeur (% ou montant)</label><input id="c-v" name="value" inputmode="decimal" value="<%= coupon.kind === "fixed" ? (coupon.value / 100).toFixed(2).replace(".", ",") : coupon.value %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-m">Panier minimum</label><input id="c-m" name="min_subtotal" inputmode="decimal" value="<%= coupon.min_subtotal_cents != null ? (coupon.min_subtotal_cents / 100).toFixed(2).replace(".", ",") : "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-s">Début</label><input id="c-s" name="starts_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.starts_at) %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-e">Fin</label><input id="c-e" name="ends_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.ends_at) %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-u">Utilisations maximales</label><input id="c-u" name="max_uses" type="number" min="1" value="<%= coupon.max_uses != null ? coupon.max_uses : "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-pc">Limite par client</label><input id="c-pc" name="per_customer_limit" type="number" min="1" value="<%= coupon.per_customer_limit != null ? coupon.per_customer_limit : "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-p">Limiter à certains produits</label><select id="c-p" name="product_ids" multiple size="5"<%= dis %>><% products.forEach((p) => { %><option value="<%= p.id %>"<%= coupon.product_ids.includes(p.id) ? " selected" : "" %>><%= p.name %></option><% }) %></select></div>
+    <div class="field-group"><label for="c-c">Limiter à certaines catégories</label><select id="c-c" name="category_ids" multiple size="5"<%= dis %>><% categories.forEach((c) => { %><option value="<%= c.id %>"<%= coupon.category_ids.includes(c.id) ? " selected" : "" %>><%= c.name %></option><% }) %></select></div>
+    <div class="field-group"><label><input type="checkbox" name="free_shipping" value="1"<%= coupon.free_shipping ? " checked" : "" %><%= dis %>> Livraison offerte avec cette remise</label></div>
+    <div class="field-group"><label><input type="checkbox" name="shipping_only" value="1"<%= coupon.shipping_only ? " checked" : "" %><%= dis %>> Livraison offerte seulement (aucune remise sur les articles)</label></div>
+    <div class="field-group"><label><input type="checkbox" name="auto_apply" value="1"<%= coupon.auto_apply ? " checked" : "" %><%= dis %>> Promotion automatique (sans saisir le code)</label></div>
+    <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
+  </form>
+  <% if (canWrite) { %><form method="post" action="<%= base %>/coupons/<%= coupon.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer ce coupon ? S'il a déjà servi, il sera seulement désactivé." data-mk-confirm-ok="Supprimer">Supprimer le coupon</button></form><% } %>
+</section>
+<%- include("../partials/bottom") %>
