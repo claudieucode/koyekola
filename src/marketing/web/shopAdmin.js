@@ -21,6 +21,7 @@ const refunds = require("../shop/refunds");
 const deliverySlots = require("../shop/deliverySlots");
 const age = require("../shop/age");
 const compare = require("../shop/compare");
+const reports = require("../shop/reports");
 
 const PAGE = 25;
 module.exports = () => {
@@ -280,6 +281,21 @@ module.exports = () => {
   }, { write: true });
 
   // ── Clients ──
+  // ── Rapports et exports CSV ──
+  route("get", "/rapports", "shop.read", (req, res, s) => {
+    const settings = store.getSettings(s);
+    render(req, res, "rapports", "Boutique — rapports", "boutique/rapports", { rep: reports.report(s, req.query, settings), statusLabels: orders.STATUS_LABELS, canExportPeople: req.mk.can("shop.orders") });
+  });
+  route("get", "/rapports/export/:kind", "shop.read", (req, res, s) => {
+    const kind = String(req.params.kind);
+    if (!Object.prototype.hasOwnProperty.call(reports.EXPORTS, kind)) throw new MarketingError("not_found", "Export inconnu.");
+    if ((kind === "commandes" || kind === "lignes" || kind === "clients") && !req.mk.can("shop.orders")) return res.status(403).render("error", { message: "Vous n'avez pas le droit d'exporter les commandes et les clients." });
+    const p = reports.period(req.query);
+    const csv = reports.EXPORTS[kind](s, p);
+    audit(req, s, "shop.export", "shop_export", kind, { from: p.from, to: p.to });
+    res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="boutique-${kind}-${p.from}_${p.to}.csv"`, "Cache-Control": "no-store" });
+    res.send(csv);
+  });
   route("get", "/clients", "shop.read", (req, res, s) => render(req, res, "clients", "Boutique — clients", "boutique/clients", { list: customers.listCustomers(s, { q: req.query.q, page: req.query.page, perPage: PAGE }) }));
   route("post", "/clients/:cid(\\d+)/statut", "shop.write", (req, res, s) => {
     customers.setStatus(s, Number(req.params.cid), req.body.statut);
