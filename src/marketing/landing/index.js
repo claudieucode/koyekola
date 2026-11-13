@@ -145,7 +145,7 @@ function preflight(ctx, page) {
   for (const s of page.sections) if (s.type === "course" && !getCourse(ctx, s.courseId)) errors.push("Une section « formation » vise une formation qui n'est plus publiée.");
   // Widgets « Formulaire » : leur formulaire doit exister et être publié
   for (const s of page.sections) if (s.type === "layout") pageNodes.walk(s.children, (n) => {
-    if (n.type !== "signupform" || n.hidden) return;
+    if ((n.type !== "signupform" && !(n.type === "modal" && n.props && n.props.formId)) || n.hidden) return;
     const f = ctx.db.prepare("SELECT status, name, site_id FROM mk_forms WHERE id = ? AND organization_id = ?").get(Number(n.props && n.props.formId), ctx.organizationId);
     if (f && (f.site_id ?? null) !== (page.site_id ?? null)) errors.push(`Le formulaire « ${f.name} » appartient à un autre site : choisissez un formulaire du même site que la page (aucun partage entre sites).`);
     else if (!f) errors.push("Un widget « Formulaire » vise un formulaire supprimé : choisissez-en un autre.");
@@ -254,7 +254,7 @@ function dynamicProps(ctx, n, visitor, page, scope) {
     return { ...p, name: s.name, homeUrl: (n.type === "sitelogo" && p.href) || s.homeUrl, ...(n.type === "sitelogo" ? { logo: s.logo } : {}) };
   }
   // Formulaire : affiché seulement s'il est publié (sinon rien sur la page publique, un avertissement dans l'éditeur)
-  if (n.type === "signupform") {
+  if (n.type === "signupform" || (n.type === "modal" && p.formId)) {
     const forms = require("../forms");
     let f = null;
     try { f = forms.getForm(ctx, p.formId); } catch { f = null; }

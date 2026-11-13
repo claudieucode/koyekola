@@ -72,7 +72,7 @@ module.exports = ({ db }) => {
     // Les widgets du PIED (ou de l'en-tête) du site, comme la lettre d'information ou le formulaire de contact d'un pied de page, font partie de la page affichée : on les cherche aussi dans les parties du site
     let secs = page.sections;
     if (req) { try { secs = pages.withSiteParts(ctxOf(req), { ...page, visitor: visitorContext(db, req.mkPages.organizationId, req) }, pages.resolveSections(ctxOf(req), page.sections), { themeBuilder: true }); } catch { secs = page.sections; } }
-    for (const s of secs) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
+    for (const s of secs) if (s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe" || (n.type === "modal" && n.props && n.props.formId)) && !n.hidden) found = n; });
     if (!found) return null;
     try { const fctx = { db, organizationId: page.organization_id }; const f = found.type === "emailsubscribe" ? require("../pages/emailSubscribe").formFor(fctx, page, found.props) : forms.getForm(fctx, Number(found.props.formId)); return f && sameSite(page, f) ? f : null; } catch { return null; }
   };
@@ -152,7 +152,7 @@ module.exports = ({ db }) => {
       for (const t of tb) { const part = pages.partSection(ctx, t.sourceId, t.type); if (part) sections.push(part); }
     } catch { /* ignoré */ }
     let found = null;
-    for (const s of sections) if (s && s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe") && !n.hidden) found = n; });
+    for (const s of sections) if (s && s.type === "layout") walk(s.children, (n) => { if (n.id === id && (n.type === "signupform" || n.type === "emailsubscribe" || (n.type === "modal" && n.props && n.props.formId)) && !n.hidden) found = n; });
     if (!found) return null;
     try {
       const pseudo = { site_id: siteId, organization_id: req.mkPages.organizationId };

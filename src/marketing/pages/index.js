@@ -111,7 +111,7 @@ function formIdsOf(sections, pageFormId) {
   const ids = new Set();
   if (Number.isInteger(pageFormId)) ids.add(pageFormId);
   const nodes = require("./nodes");
-  for (const s of sections || []) if (s && s.type === "layout") nodes.walk(s.children, (n) => { if (n && n.type === "signupform" && n.props) { const id = Number(n.props.formId); if (Number.isInteger(id)) ids.add(id); } });
+  for (const s of sections || []) if (s && s.type === "layout") nodes.walk(s.children, (n) => { if (n && (n.type === "signupform" || n.type === "modal") && n.props) { const id = Number(n.props.formId); if (Number.isInteger(id)) ids.add(id); } });
   return ids;
 }
 function assertFormsUsable(ctx, sections, pageFormId, siteId, { tolerated = new Set() } = {}) {
@@ -200,7 +200,7 @@ function publish(ctx, id) {
         status = 'published', published_at = COALESCE(published_at, datetime('now')), scheduled_at = NULL, updated_at = datetime('now') WHERE id = ?`)
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
-    ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
+    ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ? AND (label IS NULL OR label = '')").run(id, number - MAX_VERSIONS);
     try { ctx.db.prepare("DELETE FROM mk_page_reviews WHERE page_id = ?").run(id); } catch { /* demande de validation : table absente sur une très ancienne base */ } // publier répond à la demande de validation
     audit(ctx, "page.published", "landing", id, { version: number, slug: page.slug });
     if (!page.published_at) { try { require("../../services/navigation").autoAddPage(id); } catch { /* l'ajout au menu ne bloque jamais la publication */ } }
@@ -281,13 +281,21 @@ function listPages(ctx, { archived = false, siteId } = {}) {
 
 function listVersions(ctx, id) {
   requirePage(ctx, id);
-  return ctx.db.prepare("SELECT v.number, v.reason, v.created_at, v.created_by, u.username AS author FROM mk_page_versions v LEFT JOIN users u ON u.id = v.created_by WHERE v.page_id = ? ORDER BY v.number DESC").all(id);
+  return ctx.db.prepare("SELECT v.number, v.reason, v.label, v.created_at, v.created_by, u.username AS author FROM mk_page_versions v LEFT JOIN users u ON u.id = v.created_by WHERE v.page_id = ? ORDER BY v.number DESC").all(id);
 }
 function getVersion(ctx, id, number) {
   requirePage(ctx, id);
   const row = ctx.db.prepare("SELECT * FROM mk_page_versions WHERE page_id = ? AND number = ?").get(id, Number(number));
   if (!row) throw new MarketingError("not_found", "Version introuvable.");
   return { number: row.number, createdAt: row.created_at, content: json(row.content, {}) };
+}
+// Nommer une version publiée (ou retirer son nom avec une saisie vide). Le nom est du texte simple (60 caractères) ; une version nommée est conservée définitivement.
+function nameVersion(ctx, id, number, label) {
+  getVersion(ctx, id, number);
+  const clean = String(label == null ? "" : label).replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60);
+  ctx.db.prepare("UPDATE mk_page_versions SET label = ? WHERE page_id = ? AND number = ?").run(clean || null, id, Number(number));
+  audit(ctx, "page.version_named", "landing", id, { version: Number(number), label: clean });
+  return clean;
 }
 // Restaurer = copier la version dans le BROUILLON (la version en ligne ne change pas tant qu'on ne publie pas). Palier 10 : l'état actuel du
 // brouillon est d'abord sauvegardé dans l'historique, le contenu est revalidé comme une saisie, et la restauration est elle-même un point d'historique.
@@ -1220,7 +1228,7 @@ function resolveSections(ctx, sections) {
 
 module.exports = {
   KINDS, MAX_VERSIONS,
-  getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, restoreVersion,
+  getPage, requirePage, listPages, normalizeContent, saveDraft, discardDraft, publish, unpublish, listVersions, getVersion, nameVersion, restoreVersion,
   createPage, duplicatePage, archivePage, restorePage, schedulePage, cancelSchedule, promoteScheduledPages, schedulerMiddleware,
   getSite, requireSite, listSites, sitePages, createSite, updateSite, saveSiteDesign, colorUsage, setHomePage, movePage, archiveSite, restoreSite, duplicateSite, deleteSite, undeleteSite, siteCounts, SITE_TYPES, SITE_VIEWS,
   listComponents, getComponent, createComponent, updateComponent, componentUsage, componentInstances, saveComponentDraft, keepFooterAppearance, setFooterAppearance, publishComponent, discardComponentDraft, deleteComponent, COMPONENT_KINDS, resolveSections,

@@ -731,7 +731,15 @@ const NODE_TYPES = {
     const buttonLabel = line(p.buttonLabel, 60), title = line(p.title, 120), text = clean(p.text, 4000);
     if (!buttonLabel || !title || !text) throw new Error(`${at} (fenêtre) : le texte du bouton, le titre et le contenu sont obligatoires.`);
     const ctaUrl = h.linkUrl(p.ctaUrl, `${at} (bouton de la fenêtre)`), ctaLabel = line(p.ctaLabel, 60);
-    return { buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md",
+    // Formulaire d'inscription dans la fenêtre (facultatif) : même formulaire, mêmes champs et même enregistrement que le widget « Formulaire »
+    let formExtra = {};
+    if (p.formId !== undefined && p.formId !== null && p.formId !== "") {
+      const formId = Number(p.formId);
+      const row = Number.isInteger(formId) && h.ctx && h.ctx.db ? h.ctx.db.prepare("SELECT id FROM mk_forms WHERE id = ? AND organization_id = ?").get(formId, h.ctx.organizationId) : null;
+      if (!row) throw new Error(`${at} (fenêtre) : le formulaire choisi n'existe plus : choisissez-en un autre (Audience → Formulaires d'inscription).`);
+      formExtra = { formId, formButton: line(p.formButton, 40) || "S'inscrire" };
+    }
+    return { ...formExtra, buttonLabel, variant: oneOf("primary", "outline", "ghost")(p.variant) || "primary", title, text, ...(ctaUrl && ctaLabel ? { ctaLabel, ctaUrl } : {}), size: oneOf("sm", "md", "lg")(p.size) || "md",
       // centre : fenêtre ; gauche / droite : panneau qui glisse depuis le bord (« off-canvas »)
       position: oneOf("center", "left", "right", "corner", "bar")(p.position) || "center",
       // Ouverture automatique (comme les déclencheurs d'une popup Elementor) : au chargement après un délai, au défilement, à la sortie de la page ou après inactivité ; fréquence limitée

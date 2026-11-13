@@ -641,6 +641,14 @@ module.exports = () => {
     if (!page) return;
     attempt(req, res, next, `/marketing/pages/${page.id}`, () => { pages.discardDraft(req.mk.ctx, page.id); return "Brouillon abandonné : l'éditeur affiche de nouveau la version en ligne."; });
   });
+  router.post("/pages/:id(\\d+)/versions/:n(\\d+)/nom", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    attempt(req, res, next, `/marketing/pages/${page.id}`, () => {
+      const name = pages.nameVersion(req.mk.ctx, page.id, Number(req.params.n), req.body.nom);
+      return name ? `Version ${req.params.n} nommée « ${name} » : elle sera conservée.` : `Nom retiré de la version ${req.params.n}.`;
+    });
+  });
   router.post("/pages/:id(\\d+)/versions/:n(\\d+)/restaurer", need("forms.write"), need("revisions.restore"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;

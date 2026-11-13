@@ -443,6 +443,8 @@
     };
     dlg.addEventListener("close", function () { if (noScroll) document.documentElement.classList.remove("kw-noscroll"); });
     b.addEventListener("click", show);
+    // Retour après l'envoi du formulaire de la fenêtre : on la rouvre pour montrer le remerciement ou l'erreur
+    if (dlg.querySelector("[data-kw-open-now]")) show();
     dlg.querySelector("[data-kw-modal-close]").addEventListener("click", function () { dlg.close(); b.focus(); });
     // « Ne plus afficher » : mémorisé pour ce visiteur (stockage local), la fenêtre ne s'ouvre plus d'elle-même
     var offKey = "kw-pop-off-" + dlg.id, off = dlg.querySelector("[data-kw-modal-dismiss]");
