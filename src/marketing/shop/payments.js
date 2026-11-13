@@ -98,12 +98,21 @@ function handleStripeEvent(db, event) {
         break;
       case "charge.refunded": {
         const order = orders.getOrder(s, orderId);
-        if (order && Number(obj.amount_refunded) >= order.total_cents && order.status !== "refunded" && order.status !== "cancelled") {
+        if (!order || order.status === "cancelled") break;
+        const refunds = require("./refunds");
+        const announced = Number(obj.amount_refunded) || 0;
+        const committed = refunds.committedCents(db, orderId);
+        // Remboursement fait directement chez Stripe (hors Kolakisa) : on l'inscrit pour que les comptes restent justes. Un remboursement déjà inscrit par Kolakisa n'est jamais compté deux fois.
+        if (announced > committed) {
+          db.prepare("INSERT OR IGNORE INTO mk_shop_refunds (organization_id, site_id, order_id, amount_cents, currency, reason, restock, items, provider, provider_ref, status, idempotency_key, actor) VALUES (?,?,?,?,?,?,0,'[]','stripe',?, 'succeeded', ?, 'provider:stripe')")
+            .run(order.organization_id, order.site_id ?? null, orderId, announced - committed, order.currency, "Remboursement effectué chez Stripe", `ext:${obj.id}`, `ext:${obj.id}:${announced}`);
+        }
+        if (refunds.committedCents(db, orderId) >= order.total_cents && order.status !== "refunded") {
           db.prepare("UPDATE mk_shop_orders SET status = 'refunded', payment_status = 'refunded', updated_at = datetime('now') WHERE id = ?").run(orderId);
           db.prepare("UPDATE mk_shop_payments SET status = 'refunded', updated_at = datetime('now') WHERE order_id = ? AND status = 'succeeded'").run(orderId);
           orders.addEvent(db, orderId, { kind: "status", from: order.status, to: "refunded", actor: "provider:stripe", note: "Remboursement total annoncé par Stripe" });
           result = { status: "refunded" };
-        } else if (order) orders.addEvent(db, orderId, { kind: "refund_partial", actor: "provider:stripe", note: `Remboursement partiel annoncé : ${obj.amount_refunded}` });
+        } else if (announced > committed) orders.addEvent(db, orderId, { kind: "refund_partial", actor: "provider:stripe", note: `Remboursement partiel annoncé par Stripe : ${announced}` });
         break;
       }
       default: break;

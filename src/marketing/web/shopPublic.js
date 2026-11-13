@@ -33,6 +33,8 @@ const WISH_COOKIE = "kola_wish";
 const AGE_COOKIE = "kola_age";
 const CMP_COOKIE = "kola_cmp";
 const BASE = "/boutique";
+// Origine des liens envoyés par e-mail : l'adresse enregistrée du site (jamais l'en-tête Host brut)
+const shopOrigin = (req) => (req.kwSite && req.kwSite.base) || (process.env.SITE_URL ? String(process.env.SITE_URL).replace(/\/+$/, "") : `${req.protocol}://${req.get("host")}`);
 
 module.exports = ({ db }) => {
   const router = express.Router();
@@ -121,7 +123,7 @@ module.exports = ({ db }) => {
     if (!product) return res.status(404).render("error", { message: "Ce produit n'existe pas ou n'est plus en vente." });
     const related = catalog.relatedProducts(s, product, 4);
     const sum = settings.reviews_enabled ? reviews.forProduct(s, product.id) : { items: [], count: 0, average: null, distribution: {} };
-    const origin = `${req.protocol}://${req.get("host")}`;
+    const origin = shopOrigin(req);
     const crumb = seo.productBreadcrumb(product, { origin, base: BASE, shopName: present(req).shop.name });
     const jsonLd = [seo.safeJson(seo.productLd(product, { origin, base: BASE, currency: settings.currency, reviews: sum, shopName: present(req).shop.name })), seo.safeJson(crumb.ld)];
     const wished = new Set(wishlist.productIds(s, wishOf(req)));
@@ -284,7 +286,7 @@ module.exports = ({ db }) => {
     try {
       const made = giftLists.create(req.shop.s, req.body || {}, req.shopCustomer);
       const list = giftLists.findByToken(req.shop.s, made.publicToken);
-      const origin = `${req.protocol}://${req.get("host")}`;
+      const origin = shopOrigin(req);
       if (list.owner_email) {
         require("../../utils/outbox").queueMail(db, { kind: "shop_gift_list", to: list.owner_email, subject: `Votre liste « ${list.title} »`, sensitive: true,
           text: `Votre liste est créée.\n\nLien à partager avec vos proches :\n${origin}${BASE}/liste/${made.publicToken}\n\nLien privé pour la gérer (ne le partagez pas) :\n${origin}${giftManageUrl(list, made.manageToken)}` });
@@ -324,7 +326,7 @@ module.exports = ({ db }) => {
       if (p.type === "variable") p.variants.forEach((v) => choices.push({ value: `${p.id}:${v.id}`, label: `${p.name} — ${Object.values(v.options).join(" / ")}` }));
       else choices.push({ value: `${p.id}:`, label: p.name });
     }
-    const origin = `${req.protocol}://${req.get("host")}`;
+    const origin = shopOrigin(req);
     render(req, res, "liste-gerer", { title: `Gérer : ${g.list.title}`, list: g.list, m: g.m, items: giftLists.itemsView(s, g.list), gifts: giftLists.contributions(s, g.list), choices,
       address: g.list.recipient_address ? JSON.parse(g.list.recipient_address) : {}, shareUrl: `${origin}${BASE}/liste/${g.list.public_token}`, fresh: req.query.nouvelle === "1", info: req.query.ok ? "Modifications enregistrées." : null, error: null, ...extra }, status);
   };
@@ -426,7 +428,7 @@ module.exports = ({ db }) => {
       notify.onOrderEvent(s, order, "order_created", settings);
       let started;
       try {
-        const origin = `${req.protocol}://${req.get("host")}`;
+        const origin = shopOrigin(req);
         started = await payments.start(s, order, { settings, successUrl: `${origin}${BASE}/commande/retour/${encodeURIComponent(order.number)}?k=${key}`, cancelUrl: `${origin}${BASE}/commande/confirmation/${encodeURIComponent(order.number)}?k=${key}` });
       } catch (error) {
         if (!(error instanceof MarketingError)) throw error;
@@ -474,7 +476,7 @@ module.exports = ({ db }) => {
       const key = view.orderToken(order);
       if (order.status !== "pending" || order.payment_status === "paid") return res.redirect(303, `${BASE}/commande/confirmation/${encodeURIComponent(order.number)}?k=${key}`);
       try {
-        const origin = `${req.protocol}://${req.get("host")}`;
+        const origin = shopOrigin(req);
         const started = await payments.start(s, order, { settings, successUrl: `${origin}${BASE}/commande/retour/${encodeURIComponent(order.number)}?k=${key}`, cancelUrl: `${origin}${BASE}/commande/confirmation/${encodeURIComponent(order.number)}?k=${key}` });
         if (started.kind === "redirect") return res.redirect(303, started.url);
       } catch (error) {
@@ -512,7 +514,13 @@ module.exports = ({ db }) => {
     if (authLimiter.isLimited(key)) return loginPage(req, res, { error: "Trop de tentatives. Réessayez plus tard." }, 429);
     authLimiter.hit(key);
     try {
-      customers.register(req.shop.s, { email: req.body.email, password: req.body.password, name: req.body.name });
+      const reg = customers.register(req.shop.s, { email: req.body.email, password: req.body.password, name: req.body.name });
+      if (reg.activation) {
+        // Adresse déjà connue par une commande invitée : aucun accès sans preuve de possession de la boîte e-mail
+        const origin = shopOrigin(req);
+        require("../../utils/outbox").queueMail(db, { kind: "shop_reset", to: reg.activation.customer.email, subject: "Activez votre compte", text: `Pour activer votre compte et choisir votre mot de passe, ouvrez ce lien (valable une heure) :\n${origin}${BASE}/compte/reinitialiser?t=${reg.activation.token}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.`, sensitive: true });
+        return loginPage(req, res, { info: "Cette adresse a déjà servi à passer une commande. Un e-mail vient de vous être envoyé pour activer votre compte." });
+      }
       const { token } = customers.login(req.shop.s, req.body.email, req.body.password);
       view.setCookie(req, res, CUSTOMER_COOKIE, token);
       res.redirect(303, `${BASE}/compte`);
@@ -532,7 +540,7 @@ module.exports = ({ db }) => {
       resetLimiter.hit(key);
       const r = customers.requestReset(req.shop.s, req.body.email);
       if (r) {
-        const origin = `${req.protocol}://${req.get("host")}`;
+        const origin = shopOrigin(req);
         require("../../utils/outbox").queueMail(db, { kind: "shop_reset", to: r.customer.email, subject: "Réinitialisation de votre mot de passe", text: `Pour choisir un nouveau mot de passe, ouvrez ce lien (valable une heure) :\n${origin}${BASE}/compte/reinitialiser?t=${r.token}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.`, sensitive: true });
       }
     }
