@@ -76,3 +76,51 @@ describe("Header Builder : menu, recherche, compte, nouveaux réglages (navigate
     assert.deepEqual(env.errors, []);
   });
 });
+
+describe("Header Builder : style individuel de chaque lien du menu (navigateur)", { skip: SKIP }, () => {
+  let env, ids = {};
+  before(async () => {
+    env = await setup({ siteName: "Site liens individuels" });
+    const db = env.db, menu = Number(db.prepare("INSERT INTO nav_menus (site_id, name, slug, status) VALUES (?, 'Principal', 'principal', 'published')").run(env.site).lastInsertRowid);
+    const item = (parent, pos, label, url) => Number(db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, ?, ?, 'custom', ?, ?, 'published')").run(menu, parent, pos, url, label).lastInsertRowid);
+    ids.a = item(null, 0, "Accueil", "/"); ids.b = item(null, 1, "Boutique", "/boutique"); ids.c = item(null, 2, "Contact", "/contact");
+    db.prepare("INSERT INTO nav_locations (site_id, location, menu_id) VALUES (?, 'header', ?)").run(env.site, menu);
+  });
+  after(async () => { if (env) await env.close(); });
+  const withMenu = (props) => (s) => { let found = false, host = null; const walk = (nodes) => { for (const n of nodes) { if (n.type === "menu") { found = true; n.props = { ...n.props, ...props }; } if (!host && Array.isArray(n.children)) host = n; if (n.children) walk(n.children); } }; walk(s.children); if (!found) host.children.push({ id: "men0000001aa", type: "menu", props: { label: "Navigation", ...props } }); };
+
+  test("seul « Boutique » est personnalisé (normal, survol, écran mobile) ; Accueil et Contact restent identiques", async () => {
+    const itemStyles = { ["m" + ids.b]: { link: { styles: { desktop: { color: "#c2410c", fontWeight: "800", backgroundColor: "#fff7ed", borderRadius: "999px" }, mobile: { fontSize: "21px" } }, states: { hover: { color: "#ffffff", backgroundColor: "#7c2d12" } } } } };
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", itemStyles }));
+    const { context, page } = await env.visit();
+    const link = (t) => page.locator(".lp-site-header .kw-menu-link", { hasText: t }).first();
+    const css = (loc, p) => loc.evaluate((e, q) => getComputedStyle(e)[q], p);
+    assert.equal(await css(link("Boutique"), "color"), "rgb(194, 65, 12)");
+    assert.equal(await css(link("Boutique"), "fontWeight"), "800");
+    assert.notEqual(await css(link("Accueil"), "color"), "rgb(194, 65, 12)", "Accueil n'est pas touché");
+    assert.notEqual(await css(link("Contact"), "backgroundColor"), "rgb(255, 247, 237)", "Contact n'est pas touché");
+    await link("Boutique").hover();
+    await page.waitForTimeout(400);
+    assert.equal(await css(link("Boutique"), "backgroundColor"), "rgb(124, 45, 18)", "état survol propre à ce lien");
+    await context.close();
+    assert.deepEqual(env.errors, []);
+  });
+
+  test("menu mobile : le tiroir prend le fond, la largeur, le fond assombri et la fermeture réglés ; liens du panneau stylés", async () => {
+    const panelStyles = { panel: { styles: { desktop: { backgroundColor: "#0f172a", width: "300px" } } }, backdrop: { styles: { desktop: { backgroundColor: "#7c2d12cc" } } }, links: { styles: { desktop: { color: "#fde68a", fontSize: "22px" } } }, close: { styles: { desktop: { color: "#fbbf24" } } } };
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", mobileToggle: true, mobileMode: "drawer", drawerSide: "right", panelStyles }));
+    const { context, page } = await env.visit({ viewport: { width: 390, height: 800 } });
+    await page.locator(".lp-site-header .kw-menu-burger").first().click();
+    await page.waitForSelector(".kw-menu-panel");
+    const css = (sel, q) => page.locator(sel).first().evaluate((e, p) => getComputedStyle(e)[p], q);
+    assert.equal(await css(".kw-menu-panel", "backgroundColor"), "rgb(15, 23, 42)");
+    assert.equal(Math.round((await page.locator(".kw-menu-panel").first().boundingBox()).width), 300);
+    assert.equal(await css(".kw-menu-backdrop", "backgroundColor"), "rgba(124, 45, 18, 0.8)");
+    assert.equal(await css(".kw-menu-panel .kw-menu-link", "color"), "rgb(253, 230, 138)");
+    assert.equal(await css(".kw-menu-panel .kw-menu-close", "color"), "rgb(251, 191, 36)");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.locator(".kw-menu-panel").count(), 0, "Échap ferme le panneau");
+    await context.close();
+    assert.deepEqual(env.errors, []);
+  });
+});

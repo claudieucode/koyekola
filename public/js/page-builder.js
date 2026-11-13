@@ -2050,6 +2050,45 @@ function selectField(label, value, options, onChange, opts) {
     sel.addEventListener("change", function () { onChange(sel.value); });
     return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel), function () { onChange(sel.value); });
   }
+  // Style INDIVIDUEL d'un lien du menu : un lien, une partie (lien, sous-menu, icône, badge), un état, un écran ; chaque valeur ne touche que ce lien (props.itemStyles).
+  var LINK_STYLE_SEL = { key: "p0", part: "link", state: "base", bp: "desktop" };
+  var LINK_STYLE_FIELDS = [["color", "Couleur du texte", "#rrggbb"], ["backgroundColor", "Fond", "#rrggbb"], ["fontSize", "Taille du texte", "16px"], ["fontWeight", "Épaisseur (300 à 900)", "600"], ["letterSpacing", "Espacement des lettres", "1px"], ["textTransform", "Casse (none, uppercase, lowercase, capitalize)", "uppercase"], ["paddingTop", "Marge intérieure haut", "6px"], ["paddingRight", "Marge intérieure droite", "14px"], ["paddingBottom", "Marge intérieure bas", "6px"], ["paddingLeft", "Marge intérieure gauche", "14px"], ["borderRadius", "Arrondi", "999px"], ["borderWidth", "Épaisseur de bordure", "1px"], ["borderColor", "Couleur de bordure", "#rrggbb"], ["opacity", "Opacité (0 à 1)", "1"]];
+  function linkStylePanel(box, it, p, disabled) {
+    var sel = LINK_STYLE_SEL, entries = p.itemStyles || {};
+    var keys = []; (p.items || []).forEach(function (m, i) { keys.push(["p" + i, (m.label || "Lien " + (i + 1)) + (entries["p" + i] ? " ●" : "")]); (m.children || []).forEach(function (c, j) { keys.push(["p" + i + "-" + j, "   ↳ " + (c.label || "Sous-lien") + (entries["p" + i + "-" + j] ? " ●" : "")]); }); });
+    if (!keys.length) for (var n = 0; n < 12; n++) keys.push(["p" + n, "Lien n° " + (n + 1) + (entries["p" + n] ? " ●" : "")]);
+    keys.push(["panel", "Panneau du menu mobile" + (p.panelStyles ? " ●" : "")]);
+    var isPanel = sel.key === "panel";
+    if (!keys.some(function (k) { return k[0] === sel.key; })) sel.key = keys[0][0];
+    if (isPanel && ["panel", "backdrop", "close", "links", "list"].indexOf(sel.part) < 0) sel.part = "panel";
+    if (!isPanel && ["link", "sub", "icon", "badge"].indexOf(sel.part) < 0) sel.part = "link";
+    var rerender = function () { renderInspector(); };
+    box.appendChild(h("p", { class: "pb-hint", text: "Choisissez un lien, un état et un écran : les valeurs saisies ne s'appliquent qu'à ce lien (● = déjà personnalisé). Laissez vide pour retirer une valeur." }));
+    box.appendChild(selectField("Lien", sel.key, keys, function (v) { sel.key = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("Partie", sel.part, isPanel ? [["panel", "Le panneau"], ["backdrop", "Le fond assombri"], ["close", "Le bouton de fermeture"], ["links", "Les liens du panneau"], ["list", "La liste du panneau"]] : [["link", "Le lien"], ["sub", "Son sous-menu / méga-menu"], ["icon", "Son icône"], ["badge", "Son badge"]], function (v) { sel.part = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("État", sel.state, [["base", "Normal"], ["hover", "Survol"], ["focus", "Focus clavier"], ["active", "Clic"], ["current", "Page courante"]], function (v) { sel.state = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("Écran", sel.bp, [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]], function (v) { sel.bp = v; rerender(); }, { disabled: disabled }));
+    // chemin des réglages : base → styles[écran] ; survol, focus, clic → states[état ou état@écran] ; page courante → current[écran]
+    var bag = function (x, create) {
+      var e;
+      if (isPanel) { e = x.panelStyles = x.panelStyles || {}; e = e[sel.part] = e[sel.part] || {}; if (sel.state === "current") sel.state = "base"; }
+      else { e = x.itemStyles = x.itemStyles || {}; e = e[sel.key] = e[sel.key] || {}; e = e[sel.part] = e[sel.part] || {}; }
+      if (sel.state === "base") { if (!create && !e.styles) return null; e.styles = e.styles || {}; return (e.styles[sel.bp] = e.styles[sel.bp] || {}); }
+      if (sel.state === "current") { if (!create && !e.current) return null; e.current = e.current || {}; return (e.current[sel.bp] = e.current[sel.bp] || {}); }
+      var k = sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp; if (!create && !e.states) return null; e.states = e.states || {}; return (e.states[k] = e.states[k] || {});
+    };
+    var read = function (k) { var e = isPanel ? (p.panelStyles || {})[sel.part] : entries[sel.key] && entries[sel.key][sel.part]; if (!e) return ""; var set = sel.state === "base" ? e.styles && e.styles[sel.bp] : sel.state === "current" ? e.current && e.current[sel.bp] : e.states && e.states[sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp]; return set && set[k] !== undefined ? String(set[k]) : ""; };
+    var prune = function (x) { if (isPanel) { var pe = x.panelStyles || {}; Object.keys(pe).forEach(function (pp) { var t = pe[pp]; ["styles", "states"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete pe[pp]; }); if (!Object.keys(pe).length) delete x.panelStyles; return; } var e = x.itemStyles; Object.keys(e).forEach(function (kk) { Object.keys(e[kk]).forEach(function (pp) { var t = e[kk][pp]; ["styles", "states", "current"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete e[kk][pp]; }); if (!Object.keys(e[kk]).length) delete e[kk]; }); if (!Object.keys(e).length) delete x.itemStyles; };
+    LINK_STYLE_FIELDS.forEach(function (f) {
+      box.appendChild(textField(f[1], read(f[0]), function (v) {
+        change(function () { var x = byId(it.id).props, val = String(v).trim(), set = bag(x, val !== ""); if (val === "") { if (set) delete set[f[0]]; if (x.itemStyles || x.panelStyles) prune(x); } else set[f[0]] = /^-?\d+(\.\d+)?$/.test(val) && ["opacity"].indexOf(f[0]) < 0 && f[0] !== "fontWeight" ? val + "px" : val; }, { key: it.id + ":is" + sel.key + sel.part + sel.state + sel.bp + f[0], light: true });
+      }, { max: 40, disabled: disabled, onChange: true, hint: f[2] ? "Exemple : " + f[2] : "" }));
+    });
+    box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || !(isPanel ? p.panelStyles : entries[sel.key]), onclick: function () { change(function () { var x = byId(it.id).props; if (isPanel) { delete x.panelStyles; } else if (x.itemStyles) { delete x.itemStyles[sel.key]; prune(x); } }); toast("Réglages réinitialisés."); } }, isPanel ? "Réinitialiser le panneau" : "Réinitialiser ce lien"));
+    box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || isPanel || !entries[sel.key], onclick: function () { LINK_STYLE_CLIP = JSON.parse(JSON.stringify(entries[sel.key])); toast("Style du lien copié."); } }, "Copier le style de ce lien"));
+    box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || isPanel || !LINK_STYLE_CLIP, onclick: function () { change(function () { var x = byId(it.id).props; x.itemStyles = x.itemStyles || {}; x.itemStyles[sel.key] = JSON.parse(JSON.stringify(LINK_STYLE_CLIP)); }); toast("Style collé sur ce lien."); } }, "Coller le style copié"));
+  }
+  var LINK_STYLE_CLIP = null;
   function checkField(label, value, onChange, opts) {
     var cb = h("input", { type: "checkbox", disabled: opts && opts.disabled });
     cb.checked = Boolean(value);
@@ -2333,6 +2372,8 @@ function selectField(label, value, options, onChange, opts) {
         }
         box.appendChild(selectField("Indicateur de sous-menu", p.indicator || "chevron", [["chevron", "Chevron (par défaut)"], ["angle", "Angle"], ["plus", "Plus / moins"], ["none", "Aucun"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "chevron") delete x.indicator; else x.indicator = v; }); }, { disabled: disabled }));
         box.appendChild(selectField("Animation d'ouverture des sous-menus", p.submenuAnim || "", [["", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.submenuAnim = v; else delete x.submenuAnim; }); }, { disabled: disabled }));
+        if (grp) box = grp("Style d'un lien (individuel)");
+        linkStylePanel(box, it, p, disabled);
         if (grp) box = grp("Bouton mobile (hamburger)");
         box.appendChild(checkField("Sur mobile, replier derrière un bouton « Menu »", p.mobileToggle, function (v) { setProp(it.id, "mobileToggle", v); }, { disabled: disabled }));
         if (p.mobileToggle) {

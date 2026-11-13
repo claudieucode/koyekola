@@ -282,10 +282,11 @@
       if (!side) return;
       if (on) {
         var host = nav.closest(".lp-site") || document.body; // le panneau garde les couleurs et les polices du site, mais sort de l'en-tête (un fond flouté ou un transform y piégerait un panneau fixé)
-        panel = document.createElement("div"); panel.className = "kw-menu-panel is-" + side; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-label", nav.getAttribute("aria-label") || "Menu");
+        var nid = (/(?:^|\s)kw-n-([a-z0-9]+)/.exec(nav.className) || [])[1], pcls = nid ? " kw-pn-" + nid : ""; /* classe de rattachement : les réglages du panneau (panelStyles) le visent même quand il est sorti du menu */
+        panel = document.createElement("div"); panel.className = "kw-menu-panel is-" + side + pcls; panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "true"); panel.setAttribute("aria-label", nav.getAttribute("aria-label") || "Menu");
         var close = document.createElement("button"); close.type = "button"; close.className = "kw-menu-close"; close.setAttribute("aria-label", "Fermer le menu"); close.innerHTML = "<span aria-hidden=\"true\">×</span>";
         close.addEventListener("click", function () { setOpen(false); b.focus(); });
-        backdrop = document.createElement("div"); backdrop.className = "kw-menu-backdrop"; backdrop.addEventListener("click", function () { setOpen(false); b.focus(); });
+        backdrop = document.createElement("div"); backdrop.className = "kw-menu-backdrop" + pcls; backdrop.addEventListener("click", function () { setOpen(false); b.focus(); });
         panel.appendChild(close); panel.appendChild(list); host.appendChild(backdrop); host.appendChild(panel);
         locked = document.documentElement.style.overflow; document.documentElement.style.overflow = "hidden";
         panel.addEventListener("click", function (e) { if (e.target.closest && e.target.closest("a[href]")) setOpen(false); });

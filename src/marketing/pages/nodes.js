@@ -646,6 +646,12 @@ const NODE_TYPES = {
       for (const [k, v] of Object.entries(p.mega).slice(0, 12)) { const id = Number(k), cid = Number(v); if (Number.isInteger(id) && id > 0 && Number.isInteger(cid) && cid > 0) mega[String(id)] = cid; }
       if (Object.keys(mega).length) { out.mega = mega; out.megaTrigger = p.megaTrigger === "click" ? "click" : "hover"; out.megaWidth = p.megaWidth === "full" ? "full" : "item"; }
     }
+    // Réglages PROPRES à chaque lien (clé = place « p0 », « p2-1 » ou identifiant du menu du CMS « m12 ») : voir normalizeItemStyles
+    const itemStyles = normalizeItemStyles(p.itemStyles, at, h);
+    if (itemStyles) out.itemStyles = itemStyles;
+    // Panneau du menu mobile (tiroir, plein écran, panneau du bas) : panneau, fond assombri, bouton de fermeture, liens du panneau
+    const panelStyles = normalizePanelStyles(p.panelStyles, at, h);
+    if (panelStyles) out.panelStyles = panelStyles;
     if (source === "location") { out.source = source; out.location = ["header", "footer", "mobile"].includes(p.location) ? p.location : "header"; }
     else if (source === "name") { out.source = source; out.menuName = line(p.menuName, 80); }
     return out;
@@ -1941,6 +1947,45 @@ function normalizeParts(type, raw, at, h, nodeId) {
   }
   return Object.keys(out).length ? out : null;
 }
+// Réglages individuels des liens d'un menu : { clé: { link|sub|icon|badge: { styles, states, current } } }. Chaque entrée utilise la MÊME grammaire de style que les éléments
+// (écrans, états survol / focus / clic) ; « current » règle l'état « page courante ». Une entrée ne touche jamais les autres liens.
+const ITEM_KEY = /^(p\d{1,2}(-\d{1,2}){0,2}|m\d{1,9})$/;
+const ITEM_PARTS = { link: "Lien", sub: "Sous-menu du lien", icon: "Icône du lien", badge: "Badge du lien" };
+function normalizeItemStyles(raw, at, h) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} (menu) : réglages des liens invalides.`);
+  const out = {};
+  for (const [key, val] of Object.entries(raw).slice(0, 60)) {
+    if (!ITEM_KEY.test(key)) throw new Error(`${at} (menu) : identifiant de lien invalide « ${String(key).slice(0, 20)} ».`);
+    if (!val || typeof val !== "object" || Array.isArray(val)) continue;
+    const entry = {};
+    for (const [part, label] of Object.entries(ITEM_PARTS)) {
+      const v = val[part]; if (!v || typeof v !== "object") continue;
+      const st = normalizeStyles(v.styles, v.states, `${at} (menu, ${label.toLowerCase()} ${key})`, h);
+      if (v.current && typeof v.current === "object") {
+        const cur = {};
+        for (const bp of BREAKPOINTS) { const set = normalizeStyleSet(v.current[bp.key], `${at} (menu, ${label.toLowerCase()} ${key}, page courante)`, h); if (Object.keys(set).length) cur[bp.key] = set; }
+        if (Object.keys(cur).length) st.current = cur;
+      }
+      if (st.styles || st.states || st.current) entry[part] = st;
+    }
+    if (Object.keys(entry).length) out[key] = entry;
+  }
+  return Object.keys(out).length ? out : null;
+}
+const PANEL_PARTS = { panel: ["Panneau du menu mobile", ".kw-menu-panel"], backdrop: ["Fond assombri du menu mobile", ".kw-menu-backdrop"], close: ["Bouton de fermeture du menu mobile", ".kw-menu-panel .kw-menu-close"], links: ["Liens du panneau mobile", ".kw-menu-panel .kw-menu-link"], list: ["Liste du panneau mobile", ".kw-menu-panel .kw-menu-list"] };
+function normalizePanelStyles(raw, at, h) {
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw !== "object" || Array.isArray(raw)) throw new Error(`${at} (menu) : réglages du panneau mobile invalides.`);
+  const out = {};
+  for (const [part, [label]] of Object.entries(PANEL_PARTS)) {
+    const v = raw[part]; if (!v || typeof v !== "object") continue;
+    const st = normalizeStyles(v.styles, v.states, `${at} (menu, ${label.toLowerCase()})`, h);
+    if (st.styles || st.states) out[part] = st;
+  }
+  for (const k of Object.keys(raw)) if (!Object.hasOwn(PANEL_PARTS, k)) throw new Error(`${at} (menu) : « ${String(k).slice(0, 20)} » n'est pas une partie du panneau mobile.`);
+  return Object.keys(out).length ? out : null;
+}
 function normalizeStyles(styles, states, at, h) {
   const out = {};
   const s = {};
@@ -2163,6 +2208,37 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       stateRules(sel, set.states, false, rules, false);
     }
   };
+  // Réglages individuels des liens d'un menu : une règle par lien (attribut data-ik / data-mid posé par le rendu), mêmes écrans et mêmes états que le reste
+  const ITEM_SEL = { link: ">.kw-menu-link", sub: ">.kw-submenu,>.kw-mega", icon: ">.kw-menu-link .kw-menu-icon", badge: ">.kw-menu-link .kw-menu-badge" };
+  const addItems = (n) => {
+    const all = n.type === "menu" && n.props && n.props.itemStyles;
+    if (!all || !NODE_ID.test(String(n.id || ""))) return;
+    for (const [key, entry] of Object.entries(all)) {
+      if (!ITEM_KEY.test(key)) continue;
+      const li = `.kw-node.kw-n-${n.id} li[${key[0] === "m" ? `data-mid="${key.slice(1)}"` : `data-ik="${key}"`}]`;
+      for (const [part, set] of Object.entries(entry)) {
+        const sels = (ITEM_SEL[part] || "").split(",");
+        for (const frag of sels) {
+          const sel = li + frag;
+          for (const bp of BREAKPOINTS) { const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : ""; if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}{${d}}`); }
+          stateRules(sel, set.states, false, rules, false);
+          if (set.current) for (const bp of BREAKPOINTS) { const d = set.current[bp.key] ? declarations(set.current[bp.key]) : ""; if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${sel}[aria-current]{${d}}`, `${sel}.is-current{${d}}`); }
+        }
+      }
+    }
+  };
+  // Panneau mobile du menu : rattaché par la classe kw-pn-<id> (posée par landing.js) car le panneau sort du menu à l'ouverture
+  const addPanel = (n) => {
+    const all = n.type === "menu" && n.props && n.props.panelStyles;
+    if (!all || !NODE_ID.test(String(n.id || ""))) return;
+    for (const [part, set] of Object.entries(all)) {
+      if (!PANEL_PARTS[part]) continue;
+      const sel = `.lp-site ${PANEL_PARTS[part][1].replace(/^(\.kw-menu-panel|\.kw-menu-backdrop)/, `$1.kw-pn-${n.id}`)}`.replace(/^\.lp-site (\.kw-menu-panel \.)/, `.lp-site $1`);
+      const fixed = part === "links" || part === "close" || part === "list" ? sel.replace(".kw-menu-panel ", `.kw-menu-panel.kw-pn-${n.id} `) : sel;
+      for (const bp of BREAKPOINTS) { const d = set.styles && set.styles[bp.key] ? declarations(set.styles[bp.key]) : ""; if (d) (bp.media ? rules.media[bp.key] : rules.base).push(`${fixed}{${d}}`); }
+      stateRules(fixed, set.states, false, rules, false);
+    }
+  };
   const add = (id, styles, states, band = false, calm = false, type = "") => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
@@ -2235,7 +2311,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
       add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), Boolean(n.motion && n.motion.alwaysMotion), n.type);
-    addParts(n);
+    addParts(n); addItems(n); addPanel(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
       // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :

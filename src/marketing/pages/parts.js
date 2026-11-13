@@ -125,6 +125,13 @@ const PARTS = {
     list: part("Liste", ".kw-menu-list", { ...LAYOUT, background: true, border: true }),
     link: part("Lien", ".kw-menu-link", LINK, ["hover", "focus"]),
     burger: part("Bouton mobile", ".kw-menu-burger", ARROW, ["hover", "focus"]),
+    burgericon: part("Traits du bouton mobile", ".kw-menu-burger > span[aria-hidden]", { size: ["width", "height"], border: true, color: ["color"], effects: ["opacity", "transitionDuration"] }, ["hover"]),
+    submenu: part("Panneau des sous-menus", ".kw-submenu", { ...BOX, layout: ["display", "flexDirection", "gap", "rowGap", "columnGap"] }),
+    subitem: part("Liens des sous-menus", ".kw-submenu .kw-menu-link", LINK, ["hover", "focus"]),
+    toggle: part("Indicateur de sous-menu", ".kw-sub-toggle", ARROW, ["hover", "focus"]),
+    icon: part("Icônes des liens", ".kw-menu-icon", { typography: ["fontSize"], color: ["color"], spacing: spacingAll, size: ["width", "height"], effects: ["opacity", "transitionDuration"] }, ["hover"]),
+    badge: part("Badges des liens", ".kw-menu-badge", { ...LINK, size: ["minWidth", "height"] }),
+    mega: part("Panneau des méga-menus", ".kw-mega", { ...BOX, layout: ["display", "flexDirection", "gap", "rowGap", "columnGap", "justifyContent", "alignItems"] }),
   },
   carousel: {
     slide: part("Diapositive", ".kw-carousel-slide", { ...BOX }),
