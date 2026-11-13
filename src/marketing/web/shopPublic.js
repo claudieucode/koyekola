@@ -432,7 +432,7 @@ module.exports = ({ db }) => {
     if (!priced.lines.length) return res.redirect(303, `${BASE}/panier`);
     const giftLines = giftLists.cartGiftLines(s, k.id);
     const giftInfo = giftLines.length ? { titles: [...new Set(giftLines.map((g) => g.title))], canDeliver: giftLines.length === priced.lines.length && new Set(giftLines.map((g) => g.list_id)).size === 1 && Boolean(giftLines[0].allow_recipient_delivery && giftLines[0].recipient_address) } : null;
-    render(req, res, "commande", { title: "Commande", priced, giftInfo, ageRequired: age.requiredForProducts(db, priced.lines.map((l) => l.productId)), error, values: { email: req.shopCustomer ? req.shopCustomer.email : "", ...values, country }, methods: payments.available(settings).map((m) => ({ key: m, label: payments.PROVIDERS[m].label })), idempotencyKey: require("node:crypto").randomBytes(12).toString("hex"), slots: deliverySlots.forCheckout(s, priced) }, status);
+    render(req, res, "commande", { title: "Commande", priced, giftInfo, ageRequired: age.requiredForProducts(db, priced.lines.map((l) => l.productId)), error, values: { email: req.shopCustomer ? req.shopCustomer.email : "", ...values, country }, methods: payments.available(settings, s).map((m) => ({ key: m, label: payments.PROVIDERS[m].label })), idempotencyKey: require("node:crypto").randomBytes(12).toString("hex"), slots: deliverySlots.forCheckout(s, priced) }, status);
   };
   router.get(`${BASE}/commande`, (req, res) => checkoutPage(req, res));
 
@@ -450,7 +450,7 @@ module.exports = ({ db }) => {
       if (!customerId && !settings.guest_checkout) throw new MarketingError("auth", "Connectez-vous ou créez un compte pour commander.");
       const email = req.shopCustomer ? req.shopCustomer.email : b.email;
       // Un moyen de paiement activé mais non configuré (clés absentes) n'est jamais accepté : aucune commande ne doit réserver du stock sans pouvoir être payée
-      if (!payments.available(settings).includes(String(b.payment_method || ""))) throw new MarketingError("invalid_field", "Ce moyen de paiement n'est pas disponible pour le moment.");
+      if (!payments.available(settings, s).includes(String(b.payment_method || ""))) throw new MarketingError("invalid_field", "Ce moyen de paiement n'est pas disponible pour le moment.");
       const { order, duplicate } = orders.createFromCart(s, k, { email, billing, shipping, shippingMethodId: b.shipping_method, deliverySlot: b.delivery_slot, paymentMethod: b.payment_method, idempotencyKey: b.idempotency_key, expectedTotalCents: b.expected_total, giftDelivery: b.gift_delivery === "recipient" ? "recipient" : "", customerId, ageConfirmed: b.age_confirm === "1" });
       if (!customerId) { customerId = customers.ensureGuest(s, order.email, shipping.name); db.prepare("UPDATE mk_shop_orders SET customer_id = ? WHERE id = ? AND customer_id IS NULL").run(customerId, order.id); }
       const key = view.orderToken(order);
@@ -516,6 +516,32 @@ module.exports = ({ db }) => {
       res.download(r.path, r.row.original_name, { headers: { "Content-Type": r.row.mime } }, (err) => { if (err && !res.headersSent) next(err); });
     } catch (error) { next(error); }
   });
+  // Webhooks des passerelles (PayPal, Flutterwave) et de Stripe avec les clés PROPRES au site : sur l'adresse du site (/boutique/webhooks/<passerelle>).
+  // Corps lu ici ; un message n'est jamais cru tel quel (signature ou hash du site, puis relecture auprès du fournisseur).
+  const hookLimiter = createRateLimiter(120, 60 * 1000);
+  router.post(`${BASE}/webhooks/:provider(paypal|flutterwave)`, express.json({ limit: "256kb" }), async (req, res) => {
+    try {
+      const key = `hook|${req.ip}|${req.shop.s.siteId}`;
+      if (hookLimiter.isLimited(key)) return res.status(429).json({ ok: false });
+      hookLimiter.hit(key);
+      const r = await payments.handleProviderWebhook(req.shop.s, req.params.provider, req.body || {}, req.headers);
+      if (r.handled && r.becamePaid) notify.notify(req.shop.s, r.order, "order_paid");
+      res.json({ ok: true });
+    } catch (error) { console.error(`[KOLAKISA] Boutique : webhook ${req.params.provider} : ${error.message}`); res.status(500).json({ ok: false }); }
+  });
+  router.post(`${BASE}/webhooks/stripe`, express.raw({ type: "*/*", limit: "1mb" }), (req, res) => {
+    try {
+      const { s } = req.shop; const gw = require("../shop/gateways");
+      const secret = gw.getCreds(s, "stripe") && gw.getCreds(s, "stripe").webhook_secret;
+      if (!secret) return res.status(404).json({ ok: false }); // sans secret propre au site : le webhook global du serveur s'applique
+      if (!require("../../services/payments").verifyWebhookSignature(req.body, req.get("stripe-signature"), secret)) return res.status(400).json({ ok: false });
+      const event = JSON.parse(req.body.toString("utf8"));
+      const out = payments.handleStripeEvent(db, event);
+      if (out.handled && out.result && out.scope && out.orderId && out.scope.siteId === s.siteId && out.result.status === "paid") notify.notify(out.scope, orders.getOrder(out.scope, out.orderId), "order_paid");
+      res.json({ received: true });
+    } catch (error) { console.error(`[KOLAKISA] Boutique : webhook Stripe du site : ${error.message}`); res.status(500).json({ ok: false }); }
+  });
+
   // Facture / avoir d'une commande : même droit d'accès que la page de commande (lien secret ou client connecté)
   router.get(`${BASE}/commande/:number/facture/:iid(\\d+)`, (req, res) => {
     const order = loadOrderFor(req, res);

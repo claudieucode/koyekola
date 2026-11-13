@@ -27,10 +27,10 @@ function encodeForm(value, prefix = "", out = []) {
   return out;
 }
 
-async function stripeRequest(method, path, params, extraHeaders) {
+async function stripeRequest(method, path, params, extraHeaders, key) {
   const response = await fetch(`${apiBase()}${path}`, {
     method,
-    headers: { authorization: `Bearer ${process.env.STRIPE_SECRET_KEY}`, ...(params ? { "content-type": "application/x-www-form-urlencoded" } : {}), ...(extraHeaders || {}) },
+    headers: { authorization: `Bearer ${key || process.env.STRIPE_SECRET_KEY}`, ...(params ? { "content-type": "application/x-www-form-urlencoded" } : {}), ...(extraHeaders || {}) },
     body: params ? encodeForm(params).join("&") : undefined,
     signal: AbortSignal.timeout(15000),
   });
@@ -55,7 +55,7 @@ async function createStripeSession({ ref, email, lines, successUrl, cancelUrl })
   });
 }
 
-const retrieveStripeSession = (id) => stripeRequest("GET", `/v1/checkout/sessions/${encodeURIComponent(id)}`);
+const retrieveStripeSession = (id, key) => stripeRequest("GET", `/v1/checkout/sessions/${encodeURIComponent(id)}`, undefined, undefined, key);
 
 // Signature d'un webhook : en-tête « t=<horodatage>,v1=<HMAC-SHA256 de "t.corps">,… » (corps BRUT, octets exacts).
 function verifyWebhookSignature(rawBody, header, secret, now = Date.now()) {

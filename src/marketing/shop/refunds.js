@@ -71,7 +71,7 @@ async function create(s, orderId, { amountCents = null, items = [], restock = fa
     if (!Number.isFinite(amount) || amountCents == null && !sel.items.length && !shippingToo) amount = left; // « tout rembourser »
     if (!(amount > 0)) throw new MarketingError("invalid_field", "Indiquez un montant ou des articles à rembourser.");
     if (amount > left) throw new MarketingError("invalid_field", `Montant trop élevé : il reste ${(left / 100).toFixed(2)} ${order.currency.toUpperCase()} remboursable(s).`);
-    const provider = order.payment_method === "stripe" ? "stripe" : "manual";
+    const provider = order.payment_method === "stripe" ? "stripe" : require("./gateways").adapterFor(order.payment_method) ? order.payment_method : "manual";
     const info = s.db.prepare("INSERT INTO mk_shop_refunds (organization_id, site_id, order_id, amount_cents, currency, reason, restock, items, provider, status, idempotency_key, actor) VALUES (?,?,?,?,?,?,?,?,?, 'pending', ?, ?)")
       .run(s.organizationId, s.siteId ?? null, order.id, amount, order.currency, clean(reason, 300) || null, restock ? 1 : 0, JSON.stringify(sel.items), provider, key, clean(actor, 80));
     return { id: Number(info.lastInsertRowid), amount, provider, items: sel.items };
@@ -82,11 +82,28 @@ async function create(s, orderId, { amountCents = null, items = [], restock = fa
     try {
       const pay = s.db.prepare("SELECT * FROM mk_shop_payments WHERE order_id = ? AND provider = 'stripe' AND status = 'succeeded' AND provider_ref IS NOT NULL ORDER BY id DESC").get(order.id);
       if (!pay) throw new Error("aucun paiement Stripe confirmé pour cette commande");
-      const session = await gateway.retrieveStripeSession(pay.provider_ref);
+      const stripeKey = require("./gateways").stripeKeyFor(s);
+      const session = await gateway.retrieveStripeSession(pay.provider_ref, stripeKey);
       const intent = session && (typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent && session.payment_intent.id);
       if (!intent) throw new Error("paiement introuvable chez Stripe");
-      const r = await gateway.stripeRequest("POST", "/v1/refunds", { payment_intent: intent, amount: reserved.amount, "metadata[order]": order.number, "metadata[refund]": String(reserved.id) }, { "Idempotency-Key": `kw-refund-${s.organizationId}-${reserved.id}` });
+      const r = await gateway.stripeRequest("POST", "/v1/refunds", { payment_intent: intent, amount: reserved.amount, "metadata[order]": order.number, "metadata[refund]": String(reserved.id) }, { "Idempotency-Key": `kw-refund-${s.organizationId}-${reserved.id}` }, stripeKey);
       providerRef = r && r.id;
+      if (!providerRef) throw new Error("réponse sans identifiant de remboursement");
+    } catch (error) {
+      console.error(`[KOLAKISA] Boutique : remboursement ${order.number} refusé : ${error.message}`);
+      s.db.prepare("UPDATE mk_shop_refunds SET status = 'failed', failure_reason = ?, updated_at = datetime('now') WHERE id = ?").run(clean(error.message, 300), reserved.id);
+      orders.addEvent(s.db, order.id, { kind: "refund_failed", actor, note: "Remboursement refusé par le fournisseur de paiement : rien n'a été rendu." });
+      throw new MarketingError("payment_unavailable", "Le fournisseur de paiement n'a pas pu effectuer le remboursement. Rien n'a été remboursé : vous pouvez réessayer.");
+    }
+  }
+  if (reserved.provider !== "stripe" && reserved.provider !== "manual") {
+    // PayPal, Flutterwave : remboursement par l'API du fournisseur ; refus → rien n'est rendu et la commande reste intacte
+    try {
+      const gw = require("./gateways"); const adapter = gw.adapterFor(reserved.provider); const creds = gw.getCreds(s, reserved.provider);
+      const pay = s.db.prepare("SELECT * FROM mk_shop_payments WHERE order_id = ? AND provider = ? AND status = 'succeeded' ORDER BY id DESC").get(order.id, reserved.provider);
+      if (!adapter || !creds || !pay || !pay.provider_intent) throw new Error("paiement introuvable pour ce fournisseur");
+      const r = await adapter.refund(order, pay, reserved.amount, creds, `kw-refund-${s.organizationId}-${reserved.id}`);
+      providerRef = r && r.ref;
       if (!providerRef) throw new Error("réponse sans identifiant de remboursement");
     } catch (error) {
       console.error(`[KOLAKISA] Boutique : remboursement ${order.number} refusé : ${error.message}`);
