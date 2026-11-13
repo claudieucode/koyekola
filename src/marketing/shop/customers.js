@@ -41,6 +41,7 @@ function register(s, { email, password, name }) {
   // On renvoie un jeton d'activation, à envoyer à l'adresse e-mail ; le mot de passe n'est posé qu'après ouverture du lien (même circuit que la réinitialisation).
   if (existing) return { activation: requestActivation(s, existing) };
   const id = Number(s.db.prepare("INSERT INTO mk_shop_customers (organization_id, site_id, email, password_hash, name) VALUES (?,?,?,?,?)").run(s.organizationId, s.siteId ?? null, e, hashPassword(password), name ? String(name).slice(0, 120) : null).lastInsertRowid);
+  try { require("./events").customerRegistered(s, id, e); } catch { /* jamais bloquant */ }
   return { id };
 }
 // Jeton d'activation d'un compte invité (valable comme un jeton de réinitialisation)

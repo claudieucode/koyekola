@@ -22,6 +22,8 @@ const deliverySlots = require("../shop/deliverySlots");
 const age = require("../shop/age");
 const compare = require("../shop/compare");
 const reports = require("../shop/reports");
+const abandoned = require("../shop/abandoned");
+const privacy = require("../shop/privacy");
 const invoices = require("../shop/invoices");
 const downloads = require("../shop/downloads");
 const multer = require("multer");
@@ -345,8 +347,16 @@ module.exports = () => {
   // ── Rapports et exports CSV ──
   route("get", "/rapports", "shop.read", (req, res, s) => {
     const settings = store.getSettings(s);
-    render(req, res, "rapports", "Boutique — rapports", "boutique/rapports", { rep: reports.report(s, req.query, settings), statusLabels: orders.STATUS_LABELS, canExportPeople: req.mk.can("shop.orders") });
+    render(req, res, "rapports", "Boutique — rapports", "boutique/rapports", { rep: reports.report(s, req.query, settings), statusLabels: orders.STATUS_LABELS, canExportPeople: req.mk.can("shop.orders"), carts: abandoned.list(s), cartSettings: s.db.prepare(`SELECT abandoned_minutes, abandoned_reminder FROM mk_shop_settings WHERE organization_id = ? AND ${s.siteId == null ? "site_id IS NULL" : "site_id = ?"}`).get(s.organizationId, ...(s.siteId == null ? [] : [s.siteId])) || { abandoned_minutes: 60, abandoned_reminder: 0 } });
   });
+  route("post", "/rapports/paniers", "shop.write", (req, res, s) => {
+    const m = Math.floor(Number(req.body.minutes));
+    if (!Number.isFinite(m) || m < 15 || m > 43200) throw new MarketingError("invalid_field", "Délai d'inactivité : entre 15 minutes et 30 jours (43200 minutes).");
+    store.getSettings(s); // garantit la ligne de réglages
+    s.db.prepare(`UPDATE mk_shop_settings SET abandoned_minutes = ?, abandoned_reminder = ? WHERE organization_id = ? AND ${s.siteId == null ? "site_id IS NULL" : "site_id = ?"}`).run(m, req.body.reminder ? 1 : 0, s.organizationId, ...(s.siteId == null ? [] : [s.siteId]));
+    audit(req, s, "shop.abandoned_settings", "shop_settings", s.siteId ?? "principal", { minutes: m, reminder: Boolean(req.body.reminder) });
+    flashOk(req, "Réglages des paniers abandonnés enregistrés."); res.redirect(`${req.shopSpace.base}/boutique/rapports#paniers`);
+  }, { write: true });
   route("get", "/rapports/export/:kind", "shop.read", (req, res, s) => {
     const kind = String(req.params.kind);
     if (!Object.prototype.hasOwnProperty.call(reports.EXPORTS, kind)) throw new MarketingError("not_found", "Export inconnu.");
@@ -425,6 +435,17 @@ module.exports = () => {
     if (!z) throw new MarketingError("not_found", "Zone introuvable.");
     store.saveZone(s, { name: z.name, countries: z.countries, postcodes: req.body.postcodes }, z.id);
     flashOk(req, "Codes postaux de la zone enregistrés."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
+  }, { write: true });
+  route("get", "/clients/:cid(\\d+)/donnees", "shop.orders", (req, res, s) => {
+    const data = privacy.exportData(s, Number(req.params.cid));
+    audit(req, s, "shop_customer.exported", "shop_customer", req.params.cid);
+    res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="client-${Number(req.params.cid)}.json"`, "Cache-Control": "no-store" });
+    res.send(JSON.stringify(data, null, 2));
+  });
+  route("post", "/clients/:cid(\\d+)/effacer", "shop.write", (req, res, s) => {
+    privacy.erase(s, Number(req.params.cid), { actor: actor(req) });
+    audit(req, s, "shop_customer.erased", "shop_customer", req.params.cid);
+    flashOk(req, "Compte client effacé (commandes et factures conservées)."); res.redirect(`${req.shopSpace.base}/boutique/clients`);
   }, { write: true });
   route("post", "/clients/:cid(\\d+)/exoneration", "shop.write", (req, res, s) => {
     const r = s.db.prepare(`UPDATE mk_shop_customers SET tax_exempt = ? WHERE id = ? AND organization_id = ? AND ${s.siteId == null ? "site_id IS NULL" : "site_id = ?"}`).run(req.body.exempt ? 1 : 0, Number(req.params.cid), s.organizationId, ...(s.siteId == null ? [] : [s.siteId]));

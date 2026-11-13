@@ -235,6 +235,8 @@ function createApiRouter({ db }) {
   // Erreurs
   // ================================================================
 
+  require("./shop").mount(router, { db, fail, needWrite });
+
   router.use((req, res) => fail(res, 404, "not_found", "Route d'API inconnue."));
   // eslint-disable-next-line no-unused-vars
   router.use((error, req, res, next) => fail(res, 500, "server_error", "Erreur interne."));

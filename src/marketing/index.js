@@ -33,6 +33,7 @@ function initMarketing({ db, dbFile, dataDir, env = process.env, log = console }
       log.warn?.("[KOLAKISA] Synchronisation des comptes vers les contacts marketing impossible :", error.message);
     }
     const bus = createEventBus(db, { log });
+    require("./shop/events").attach(bus); // événements de la boutique → automatisations et webhooks
     // Le worker n'est démarré que si MARKETING_WORKER=on (voir server.js) : aucun traitement en arrière-plan par défaut
     const settings = createSettings(db, { encryptionKey: env.ENCRYPTION_KEY });
     const handlers = {
