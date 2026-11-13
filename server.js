@@ -79,6 +79,8 @@ app.use(siteHost.normalizePaths);
 app.use("/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.webhooks);
 // Webhook de paiement Stripe : même principe (corps brut, signature vérifiée, pas de cookie ni de contrôle d'origine)
 app.use("/stripe", express.raw({ type: "*/*", limit: "256kb" }), require("./src/routes/stripeWebhook"));
+// Webhooks de paiement de la boutique, par site (PayPal, Flutterwave, Stripe avec les clés du site) : corps brut, message jamais cru tel quel
+app.use("/boutique/webhooks", express.raw({ type: "*/*", limit: "256kb" }), marketingWeb.shopWebhooks);
 app.use(express.urlencoded({ extended: true }));
 // Éditeur visuel des pages : une page complète (30 sections) peut dépasser la limite par défaut de 100 ko
 app.use("/marketing/pages", express.json({ limit: "1mb" }));

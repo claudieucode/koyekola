@@ -2,7 +2,7 @@
 const { MarketingError } = require("../errors");
 const catalog = require("./catalog");
 
-const METHODS = Object.freeze(["stripe", "manual"]);
+const METHODS = Object.freeze(["stripe", "paypal", "flutterwave", "manual"]);
 const siteCond = (s, alias = "") => (s.siteId == null ? `${alias}site_id IS NULL` : `${alias}site_id = ?`);
 const siteArgs = (s) => (s.siteId == null ? [] : [s.siteId]);
 const json = (v, f) => { try { const x = JSON.parse(v); return x == null ? f : x; } catch { return f; } };

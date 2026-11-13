@@ -23,6 +23,7 @@ const age = require("../shop/age");
 const compare = require("../shop/compare");
 const reports = require("../shop/reports");
 const abandoned = require("../shop/abandoned");
+const gateways = require("../shop/gateways");
 const privacy = require("../shop/privacy");
 const invoices = require("../shop/invoices");
 const downloads = require("../shop/downloads");
@@ -376,7 +377,7 @@ module.exports = () => {
   }, { write: true });
 
   // ── Réglages : boutique, paiement, livraison, taxes, coupons ──
-  route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { slots: deliverySlots.list(s), zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s)), products: catalog.adminList(s, { perPage: 100 }).items }));
+  route("get", "/reglages", "shop.read", (req, res, s) => render(req, res, "reglages", "Boutique — réglages", "boutique/reglages", { slots: deliverySlots.list(s), zones: store.listZones(s), taxRules: store.listTaxRules(s), coupons: store.listCoupons(s), providers: payments.status(store.getSettings(s), s), products: catalog.adminList(s, { perPage: 100 }).items }));
   route("post", "/reglages", "shop.write", (req, res, s) => {
     const b = req.body;
     const input = { currency: b.currency, prices_include_tax: b.prices_include_tax ? 1 : 0, tax_enabled: b.tax_enabled ? 1 : 0, default_country: b.default_country, guest_checkout: b.guest_checkout ? 1 : 0, reviews_enabled: b.reviews_enabled ? 1 : 0, reviews_auto_publish: b.reviews_auto_publish ? 1 : 0, low_stock_threshold: b.low_stock_threshold, notify_email: b.notify_email, order_prefix: b.order_prefix };
@@ -408,6 +409,20 @@ module.exports = () => {
     flashOk(req, "Règle de taxe ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/${b.back === "classes" ? "classes" : "reglages#taxes"}`);
   }, { write: true });
   route("post", "/taxes/:tid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteTaxRule(s, Number(req.params.tid)); flashOk(req, "Règle supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#taxes`); }, { write: true });
+  // ── Passerelles de paiement du site : identifiants chiffrés, jamais ré-affichés ──
+  route("get", "/paiements", "shop.read", (req, res, s) => {
+    const info = Number.isInteger(s.siteId) ? require("../../services/urls").siteInfo(s.siteId) : null;
+    const origin = (info && info.base) || (process.env.SITE_URL ? String(process.env.SITE_URL).replace(/\/+$/, "") : "");
+    const providers = ["stripe", "paypal", "flutterwave"].map((k) => ({ key: k, label: gateways.LABELS[k], fields: gateways.FIELDS[k], state: gateways.summary(s, k), configured: payments.PROVIDERS[k].configured(s), hook: `${origin}/boutique/webhooks/${k}` }));
+    render(req, res, "paiements", "Boutique — paiements", "boutique/paiements", { providers, serverStripe: payments.PROVIDERS.stripe.configured(null), canPaySettings: req.mk.can("shop.payments") });
+  });
+  route("post", "/paiements/:provider(stripe|paypal|flutterwave)", "shop.payments", (req, res, s) => {
+    const p = req.params.provider;
+    gateways.saveCreds(s, p, req.body || {}, { mode: req.body.mode, clear: Boolean(req.body.clear) });
+    audit(req, s, req.body.clear ? "shop_gateway.cleared" : "shop_gateway.saved", "shop_gateway", p, { provider: p, mode: req.body.mode === "test" ? "test" : "live" }); // jamais les valeurs
+    flashOk(req, req.body.clear ? "Identifiants supprimés." : "Identifiants enregistrés (chiffrés). Activez ensuite le moyen de paiement dans Réglages.");
+    res.redirect(`${req.shopSpace.base}/boutique/paiements`);
+  }, { write: true });
   // ── Classes de taxe et d'expédition, codes postaux, exonération ──
   route("get", "/classes", "shop.read", (req, res, s) => {
     render(req, res, "classes", "Boutique — taxes et expédition", "boutique/classes", { taxClasses: store.listClasses(s, "tax"), shipClasses: store.listClasses(s, "shipping"), zones: store.listZones(s), taxRules: store.listTaxRules(s) });

@@ -15,7 +15,7 @@
   <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
   <fieldset><legend>Moyens de paiement</legend>
     <% providers.forEach((p) => { %><div class="field-group"><label><input type="checkbox" name="payment_methods" value="<%= p.key %>"<%= p.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> <%= p.label %></label>
-      <% if (!p.configured) { %><p class="field-hint">Configuration externe requise : clés du fournisseur (STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET) à définir sur le serveur. Tant qu'elles manquent, ce moyen n'est pas proposé aux clients.</p><% } %></div><% }) %>
+      <% if (!p.configured) { %><p class="field-hint">Identifiants à saisir dans l’onglet Paiements. Tant qu'elles manquent, ce moyen n'est pas proposé aux clients.</p><% } %></div><% }) %>
     <div class="field-group"><label for="r-man">Instructions du paiement manuel (virement, à la livraison…)</label><textarea id="r-man" name="manual_instructions" rows="3" maxlength="2000"<%= canPay ? "" : " disabled" %>><%= st.manual_instructions || "" %></textarea></div>
   </fieldset>
   <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>

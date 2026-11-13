@@ -432,7 +432,7 @@ module.exports = ({ db }) => {
     if (!priced.lines.length) return res.redirect(303, `${BASE}/panier`);
     const giftLines = giftLists.cartGiftLines(s, k.id);
     const giftInfo = giftLines.length ? { titles: [...new Set(giftLines.map((g) => g.title))], canDeliver: giftLines.length === priced.lines.length && new Set(giftLines.map((g) => g.list_id)).size === 1 && Boolean(giftLines[0].allow_recipient_delivery && giftLines[0].recipient_address) } : null;
-    render(req, res, "commande", { title: "Commande", priced, giftInfo, ageRequired: age.requiredForProducts(db, priced.lines.map((l) => l.productId)), error, values: { email: req.shopCustomer ? req.shopCustomer.email : "", ...values, country }, methods: payments.available(settings).map((m) => ({ key: m, label: payments.PROVIDERS[m].label })), idempotencyKey: require("node:crypto").randomBytes(12).toString("hex"), slots: deliverySlots.forCheckout(s, priced) }, status);
+    render(req, res, "commande", { title: "Commande", priced, giftInfo, ageRequired: age.requiredForProducts(db, priced.lines.map((l) => l.productId)), error, values: { email: req.shopCustomer ? req.shopCustomer.email : "", ...values, country }, methods: payments.available(settings, s).map((m) => ({ key: m, label: payments.PROVIDERS[m].label })), idempotencyKey: require("node:crypto").randomBytes(12).toString("hex"), slots: deliverySlots.forCheckout(s, priced) }, status);
   };
   router.get(`${BASE}/commande`, (req, res) => checkoutPage(req, res));
 
@@ -450,7 +450,7 @@ module.exports = ({ db }) => {
       if (!customerId && !settings.guest_checkout) throw new MarketingError("auth", "Connectez-vous ou créez un compte pour commander.");
       const email = req.shopCustomer ? req.shopCustomer.email : b.email;
       // Un moyen de paiement activé mais non configuré (clés absentes) n'est jamais accepté : aucune commande ne doit réserver du stock sans pouvoir être payée
-      if (!payments.available(settings).includes(String(b.payment_method || ""))) throw new MarketingError("invalid_field", "Ce moyen de paiement n'est pas disponible pour le moment.");
+      if (!payments.available(settings, s).includes(String(b.payment_method || ""))) throw new MarketingError("invalid_field", "Ce moyen de paiement n'est pas disponible pour le moment.");
       const { order, duplicate } = orders.createFromCart(s, k, { email, billing, shipping, shippingMethodId: b.shipping_method, deliverySlot: b.delivery_slot, paymentMethod: b.payment_method, idempotencyKey: b.idempotency_key, expectedTotalCents: b.expected_total, giftDelivery: b.gift_delivery === "recipient" ? "recipient" : "", customerId, ageConfirmed: b.age_confirm === "1" });
       if (!customerId) { customerId = customers.ensureGuest(s, order.email, shipping.name); db.prepare("UPDATE mk_shop_orders SET customer_id = ? WHERE id = ? AND customer_id IS NULL").run(customerId, order.id); }
       const key = view.orderToken(order);

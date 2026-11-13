@@ -1,0 +1,19 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Paiements" }) %>
+<section class="mk-panel">
+  <p class="mk-sub">Chaque site a ses propres identifiants de paiement. Ils sont <strong>chiffrés</strong> et ne sont jamais ré-affichés (un champ vide conserve la valeur actuelle). Aucune donnée de carte ni de compte Mobile Money ne transite par ce serveur : le client paie sur la page du fournisseur. Après l'enregistrement, activez le moyen de paiement dans <a href="<%= base %>/reglages">Réglages</a>.</p>
+  <% if (serverStripe) { %><p class="mk-callout"><span>Stripe est aussi configuré au niveau du serveur : ce site l'utilise tant qu'il n'a pas ses propres clés ci-dessous.</span></p><% } %>
+</section>
+<% providers.forEach((p) => { %>
+<section class="mk-panel" id="<%= p.key %>"><h2><%= p.label %> <small><%= p.configured ? "— prêt" : "— à configurer" %></small></h2>
+  <p class="field-hint">Adresse de webhook à renseigner chez le fournisseur : <code><%= p.hook %></code>
+    <% if (p.key === "stripe") { %>(événements : checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed, checkout.session.expired, charge.refunded)<% } else if (p.key === "paypal") { %>(événements : CHECKOUT.ORDER.APPROVED, PAYMENT.CAPTURE.COMPLETED)<% } else { %>(événement : charge.completed ; saisissez le même « hash secret » des deux côtés)<% } %></p>
+  <% if (canPaySettings) { %><form class="mk-form" method="post" action="<%= base %>/paiements/<%= p.key %>" autocomplete="off">
+    <% p.fields.forEach((f) => { %><div class="field-group"><label for="g-<%= p.key %>-<%= f.key %>"><%= f.label %> <%= p.state.filled[f.key] ? "(déjà renseigné)" : "" %></label><input id="g-<%= p.key %>-<%= f.key %>" name="<%= f.key %>" type="<%= f.secret ? "password" : "text" %>" maxlength="300" autocomplete="off" placeholder="<%= p.state.filled[f.key] ? "•••••••• (laisser vide pour conserver)" : "" %>"></div><% }) %>
+    <div class="field-group"><label for="g-<%= p.key %>-m">Mode</label><select id="g-<%= p.key %>-m" name="mode"><option value="live"<%= p.state.mode === "live" ? " selected" : "" %>>Production</option><option value="test"<%= p.state.mode === "test" ? " selected" : "" %>>Test (bac à sable)</option></select></div>
+    <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+    <% if (p.state.set) { %><button class="btn btn-ghost btn-sm" type="submit" name="clear" value="1" data-mk-confirm="Supprimer les identifiants de ce site ?" data-mk-confirm-ok="Supprimer">Supprimer les identifiants</button><% } %>
+  </form><% } else { %><p class="mk-sub">Seule une personne ayant le droit « paiements » peut modifier ces identifiants.</p><% } %>
+</section>
+<% }) %>
+<%- include("../partials/bottom") %>
