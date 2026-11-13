@@ -3,10 +3,10 @@
 //  1. la LIGNE DU MODÈLE (© et mentions légales : rangée « copyright + bizlegal » et le filet qui la précède) : 8 mises en page (S) × 6 filets (R) ;
 //  2. la BARRE DE LA PLATEFORME (« nom · Cookies · Confidentialité », ajoutée sous le pied) : 8 présentations (P), pilotées par des jetons --ft-legal-* sur la racine du pied (CSS : landing.css).
 // Le plan d'un modèle dépend UNIQUEMENT de son numéro (ft2-NNN) : stable, sans état. Un modèle peut le fixer lui-même avec `bas: { s, r, p }` (indices).
-const NB_S = 8, NB_R = 6, NB_P = 8, TOTAL = NB_S * NB_R * NB_P;
+const NB_S = 8, NB_R = 8, NB_P = 8, TOTAL = NB_S * NB_R * NB_P;
 
 const numeroDe = (id) => Number((/^ft2-(\d+)/.exec(String(id)) || [])[1]) || 0;
-// 97 est premier avec 384 : n ↦ n·97 mod 384 est injective sur 0..383, donc deux modèles (numéros différents < 384) n'ont jamais le même plan
+// 97 est premier avec 512 : n ↦ n·97 mod 384 est injective sur 0..383, donc deux modèles (numéros différents < 512) n'ont jamais le même plan
 function planDe(id, force) {
   const c = force || ((numeroDe(id) * 97) % TOTAL);
   const s = force && force.s !== undefined ? force.s : c % NB_S;
@@ -65,6 +65,8 @@ function appliquerLigne(arbre, plan, S) {
     else if (plan.r === 3) Object.assign(v, { borderStyle: "double", borderTopWidth: "5px" });
     else if (plan.r === 4) Object.assign(v, { borderTopWidth: "0px", marginBottom: "10px" });
     else if (plan.r === 5) Object.assign(v, { width: "64px", borderTopWidth: "4px", borderColor: accent });
+    else if (plan.r === 6) Object.assign(v, { borderStyle: "dotted", borderTopWidth: "3px" });
+    else if (plan.r === 7) Object.assign(v, { width: "140px", borderTopWidth: "2px", borderColor: accent, marginBottom: "6px" });
   }
   return true;
 }

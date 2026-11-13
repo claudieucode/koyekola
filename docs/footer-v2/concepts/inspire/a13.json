@@ -1,0 +1,294 @@
+{
+  "concepts": [
+    {
+      "id": "c-422-tour-de-controle",
+      "ordre": 422,
+      "nom": "Tour de contrôle",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aéronautique",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'études aéronautique : grande colonne ambre pleine hauteur (nom, signal qui respire, lettre technique) à gauche ; à droite, sur marine profond, cinq colonnes de liens à petit filet d'accent, adresse et mentions. Les liens s'indentent d'un cran au survol."
+      },
+      "typographies": {
+        "titre": "Exo 2",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aéronautique",
+        "colonne latérale",
+        "lettre",
+        "marine",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-423-orbite-silencieuse",
+      "ordre": 423,
+      "nom": "Orbite silencieuse",
+      "famille": "Aéronautique et spatial",
+      "secteur": "spatial",
+      "directionArtistique": {
+        "texte": "Pour une entreprise spatiale : nom monumental en deux tons au centre d'un grand vide noir, légende, trois liens empilés, carré orange qui respire et ligne de mentions. Rien d'autre."
+      },
+      "typographies": {
+        "titre": "Syncopate",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spatial",
+        "nom monumental",
+        "minimal",
+        "noir",
+        "orange",
+        "centré",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-424-tableau-des-departs",
+      "ordre": 424,
+      "nom": "Tableau des départs",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aviation commerciale",
+      "directionArtistique": {
+        "texte": "Pour une compagnie ou un aéroport : titre en capitales condensées puis damier de huit cases carrées à joint noir (quatre liens colorés qui se soulèvent, adresse, horaires, lettre, mentions), comme un tableau d'affichage."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aviation",
+        "damier",
+        "cases",
+        "acier",
+        "rouge signal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-425-plan-de-vol-compact",
+      "ordre": 425,
+      "nom": "Plan de vol compact",
+      "famille": "Aéronautique et spatial",
+      "secteur": "aéroclub",
+      "directionArtistique": {
+        "texte": "Pour un aéroclub ou une compagnie régionale : deux lignes cobalt seulement ; sur la première le nom, cinq liens séparés par des carrés dont un respire et deux réseaux, sur la seconde l'adresse en ligne et les mentions."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aéroclub",
+        "compact",
+        "barre",
+        "cobalt",
+        "jaune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-426-ciel-et-nuit",
+      "ordre": 426,
+      "nom": "Ciel et nuit",
+      "famille": "Aéronautique et spatial",
+      "secteur": "constructeur aéronautique",
+      "directionArtistique": {
+        "texte": "Pour un constructeur : deux demi-pages bord à bord, ciel pâle (grande phrase en serif, coordonnées) et nuit (lettre, cinq grands liens, réseaux), puis fine bande de mentions."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "constructeur",
+        "deux moitiés",
+        "grande phrase",
+        "bleu nuit",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-427-compte-a-rebours",
+      "ordre": 427,
+      "nom": "Compte à rebours",
+      "famille": "Aéronautique et spatial",
+      "secteur": "lancement spatial",
+      "directionArtistique": {
+        "texte": "Pour un service de lancement : bandeau d'appel violet géant (jusqu'à 170 px) avec bouton lime qui respire, puis bande sombre avec adresse, mentions et une colonne étroite de liens numérotés bordée de lime."
+      },
+      "typographies": {
+        "titre": "Big Shoulders",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lancement",
+        "appel à l'action",
+        "bandeau géant",
+        "violet",
+        "lime",
+        "colonne étroite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-428-registre-des-maisons",
+      "ordre": 428,
+      "nom": "Registre des maisons",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "palace",
+      "directionArtistique": {
+        "texte": "Pour un palace : en-tête (nom, réseaux), six grandes lignes pleine largeur en Cormorant 40 px avec filet qui s'indentent en or au survol, puis adresse en ligne et mentions. Ivoire, encre, or."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "palace",
+        "index",
+        "sommaire",
+        "ivoire",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-429-mosaique-de-la-maison",
+      "ordre": 429,
+      "nom": "Mosaïque de la maison",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "maison d'exception",
+      "directionArtistique": {
+        "texte": "Pour une maison d'exception : grande case champagne (phrase en Bodoni, réservation) et trois cases empilées (adresse, lettre, liens et mentions) à joints d'émeraude."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Raleway",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mosaïque",
+        "asymétrique",
+        "émeraude",
+        "champagne",
+        "réservation",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-430-chronologie-du-sejour",
+      "ordre": 430,
+      "nom": "Chronologie du séjour",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "hôtel de charme",
+      "directionArtistique": {
+        "texte": "Pour un hôtel de charme : chronologie verticale sur filet d'or à cinq points carrés (arrivée, suites, table, bien-être, départ) à droite ; grande phrase, adresse et mentions à gauche. Bordeaux, or pâle, crème."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "chronologie",
+        "séjour",
+        "points carrés",
+        "bordeaux",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-431-papier-du-palace",
+      "ordre": 431,
+      "nom": "Papier du palace",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "maison historique",
+      "directionArtistique": {
+        "texte": "Pour une maison historique : papier à en-tête centré, règle cuivre avec carré qui respire, monogramme carré, nom en grandes capitales, cartouche à double bordure (adresse, horaires), liens en ligne, filet et mentions."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "EB Garamond",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "papier à en-tête",
+        "centré",
+        "cartouche",
+        "cuivre",
+        "bleu nuit",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-432-console-du-concierge",
+      "ordre": 432,
+      "nom": "Console du concierge",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "conciergerie",
+      "directionArtistique": {
+        "texte": "Pour une conciergerie : pied en fenêtre anthracite, barre de titre platine, onglets verticaux qui s'allument en or rose, panneau de demande (bouton qui respire, adresse, horaires, lettre) et barre d'état de mentions."
+      },
+      "typographies": {
+        "titre": "Tenor Sans",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "conciergerie",
+        "fenêtre",
+        "onglets",
+        "anthracite",
+        "or rose",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-433-marches-du-palace",
+      "ordre": 433,
+      "nom": "Marches du palace",
+      "famille": "Luxe et hôtellerie de prestige",
+      "secteur": "grand hôtel",
+      "directionArtistique": {
+        "texte": "Pour un grand hôtel : quatre marches alignées à gauche, 100 %, 78 %, 56 %, 34 % de largeur et de plus en plus claires en prune (nom, liens, adresse et horaires, lettre et mentions) sur fond ivoire."
+      },
+      "typographies": {
+        "titre": "Prata",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "escalier",
+        "étagé",
+        "prune",
+        "ivoire",
+        "or",
+        "angles droits"
+      ]
+    }
+  ]
+}

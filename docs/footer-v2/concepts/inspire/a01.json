@@ -1,0 +1,292 @@
+{
+  "concepts": [
+    {
+      "id": "c-278-nuage-monumental",
+      "ordre": 278,
+      "nom": "Nuage monumental",
+      "famille": "Cloud et infrastructure",
+      "secteur": "fournisseur cloud",
+      "directionArtistique": {
+        "texte": "Archétype B (nom monumental). Inspiré d'une capture au nom géant fondu dans un dégradé : ardoise vers vert-de-gris, trois grands liens à gauche, coordonnées à droite, nom « Cumulo » sur toute la largeur. Un carré de statut respire."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "nom géant",
+        "dégradé",
+        "ardoise",
+        "statut",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-279-index-des-services",
+      "ordre": 279,
+      "nom": "Index des services",
+      "famille": "Cloud et infrastructure",
+      "secteur": "hébergeur",
+      "directionArtistique": {
+        "texte": "Archétype G (index en lignes pleine largeur). Papier chaud et vermillon : six lignes numérotées en grand serif avec description et flèche qui glisse, filets d'encre, la ligne s'indente et se teinte au survol."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "index",
+        "serif",
+        "vermillon",
+        "papier",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-280-console-de-deploiement",
+      "ordre": 280,
+      "nom": "Console de déploiement",
+      "famille": "Cloud et infrastructure",
+      "secteur": "cloud pour développeurs",
+      "directionArtistique": {
+        "texte": "Archétype K (fenêtre / console). Fenêtre de terminal à angles droits, noir et vert : barre de titre à trois carrés, invites « $ » pour commandes, contact et lettre, curseur carré qui respire."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "terminal",
+        "console",
+        "monospace",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-281-damier-d-infrastructure",
+      "ordre": 281,
+      "nom": "Damier d'infrastructure",
+      "famille": "Cloud et infrastructure",
+      "secteur": "fournisseur d'infrastructure",
+      "directionArtistique": {
+        "texte": "Archétype C (damier de huit cases). Blanc, noir et jaune signal à filets noirs : marque, cinq services en cases-liens, support (coordonnées) et horaires. La case survolée se soulève."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "damier",
+        "jaune",
+        "noir",
+        "services",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-282-tableau-de-statut",
+      "ordre": 282,
+      "nom": "Tableau de statut",
+      "famille": "Cloud et infrastructure",
+      "secteur": "plateforme cloud",
+      "directionArtistique": {
+        "texte": "Archétype A (colonne latérale pleine hauteur). Inspiré des colonnes titrées de la capture claire et sombre : barre marine (nom, statut qui respire, contact, réseaux) et trois colonnes de liens sur gris clair, puis la lettre."
+      },
+      "typographies": {
+        "titre": "Saira Extra Condensed",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "barre latérale",
+        "colonnes",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-283-chaine-de-mise-en-ligne",
+      "ordre": 283,
+      "nom": "Chaîne de mise en ligne",
+      "famille": "Cloud et infrastructure",
+      "secteur": "cloud et déploiement",
+      "directionArtistique": {
+        "texte": "Archétype I (frise en étapes). Rose pâle, prune et menthe : quatre étapes reliées par un filet à points carrés (connecter, configurer, déployer, superviser), le dernier point respire ; liens et mentions en bas."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cloud",
+        "frise",
+        "étapes",
+        "prune",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-284-ligne-de-defense",
+      "ordre": 284,
+      "nom": "Ligne de défense",
+      "famille": "Cybersécurité",
+      "secteur": "cabinet de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype E (deux demi-pages). Noir et jaune acide : à gauche le message en lettres condensées géantes, à droite les boutons de signalement et d'audit, liens soulignés qui se remplissent, coordonnées."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "deux moitiés",
+        "noir",
+        "jaune",
+        "condensé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-285-alerte-rouge",
+      "ordre": 285,
+      "nom": "Alerte rouge",
+      "famille": "Cybersécurité",
+      "secteur": "éditeur de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype F (bandeau XXL + colonne étroite). Bandeau rouge sirène aux lettres Anton énormes avec bouton blanc ; dessous, coordonnées à gauche et une seule colonne étroite de liens à droite, sur aubergine."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "appel à l'action",
+        "rouge",
+        "bandeau",
+        "colonne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-286-salle-des-operations",
+      "ordre": 286,
+      "nom": "Salle des opérations",
+      "famille": "Cybersécurité",
+      "secteur": "centre de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype H (mosaïque asymétrique). Indigo, cyan et lavande : trois petites cases-liens empilées à gauche, grande case à droite (nom, phrase, lettre, contact) ; cases séparées de 6 px qui se soulèvent."
+      },
+      "typographies": {
+        "titre": "Chivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "mosaïque",
+        "indigo",
+        "cyan",
+        "lettre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-287-cabinet-de-securite",
+      "ordre": 287,
+      "nom": "Cabinet de sécurité",
+      "famille": "Cybersécurité",
+      "secteur": "conseil en sécurité des systèmes d'information",
+      "directionArtistique": {
+        "texte": "Archétype J (papier à en-tête). Crème, marine et bordeaux : filets doubles, nom serif centré, cartouche d'adresse, liens en ligne centrée séparés de carrés, lettre centrée et sceau carré qui respire, barre marine de mentions."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "cabinet",
+        "papier à en-tête",
+        "centré",
+        "bordeaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-288-veille-permanente",
+      "ordre": 288,
+      "nom": "Veille permanente",
+      "famille": "Cybersécurité",
+      "secteur": "éditeur de sécurité",
+      "directionArtistique": {
+        "texte": "Archétype D (ligne unique compacte). Barre noir graphite à filet ambre : nom, quatre liens et voyant « statut » qui respire sur une seule ligne, mentions dessous. Aucun bloc supplémentaire."
+      },
+      "typographies": {
+        "titre": "Geist Mono",
+        "corps": "Geist",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "compact",
+        "barre",
+        "ambre",
+        "statut",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-289-paliers-de-confinement",
+      "ordre": 289,
+      "nom": "Paliers de confinement",
+      "famille": "Cybersécurité",
+      "secteur": "entreprise de cybersécurité",
+      "directionArtistique": {
+        "texte": "Archétype L (escalier). Quatre marches alignées à gauche de 100, 85, 70 et 52 % de largeur, du gris acier à l'encre : message, liens et bouton, coordonnées, mentions. Un carré orange respire."
+      },
+      "typographies": {
+        "titre": "Teko",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cybersécurité",
+        "escalier",
+        "acier",
+        "orange",
+        "marches",
+        "angles droits"
+      ]
+    }
+  ]
+}

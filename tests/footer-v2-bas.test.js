@@ -14,7 +14,7 @@ const skins = new Map(V2.skins.map((s) => [s.key, s]));
 const construit = (e) => e.build(kit(skins.get(e.skin)), {});
 
 describe("Pied v2 : bas de page varié", () => {
-  test("plan unique : 384 combinaisons distinctes pour les numéros 1 à 384, donc jamais deux modèles identiques", () => {
+  test("plan unique : 512 combinaisons distinctes pour les numéros 1 à 512, donc jamais deux modèles identiques", () => {
     const vus = new Set();
     for (let n = 1; n <= Bas.TOTAL; n++) vus.add(JSON.stringify(Bas.planUnique(`ft2-${String(n).padStart(3, "0")}`)));
     assert.equal(vus.size, Bas.TOTAL);
@@ -36,10 +36,10 @@ describe("Pied v2 : bas de page varié", () => {
       if ((e.model.widgets || []).includes("divider")) assert.ok(/"type":"divider"/.test(json), `${e.fullKey} : filet supprimé`);
     }
   });
-  test("variété réelle : au moins 6 présentations de ligne, 6 filets et 8 barres de plateforme utilisés", () => {
+  test("variété réelle : au moins 6 présentations de ligne, 8 filets et 8 barres de plateforme utilisés", () => {
     const s = new Set(), r = new Set(), p = new Set();
     for (const e of V2.nouveaux) { const x = Bas.planUnique(e.fullKey); s.add(x.s); r.add(x.r); p.add(x.p); }
-    assert.ok(s.size >= 6 && r.size >= 6 && p.size >= 8, JSON.stringify([s.size, r.size, p.size]));
+    assert.ok(s.size >= 6 && r.size >= 8 && p.size >= 8, JSON.stringify([s.size, r.size, p.size]));
   });
   test("feuille de style : chaque jeton --ft-legal-* utilisé est lu par landing.css (barre de la plateforme)", () => {
     const css = fs.readFileSync(path.join(__dirname, "../public/css/landing.css"), "utf8");

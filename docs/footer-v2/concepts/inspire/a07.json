@@ -1,0 +1,302 @@
+{
+  "concepts": [
+    {
+      "id": "c-350-programme-de-salle",
+      "ordre": 350,
+      "nom": "Programme de salle",
+      "famille": "Musique et spectacle",
+      "secteur": "maison de musique",
+      "directionArtistique": {
+        "texte": "Pour une maison de musique : à gauche un titre « La saison au programme. » en serif Bodoni, un bouton d'or qui respire et les coordonnées ; à droite six lignes de programme en deux colonnes à filets d'or qui se remplissent d'or et s'indentent au survol. Noir velours et or. Archétype G : index en lignes pleine largeur. Inspiré de la liste à filets de la capture 23."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musique",
+        "salle de concert",
+        "programme",
+        "index",
+        "noir",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-351-rideau-rouge",
+      "ordre": 351,
+      "nom": "Rideau rouge",
+      "famille": "Musique et spectacle",
+      "secteur": "théâtre",
+      "directionArtistique": {
+        "texte": "Pour un théâtre : deux demi-pages bord à bord. À gauche un rideau bordeaux (plis en bandes, « Le rideau se lève. » en Abril Fatface, lettre d'information) ; à droite un panneau crème avec un énorme bouton de réservation qui respire, quatre liens à filets et les horaires de billetterie. Archétype E : deux demi-pages. Inspiré du bloc marque + bouton de la capture 22."
+      },
+      "typographies": {
+        "titre": "Abril Fatface",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "théâtre",
+        "spectacle",
+        "réservation",
+        "deux panneaux",
+        "bordeaux",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-352-console-de-mixage",
+      "ordre": 352,
+      "nom": "Console de mixage",
+      "famille": "Musique et spectacle",
+      "secteur": "club de musiques actuelles",
+      "directionArtistique": {
+        "texte": "Pour un club : le pied est une fenêtre de console, barre de titre à trois carrés, invite de commande avec curseur vert qui respire, cinq onglets de commandes qui s'allument au survol, lettre d'information et coordonnées en barre d'état. Mono, graphite et vert phosphore. Archétype K : fenêtre / console. Inspiré de l'ambiance nuit et des notes de la capture 24."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "club",
+        "musiques actuelles",
+        "console",
+        "fenêtre",
+        "mono",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-353-affiche-en-mosaique",
+      "ordre": 353,
+      "nom": "Affiche en mosaïque",
+      "famille": "Musique et spectacle",
+      "secteur": "festival",
+      "directionArtistique": {
+        "texte": "Pour un festival : une grande case jaune « EN SCÈNE » en Anton avec billetterie et coordonnées, et trois cases empilées (programme rose, artistes bleu électrique, infos pratiques noir cerné de blanc) qui virent au jaune au survol. Réseaux et mentions sous la mosaïque. Archétype H : mosaïque asymétrique. Inspiré de l'illustration monumentale de la capture 24, traduite en aplats."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "festival",
+        "concerts",
+        "billetterie",
+        "mosaïque",
+        "jaune",
+        "rose",
+        "bleu",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-354-saison-en-frise",
+      "ordre": 354,
+      "nom": "Saison en frise",
+      "famille": "Musique et spectacle",
+      "secteur": "orchestre",
+      "directionArtistique": {
+        "texte": "Pour un orchestre : un titre « La saison en quatre temps. » en Fraunces, puis une frise horizontale à quatre étapes (automne, hiver, printemps, été) sur un trait marine, points carrés orange dont le premier respire, liens de programme qui glissent. Aucune date inventée. Gris bleuté, marine, orange. Archétype I : frise en étapes. Inspiré de la silhouette alignée sur un trait de la capture 23."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "orchestre",
+        "saison",
+        "frise",
+        "chronologie",
+        "marine",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-355-coulisses",
+      "ordre": 355,
+      "nom": "Coulisses",
+      "famille": "Musique et spectacle",
+      "secteur": "compagnie de théâtre",
+      "directionArtistique": {
+        "texte": "Pour une compagnie : une zone crème (grande phrase « La maison est ouverte à tous. », liens soulignés, lettre en boîte à contour net) et, à droite, une barre verticale vert-de-gris pleine hauteur (nom, phrase, bouton ambre qui respire, réseaux). Archétype A : colonne latérale pleine hauteur. Inspiré du bloc logo + phrase + bouton de la capture 22."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "compagnie",
+        "théâtre",
+        "colonne latérale",
+        "vert-de-gris",
+        "crème",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-356-cimaise",
+      "ordre": 356,
+      "nom": "Cimaise",
+      "famille": "Galeries et musées",
+      "secteur": "galerie d'art contemporain",
+      "directionArtistique": {
+        "texte": "Pour une galerie : un seul mot monumental « Cimaise. » centré en Italiana sur blanc cassé, un fin filet, une légende avec un point vermillon qui respire, trois liens seulement et la ligne légale. Grand vide. Archétype B : nom monumental. Inspiré du grand vide de la capture 24 et du logo isolé de la capture 22."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "galerie",
+        "art contemporain",
+        "minimal",
+        "nom monumental",
+        "vermillon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-357-cartel",
+      "ordre": 357,
+      "nom": "Cartel",
+      "famille": "Galeries et musées",
+      "secteur": "musée de l'estampe",
+      "directionArtistique": {
+        "texte": "Pour un musée : un pied en papier à en-tête. Double filet, cartouche centré à double cadre fin (nom en Marcellus, adresse et horaires centrés), ligne de liens centrée séparés de points, double filet, mentions centrées. Papier chaud et rouge sang de bœuf. Archétype J : papier à en-tête. Inspiré du bloc d'identité central de la capture 23."
+      },
+      "typographies": {
+        "titre": "Marcellus",
+        "corps": "Literata",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "papier à en-tête",
+        "cartouche",
+        "centré",
+        "filets",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-358-damier-d-exposition",
+      "ordre": 358,
+      "nom": "Damier d'exposition",
+      "famille": "Galeries et musées",
+      "secteur": "centre d'art",
+      "directionArtistique": {
+        "texte": "Pour un centre d'art : un damier de huit cases égales à filets noirs en quatre piles de deux, chaque case est un lien ou une information (expositions, collections, visite, boutique, horaires, accès, lettre, mécénat). Gris pierre, noir, orange signal ; la case mécénat respire. Archétype C : grille de cases égales. Inspiré des colonnes à titres courts des captures 23 et 24."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "centre d'art",
+        "damier",
+        "grille",
+        "cases",
+        "horaires",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-359-grand-accrochage",
+      "ordre": 359,
+      "nom": "Grand accrochage",
+      "famille": "Galeries et musées",
+      "secteur": "musée",
+      "directionArtistique": {
+        "texte": "Pour un musée : un bandeau corail XXL « Entrez dans l'œuvre. » en Syne géant avec un énorme bouton noir qui respire, et à droite une seule colonne étroite de liens à filets noirs qui s'inversent au survol ; dessous une fine bande noire avec coordonnées et horaires. Archétype F : bandeau d'appel XXL + colonne étroite. Inspiré du bloc d'appel et de la colonne de liens de la capture 23."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "appel à l'action",
+        "bandeau XXL",
+        "colonne étroite",
+        "corail",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-360-rail-de-cimaise",
+      "ordre": 360,
+      "nom": "Rail de cimaise",
+      "famille": "Galeries et musées",
+      "secteur": "fondation d'art",
+      "directionArtistique": {
+        "texte": "Pour une fondation : tout sur une barre compacte de deux niveaux. Nom précédé d'un point bleu qui respire et bouton « Visiter » sur la première ligne ; liens soulignés d'un trait épais au survol et réseaux sur la seconde. Pierre claire, noir, bleu outremer. Archétype D : barre unique compacte. Inspiré du pied en une ligne sous l'illustration de la capture 24."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Newsreader",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fondation",
+        "barre compacte",
+        "liens",
+        "pierre",
+        "bleu",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-361-escalier-des-salles",
+      "ordre": 361,
+      "nom": "Escalier des salles",
+      "famille": "Galeries et musées",
+      "secteur": "musée",
+      "directionArtistique": {
+        "texte": "Pour un musée : quatre bandes alignées à gauche qui rétrécissent comme des marches (100 %, 78 %, 56 %, 34 %) : nom géant « Les Salles du Levant. » sur vert forêt, liens sur vert moyen, coordonnées sur vert sauge, lettre sur vert pâle. Archétype L : escalier étagé. Inspiré de la silhouette en gradins de la capture 23."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "musée",
+        "escalier",
+        "bandes étagées",
+        "vert",
+        "sauge",
+        "angles droits"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,287 @@
+{
+  "concepts": [
+    {
+      "id": "c-326-flanc-de-la-maison",
+      "ordre": 326,
+      "nom": "Flanc de la maison",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "joaillerie",
+      "directionArtistique": {
+        "texte": "Pour une joaillerie : une colonne champagne pleine hauteur à gauche (nom de la maison, description, coordonnées, rendez-vous, réseaux) et, sur noir, les quatre collections en très grands mots fins puis deux colonnes de liens. Archétype : A colonne latérale. Inspiration : capture à grands mots légers."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "joaillerie",
+        "colonne latérale",
+        "noir",
+        "champagne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-327-lettres-d-or",
+      "ordre": 327,
+      "nom": "Lettres d'or",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "haute joaillerie",
+      "directionArtistique": {
+        "texte": "Pour une haute joaillerie : presque rien. Un cadre carré fin bordeaux et or rose contenant un monogramme géant, le nom espacé, une phrase et trois liens. Archétype : B monogramme. Inspiration : marque monumentale."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Tenor Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "haute joaillerie",
+        "monogramme",
+        "minimal",
+        "bordeaux",
+        "or rose",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-328-mosaique-d-atelier",
+      "ordre": 328,
+      "nom": "Mosaïque d'atelier",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "bijoutier créateur",
+      "directionArtistique": {
+        "texte": "Pour un bijoutier créateur : une grande case marine (titre, guide des pierres, bouton) à gauche ; à droite deux cases moyennes (horaires, coordonnées) et une case large (lettre). Archétype : H mosaïque asymétrique. Inspiration : carte d'appel à droite du titre."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Display",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bijoutier",
+        "mosaïque",
+        "marine",
+        "ivoire",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-329-papier-du-joaillier",
+      "ordre": 329,
+      "nom": "Papier du joaillier",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "bijouterie de tradition",
+      "directionArtistique": {
+        "texte": "Pour une bijouterie de tradition : un pied en papier à lettres, filets doubles, nom en italique centré, cartouche d'adresse, liens en une ligne centrée, réseaux. Archétype : J papier à en-tête. Inspiration : logo, description et réseaux."
+      },
+      "typographies": {
+        "titre": "Cormorant",
+        "corps": "Spectral",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bijouterie",
+        "tradition",
+        "centré",
+        "filets doubles",
+        "crème",
+        "prune",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-330-barre-de-cadran",
+      "ordre": 330,
+      "nom": "Barre de cadran",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "horlogerie",
+      "directionArtistique": {
+        "texte": "Pour un horloger : un pied compact en deux lignes sur gris acier ; nom en capitales condensées et bouton d'entretien turquoise, liens séparés par de petits carrés, réseaux et mentions. Archétype : D barre unique. Inspiration : barre basse à séparateur."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "horlogerie",
+        "barre compacte",
+        "acier",
+        "turquoise",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-331-fiche-de-calibre",
+      "ordre": 331,
+      "nom": "Fiche de calibre",
+      "famille": "Bijouterie et horlogerie",
+      "secteur": "horlogerie d'art",
+      "directionArtistique": {
+        "texte": "Pour une horlogerie d'art : le pied est une fenêtre d'interface à angles droits, barre de titre verte à trois carrés, commandes en police mono à gauche, adresse, horaires et lettre à droite. Archétype : K fenêtre. Inspiration : colonnes de liens sur panneau."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "horlogerie d'art",
+        "fenêtre",
+        "console",
+        "mono",
+        "vert sapin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-332-damier-du-marche",
+      "ordre": 332,
+      "nom": "Damier du marché",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "épicerie fine",
+      "directionArtistique": {
+        "texte": "Pour une épicerie fine : huit cases à angles droits sur charbon, chacune un lien ou une information (rayons, horaires, coordonnées, lettre) ; la case survolée vire à la tomate. Archétype : C damier. Inspiration : marques du groupe en pastilles."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "épicerie fine",
+        "damier",
+        "tomate",
+        "charbon",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-333-deux-assiettes",
+      "ordre": 333,
+      "nom": "Deux assiettes",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "traiteur",
+      "directionArtistique": {
+        "texte": "Pour un traiteur : deux demi-pages bord à bord, olive à gauche (grande phrase, devis, coordonnées), crème à droite (formules en lignes à filet, horaires, lettre). Archétype : E deux demi-pages. Inspiration : titre et carte d'appel."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traiteur",
+        "deux panneaux",
+        "olive",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-334-panier-xxl",
+      "ordre": 334,
+      "nom": "Panier XXL",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "produits du terroir en ligne",
+      "directionArtistique": {
+        "texte": "Pour une boutique de terroir en ligne : bandeau moutarde monumental avec un énorme bouton de commande, puis bande brun café avec le nom et une seule colonne étroite de liens. Archétype : F appel XXL. Inspiration : grande carte d'appel."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "terroir",
+        "appel à l'action",
+        "moutarde",
+        "brun café",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-335-sommaire-gourmand",
+      "ordre": 335,
+      "nom": "Sommaire gourmand",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "cave à manger",
+      "directionArtistique": {
+        "texte": "Pour une cave à manger : cinq lignes pleine largeur en très grands mots fins, flèche et filet, qui glissent et passent à l'orange ; dessous une ligne de coordonnées, horaires et mentions. Archétype : G index. Inspiration : liste de grands mots légers."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Instrument Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cave à manger",
+        "index",
+        "grands mots",
+        "noir",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-336-du-champ-a-la-table",
+      "ordre": 336,
+      "nom": "Du champ à la table",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "producteur-boutique",
+      "directionArtistique": {
+        "texte": "Pour un producteur-boutique : une frise horizontale à quatre étapes reliées par un filet à carrés (producteurs, atelier, boutique, votre table), puis coordonnées et horaires. Archétype : I frise. Inspiration : colonnes aérées."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "producteur",
+        "frise",
+        "étapes",
+        "sauge",
+        "vert forêt",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-337-escalier-de-cave",
+      "ordre": 337,
+      "nom": "Escalier de cave",
+      "famille": "Gastronomie et épicerie fine",
+      "secteur": "caviste",
+      "directionArtistique": {
+        "texte": "Pour un caviste : quatre paliers de largeurs décroissantes alignés à gauche, de la crème au bordeaux presque noir : nom et liens, rayons, lettre, mentions. Archétype : L escalier. Inspiration : nom monumental et cartes en retrait."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "caviste",
+        "escalier",
+        "paliers",
+        "grenat",
+        "angles droits"
+      ]
+    }
+  ]
+}

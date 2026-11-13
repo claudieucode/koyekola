@@ -1,0 +1,292 @@
+{
+  "concepts": [
+    {
+      "id": "c-314-orme-monumental",
+      "ordre": 314,
+      "nom": "Orme monumental",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "marque de prêt-à-porter",
+      "directionArtistique": {
+        "texte": "Inspiré d'une capture au nom de marque géant en bas de page : phrase d'accueil et deux colonnes de liens sobres sur fond gris papier, puis le nom « orme&co » en lettres monumentales sur toute la largeur, un carré orange qui respire. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "prêt-à-porter",
+        "nom monumental",
+        "minimal",
+        "gris",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-315-deux-saisons",
+      "ordre": 315,
+      "nom": "Deux saisons",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Deux demi-pages bord à bord : terre cuite avec la grande phrase « Habillez la saison » et un bouton qui respire, crème avec liens des rayons, aide et lettre d'information. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "deux panneaux",
+        "terre cuite",
+        "crème",
+        "collection",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-316-barre-de-cintre",
+      "ordre": 316,
+      "nom": "Barre de cintre",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "maison de maille",
+      "directionArtistique": {
+        "texte": "Haute barre noire à gauche (nom en Bodoni, phrase, réseaux, mentions) et zone ivoire à droite avec quatre colonnes de liens qui s'indentent ; l'idée de marque à gauche, colonnes à droite vient d'une capture. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "maille",
+        "barre latérale",
+        "noir",
+        "ivoire",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-317-damier-des-rayons",
+      "ordre": 317,
+      "nom": "Damier des rayons",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "mode urbaine",
+      "directionArtistique": {
+        "texte": "Damier de huit cases carrées cobalt dont une jaune avec le nom ; chaque case est un lien (rayons, services) qui se remplit de jaune au survol. Archétype : C grille de cases."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "Epilogue",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mode urbaine",
+        "damier",
+        "cobalt",
+        "jaune",
+        "cases",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-318-ligne-de-caisse",
+      "ordre": 318,
+      "nom": "Ligne de caisse",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Barre compacte vert sapin : nom, six liens et bouton or sur une ligne, puis réseaux et mentions sur une seconde ligne fine. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "barre compacte",
+        "vert sapin",
+        "or",
+        "une ligne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-319-soldes-en-grand",
+      "ordre": 319,
+      "nom": "Soldes en grand",
+      "famille": "Mode et prêt-à-porter",
+      "secteur": "boutique de mode",
+      "directionArtistique": {
+        "texte": "Inspiré d'un grand appel centré en tête de page : bandeau rose poudré avec phrase géante en Gloock et très gros bouton bleu nuit qui respire, puis bande bleu nuit avec phrase de marque et une seule colonne étroite de liens à filets à droite. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boutique de mode",
+        "appel à l'action",
+        "rose",
+        "bleu nuit",
+        "colonne étroite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-320-index-des-essences",
+      "ordre": 320,
+      "nom": "Index des essences",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "maison de parfum",
+      "directionArtistique": {
+        "texte": "Sommaire en six grandes lignes pleine largeur (Cormorant 40 px, flèche, filet) qui s'indentent et se remplissent de vin au survol, sans cartes. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parfumerie",
+        "index",
+        "sommaire",
+        "ivoire",
+        "vin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-321-mosaique-d-ambre",
+      "ordre": 321,
+      "nom": "Mosaïque d'ambre",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "cosmétique naturelle",
+      "directionArtistique": {
+        "texte": "Inspiré d'une capture (marque, coordonnées et réseaux à gauche, colonnes à droite) : une grande case vert sapin avec nom et lettre, et trois cases sable, sauge et pêche (contact, horaires, liens et réseaux). Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cosmétique naturelle",
+        "mosaïque",
+        "contact",
+        "horaires",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-322-quatre-gestes",
+      "ordre": 322,
+      "nom": "Quatre gestes",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "soin et beauté",
+      "directionArtistique": {
+        "texte": "Frise horizontale en quatre étapes (choisir, essayer, offrir, prendre soin) reliées par un filet doré à points carrés ; chaque étape est un lien avec sa phrase. Archétype : I frise en étapes."
+      },
+      "typographies": {
+        "titre": "Playfair Display",
+        "corps": "Jost",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "soin",
+        "frise",
+        "étapes",
+        "bleu nuit",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-323-papier-de-parfumeur",
+      "ordre": 323,
+      "nom": "Papier de parfumeur",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "parfumeur indépendant",
+      "directionArtistique": {
+        "texte": "Papier à en-tête : filets doubles, nom en petites capitales Cormorant, coordonnées centrées, liens en capitales sur une ligne, mentions centrées. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant SC",
+        "corps": "Libre Caslon Text",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parfumeur",
+        "papier à en-tête",
+        "centré",
+        "serif",
+        "encre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-324-console-du-laboratoire",
+      "ordre": 324,
+      "nom": "Console du laboratoire",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "laboratoire de cosmétique",
+      "directionArtistique": {
+        "texte": "Le pied est une fenêtre à bord menthe : barre de titre à trois carrés, lignes de commande pour les liens avec curseur qui respire, formulaire d'abonnement à droite. Texte monospace. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "laboratoire",
+        "console",
+        "fenêtre",
+        "monospace",
+        "menthe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-325-gradins-de-rosee",
+      "ordre": 325,
+      "nom": "Gradins de rosée",
+      "famille": "Cosmétique et parfumerie",
+      "secteur": "marque de soin",
+      "directionArtistique": {
+        "texte": "Pied en escalier : quatre bandes alignées à gauche de 100, 80, 60 et 40 % de largeur, de rose clair à rose profond (nom, liens, contact et horaires, mentions). Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Italiana",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "soin",
+        "rose",
+        "escalier",
+        "gradins",
+        "horaires",
+        "angles droits"
+      ]
+    }
+  ]
+}

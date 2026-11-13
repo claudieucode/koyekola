@@ -1,0 +1,299 @@
+{
+  "concepts": [
+    {
+      "id": "c-338-chai-de-nuit",
+      "ordre": 338,
+      "nom": "Chai de nuit",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "cave à vins",
+      "directionArtistique": {
+        "texte": "Mosaïque asymétrique bordeaux inspirée d'une capture à cartes sombres : une grande case de bienvenue avec rayons et trois cases (horaires, adresse, signature) à angles droits ; les cases se soulèvent au survol. Archétype : H mosaïque."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cave à vins",
+        "caviste",
+        "mosaïque",
+        "sombre",
+        "bordeaux",
+        "champagne",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-339-mousse-haute",
+      "ordre": 339,
+      "nom": "Mousse haute",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "brasserie",
+      "directionArtistique": {
+        "texte": "Bandeau jaune d'inscription XXL en tête (inspiré du bandeau newsletter de la capture), puis bande anthracite avec horaires, adresse et une seule colonne étroite de liens qui glissent. Archétype : F bandeau XXL."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "brasserie",
+        "bière",
+        "lettre d'information",
+        "jaune",
+        "anthracite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-340-damier-du-comptoir",
+      "ordre": 340,
+      "nom": "Damier du comptoir",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "boutique de spiritueux",
+      "directionArtistique": {
+        "texte": "Grille de huit cases égales à filets noirs sur papier : quatre rayons, horaires, adresse, retrait, conseils. Chaque case se remplit de vert bouteille au survol. Archétype : C damier."
+      },
+      "typographies": {
+        "titre": "League Gothic",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "spiritueux",
+        "whisky",
+        "damier",
+        "grille",
+        "papier",
+        "vert bouteille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-341-sommaire-des-vignes",
+      "ordre": 341,
+      "nom": "Sommaire des vignes",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "caviste",
+      "directionArtistique": {
+        "texte": "Index en grandes lignes pleine largeur sur crème, libellés en italique serif, ligne qui se remplit de lie-de-vin au survol, puis horaires, adresse et réseaux. Archétype : G index."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vin",
+        "caviste",
+        "sommaire",
+        "index",
+        "crème",
+        "lie-de-vin",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-342-tourbe-et-fut",
+      "ordre": 342,
+      "nom": "Tourbe et fût",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "distillerie de whisky",
+      "directionArtistique": {
+        "texte": "Nom monumental centré dans un grand vide noir, carré de cuivre qui respire, deux petites colonnes de liens et d'adresse. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Abril Fatface",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "whisky",
+        "distillerie",
+        "nom monumental",
+        "noir",
+        "cuivre",
+        "minimal",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-343-barre-de-comptoir",
+      "ordre": 343,
+      "nom": "Barre de comptoir",
+      "famille": "Cave, bières et spiritueux",
+      "secteur": "cidrerie",
+      "directionArtistique": {
+        "texte": "Barre rouge compacte sur une ou deux lignes : nom avec point qui respire, liens, bloc blanc Commander pleine hauteur, puis adresse et mentions. Archétype : D barre unique."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "cidre",
+        "bière",
+        "barre",
+        "compact",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-344-le-zinc",
+      "ordre": 344,
+      "nom": "Le zinc",
+      "famille": "Cafés et boulangeries",
+      "secteur": "café-torréfacteur",
+      "directionArtistique": {
+        "texte": "Colonne espresso pleine hauteur à droite (nom, horaires, adresse) et zone crème avec trois colonnes de liens, lettre et réseaux. Liens qui avancent au survol. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "café",
+        "torréfaction",
+        "colonne latérale",
+        "espresso",
+        "crème",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-345-deux-fournees",
+      "ordre": 345,
+      "nom": "Deux fournées",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie",
+      "directionArtistique": {
+        "texte": "Deux demi-pages bord à bord : crème avec phrase et horaires, bleu profond avec énorme bouton Passer commande, contact et lettre. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Gloock",
+        "corps": "Red Hat Display",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "pain",
+        "deux moitiés",
+        "crème",
+        "bleu",
+        "commande",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-346-papier-a-en-tete",
+      "ordre": 346,
+      "nom": "Salon sur papier",
+      "famille": "Cafés et boulangeries",
+      "secteur": "salon de thé",
+      "directionArtistique": {
+        "texte": "Papier à lettres : filets doubles, nom en italique centré, losange qui respire, cartouche adresse et horaires, liens en ligne centrée. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Source Serif 4",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "salon de thé",
+        "papier à lettres",
+        "centré",
+        "filets doubles",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-347-console-du-fournil",
+      "ordre": 347,
+      "nom": "Console du fournil",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie",
+      "directionArtistique": {
+        "texte": "Fenêtre de console noire sur fond beurre : commandes horaires, adresse, liens et lettre, curseur carré qui bat. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "console",
+        "fenêtre",
+        "monospace",
+        "jaune",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-348-du-moulin-au-comptoir",
+      "ordre": 348,
+      "nom": "Du moulin au comptoir",
+      "famille": "Cafés et boulangeries",
+      "secteur": "boulangerie artisanale",
+      "directionArtistique": {
+        "texte": "Frise horizontale à points carrés en cinq étapes cliquables sur rose farine, dernier point qui respire, puis horaires et lettre. Archétype : I frise."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "boulangerie",
+        "frise",
+        "étapes",
+        "artisan",
+        "rose",
+        "brun",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-349-escalier-du-grain",
+      "ordre": 349,
+      "nom": "Escalier du grain",
+      "famille": "Cafés et boulangeries",
+      "secteur": "café-boulangerie",
+      "directionArtistique": {
+        "texte": "Quatre bandes vertes de largeur décroissante alignées à gauche (nom, liens, horaires et adresse, lettre) comme un escalier. Archétype : L escalier."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "café",
+        "boulangerie",
+        "escalier",
+        "bandes",
+        "vert",
+        "étagé",
+        "angles droits"
+      ]
+    }
+  ]
+}

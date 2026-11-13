@@ -1,0 +1,306 @@
+{
+  "concepts": [
+    {
+      "id": "c-302-appel-de-plateau",
+      "ordre": 302,
+      "nom": "Appel de plateau",
+      "famille": "Studios créatifs",
+      "secteur": "studio de design graphique",
+      "directionArtistique": {
+        "texte": "Pour un studio de design graphique : un bandeau orange brûlé XXL avec une phrase d'appel gigantesque (« On fait quoi ensemble ? ») et un bouton blanc, puis sur crème les coordonnées et une seule colonne étroite de liens à droite. Inspiré de la capture 10 (grande phrase d'appel centrée puis logo et liens) mais recomposé en bandeau plein. Archétype : F bandeau d'appel XXL."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio",
+        "design graphique",
+        "appel à l'action",
+        "phrase géante",
+        "crème",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-303-tirages-en-damier",
+      "ordre": 303,
+      "nom": "Tirages en damier",
+      "famille": "Studios créatifs",
+      "secteur": "studio photo et de marque",
+      "directionArtistique": {
+        "texte": "Pour un studio photo : un damier de huit cases carrées sur noir graphite (nom, portfolio, journal, projet, coordonnées, Instagram, questions, espace client) qui virent au lime acide au survol. Les colonnes de la capture 11 deviennent des cases. Archétype : C grille de cases égales."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Space Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "studio photo",
+        "damier",
+        "cases",
+        "noir",
+        "lime",
+        "grille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-304-console-de-montage",
+      "ordre": 304,
+      "nom": "Console de montage",
+      "famille": "Studios créatifs",
+      "secteur": "studio de motion design et de jeu",
+      "directionArtistique": {
+        "texte": "Pour un studio de motion design : une fenêtre de terminal posée sur un aplat violet, barre de titre à trois carrés, commandes cliquables (« $ ouvrir portfolio »), sortie des coordonnées et curseur qui respire. La carte sombre de la capture 11 devient une fenêtre d'interface. Archétype : K fenêtre / console."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "JetBrains Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "motion design",
+        "jeu",
+        "console",
+        "terminal",
+        "violet",
+        "menthe",
+        "monospace",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-305-signature-du-studio",
+      "ordre": 305,
+      "nom": "Signature du studio",
+      "famille": "Studios créatifs",
+      "secteur": "studio de lettrage",
+      "directionArtistique": {
+        "texte": "Pour un studio de lettrage : le nom du site en immense serif centré sur jaune moutarde, un carré qui respire, trois liens soulignés et la ligne légale. Presque rien d'autre : le vide fait la signature. La marque monumentale de la capture 10, sans le reste. Archétype : B nom monumental."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lettrage",
+        "nom monumental",
+        "moutarde",
+        "serif",
+        "minimal",
+        "centré",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-306-plateau-et-regie",
+      "ordre": 306,
+      "nom": "Plateau et régie",
+      "famille": "Studios créatifs",
+      "secteur": "studio de production",
+      "directionArtistique": {
+        "texte": "Pour un studio de production : deux demi-pages bord à bord, crème (venir au studio, adresse, horaires) et brique (lettre d'information, liens rapides sur deux colonnes, réseaux), puis une barre brique foncé. Reprend la logique de la capture 12 (accueil, lettre, liens rapides) en deux panneaux. Archétype : E deux demi-pages."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "production",
+        "deux panneaux",
+        "brique",
+        "crème",
+        "lettre d'information",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-307-du-brief-a-la-livraison",
+      "ordre": 307,
+      "nom": "Du brief à la livraison",
+      "famille": "Studios créatifs",
+      "secteur": "agence de marque",
+      "directionArtistique": {
+        "texte": "Pour une agence de marque : une frise de cinq points carrés sur menthe pâle (brief, esquisses, épreuves, production, livraison), chaque étape menant à une page utile, puis le titre, un bouton rouille et les coordonnées, et une bande vert forêt pour la ligne légale. Archétype : I frise en étapes."
+      },
+      "typographies": {
+        "titre": "Epilogue",
+        "corps": "Lexend",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence de marque",
+        "frise",
+        "étapes",
+        "menthe",
+        "vert forêt",
+        "processus",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-308-montant-d-agence",
+      "ordre": 308,
+      "nom": "Montant d'agence",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence d'architecture",
+      "directionArtistique": {
+        "texte": "Pour une agence d'architecture : une colonne graphite pleine hauteur à gauche (nom, liens, coordonnées) et, sur béton clair, une grande phrase en serif, un bouton terre cuite et les horaires d'accueil. Logo à gauche et liens de la capture 10, recomposés en montant de cloison. Archétype : A colonne latérale."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "colonne latérale",
+        "graphite",
+        "béton",
+        "terre cuite",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-309-maquette-en-blocs",
+      "ordre": 309,
+      "nom": "Maquette en blocs",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "architecte d'intérieur",
+      "directionArtistique": {
+        "texte": "Pour un architecte d'intérieur : une mosaïque asymétrique, une grande case bleu Klein avec l'appel en Bodoni et trois petites cases (réalisations sur ivoire, coordonnées sur jaune, lettre d'information sur nuit). Carte d'appel de la capture 11 découpée en volumes de maquette. Archétype : H mosaïque asymétrique."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Inter Tight",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecte d'intérieur",
+        "mosaïque",
+        "bleu Klein",
+        "jaune",
+        "ivoire",
+        "cases",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-310-en-tete-d-agence",
+      "ordre": 310,
+      "nom": "En-tête d'agence",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence de design d'espace",
+      "directionArtistique": {
+        "texte": "Pour une agence de design d'espace : un papier à en-tête sauge, adresse à gauche, nom centré en grand serif, horaires à droite, entre doubles filets, puis une ligne de liens centrée et la ligne légale. Archétype : J papier à en-tête."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "design d'espace",
+        "papier à en-tête",
+        "centré",
+        "sauge",
+        "serif",
+        "doubles filets",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-311-cote-unique",
+      "ordre": 311,
+      "nom": "Cote unique",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "bureau d'architecture",
+      "directionArtistique": {
+        "texte": "Pour un bureau d'architecture : un filet rouge de 4 px puis une seule ligne blanche en monospace (point, nom du site, quatre liens en capitales, e-mail) et la ligne légale dessous. Très compact, façon cote de plan. Archétype : D ligne unique."
+      },
+      "typographies": {
+        "titre": "DM Mono",
+        "corps": "DM Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "ligne unique",
+        "compact",
+        "monospace",
+        "rouge",
+        "blanc",
+        "cote",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-312-gradins-d-atelier",
+      "ordre": 312,
+      "nom": "Gradins d'atelier",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "atelier de design d'intérieur",
+      "directionArtistique": {
+        "texte": "Pour un atelier de design d'intérieur : quatre gradins alignés à gauche, de plus en plus étroits et foncés, du sable clair au brun (nom et bouton, pages, coordonnées, accueil), chacun sur une seule ligne, sur papier blanc. Archétype : L pied en escalier."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Zilla Slab",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "design d'intérieur",
+        "escalier",
+        "gradins",
+        "sable",
+        "brun",
+        "étagé",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-313-table-des-realisations",
+      "ordre": 313,
+      "nom": "Table des réalisations",
+      "famille": "Architecture et design d'intérieur",
+      "secteur": "agence d'architecture et d'aménagement",
+      "directionArtistique": {
+        "texte": "Pour une agence d'architecture : un sommaire de cinq lignes pleine largeur en grandes capitales condensées sur vert nuit, chacune terminée par une flèche, qui virent au vert vif au survol, avec une ligne de coordonnées et la ligne légale. Rubriques d'exemple. Archétype : G index en lignes."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Schibsted Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "architecture",
+        "sommaire",
+        "index",
+        "vert nuit",
+        "vert vif",
+        "capitales",
+        "angles droits"
+      ]
+    }
+  ]
+}

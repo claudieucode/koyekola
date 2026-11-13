@@ -1,0 +1,267 @@
+{
+  "concepts": [
+    {
+      "id": "c-410-lin-et-terre",
+      "ordre": 410,
+      "nom": "Lin et Terre",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "linge de maison et poterie",
+      "directionArtistique": {
+        "texte": "Archétype B (inspiré de la capture 37 : nom de marque monumental) : aplat terre cuite, nom en très grandes lettres rognées, quelques liens discrets, réseaux en texte, bande basse plus sombre. Carré qui respire. Aucune photo."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "linge",
+        "poterie",
+        "nom monumental",
+        "terre cuite"
+      ]
+    },
+    {
+      "id": "c-411-verdier-interieurs",
+      "ordre": 411,
+      "nom": "Verdier Intérieurs",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "magasin de meubles",
+      "directionArtistique": {
+        "texte": "Archétype E (capture 38 : lettre d'information en tête) : deux demi-pages bord à bord, vert sapin à gauche (phrase, lettre, engagements), lin clair à droite (contact, rubriques par pièce, réseaux, bouton de rendez-vous qui respire)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "meubles",
+        "demi-pages",
+        "vert sapin",
+        "lettre"
+      ]
+    },
+    {
+      "id": "c-412-casa-quadra",
+      "ordre": 412,
+      "nom": "Casa Quadra",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "showroom de design d'intérieur",
+      "directionArtistique": {
+        "texte": "Archétype C (capture 39 : carte sombre sur aplat vif) : damier de huit cases noir encre dans un cadre sur aplat ocre ; chaque case est un lien ou une information (horaires, contact, lettre). Carré qui respire."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "showroom",
+        "damier",
+        "ocre",
+        "noir"
+      ]
+    },
+    {
+      "id": "c-413-atelier-sorel",
+      "ordre": 413,
+      "nom": "Atelier Sorel",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "mobilier sur mesure",
+      "directionArtistique": {
+        "texte": "Archétype G (capture 37 : grands libellés) : sommaire en cinq lignes pleine largeur en serif monumental ; la ligne survolée se remplit de vermillon et se décale. Blanc cassé, noir, vermillon."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mobilier sur mesure",
+        "index",
+        "serif",
+        "vermillon"
+      ]
+    },
+    {
+      "id": "c-414-maison-delorme",
+      "ordre": 414,
+      "nom": "Maison Delorme",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "décoration et art de la table",
+      "directionArtistique": {
+        "texte": "Archétype J (capture 38 : bloc logo + lettre) : papier à en-tête rose poudré dans un cadre à double filet, nom en Cormorant, cartouche adresse et horaires, rubriques en italique, lettre centrée, bouton de rendez-vous."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Lora",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "décoration",
+        "art de la table",
+        "papier à en-tête",
+        "rose poudré"
+      ]
+    },
+    {
+      "id": "c-415-brasse-et-noyer",
+      "ordre": 415,
+      "nom": "Brasse et Noyer",
+      "famille": "Maison, mobilier et déco",
+      "secteur": "ébénisterie et meubles en bois",
+      "directionArtistique": {
+        "texte": "Archétype L (capture 39 : carte sur aplat) : quatre marches de largeurs décroissantes alignées à gauche, noyer foncé, noyer moyen, laiton (lettre) et sable (mentions). Chaque marche s'éclaircit au survol."
+      },
+      "typographies": {
+        "titre": "Bodoni Moda",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "ébéniste",
+        "escalier",
+        "noyer",
+        "laiton"
+      ]
+    },
+    {
+      "id": "c-416-volt-atelier",
+      "ordre": 416,
+      "nom": "Volt Atelier",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "vélociste électrique",
+      "directionArtistique": {
+        "texte": "Archétype A (capture 37 : nom en grand) : barre verticale citron vif pleine hauteur (nom, réseaux), zone principale charbon (trois colonnes de liens, lettre, horaires). Carré qui respire."
+      },
+      "typographies": {
+        "titre": "Unbounded",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vélos électriques",
+        "colonne latérale",
+        "citron",
+        "charbon"
+      ]
+    },
+    {
+      "id": "c-417-pedale-urbaine",
+      "ordre": 417,
+      "nom": "Pédale Urbaine",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "vélos en libre-service",
+      "directionArtistique": {
+        "texte": "Archétype D (capture 38 : réseaux en bout de ligne) : barre compacte turquoise en deux lignes (nom en capitales condensées, rubriques, bouton, réseaux, mentions). Bouton qui respire."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Rubik",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "libre-service",
+        "barre compacte",
+        "turquoise"
+      ]
+    },
+    {
+      "id": "c-418-kilowatt-club",
+      "ordre": 418,
+      "nom": "Kilowatt Club",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "scooters et motos électriques",
+      "directionArtistique": {
+        "texte": "Archétype F (capture 37 : nom monumental) : bandeau d'appel orange XXL « Roulez électrique » avec bouton d'essai, puis graphite : lettre et contact à gauche, une colonne étroite de liens à droite."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Epilogue",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "scooters",
+        "bandeau d'appel",
+        "orange",
+        "graphite"
+      ]
+    },
+    {
+      "id": "c-419-borne-et-cie",
+      "ordre": 419,
+      "nom": "Borne et Cie",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "bornes de recharge et installation",
+      "directionArtistique": {
+        "texte": "Archétype H (capture 39 : cartes sur aplat) : mosaïque asymétrique, grande case violette (nom, lettre) et trois petites cases jaune, graphite et blanche (horaires, contact, rubriques)."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "Outfit",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "bornes",
+        "mosaïque",
+        "violet",
+        "jaune"
+      ]
+    },
+    {
+      "id": "c-420-trajet",
+      "ordre": 420,
+      "nom": "Trajet",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "concessionnaire vélos et trottinettes",
+      "directionArtistique": {
+        "texte": "Archétype I (capture 38 : colonnes de liens) : frise horizontale de quatre étapes à points carrés (choisir, essayer, acheter, entretenir) sur bleu océan, accents corail ; adresse et lettre dessous. Premier point qui respire."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Red Hat Display",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "concessionnaire",
+        "frise",
+        "bleu océan",
+        "corail"
+      ]
+    },
+    {
+      "id": "c-421-console-wattmetre",
+      "ordre": 421,
+      "nom": "Console Wattmètre",
+      "famille": "Mobilité électrique et vélos",
+      "secteur": "suivi de recharge et flottes",
+      "directionArtistique": {
+        "texte": "Archétype K (capture 39 : carte sombre) : fenêtre de console à angles droits, barre de titre à trois carrés, lignes de commande en monospace, curseur ambre qui respire, lettre et contact à droite."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Space Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "flotte",
+        "console",
+        "monospace",
+        "ambre"
+      ]
+    }
+  ]
+}
