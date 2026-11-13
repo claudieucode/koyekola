@@ -112,7 +112,7 @@ function listCustomers(s, { q, page = 1, perPage = 25 } = {}) {
   if (q) { const like = `%${String(q).slice(0, 80).replace(/[\\%_]/g, (m) => `\\${m}`)}%`; where.push("(c.email LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\')"); args.push(like, like); }
   const pp = Math.min(100, Math.max(1, Number(perPage) || 25));
   const total = s.db.prepare(`SELECT COUNT(*) AS n FROM mk_shop_customers c WHERE ${where.join(" AND ")}`).get(...args).n;
-  const items = s.db.prepare(`SELECT c.id, c.email, c.name, c.status, c.created_at, (c.password_hash IS NOT NULL) AS has_account,
+  const items = s.db.prepare(`SELECT c.id, c.email, c.name, c.status, c.created_at, c.tax_exempt, (c.password_hash IS NOT NULL) AS has_account,
       (SELECT COUNT(*) FROM mk_shop_orders o WHERE o.customer_id = c.id) AS orders, (SELECT COALESCE(SUM(total_cents),0) FROM mk_shop_orders o WHERE o.customer_id = c.id AND o.payment_status = 'paid') AS spent_cents
     FROM mk_shop_customers c WHERE ${where.join(" AND ")} ORDER BY c.id DESC LIMIT ? OFFSET ?`).all(...args, pp, (Math.max(1, Number(page) || 1) - 1) * pp);
   return { items, total, pages: Math.ceil(total / pp) };

@@ -393,11 +393,45 @@ module.exports = () => {
   route("post", "/livraison/methodes/:mid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteMethod(s, Number(req.params.mid)); flashOk(req, "Méthode supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#livraison`); }, { write: true });
   route("post", "/taxes", "shop.write", (req, res, s) => {
     const b = req.body;
-    store.saveTaxRule(s, { name: b.name, country: b.country, region: b.region, rate_bp: Math.round(Number(String(b.rate).replace(",", ".")) * 100), applies_to_shipping: b.applies_to_shipping ? 1 : 0, priority: b.priority });
+    store.saveTaxRule(s, { name: b.name, country: b.country, region: b.region, rate_bp: Math.round(Number(String(b.rate).replace(",", ".")) * 100), applies_to_shipping: b.applies_to_shipping ? 1 : 0, priority: b.priority, tax_class_id: b.tax_class_id, postcode: b.postcode });
     audit(req, s, "shop_tax.created", "shop_settings", s.siteId ?? "principal", { country: b.country });
-    flashOk(req, "Règle de taxe ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#taxes`);
+    flashOk(req, "Règle de taxe ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/${b.back === "classes" ? "classes" : "reglages#taxes"}`);
   }, { write: true });
   route("post", "/taxes/:tid(\\d+)/supprimer", "shop.write", (req, res, s) => { store.deleteTaxRule(s, Number(req.params.tid)); flashOk(req, "Règle supprimée."); res.redirect(`${req.shopSpace.base}/boutique/reglages#taxes`); }, { write: true });
+  // ── Classes de taxe et d'expédition, codes postaux, exonération ──
+  route("get", "/classes", "shop.read", (req, res, s) => {
+    render(req, res, "classes", "Boutique — taxes et expédition", "boutique/classes", { taxClasses: store.listClasses(s, "tax"), shipClasses: store.listClasses(s, "shipping"), zones: store.listZones(s), taxRules: store.listTaxRules(s) });
+  });
+  route("post", "/classes/:kind(tax|shipping)", "shop.write", (req, res, s) => {
+    store.saveClass(s, req.params.kind, req.body.name);
+    audit(req, s, "shop_class.created", "shop_class", req.params.kind, { name: req.body.name });
+    flashOk(req, "Classe ajoutée."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
+  }, { write: true });
+  route("post", "/classes/:kind(tax|shipping)/:id(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    store.deleteClass(s, req.params.kind, Number(req.params.id));
+    audit(req, s, "shop_class.deleted", "shop_class", req.params.id, { kind: req.params.kind });
+    flashOk(req, "Classe supprimée : les produits concernés repassent en classe standard."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/classes", "shop.write", (req, res, s) => {
+    store.setProductClasses(s, Number(req.params.pid), { taxClassId: req.body.tax_class_id, shippingClassId: req.body.shipping_class_id });
+    flashOk(req, "Classes du produit enregistrées."); res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/livraison/methodes/:mid(\\d+)/classes", "shop.write", (req, res, s) => {
+    store.setClassCost(s, Number(req.params.mid), Number(req.body.class_id), req.body.cost === "" ? "" : euros(req.body.cost));
+    flashOk(req, "Supplément enregistré."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
+  }, { write: true });
+  route("post", "/livraison/zones/:zid(\\d+)/postcodes", "shop.write", (req, res, s) => {
+    const z = store.listZones(s).find((x) => x.id === Number(req.params.zid));
+    if (!z) throw new MarketingError("not_found", "Zone introuvable.");
+    store.saveZone(s, { name: z.name, countries: z.countries, postcodes: req.body.postcodes }, z.id);
+    flashOk(req, "Codes postaux de la zone enregistrés."); res.redirect(`${req.shopSpace.base}/boutique/classes`);
+  }, { write: true });
+  route("post", "/clients/:cid(\\d+)/exoneration", "shop.write", (req, res, s) => {
+    const r = s.db.prepare(`UPDATE mk_shop_customers SET tax_exempt = ? WHERE id = ? AND organization_id = ? AND ${s.siteId == null ? "site_id IS NULL" : "site_id = ?"}`).run(req.body.exempt ? 1 : 0, Number(req.params.cid), s.organizationId, ...(s.siteId == null ? [] : [s.siteId]));
+    if (!r.changes) throw new MarketingError("not_found", "Client introuvable.");
+    audit(req, s, "shop_customer.tax_exempt", "shop_customer", req.params.cid, { exempt: Boolean(req.body.exempt) });
+    flashOk(req, req.body.exempt ? "Client exonéré de taxe (compte connecté uniquement)." : "Exonération retirée."); res.redirect(`${req.shopSpace.base}/boutique/clients`);
+  }, { write: true });
   route("post", "/coupons", "shop.write", (req, res, s) => {
     const b = req.body;
     store.saveCoupon(s, { code: b.code, kind: b.kind, value: b.kind === "fixed" ? euros(b.value) : Number(b.value), min_subtotal_cents: euros(b.min_subtotal), starts_at: b.starts_at, ends_at: b.ends_at, max_uses: int(b.max_uses), per_customer_limit: int(b.per_customer_limit), product_ids: [].concat(b.product_ids || []).map(Number) });

@@ -104,6 +104,14 @@
   <% } %>
 </section>
 <% } %>
+<section class="mk-panel" aria-labelledby="cl-h"><h2 id="cl-h">Classes de taxe et d'expédition</h2>
+  <p class="field-hint">Une classe de taxe applique son propre taux (ex. taux réduit) ; une classe d'expédition ajoute son supplément de livraison. Créez-les dans « Taxes et expédition ». Sans classe, le produit suit les règles standard.</p>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/classes">
+    <div class="field-group"><label for="cl-t">Classe de taxe</label><select id="cl-t" name="tax_class_id"><option value="">Standard</option><% taxClasses.forEach((c) => { %><option value="<%= c.id %>"<%= cls && cls.tax_class_id === c.id ? " selected" : "" %>><%= c.name %></option><% }) %></select></div>
+    <div class="field-group"><label for="cl-s">Classe d'expédition</label><select id="cl-s" name="shipping_class_id"><option value="">Aucune</option><% shipClasses.forEach((c) => { %><option value="<%= c.id %>"<%= cls && cls.shipping_class_id === c.id ? " selected" : "" %>><%= c.name %></option><% }) %></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+  </form><% } %>
+</section>
 <section class="mk-panel" aria-labelledby="var-h"><h2 id="var-h">Variantes</h2>
   <% if (!product.attributes.length) { %><p class="mk-empty">Définissez d'abord les attributs (ex. « Taille: S, M, L »), enregistrez, puis ajoutez les variantes.</p><% } else { %>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Variantes</caption><thead><tr><th scope="col">Combinaison</th><th scope="col">SKU</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>

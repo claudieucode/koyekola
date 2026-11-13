@@ -95,8 +95,8 @@ function createFromCart(s, cart, input) {
     const priced0 = cartSvc.priceCart(s, fresh, { dest: {}, email });
     const needsShipping = priced0.shipping.required;
     const shippingAddr = address(needsShipping ? input.shipping : input.shipping || {}, "Adresse de livraison", { required: needsShipping });
-    const dest = { country: (needsShipping ? shippingAddr.country : billing.country || shippingAddr.country) || settings.default_country, region: needsShipping ? shippingAddr.region : billing.region };
-    const priced = cartSvc.priceCart(s, fresh, { dest, shippingMethodId: input.shippingMethodId, email });
+    const dest = { country: (needsShipping ? shippingAddr.country : billing.country || shippingAddr.country) || settings.default_country, region: needsShipping ? shippingAddr.region : billing.region, postcode: needsShipping ? shippingAddr.postal_code : billing.postal_code };
+    const priced = cartSvc.priceCart(s, fresh, { dest, shippingMethodId: input.shippingMethodId, email, customerId: input.customerId });
 
     if (!priced.lines.length) throw new MarketingError("invalid_field", "Votre panier est vide.");
     if (priced.issues.length) throw new MarketingError("stock", priced.issues[0].message);
