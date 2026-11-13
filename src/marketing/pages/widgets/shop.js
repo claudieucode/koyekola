@@ -293,7 +293,7 @@ const productData = (fn) => (ctx, p, env) => {
 const money_ = (c, cur) => view.money(c, cur);
 const productWidget = (type, label, icon, description, keywords, schema, fn) => ({ type, label, group: "commerce", icon, version: 1, style: "box", status: "operational", dependencies: DEP, description, keywords, schema, data: productData(fn) });
 module.exports.push(
-  productWidget("shoptitle", "Titre du produit", "heading", "Le nom du produit de la page (titre de niveau réglable)", "titre nom produit boutique fiche product title name",
+  productWidget("shoptitle", "Titre du produit", "type", "Le nom du produit de la page (titre de niveau réglable)", "titre nom produit boutique fiche product title name",
     [{ key: "tag", kind: "select", label: "Niveau du titre", options: [["h1", "h1"], ["h2", "h2"], ["h3", "h3"], ["p", "Paragraphe"]], default: "h1" }],
     (pr) => ({ name: pr.name })),
   productWidget("shopprice", "Prix du produit", "tag", "Prix réel (promotion barrée, « à partir de » pour un produit à variantes)", "prix tarif promotion produit boutique fiche price sale",
@@ -302,16 +302,16 @@ module.exports.push(
   productWidget("shoprating", "Note du produit", "star", "Note moyenne et nombre d'avis publiés (jamais d'avis d'exemple)", "note etoiles avis evaluations produit boutique fiche rating stars",
     [bool("showCount", "Afficher le nombre d'avis", true), { key: "noneLabel", kind: "text", label: "Texte s'il n'y a aucun avis (vide = rien)", max: 80, default: "Aucun avis" }],
     (pr, p, env, r) => ({ average: r.average, count: r.count || 0 })),
-  productWidget("shopdescription", "Description du produit", "text", "Description courte ou détaillée du produit (texte brut, retours à la ligne conservés)", "description texte produit boutique fiche resume short description",
+  productWidget("shopdescription", "Description du produit", "fileText", "Description courte ou détaillée du produit (texte brut, retours à la ligne conservés)", "description texte produit boutique fiche resume short description",
     [{ key: "which", kind: "select", label: "Texte à afficher", options: [["short", "Description courte"], ["long", "Description détaillée"]], default: "short" }],
     (pr, p) => ({ text: p.which === "long" ? pr.description : pr.short })),
-  productWidget("shopstock", "Disponibilité", "box", "En stock / rupture de stock du produit de la page", "disponibilite stock rupture produit boutique fiche availability",
+  productWidget("shopstock", "Disponibilité", "inbox", "En stock / rupture de stock du produit de la page", "disponibilite stock rupture produit boutique fiche availability",
     [{ key: "inLabel", kind: "text", label: "Texte « en stock »", max: 60, default: "En stock" }, { key: "outLabel", kind: "text", label: "Texte « rupture »", max: 60, default: "Rupture de stock" }],
     (pr) => ({ inStock: pr.inStock })),
   productWidget("shopmeta", "Références du produit", "list", "Référence (SKU), catégories et étiquettes du produit, avec liens vers la boutique", "sku reference categories etiquettes tags produit boutique fiche meta",
     [bool("showSku", "Référence (SKU)", true), bool("showCategories", "Catégories (liens)", true), bool("showTags", "Étiquettes (liens)", true)],
     (pr, p) => ({ sku: p.showSku ? pr.sku : "", categories: p.showCategories ? pr.categories : [], tags: p.showTags ? pr.tags : [] })),
-  productWidget("shopbreadcrumb", "Fil d'Ariane du produit", "chevron", "Accueil › Boutique › catégorie › produit, avec les vraies adresses", "fil ariane breadcrumb navigation produit boutique fiche",
+  productWidget("shopbreadcrumb", "Fil d'Ariane du produit", "chevronRight", "Accueil › Boutique › catégorie › produit, avec les vraies adresses", "fil ariane breadcrumb navigation produit boutique fiche",
     [{ key: "separator", kind: "text", label: "Séparateur", max: 4, default: "›" }, bool("showHome", "Afficher « Accueil »", true)],
     (pr) => ({ name: pr.name, category: pr.categories[0] || null })),
   {
