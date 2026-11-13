@@ -38,8 +38,9 @@ describe("rendu public", () => {
     const used = JSON.parse((await boss.request(`/marketing/site-web/sites/${site}/constructeur-de-theme/api/bibliotheque/utiliser`, { method: "POST", json: { type: "single_product", key: e.key }, headers: origin() })).text).template;
     // On remplace le contenu de la copie par les nouveaux éléments (Page Builder : brouillon puis publication)
     const pageId = used.sourceId; const rev = one("SELECT revision FROM mk_landing_pages WHERE id = ?", pageId).revision;
-    const W = (type, props = {}) => ({ type, props, id: `n-${type}` });
-    const section = { type: "layout", id: "s1", children: [W("shopbreadcrumb", { separator: "›", showHome: true }), W("shoptitle", { tag: "h1" }), W("shoprating", { showCount: true, noneLabel: "Aucun avis" }), W("shopprice", { showRegular: true, fromLabel: "À partir de", taxNote: "TTC" }), W("shopstock", { inLabel: "En stock", outLabel: "Rupture" }), W("shopdescription", { which: "short" }), W("shopdescription", { which: "long" }), W("shopmeta", { showSku: true, showCategories: true, showTags: true }), W("shopminicart", { label: "Panier", showTotal: true, checkoutLabel: "Commander" })] };
+    const hex = () => require("node:crypto").randomBytes(6).toString("hex");
+    const W = (type, props = {}) => ({ type, props, id: hex() });
+    const section = { type: "layout", id: hex(), children: [W("shopbreadcrumb", { separator: "›", showHome: true }), W("shoptitle", { tag: "h1" }), W("shoprating", { showCount: true, noneLabel: "Aucun avis" }), W("shopprice", { showRegular: true, fromLabel: "À partir de", taxNote: "TTC" }), W("shopstock", { inLabel: "En stock", outLabel: "Rupture" }), W("shopdescription", { which: "short" }), W("shopdescription", { which: "long" }), W("shopmeta", { showSku: true, showCategories: true, showTags: true }), W("shopminicart", { label: "Panier", showTotal: true, checkoutLabel: "Commander" })] };
     const put = await boss.request(`/marketing/pages/${pageId}/brouillon`, { method: "PUT", headers: origin(), json: { revision: rev, content: { title: "Fiche", sections: [section] } } });
     assert.equal(put.status, 200, put.text.slice(0, 400));
     assert.equal((await boss.request(`/marketing/pages/${pageId}/publier.json`, { method: "POST", json: {}, headers: origin() })).status, 200);
