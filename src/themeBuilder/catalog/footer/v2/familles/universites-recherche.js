@@ -5,6 +5,7 @@
 const FAM = "universites-recherche";
 const { modeleV2, identifiantV2, identite, G: GK, Moteur } = require("../kit-v2");
 const { compact } = require("../../../kit");
+const I = require("../aides-illus-a09");
 
 const DOUX = 360; // ms : transitions de survol / focus
 
@@ -54,10 +55,10 @@ const liensStd = (k, couleur, survol, liste, o = {}) => (liste || [["Accueil", "
 // Idée : la grille de cases bordées de la capture (une case = un lien + une flèche), traduite en damier 4 × 2 de facultés sur papier crème, filets bordeaux de 1 px entre les cases ; au survol la case se remplit de bordeaux (fond qui change doucement) et le libellé glisse.
 // Facultés d'EXEMPLE à renommer dans l'éditeur. Polices : Libre Caslon Text (libellés) et Hanken Grotesk. Mobile : cases empilées.
 const creme = identite({
-  key: "c374", label: "Crème et bordeaux", humeur: "light",
-  fond: "#f4efe6", texte: "#1d1a17", discret: "#4f4740", accent: "#7a1f2b", surface: "#ffffff", encre: "#1d1a17",
+  key: "c374", label: "Noir, crème et bordeaux", humeur: "dark",
+  fond: "#0a0a0c", texte: "#f4efe6", discret: "#b8aea3", accent: "#e0566b", surface: "#16161a", encre: "#0a0a0c",
   police: "font.hanken-grotesk", titres: "font.libre-caslon-text",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#7a1f2b55",
+  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#f4efe633",
 });
 const CREME = "#f4efe6", BORD = "#7a1f2b", ENCRE1 = "#1d1a17";
 
@@ -67,24 +68,23 @@ const damierFacultes = modeleV2({
   description: "Pour une université : un damier de huit cases égales à angles droits, chacune est un lien vers une faculté avec sa flèche ; la case se remplit de bordeaux au survol. Papier crème, serif classique, adresse et mentions en dessous.",
   tags: ["université", "damier", "grille", "facultés", "crème", "bordeaux", "serif", "angles droits"],
   identity: creme,
-  racine: racineDe(CREME),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  racine: racineDe("#0a0a0c"),
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S;
-    const nom = nomDuSite(k, env, 30, BORD, { fontWeight: "400" });
-    nom.styles.desktop.fontSize = "fluid:26-34";
-    const tete = G.bande(k, [G.colonne(k, [caps(k, "Enseignement supérieur", { couleur: BORD, suivi: "0.24em" }), nom], { poids: 1, min: "260px", gap: "10px" }), G.colonne(k, [para(k, "Huit portes d'entrée vers les études, la recherche et la vie du campus.", { taille: 17, couleur: ENCRE1, max: "420px" })], { poids: 1, min: "260px", soi: "flex-end" })], { fond: CREME, gap: "20px 48px", aligne: "flex-end", padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "En-tête" });
-    const case1 = (t, u) => {
-      const a = lien(k, `${t}  →`, u, { taille: 22, poids: "400", police: S.head, couleur: ENCRE1, bloc: true, h: "156px", padH: "24px", survol: { color: "#ffffff", backgroundColor: BORD, transform: { x: 0 } }, focus: BORD, extra: { backgroundColor: CREME, alignItems: "flex-end", paddingBottom: "20px", boxSizing: "border-box", flexGrow: 1, flexBasis: "0px", minWidth: "200px", lineHeight: 1.15 } });
-      return a;
-    };
+    const S = k.S, N0 = "#0a0a0c", CR = "#f4efe6";
+    const nom = nomDuSite(k, env, 20, CR, { fontWeight: "400", letterSpacing: "0.08em", textTransform: "uppercase" });
+    const titre = G.geant(`<p>Là où le savoir<br>se prépare.</p>`, { taille: [38, 92], tablette: { taille: [40, 64] }, mobile: { taille: [34, 44] }, lh: 1.02, suivi: "-0.02em", poids: "400", police: S.head, couleur: CR, extra: { textAlign: "center" } })(k, env);
+    const btn = lien(k, "Candidater", "/contact", { taille: 15, poids: "700", casse: "uppercase", suivi: "0.1em", couleur: N0, h: "52px", padH: "30px", survol: { backgroundColor: "#e0566b", color: "#ffffff", transform: { y: -3 } }, focus: "#e0566b", extra: { backgroundColor: CR, justifyContent: "center", alignSelf: "center" } });
+    const tete = G.bande(k, [k.col([caps(k, "Enseignement supérieur", { couleur: "#e0566b", suivi: "0.24em" }), nom, titre, para(k, "Huit portes d'entrée vers les études, la recherche et la vie du campus.", { taille: 17, couleur: "#b8aea3", max: "460px", align: "center" }), btn], { alignItems: "center", gap: "22px", width: "100%" })], { fond: N0, colonne: true, padV: ["80px", "64px", "48px"], padB: ["0px", "0px", "0px"], padH: ["48px", "32px", "20px"], nom: "Appel" });
+    const marque = G.bande(k, [I.W(k, I.monogramme374(), { maxWidth: "760px", marginLeft: "auto", marginRight: "auto" })], { fond: N0, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Monogramme" });
+    const case1 = (t, u) => lien(k, `${t}  →`, u, { taille: 20, poids: "400", police: S.head, couleur: CR, bloc: true, h: "132px", padH: "24px", survol: { color: "#ffffff", backgroundColor: BORD, transform: { x: 0 } }, focus: "#e0566b", extra: { backgroundColor: N0, alignItems: "flex-end", paddingBottom: "20px", boxSizing: "border-box", flexGrow: 1, flexBasis: "0px", minWidth: "200px", lineHeight: 1.15 } });
     const rang = (liste) => k.row(liste.map(([t, u]) => case1(t, u)), { gap: "1px", flexWrap: "wrap", width: "100%" });
-    const grille = k.col([rang([["Lettres et langues", "/faq"], ["Sciences du vivant", "/faq"], ["Droit et sciences politiques", "/faq"], ["Médecine et santé", "/faq"]]), rang([["Économie et gestion", "/faq"], ["Arts et patrimoine", "/faq"], ["Ingénierie", "/faq"], ["Vie étudiante", "/blog"]])], { gap: "1px", width: "100%", backgroundColor: BORD, borderStyle: "solid", borderWidth: "1px", borderColor: BORD, boxSizing: "border-box" });
-    const milieu = G.bande(k, [grille], { fond: CREME, colonne: true, padV: ["0px", "0px", "0px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Damier" });
-    const adresse = G.colonne(k, [coordonnees(k, { taille: 15, lien: ENCRE1, survol: BORD, focus: BORD })], { poids: 1, min: "260px" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#4f4740", liens: ENCRE1 })(k, env);
-    const bas = G.bande(k, [adresse, G.colonne(k, [mentions], { poids: 2, min: "300px", soi: "flex-end" })], { fond: CREME, gap: "24px 40px", aligne: "flex-end", padV: ["0px", "0px", "0px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Adresse" });
-    return [G.racine(k, [tete, milieu, bas])];
+    const grille = k.col([rang([["Lettres et langues", "/faq"], ["Sciences du vivant", "/faq"], ["Droit et sciences politiques", "/faq"], ["Médecine et santé", "/faq"]]), rang([["Économie et gestion", "/faq"], ["Arts et patrimoine", "/faq"], ["Ingénierie", "/faq"], ["Vie étudiante", "/blog"]])], { gap: "1px", width: "100%", backgroundColor: "#f4efe630", borderStyle: "solid", borderWidth: "1px", borderColor: "#f4efe630", boxSizing: "border-box" });
+    const milieu = G.bande(k, [grille], { fond: N0, colonne: true, padV: ["0px", "0px", "0px"], padB: ["48px", "40px", "32px"], padH: ["48px", "32px", "20px"], nom: "Damier" });
+    const adresse = G.colonne(k, [coordonnees(k, { taille: 15, couleur: "#b8aea3", lien: CR, survol: "#e0566b", focus: "#e0566b" })], { poids: 1, min: "260px" });
+    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b8aea3", liens: CR })(k, env);
+    const bas = G.bande(k, [adresse, G.colonne(k, [mentions], { poids: 2, min: "300px", soi: "flex-end" })], { fond: N0, gap: "24px 40px", aligne: "flex-end", padV: ["0px", "0px", "0px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Adresse" });
+    return [G.racine(k, [tete, marque, milieu, bas])];
   },
 }, FAM);
 
@@ -107,13 +107,13 @@ const amphiCouloirs = modeleV2({
   tags: ["université", "deux moitiés", "bleu nuit", "ocre", "pierre", "serif", "angles droits"],
   identity: nuit,
   racine: racineDe(PIERRE),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 22, OCRE, { fontWeight: "700" });
     const phrase = G.geant(`<p>Apprendre à<br>penser, chercher,<br><span style="color:${OCRE}">transmettre.</span></p>`, { taille: [36, 76], tablette: { taille: [40, 60] }, mobile: { taille: [34, 42] }, lh: 1.06, suivi: "-0.015em", poids: "600", police: S.head, couleur: "#f3f5f9" })(k, env);
     const btn = lien(k, "Candidater", "/contact", { taille: 16, poids: "700", casse: "uppercase", suivi: "0.08em", couleur: NUIT, h: "54px", padH: "30px", survol: { backgroundColor: "#ffffff", transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: OCRE, justifyContent: "center", alignSelf: "flex-start" } });
-    const gauche = k.col([k.row([nom, caps(k, "Université", { couleur: "#b9c5d8" })], { gap: "16px", alignItems: "center", flexWrap: "wrap" }), phrase, k.row([btn, lien(k, "Vie du campus", "/blog", { taille: 16, poids: "600", couleur: "#f3f5f9", survol: { color: OCRE, transform: { x: 6 } }, focus: OCRE })], { rowGap: "12px", columnGap: "28px", alignItems: "center" })], { flexGrow: 1, flexBasis: "0px", minWidth: "300px", gap: "36px", justifyContent: "space-between", paddingTop: "80px", paddingBottom: "72px", paddingLeft: "64px", paddingRight: "56px", backgroundColor: NUIT, borderRadius: "0px" }, { paddingLeft: "32px", paddingRight: "32px" }, { minWidth: "100%", paddingTop: "48px", paddingBottom: "48px", paddingLeft: "20px", paddingRight: "20px" });
+    const gauche = k.col([k.row([nom, caps(k, "Université", { couleur: "#b9c5d8" })], { gap: "16px", alignItems: "center", flexWrap: "wrap" }), phrase, I.W(k, I.amphi375(), { maxWidth: "520px" }), I.W(k, I.pastilles375(), { maxWidth: "260px" }), k.row([btn, lien(k, "Vie du campus", "/blog", { taille: 16, poids: "600", couleur: "#f3f5f9", survol: { color: OCRE, transform: { x: 6 } }, focus: OCRE })], { rowGap: "12px", columnGap: "28px", alignItems: "center" })], { flexGrow: 1, flexBasis: "0px", minWidth: "300px", gap: "36px", justifyContent: "space-between", paddingTop: "80px", paddingBottom: "72px", paddingLeft: "64px", paddingRight: "56px", backgroundColor: NUIT, borderRadius: "0px" }, { paddingLeft: "32px", paddingRight: "32px" }, { minWidth: "100%", paddingTop: "48px", paddingBottom: "48px", paddingLeft: "20px", paddingRight: "20px" });
     const liens1 = k.col(liensStd(k, ENCRE2, "#7a520c", [["Formations", "/faq"], ["Admissions", "/contact"], ["Vie du campus", "/blog"], ["Bibliothèques", "/faq"]], { taille: 18, poids: "500" }), { gap: "0px" });
     const liens2 = k.col(liensStd(k, ENCRE2, "#7a520c", [["Laboratoires", "/faq"], ["Publications", "/blog"], ["Doctorat", "/faq"], ["Partenariats", "/contact"]], { taille: 18, poids: "500" }), { gap: "0px" });
     const cols = G.ligne(k, [G.colonne(k, [caps(k, "Étudier", { couleur: "#7a520c" }), liens1], { poids: 1, min: "150px", gap: "8px" }), G.colonne(k, [caps(k, "Chercher", { couleur: "#7a520c" }), liens2], { poids: 1, min: "150px", gap: "8px" })], { gap: "24px 32px", aligne: "flex-start", largeur: "100%" });
@@ -146,7 +146,7 @@ const guichetChercheur = modeleV2({
   tags: ["recherche", "console", "fenêtre", "formulaire", "monospace", "noir", "vert", "angles droits"],
   identity: console1,
   racine: racineDe(CNOIR),
-  widgets: ["sitetitle", "text", "link", "emailsubscribe", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["sitetitle", "text", "link", "html", "emailsubscribe", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S, mono = S.head;
     const barreTitre = k.row([k.row([carre(k, "#e6edf3", "10px"), carre(k, "#9aa7b4", "10px"), souffle(carre(k, PHOS, "10px"), 2800)], { gap: "8px", flexWrap: "nowrap", alignItems: "center" }), caps(k, "centre-de-recherche / guichet.sh", { police: mono, couleur: "#9aa7b4", suivi: "0.06em", taille: "12px", poids: "500" })], { gap: "18px", flexWrap: "nowrap", alignItems: "center", paddingTop: "12px", paddingBottom: "12px", paddingLeft: "20px", paddingRight: "20px", backgroundColor: "#21262d", width: "100%", boxSizing: "border-box" });
@@ -158,9 +158,10 @@ const guichetChercheur = modeleV2({
     const nom = nomDuSite(k, env, 22, CTXT, { fontFamily: mono, fontWeight: "700" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#9aa7b4", liens: CTXT })(k, env);
     const statut = k.col([trait(k, "#e6edf33a"), mentions], { gap: "14px", width: "100%", boxSizing: "border-box", paddingTop: "0px", paddingBottom: "20px", paddingLeft: "32px", paddingRight: "32px" }, undefined, { paddingLeft: "20px", paddingRight: "20px" });
-    const fenetre = k.col([barreTitre, k.row([nom], { paddingTop: "28px", paddingLeft: "32px", paddingRight: "32px", width: "100%", boxSizing: "border-box" }, undefined, { paddingLeft: "20px" }), corpsFen, statut], { width: "100%", backgroundColor: CFEN, borderStyle: "solid", borderWidth: "2px", borderColor: "#e6edf366", gap: "0px", borderRadius: "0px", boxSizing: "border-box" });
-    const haut = G.bande(k, [fenetre], { fond: CNOIR, colonne: true, padV: ["72px", "56px", "40px"], padB: ["72px", "56px", "40px"], padH: ["48px", "32px", "20px"], nom: "Console" });
-    return [G.racine(k, [haut])];
+    const fenetre = k.col([barreTitre, I.W(k, I.trace376()), k.row([nom], { paddingTop: "28px", paddingLeft: "32px", paddingRight: "32px", width: "100%", boxSizing: "border-box" }, undefined, { paddingLeft: "20px" }), corpsFen, statut], { width: "100%", backgroundColor: CFEN, borderStyle: "solid", borderWidth: "2px", borderColor: "#e6edf366", gap: "0px", borderRadius: "0px", boxSizing: "border-box" });
+    const haut = G.bande(k, [fenetre], { fond: CNOIR, colonne: true, padV: ["72px", "56px", "40px"], padB: ["32px", "24px", "16px"], padH: ["48px", "32px", "20px"], nom: "Console" });
+    const motBande = G.bande(k, [I.W(k, I.mot376(), { maxWidth: "1100px", marginLeft: "auto", marginRight: "auto" })], { fond: CNOIR, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["16px", "16px", "8px"], nom: "Mot en contour" });
+    return [G.racine(k, [haut, motBande])];
   },
 }, FAM);
 
@@ -183,7 +184,7 @@ const indexLabos = modeleV2({
   tags: ["institut", "recherche", "index", "lignes", "jaune acide", "noir", "grande typographie", "angles droits"],
   identity: acide,
   racine: racineDe(ACID),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 24, NOIR, { fontWeight: "800" });
@@ -195,11 +196,12 @@ const indexLabos = modeleV2({
       return a;
     };
     const index = k.col([ligneIdx("Chimie des matériaux", "/faq"), ligneIdx("Neurosciences", "/faq"), ligneIdx("Humanités numériques", "/faq"), ligneIdx("Climat et océans", "/faq"), ligneIdx("Mathématiques", "/faq")], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: NOIR });
+    const titre377 = G.bande(k, [k.col([G.geant(`<p>Chercher,<br>trouver, partager.</p>`, { taille: [40, 104], tablette: { taille: [44, 72] }, mobile: { taille: [36, 46] }, lh: 0.98, suivi: "-0.03em", poids: "800", police: S.head, couleur: NOIR, extra: { textAlign: "center" } })(k, env), I.W(k, I.atome377(), { maxWidth: "820px", marginLeft: "auto", marginRight: "auto" })], { alignItems: "center", gap: "8px", width: "100%" })], { fond: ACID, colonne: true, padV: ["8px", "8px", "4px"], padB: ["8px", "8px", "8px"], padH: ["48px", "32px", "20px"], nom: "Marque" });
     const milieu = G.bande(k, [index], { fond: ACID, colonne: true, padV: ["0px", "0px", "0px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "Index" });
     const adresse = G.colonne(k, [coordonnees(k, { taille: 15, lien: NOIR, survol: NOIR, focus: NOIR })], { poids: 1, min: "260px" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#2f3300", liens: NOIR })(k, env);
     const bas = G.bande(k, [adresse, G.colonne(k, [mentions], { poids: 2, min: "300px", soi: "flex-end" })], { fond: ACID, gap: "24px 40px", aligne: "flex-end", padV: ["0px", "0px", "0px"], padB: ["36px", "32px", "28px"], padH: ["48px", "32px", "20px"], nom: "Adresse" });
-    return [G.racine(k, [tete, milieu, bas])];
+    return [G.racine(k, [tete, titre377, milieu, bas])];
   },
 }, FAM);
 
@@ -222,7 +224,7 @@ const annales = modeleV2({
   tags: ["école doctorale", "nom monumental", "violet", "lilas", "peu de liens", "grand vide", "angles droits"],
   identity: violet,
   racine: racineDe(VIOL2),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 20, "#f4effe", { fontWeight: "400", fontFamily: S.head, letterSpacing: "0.04em" });
@@ -232,13 +234,14 @@ const annales = modeleV2({
       return a;
     };
     const liens = k.col([l("Thèses", "/blog"), l("Soutenances", "/faq"), l("Contact", "/contact")], { gap: "6px", alignItems: "flex-start" });
-    const haut = G.bande(k, [G.colonne(k, [nom, phrase], { poids: 2, min: "280px", gap: "24px" }), G.colonne(k, [liens], { poids: 1, min: "200px" })], { fond: VIOL, gap: "40px 48px", aligne: "flex-start", padV: ["88px", "72px", "48px"], padB: ["120px", "96px", "56px"], padH: ["48px", "32px", "20px"], nom: "Liens" });
+    const haut = G.bande(k, [G.colonne(k, [nom, phrase], { poids: 2, min: "280px", gap: "24px" }), G.colonne(k, [liens], { poids: 1, min: "200px" })], { fond: VIOL, gap: "40px 48px", aligne: "flex-start", padV: ["88px", "72px", "48px"], padB: ["56px", "48px", "32px"], padH: ["48px", "32px", "20px"], nom: "Liens" });
     const mot = G.nomRogne("ANNALES", { taille: [64, 200], visible: 0.7, poids: "400", suivi: "0em", couleur: LILAS, police: S.head })(k);
-    const grand = G.bande(k, [mot], { fond: VIOL, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["48px", "32px", "20px"], max: "1920px", nom: "Mot géant" });
+    const orbe = G.bande(k, [I.W(k, I.orbe378())], { fond: VIOL, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Orbe" });
+    const grand = G.bande(k, [mot], { fond: "#3b1d7a", colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["48px", "32px", "20px"], max: "1920px", nom: "Mot géant" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#cbbcf0", liens: "#f4effe" })(k, env);
     const bas = G.bande(k, [mentions], { fond: VIOL2, colonne: true, padV: ["28px", "48px", "44px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
     bas.styles.desktop.color = "#f4effe";
-    return [G.racine(k, [haut, grand, bas])];
+    return [G.racine(k, [haut, orbe, grand, bas])];
   },
 }, FAM);
 
@@ -261,7 +264,7 @@ const gradinsSavoir = modeleV2({
   tags: ["bibliothèque", "université", "étagé", "gradins", "turquoise", "condensé", "angles droits"],
   identity: gradins,
   racine: racineDe(FOND4),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const etage = (largeur, fond, enfants, extra = {}) => k.col(enfants, { width: largeur, maxWidth: "100%", backgroundColor: fond, boxSizing: "border-box", gap: "20px", paddingLeft: "48px", paddingRight: "48px", borderRadius: "0px", transitionDuration: DOUX, ...extra }, { paddingLeft: "32px", paddingRight: "32px" }, { width: "100%", paddingLeft: "20px", paddingRight: "20px" });
@@ -279,7 +282,8 @@ const gradinsSavoir = modeleV2({
     const fin = G.bande(k, [mentions], { fond: FOND4, colonne: true, padV: ["24px", "20px", "20px"], padB: ["24px", "20px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
     fin.styles.desktop.color = "#06302d";
     const gradinsBande = G.bande(k, [pile], { fond: FOND4, colonne: true, aligne: "stretch", max: "1920px", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Gradins" });
-    return [G.racine(k, [gradinsBande, fin])];
+    const hero = G.bande(k, [I.W(k, I.escalier379(), { maxWidth: "780px", marginLeft: "auto", marginRight: "auto" })], { fond: "#073a36", colonne: true, padV: ["24px", "16px", "8px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Escalier" });
+    return [G.racine(k, [hero, gradinsBande, fin])];
   },
 }, FAM);
 

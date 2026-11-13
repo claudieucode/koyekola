@@ -1,0 +1,141 @@
+// Famille v2 « Aéronautique et spatial » — 6 modèles (ft2-422 à ft2-427), lot « inspiré de captures », REFAIT avec de vraies illustrations vectorielles : ANGLES DROITS partout.
+// Capture 40 (FoodFiesta, fond sombre) : marque monumentale à deux tons + lettre à gauche, trois colonnes à droite, filet, copyright en italique et icônes de réseaux → ft2-422, 423, 424.
+// Capture 41 (CodingLab, bleu nuit) : barre marque dessinée + pastilles de réseaux colorées, filet, colonnes à petit soulignement + abonnement, bande sombre de mentions → ft2-425, 426, 427.
+// Marques fictives ; AUCUNE coordonnée, chiffre ni certification inventés (adresse, téléphone, horaires = Données de l'entreprise). Dessins : aides-illus-a13.js (SVG inline, aria-hidden).
+// MOUVEMENT : transitions 360 ms ; UNE animation douce par modèle (carré qui respire / bouton qui se soulève) ; tout est immobile sous « prefers-reduced-motion ». Ni animation d'entrée ni défilement.
+const FAM = "aeronautique-spatial";
+const { modeleV2, identifiantV2, identite } = require("../kit-v2");
+const { lien, caps, souffle, carre, horaires, coordonnees, lettre, para, bouton, filetC, pied40, pied41, art, dessin, duo, glyphe } = require("../aides-illus-a13");
+
+// ═══ ft2-422 « Tour de contrôle » — aéronautique  [archétype A : colonne latérale pleine hauteur]
+// Idée : une colonne AMBRE pleine hauteur à gauche (nom en Exo 2, signal qui « respire », lettre technique) et, à droite sur marine profond, quatre colonnes de liens à petit filet d'accent puis réseaux et mentions.
+// Marine, ambre, blanc glacé. Polices : Exo 2 (titres) et IBM Plex Sans (texte). Mobile : la colonne passe au-dessus.
+const NAV = "#0e1a3d", AMB = "#f5b301", GLACE = "#eef2fb", NAV2 = "#14224d";
+const tourId = identite({ key: "c422", label: "Marine profond et ambre", humeur: "dark", fond: NAV, texte: GLACE, discret: "#b5c0dd", accent: AMB, surface: NAV2, encre: NAV, surEncre: GLACE, police: "font.ibm-plex-sans", titres: "font.exo-2", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#eef2fb4d" });
+const tour = modeleV2({
+  id: identifiantV2(422, "tour-de-controle"), concept: "c-422-tour-de-controle", name: "Tour de contrôle", family: FAM,
+  description: "Pour un constructeur ou un bureau d'études aéronautique : grande colonne ambre pleine hauteur avec nom et lettre technique, quatre colonnes de liens à petit filet sur marine profond, réseaux et mentions.",
+  tags: ["aéronautique", "bureau d'études", "colonne latérale", "lettre", "marine", "ambre", "ingénierie"],
+  identity: tourId, racine: racineDe(NAV),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p>AÉRO<span style="color:${AMB}">DYNE</span></p>`, { taille: [52, 124], tablette: { taille: [60, 96] }, mobile: { taille: [48, 64] }, lh: 0.95, suivi: "0.01em", poids: "800", police: S.head, couleur: GLACE })(k, env);
+    const sig = k.row([souffle(carre(k, AMB, "12px"), 3200), caps(k, "Bureau d'études aéronautique", { couleur: AMB, suivi: "0.2em", poids: "800" })], { gap: "10px", alignItems: "center", flexWrap: "nowrap" });
+    const cols = [["Programmes", [["Aéronefs", "/catalogue"], ["Systèmes embarqués", "/catalogue"], ["Maintenance", "/faq"], ["Essais en vol", "/blog"]]], ["Entreprise", [["Qui nous sommes", "/"], ["Engagements", "/faq"], ["Presse", "/blog"], ["Contact", "/contact"]]], ["Carrières", [["Métiers", "/blog"], ["Stages", "/faq"], ["Candidature", "/contact"]]]];
+    return pied40(k, env, G, { fond: NAV, fg: GLACE, mute: "#b5c0dd", accent: AMB, avant: [sig], nom: [nom], lettre: { titre: "", intro: "Abonnez-vous à la lettre technique.", largeur: "360px", accent: AMB, texte: GLACE, couleurIntro: GLACE, surBouton: NAV, survolBouton: GLACE, surSurvol: NAV }, colonnes: cols,
+      artMilieu: duo(k, art.horizonRadar, [1200, 210], [480, 190]), fondArtMilieu: "#0b1430", artPlein: true, fondBas: "#0b1430", ligne: "#f5b30166", reseaux: { fond: AMB, couleur: NAV, survolFond: GLACE, survolCouleur: NAV } });
+  },
+}, FAM);
+
+// ═══ ft2-423 « Orbite silencieuse » — spatial  [archétype B : nom monumental seul au centre]
+// Idée : presque rien. Un nom géant en deux tons (capture 40) centré sur noir profond, un carré orange qui « respire » au-dessus, trois liens, une ligne de mentions. Grand vide.
+// Noir, ivoire, orange fusée. Polices : Syncopate (nom) et Space Grotesk (texte). Mobile : le nom rétrécit, les liens s'empilent.
+const NOIR = "#07070a", IVOIRE = "#f1efe8", FUSEE = "#ff5a1f";
+const orbiteId = identite({ key: "c423", label: "Noir profond, ivoire et orange fusée", humeur: "dark", fond: NOIR, texte: IVOIRE, discret: "#b9b7ae", accent: FUSEE, surface: "#101015", encre: NOIR, surEncre: IVOIRE, police: "font.space-grotesk", titres: "font.syncopate", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f1efe84d" });
+const orbite = modeleV2({
+  id: identifiantV2(423, "orbite-silencieuse"), concept: "c-423-orbite-silencieuse", name: "Orbite silencieuse", family: FAM,
+  description: "Pour une entreprise spatiale ou un lanceur : un nom monumental en deux tons au centre d'un grand vide noir, un carré orange qui respire, trois liens et une ligne de mentions. Noir, ivoire, orange fusée.",
+  tags: ["spatial", "lanceur", "nom monumental", "minimal", "noir", "orange", "centré"],
+  identity: orbiteId, racine: racineDe(NOIR),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p style="text-align:left">ORBI<span style="color:${FUSEE}">TE</span></p>`, { taille: [64, 150], tablette: { taille: [70, 110] }, mobile: { taille: [44, 60] }, lh: 1, suivi: "0.02em", poids: "700", police: S.head, couleur: IVOIRE })(k, env);
+    const liensCol = k.row(["Lanceurs", "Missions", "Contact"].map((t, i) => lien(k, t, ["/catalogue", "/blog", "/contact"][i], { taille: 15, poids: "600", casse: "uppercase", suivi: "0.2em", couleur: IVOIRE, padH: "0px", survol: { color: FUSEE, transform: { x: 4 } }, focus: FUSEE })), { rowGap: "0px", columnGap: "28px" });
+    const planete = { ...dessin(k, 480, 440, art.planete(480, 440), { maxWidth: "480px", marginLeft: "auto" }) };
+    return pied40(k, env, G, { fond: NOIR, fg: IVOIRE, mute: "#b9b7ae", accent: FUSEE, avant: [caps(k, "Accès à l'espace, sans bruit", { couleur: "#b9b7ae", suivi: "0.3em" })], nom: [nom, liensCol], lettre: { titre: "", intro: "La lettre des missions.", largeur: "340px", accent: FUSEE, texte: IVOIRE, couleurIntro: IVOIRE, surBouton: NOIR, survolBouton: IVOIRE, surSurvol: NOIR },
+      baseG: "50%", baseD: "40%", colonnes: [], extraDroite: [souffle(carre(k, FUSEE, "14px"), 3600), planete], reseaux: { contour: "#f1efe8", couleur: IVOIRE, survolFond: FUSEE, survolCouleur: NOIR }, padV: ["96px", "64px", "40px"] });
+  },
+}, FAM);
+
+// ═══ ft2-424 « Tableau des départs » — aviation commerciale  [archétype C : damier de huit cases]
+// Idée : un tableau d'affichage de gare aérienne : titre en capitales condensées puis huit cases égales à angles droits séparées par un joint noir ; quatre cases-liens colorées (acier, blanc, rouge, acier foncé)
+// qui se soulèvent, et quatre cases d'information (adresse, horaires, lettre, mentions). Papier, acier, rouge signal. Polices : Barlow Condensed (titres) et Barlow (texte). Mobile : une case par ligne.
+const PAP = "#eef1f4", ACIER = "#1d3b5c", ROUGE = "#c8321c", ENCRE = "#0f1722";
+const departsId = identite({ key: "c424", label: "Papier, acier et rouge signal", humeur: "light", fond: PAP, texte: ENCRE, discret: "#3f4a58", accent: ROUGE, surface: "#ffffff", encre: ENCRE, surEncre: PAP, police: "font.barlow", titres: "font.barlow-condensed", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#0f17224d" });
+const departs = modeleV2({
+  id: identifiantV2(424, "tableau-des-departs"), concept: "c-424-tableau-des-departs", name: "Tableau des départs", family: FAM,
+  description: "Pour une compagnie ou un aéroport : damier de huit cases carrées (flotte, maintenance, formation, carrières, adresse, horaires, lettre, mentions) comme un tableau d'affichage. Papier, acier, rouge signal.",
+  tags: ["aviation", "compagnie aérienne", "aéroport", "damier", "cases", "acier", "rouge"],
+  identity: departsId, racine: racineDe(PAP),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p>DÉPARTS<span style="color:${ROUGE}">.</span></p>`, { taille: [60, 150], tablette: { taille: [64, 110] }, mobile: { taille: [48, 64] }, lh: 0.95, suivi: "0.01em", poids: "800", police: S.head, couleur: ACIER, extra: { textTransform: "uppercase" } })(k, env);
+    const hor = k.col([caps(k, "Horaires", { couleur: "#a52713", poids: "800", suivi: "0.16em", taille: "13px" }), horaires(k, { couleur: ENCRE, taille: 15 })], { flexGrow: 1, flexBasis: "160px", minWidth: "140px", gap: "10px" });
+    const cols = [["Compagnie", [["Flotte", "/catalogue"], ["Maintenance", "/faq"], ["Formation", "/blog"]]], ["Services", [["Carrières", "/contact"], ["Presse", "/blog"], ["Aide", "/faq"]]]];
+    return pied40(k, env, G, { fond: PAP, fg: ENCRE, mute: "#3f4a58", accent: ROUGE, colO: { titre: "#a52713", survol: ROUGE }, nom: [nom, coordonnees(k, { couleur: ENCRE, lien: ENCRE, survol: ROUGE, focus: ROUGE, taille: 15 })], lettre: { titre: "", intro: "La lettre des départs.", largeur: "360px", accent: ACIER, texte: ENCRE, couleurIntro: "#3f4a58", surBouton: "#ffffff", survolBouton: ROUGE, surSurvol: "#ffffff" },
+      colonnes: cols, extraDroite: [hor], artMilieu: duo(k, art.pisteAvion, [1200, 130], [480, 120]), artPlein: true, fondArtMilieu: ACIER, ligne: "#0f172266", reseaux: { fond: ACIER, couleur: "#ffffff", survolFond: ROUGE, survolCouleur: "#ffffff" } });
+  },
+}, FAM);
+
+// ═══ ft2-425 « Plan de vol compact » — compagnie  [archétype D : barre unique inversée]
+// Idée : tout tient sur DEUX lignes de bleu cobalt : la ligne de cap (carré jaune qui respire, nom, cinq liens, réseaux) et la ligne de service (adresse en ligne et mentions). Aucune colonne, aucune lettre.
+// Cobalt, jaune, blanc. Polices : Space Grotesk (titres et texte) et IBM Plex Mono (petites mentions). Mobile : nom, liens en colonne, réseaux, mentions.
+const COB = "#1b3fd8", COB2 = "#1432ad", JAUNE = "#ffe14d";
+const planId = identite({ key: "c425", label: "Cobalt, jaune et blanc", humeur: "dark", fond: COB, texte: "#ffffff", discret: "#dbe2ff", accent: JAUNE, surface: COB2, encre: COB, surEncre: "#ffffff", police: "font.ibm-plex-mono", titres: "font.space-grotesk", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#ffffff66" });
+const plan = modeleV2({
+  id: identifiantV2(425, "plan-de-vol-compact"), concept: "c-425-plan-de-vol-compact", name: "Plan de vol compact", family: FAM,
+  description: "Pour un aéroclub ou une compagnie régionale : pied sur deux lignes seulement, nom, cinq liens et réseaux sur la ligne de cap, adresse et mentions sur la ligne de service. Cobalt, jaune, blanc.",
+  tags: ["aéroclub", "compagnie régionale", "compact", "barre", "cobalt", "jaune", "une ligne"],
+  identity: planId, racine: racineDe(COB2),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [glyphe(k, "rose", JAUNE, "#ffffff", 46), lien(k, "AEROLINE", "/", { taille: 30, poids: "700", police: S.head, suivi: "0.04em", couleur: "#ffffff", survol: { color: JAUNE }, focus: JAUNE })];
+    const abo = k.col([caps(k, "Lettre de bord", { couleur: JAUNE, suivi: "0.16em", taille: "13px" }), filetC(k, JAUNE), lettre(k, env, { titre: "", intro: "Nouvelles des lignes.", largeur: "100%", accent: JAUNE, texte: "#ffffff", couleurIntro: "#dbe2ff", surBouton: COB, survolBouton: "#ffffff", surSurvol: COB })], { flexGrow: 1, flexBasis: "240px", minWidth: "220px", gap: "10px" });
+    return pied41(k, env, G, { fond: COB, fondBas: "#0b1f6b", fg: "#ffffff", mute: "#dbe2ff", titre: "#ffffff", accent: JAUNE, marque, reseaux: { fond: JAUNE, couleur: COB, survolFond: "#ffffff", survolCouleur: COB },
+      colonnes: [["Flotte", [["Appareils", "/catalogue"], ["Escales", "/faq"], ["Services", "/faq"]]], ["Passagers", [["Réserver", "/contact"], ["Bagages", "/faq"], ["Aide", "/faq"]]], ["Société", [["Carrières", "/blog"], ["Presse", "/blog"], ["Contact", "/contact"]]]], fin: [abo],
+      artBas: duo(k, art.nuagesRoute, [1200, 190], [480, 170]), artPlein: true, fondArt: "#0b1f6b" });
+  },
+}, FAM);
+
+// ═══ ft2-426 « Ciel et nuit » — constructeur  [archétype E : deux demi-pages bord à bord]
+// Idée : à gauche, la demi-page CIEL (bleu pâle) : grande phrase en Instrument Serif et coordonnées ; à droite, la demi-page NUIT (bleu-nuit) : cinq grandes lignes-liens à filet, lettre (capture 40) et réseaux.
+// Une fine bande nuit en bas porte les mentions. Ciel, nuit, vermillon. Polices : Instrument Serif (titres) et Hanken Grotesk (texte). Mobile : les deux moitiés s'empilent.
+const CIEL = "#dce8f2", NUIT = "#0a1128", VERM = "#ff6a3d", ENC2 = "#0a1128";
+const cielId = identite({ key: "c426", label: "Ciel pâle, nuit et vermillon", humeur: "dark", fond: NUIT, texte: "#eaf1fa", discret: "#b6c3d8", accent: VERM, surface: "#121c3d", encre: NUIT, surEncre: CIEL, police: "font.hanken-grotesk", titres: "font.instrument-serif", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#eaf1fa4d" });
+const cielNuit = modeleV2({
+  id: identifiantV2(426, "ciel-et-nuit"), concept: "c-426-ciel-et-nuit", name: "Ciel et nuit", family: FAM,
+  description: "Pour un constructeur aéronautique : deux demi-pages bord à bord, ciel pâle avec grande phrase et coordonnées, nuit avec cinq grandes lignes de liens, lettre et réseaux. Ciel, nuit, vermillon.",
+  tags: ["constructeur", "deux moitiés", "grande phrase", "lettre", "bleu nuit", "vermillon", "serif"],
+  identity: cielId, racine: racineDe(NUIT),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [glyphe(k, "croissant", "#eaf1fa", NUIT, 46), k.T(`<p>Ciel &amp; nuit</p>`, { fontSize: "34px", lineHeight: 1.1, fontFamily: S.head, color: "#eaf1fa" })];
+    const abo = k.col([caps(k, "Lettre du constructeur", { couleur: VERM, suivi: "0.16em", taille: "13px" }), filetC(k, VERM), lettre(k, env, { titre: "", intro: "Une nouvelle de temps en temps.", largeur: "100%", accent: VERM, texte: "#eaf1fa", couleurIntro: "#b6c3d8", surBouton: NUIT, survolBouton: "#eaf1fa", surSurvol: NUIT })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "10px" });
+    return pied41(k, env, G, { fond: NUIT, fondBas: "#060b1c", fg: "#eaf1fa", mute: "#b6c3d8", titre: VERM, accent: VERM, marque, reseaux: { liste: ["linkedin", "youtube", "instagram"], fond: "#eaf1fa", couleur: NUIT, survolFond: VERM, survolCouleur: NUIT },
+      artSous: duo(k, art.crete, [1200, 220], [480, 200]), artPlein: true, fondArt: NUIT,
+      colonnes: [["Appareils", [["Gamme", "/catalogue"], ["Services", "/faq"], ["Recherche", "/blog"]]], ["Maison", [["Histoire", "/"], ["Carrières", "/blog"], ["Presse", "/blog"]]], ["Contact", [["Nous écrire", "/contact"], ["Assistance", "/faq"]]]], fin: [abo] });
+  },
+}, FAM);
+
+// ═══ ft2-427 « Compte à rebours » — lancement  [archétype F : bandeau d'appel XXL + colonne étroite à droite]
+// Idée : un bandeau d'appel GÉANT violet (« Décollons ensemble. » en Big Shoulders, jusqu'à 170 px, bouton lime qui respire), puis dessous une bande plus sombre : à gauche l'adresse et les horaires,
+// à droite UNE colonne étroite de liens à flèche, bordée d'une barre lime. Pas de lettre. Violet, lime, lavande. Polices : Big Shoulders (titres) et DM Sans (texte). Mobile : bandeau, coordonnées, liens.
+const VIO = "#2a1166", VIO2 = "#1d0b4a", LIME = "#c8ff3d", LAV = "#f3eeff";
+const rebourId = identite({ key: "c427", label: "Violet, lime et lavande", humeur: "dark", fond: VIO, texte: LAV, discret: "#d3c7f5", accent: LIME, surface: VIO2, encre: VIO, surEncre: LAV, police: "font.dm-sans", titres: "font.big-shoulders", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f3eeff4d" });
+const rebours = modeleV2({
+  id: identifiantV2(427, "compte-a-rebours"), concept: "c-427-compte-a-rebours", name: "Compte à rebours", family: FAM,
+  description: "Pour une start-up spatiale ou un service de lancement : bandeau d'appel géant avec bouton lime, puis bande sombre avec adresse, horaires et une colonne étroite de liens à flèche. Violet, lime, lavande.",
+  tags: ["lancement", "start-up spatiale", "appel à l'action", "bandeau géant", "violet", "lime", "colonne étroite"],
+  identity: rebourId, racine: racineDe(VIO2),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [glyphe(k, "fusee", LIME, LAV, 46), k.T(`<p>ASTRÉA</p>`, { fontSize: "36px", fontWeight: "800", lineHeight: 1, letterSpacing: "0.04em", fontFamily: S.head, color: LAV })];
+    const rocket = k.col([dessin(k, 360, 400, art.fusee(360, 400), { width: "100%", maxWidth: "320px" })], { flexGrow: 0, flexBasis: "300px", minWidth: "220px" });
+    const b = souffle(bouton(k, "Parler à l'équipe", "/contact", { texte: VIO2, fond: LIME, survol: { backgroundColor: LAV, borderColor: LAV, color: VIO2, transform: { y: -4 } }, focus: LAV, taille: 17 }), 3800);
+    const cta = k.col([caps(k, "Lancements", { couleur: LIME, suivi: "0.16em", taille: "13px" }), filetC(k, LIME), para(k, "Étude de mission, intégration et campagne de lancement.", { taille: 16, couleur: "#d3c7f5" }), b, coordonnees(k, { couleur: LAV, lien: LAV, survol: LIME, focus: LIME, taille: 15 })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "14px" });
+    return pied41(k, env, G, { fond: VIO, fondBas: VIO2, fg: LAV, mute: "#d3c7f5", titre: LIME, accent: LIME, marque, reseaux: { fond: LIME, couleur: VIO2, survolFond: LAV, survolCouleur: VIO2 }, artCol: [rocket],
+      colonnes: [["Lanceurs", [["Gamme", "/catalogue"], ["Charges utiles", "/catalogue"], ["Sites de tir", "/faq"]]], ["Société", [["Actualités", "/blog"], ["Carrières", "/blog"], ["Contact", "/contact"]]]], fin: [cta], padV: ["40px", "32px", "28px"] });
+  },
+}, FAM);
+
+module.exports = {
+  key: FAM, label: "Aéronautique et spatial", target: 6, built: true,
+  description: "Pieds inspirés de captures, angles droits, animations fluides : bureau d'études aéronautique, lanceur, compagnie, constructeur, start-up spatiale.",
+  models: [tour, orbite, departs, plan, cielNuit, rebours],
+};

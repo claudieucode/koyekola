@@ -1,290 +1,151 @@
-// Famille v2 « Fintech et paiement » — 6 modèles (ft2-272 à ft2-277), pieds « inspirés de captures » : ANGLES DROITS partout, standard et très professionnels, marques fictives, aucun chiffre, tarif ni coordonnée inventés.
-// Libellés de produits = EXEMPLES modifiables dans l'éditeur. MOUVEMENT (coupé sous « prefers-reduced-motion: reduce ») : transitions de 360 ms, un carré qui respire ou une case qui se soulève par modèle. Pas d'animation d'entrée, pas de défilement continu.
-const { modeleV2, identifiantV2, identite, G: GK, Moteur } = require("../kit-v2");
-const { sty, compact } = require("../../../kit");
-
-const DOUX = 360; // ms : transitions de survol / focus
-
-// ── Aides LOCALES (toutes à angles droits) ───────────────────────────────────────────────────────────────────────────────────────────────────────
-const racineDe = (fond) => ({ desktop: { backgroundColor: fond, gap: "0px" } });
-function lien(k, label, url, o = {}) {
-  const S = k.S, n = k.LINK(label, url, compact({ fontSize: `${o.taille || 15}px`, fontWeight: o.poids || "500", fontFamily: o.police || S.font, color: o.couleur || S.fg, textDecoration: o.soulign ? "underline" : "none", display: o.bloc ? "flex" : "inline-flex", alignItems: "center", minHeight: o.h || "44px", paddingLeft: o.padH, paddingRight: o.padH, lineHeight: o.lh, letterSpacing: o.suivi, textTransform: o.casse, borderRadius: "0px", transitionDuration: DOUX, ...(o.extra || {}) }));
-  return GK.fini(k, n, { hover: o.survol || { color: S.accent, transform: { x: 4 } }, focus: GK.focus(o.focus || S.accent) });
-}
-const caps = (k, texte, o = {}) => k.T(`<p>${texte}</p>`, compact({ fontSize: o.taille || "12px", lineHeight: 1.4, fontWeight: o.poids || "700", textTransform: "uppercase", letterSpacing: o.suivi || "0.14em", color: o.couleur || k.S.mute, fontFamily: o.police || k.S.font, ...(o.extra || {}) }));
-const trait = (k, couleur, epaisseur = "1px") => k.divider({ width: "100%", borderColor: couleur, borderTopWidth: epaisseur, marginTop: "0px", marginBottom: "0px" });
-const souffle = (n, ms = 3200) => { n.motion = { entrance: "pulse", trigger: "load", duration: ms, iterations: "infinite", easing: "ease-in-out" }; return n; };
-// petit carré plein (statut, repère) : jamais rond
-const carre = (k, couleur, t = "12px") => k.col([], { width: t, height: t, backgroundColor: couleur, borderRadius: "0px", flexShrink: 0 });
-function partie(n, nom, styles, etats) {
-  const p = (n.parts || {})[nom] || {};
-  n.parts = { ...(n.parts || {}), [nom]: { ...p, styles: { ...(p.styles || {}), desktop: { ...((p.styles || {}).desktop || {}), ...styles } }, states: { ...(p.states || {}), ...(etats || {}) } } };
-  return n;
-}
-const horaires = (k, o = {}) => Moteur.finishNode(k.S, k.W("bizhours", { title: "", showOpenNow: false, groupDays: true, showExceptions: true, showNote: true, closedLabel: "Fermé" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: o.police || k.S.font, lineHeight: 1.55, width: "100%" }));
-const coordonnees = (k, o = {}) => {
-  const n = Moteur.finishNode(k.S, k.W("bizcontact", { title: "", showName: false, showAddress: true, showPhone: true, showEmail: true, showIcons: o.icones === true, layout: "stack" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: o.police || k.S.font, lineHeight: 1.55, width: "100%" }));
-  return partie(n, "link", { color: o.lien || o.couleur || k.S.fg, textDecoration: "underline", transitionDuration: DOUX }, { hover: { color: o.survol || k.S.accent }, focus: GK.focus(o.focus || k.S.accent) });
-};
-const bloc = (k, titre, enfants, o = {}) => GK.colonne(k, [caps(k, titre, { couleur: o.couleurTitre, police: o.police, taille: o.tailleTitre, suivi: o.suiviTitre }), ...enfants], { poids: o.poids ?? 1, min: o.min || "220px", gap: o.gap || "12px", extra: o.extra, mobile: o.mobile });
-// Lettre d'information : habille toutes les parties du widget pour un fond précis (angles droits)
-function lettre(k, env, G, o) {
-  const abo = G.abonnement({ titre: o.titre, intro: o.intro, bouton: o.bouton || "S'abonner", largeur: o.largeur || "380px", accent: o.accent, texte: o.texte, rayonBouton: "0px", rayonChamp: "0px", soulignement: o.soulignement || "2px", survolBouton: o.survolBouton, survolTexte: o.survolTexte, fondChamp: o.fondChamp, rembChamp: o.rembChamp })(k, env);
-  const P = abo.parts;
-  P.title.styles.desktop = { ...P.title.styles.desktop, color: o.couleurTitre || o.texte, lineHeight: 1.4 };
-  P.intro.styles.desktop = { ...P.intro.styles.desktop, color: o.texte };
-  P.consent.styles.desktop = { ...P.consent.styles.desktop, color: o.texte };
-  P.missing.styles.desktop = { ...P.missing.styles.desktop, color: o.texte };
-  P.button.styles.desktop = { ...P.button.styles.desktop, color: o.surBouton, backgroundColor: o.accent, borderRadius: "0px", transitionDuration: DOUX };
-  P.button.states = { hover: { backgroundColor: o.survolBouton || o.texte, color: o.survolTexte || o.fond, transform: { y: -2 } }, focus: GK.focus(o.focus || o.texte) };
-  return abo;
-}
-const nomDuSite = (k, env, taille, couleur, extra = {}) => {
-  const S = k.S, nom = Moteur.item(k, `title:${taille}`, env);
-  nom.styles.desktop = { ...nom.styles.desktop, color: couleur, fontFamily: S.head, fontWeight: "700", letterSpacing: "-0.01em", lineHeight: 1.1, ...extra };
-  nom.parts = { ...(nom.parts || {}), link: { ...((nom.parts || {}).link || {}), styles: { desktop: { color: couleur, textDecoration: "none" }, mobile: { display: "inline-block", minHeight: "44px", paddingTop: "10px", paddingBottom: "10px" } } } };
-  return nom;
-};
-// Rangée de lien pleine largeur (filet bas, fond qui change et glisse au survol) — angles droits
-const rangee = (k, label, url, o) => lien(k, label, url, { taille: o.taille || 16, poids: o.poids || "600", couleur: o.couleur, police: o.police, bloc: true, h: o.h || "48px", padH: o.padH || "12px", survol: { backgroundColor: o.fondSurvol, color: o.couleurSurvol, transform: { x: 6 } }, focus: o.focus, extra: { width: "100%", justifyContent: "space-between", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: o.ligne } });
-// Panneau / case à angles droits, qui passe à la ligne et se redimensionne tout seul
-const panneau = (k, enfants, o = {}) => k.col(enfants, { flexGrow: o.poids ?? 1, flexBasis: o.base || "0px", minWidth: o.min || "320px", gap: o.gap || "16px", justifyContent: o.justifie, alignItems: o.aligne || "flex-start", paddingTop: o.padV?.[0] || "56px", paddingBottom: o.padV?.[0] || "56px", paddingLeft: o.padH?.[0] || "56px", paddingRight: o.padH?.[0] || "56px", backgroundColor: o.fond, minHeight: o.hauteur, borderRadius: "0px", borderStyle: "solid", borderWidth: "0px", ...(o.extra || {}) },
-  { paddingTop: o.padV?.[1] || "44px", paddingBottom: o.padV?.[1] || "44px", paddingLeft: o.padH?.[1] || "32px", paddingRight: o.padH?.[1] || "32px" },
-  { paddingTop: o.padV?.[2] || "36px", paddingBottom: o.padV?.[2] || "36px", paddingLeft: o.padH?.[2] || "20px", paddingRight: o.padH?.[2] || "20px", minWidth: "0px", flexBasis: "100%" });
-const rangeeDe = (k, enfants, o = {}) => k.row(enfants, { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%", backgroundColor: o.fond, ...(o.extra || {}) });
+// Famille v2 « Fintech et paiement » — 6 modèles (ft2-272 à ft2-277), pieds « inspirés de captures », REFAITS avec de vraies illustrations SVG (aides-illus-engfin.js).
+// ANGLES DROITS partout, marques fictives, aucun chiffre, tarif ni coordonnée inventés ; libellés de produits = EXEMPLES. MOUVEMENT (coupé sous « prefers-reduced-motion: reduce ») : transitions de 360 ms, un carré qui respire par modèle.
+const A = require("../aides-illus-engfin");
+const { modeleV2, identifiantV2, identite, GK, racineDe, lien, caps, trait, souffle, carre, lettre, nomDuSite, rangee, panneau, rangeeDe, mentionsBande, pastilles, fantome, colLiens, svgDeux, coordonnees } = A;
 const FAM = "fintech-paiement";
-const PAGE_LARGEUR = { padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"] };
-const mentionsBande = (k, env, G, fond, couleur, liens, o = {}) => G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur, liens })(k, env)], { fond, colonne: true, padV: ["22px", "20px", "18px"], padB: ["22px", "20px", "18px"], padH: ["48px", "32px", "20px"], nom: "Mentions", ...o });
+const RES = ["linkedin", "youtube", "instagram", "facebook"];
+const bas = (k, env, G, fond, mute, liens, filet) => mentionsBande(k, env, G, fond, mute, liens, filet ? { filetHaut: { epaisseur: "1px", couleur: filet } } : {});
+const abo = (k, env, G, o) => lettre(k, env, G, { titre: "", intro: o.intro, bouton: o.bouton || "S'abonner", largeur: o.largeur || "100%", accent: o.accent, texte: o.texte, surBouton: o.surBouton, fond: o.fond, fondChamp: o.fondChamp, rembChamp: "10px", focus: o.focus || o.texte, survolBouton: o.survolBouton, survolTexte: o.survolTexte });
+const bouton = (k, t, o) => lien(k, t, "/contact", { taille: o.taille || 18, poids: "800", couleur: o.texte, h: "60px", padH: "32px", survol: { backgroundColor: o.survol, color: o.surSurvol, transform: { y: -3 } }, focus: o.focus || o.survol, extra: { backgroundColor: o.fond, borderStyle: "solid", borderWidth: "2px", borderColor: o.fond } });
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-272 « Appel à l'encaissement » — solution d'encaissement en ligne — archétype F : BANDEAU D'APPEL XXL en haut + liens en UNE colonne étroite à droite
-// Idée (capture : grande phrase et bouton avant les colonnes) : un bandeau violet électrique porte une phrase gigantesque et un bouton blanc ; dessous, sur lavande pâle, le nom, une phrase et les réseaux à gauche,
-// et UNE seule colonne étroite de huit liens à rangées à filet à droite. Un carré blanc respire dans le bandeau. Polices : Epilogue (phrase) et Instrument Sans. Mobile : la colonne passe sous le nom.
-const appelXxl = identite({
-  key: "c272", label: "Violet électrique et lavande pâle", humeur: "light",
-  fond: "#f3f0ff", texte: "#1a1233", discret: "#554a78", accent: "#4a1fe0", surface: "#ffffff", encre: "#1a1233",
-  police: "font.instrument-sans", titres: "font.epilogue",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#1a123333",
-});
+// ═════════ ft2-272 « Appel à l'encaissement » — capture 2 : héros en dégradé lumineux (phrase + bouton) et PILE DE CARTES dessinée dans un halo lilas ; puis nom, liens, pastilles ═════════
+const appelXxl = identite({ key: "c272", label: "Violet électrique et lavande pâle", humeur: "light", fond: "#f3f0ff", texte: "#1a1233", discret: "#554a78", accent: "#4a1fe0", surface: "#ffffff", encre: "#1a1233", police: "font.instrument-sans", titres: "font.epilogue", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#1a123333" });
 const VIOLET = "#4a1fe0", LAVANDE = "#f3f0ff", ENCRE_V = "#1a1233";
-
 const appelEncaissement = modeleV2({
-  id: identifiantV2(272, "appel-a-l-encaissement"), concept: "c-272-appel-a-l-encaissement",
-  name: "Appel à l'encaissement", family: FAM,
-  description: "Pour une solution d'encaissement : un bandeau violet électrique avec une phrase gigantesque et un bouton blanc, puis sur lavande le nom, une phrase et les réseaux à gauche et une seule colonne étroite de liens à rangées à filet à droite.",
-  tags: ["fintech", "encaissement", "bandeau XXL", "appel à l'action", "violet", "lavande", "angles droits", "colonne étroite"],
-  identity: appelXxl,
-  racine: racineDe(LAVANDE),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  id: identifiantV2(272, "appel-a-l-encaissement"), concept: "c-272-appel-a-l-encaissement", name: "Appel à l'encaissement", family: FAM,
+  description: "Pour une solution d'encaissement : un héros violet électrique en dégradé avec une phrase gigantesque, deux boutons et un éventail de cartes de paiement dessinées dans un halo lilas ; dessous, sur lavande, le nom, une colonne de liens et des pastilles de réseaux.",
+  tags: ["fintech", "encaissement", "cartes dessinées", "halo", "dégradé", "violet", "lavande", "angles droits"],
+  identity: appelXxl, racine: racineDe(LAVANDE),
+  widgets: ["html", "sitetitle", "text", "link", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = k.T("<p>Encaissez partout, sans friction.</p>", { fontSize: "fluid:44-124", lineHeight: 0.98, fontWeight: "800", fontFamily: S.head, color: "#ffffff", letterSpacing: "-0.03em", maxWidth: "980px", overflowWrap: "anywhere" });
-    const bouton = lien(k, "Ouvrir un compte", "/contact", { taille: 20, poids: "800", couleur: VIOLET, h: "68px", padH: "40px", survol: { backgroundColor: ENCRE_V, color: "#ffffff", transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: "#ffffff", borderStyle: "solid", borderWidth: "2px", borderColor: "#ffffff" } });
-    const parler = lien(k, "Parler à un conseiller", "/contact", { taille: 18, poids: "700", couleur: "#ffffff", h: "68px", padH: "8px", survol: { color: "#d9ceff", transform: { x: 6 } }, focus: "#ffffff", extra: { textDecoration: "underline", textDecorationThickness: "2px", textUnderlineOffset: "6px" } });
-    const repere = k.row([souffle(carre(k, "#ffffff", "12px"), 3000), caps(k, "Paiements en ligne et en boutique", { couleur: "#ffffff", suivi: "0.24em" })], { gap: "12px", alignItems: "center" });
-    const appel = G.bande(k, [repere, phrase, k.row([bouton, parler], { rowGap: "12px", columnGap: "32px", alignItems: "center", flexWrap: "wrap" })], { fond: VIOLET, colonne: true, gap: "36px", padV: ["104px", "72px", "52px"], padB: ["88px", "64px", "48px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Appel" });
-    const nom = nomDuSite(k, env, 36, ENCRE_V, { fontWeight: "800" });
-    const gauche = k.col([nom, k.T("<p>Des paiements clairs pour les commerçants, les associations et les équipes en ligne.</p>", { fontSize: "18px", lineHeight: 1.55, color: S.mute, fontFamily: S.font, maxWidth: "440px" }), G.reseauxTexte([["LinkedIn", "https://www.linkedin.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 15, poids: "700", couleur: ENCRE_V, survol: VIOLET, focus: VIOLET })(k, env)], { gap: "22px", flexGrow: 1, flexBasis: "0px", minWidth: "280px" });
-    const liens = ["Encaissement en ligne", "Terminaux en boutique", "Facturation", "Liens de paiement", "Documentation", "État du service", "Entreprise", "Contact"].map((t) => rangee(k, t, "/contact", { couleur: ENCRE_V, taille: 16, poids: "600", h: "48px", padH: "4px", fondSurvol: "#ffffff", couleurSurvol: VIOLET, focus: VIOLET, ligne: "#1a123344" }));
-    const etroite = k.col(liens, { gap: "0px", width: "280px", flexShrink: 0 }, undefined, { width: "100%" });
-    const corps = G.bande(k, [k.row([gauche, etroite], { rowGap: "40px", columnGap: "80px", alignItems: "flex-start", flexWrap: "wrap", width: "100%", justifyContent: "space-between" })], { fond: LAVANDE, colonne: true, padV: ["64px", "52px", "40px"], padB: ["56px", "44px", "36px"], padH: ["48px", "32px", "20px"], nom: "Liens" });
-    return [G.racine(k, [appel, corps, mentionsBande(k, env, G, LAVANDE, "#554a78", ENCRE_V, { filetHaut: { epaisseur: "1px", couleur: "#1a123333" } })])];
+    const phrase = k.T("<p>Encaissez partout, sans friction.</p>", { fontSize: "fluid:44-112", lineHeight: 0.98, fontWeight: "800", fontFamily: S.head, color: "#ffffff", letterSpacing: "-0.03em", maxWidth: "760px", overflowWrap: "anywhere" });
+    const parler = lien(k, "Parler à un conseiller", "/contact", { taille: 18, poids: "700", couleur: "#ffffff", h: "60px", padH: "8px", survol: { color: "#d9ceff", transform: { x: 6 } }, focus: "#ffffff", extra: { textDecoration: "underline", textDecorationThickness: "2px", textUnderlineOffset: "6px" } });
+    const texte = k.col([k.row([souffle(carre(k, "#ffffff", "12px"), 3000), caps(k, "Paiements en ligne et en boutique", { couleur: "#ffffff", suivi: "0.24em" })], { gap: "12px", alignItems: "center" }), phrase, k.row([bouton(k, "Ouvrir un compte", { texte: VIOLET, fond: "#ffffff", survol: ENCRE_V, surSurvol: "#ffffff" }), parler], { rowGap: "12px", columnGap: "28px", alignItems: "center", flexWrap: "wrap" })], { gap: "32px", flexGrow: 1.3, flexBasis: "0px", minWidth: "300px" });
+    const cartes = k.col(svgDeux(k, A.illCartes(), null, { maxWidth: "540px" }), { flexGrow: 1, flexBasis: "0px", minWidth: "260px", alignItems: "center" });
+    const heros = G.bande(k, [k.row([texte, cartes], { columnGap: "40px", rowGap: "24px", alignItems: "center", width: "100%", flexWrap: "wrap" })], { fond: VIOLET, degrade: { from: "#2a0f9a", to: "#6c3cf0", angle: 120, type: "linear" }, colonne: true, padV: ["88px", "64px", "44px"], padB: ["72px", "52px", "40px"], padH: ["48px", "32px", "20px"], nom: "Héros" });
+    const nom = nomDuSite(k, env, 40, ENCRE_V, { fontWeight: "800" });
+    const gauche = k.col([nom, k.T("<p>Des paiements clairs pour les commerçants, les associations et les équipes en ligne.</p>", { fontSize: "18px", lineHeight: 1.55, color: S.mute, fontFamily: S.font, maxWidth: "400px" }), pastilles(k, env, RES, { couleur: ENCRE_V, contour: "#1a123388", survolFond: VIOLET, survolCouleur: "#ffffff", focus: VIOLET })], { gap: "22px", flexGrow: 1, flexBasis: "0px", minWidth: "280px" });
+    const liens = ["Encaissement en ligne", "Terminaux en boutique", "Facturation", "Liens de paiement", "Documentation", "Entreprise", "Contact"].map((t) => rangee(k, t, "/contact", { couleur: ENCRE_V, taille: 16, poids: "600", h: "48px", padH: "4px", fondSurvol: "#ffffff", couleurSurvol: VIOLET, focus: VIOLET, ligne: "#1a123344" }));
+    const etroite = k.col(liens, { gap: "0px", width: "300px", flexShrink: 0 }, undefined, { width: "100%" });
+    const corps = G.bande(k, [k.row([gauche, etroite], { rowGap: "36px", columnGap: "80px", alignItems: "flex-start", flexWrap: "wrap", width: "100%", justifyContent: "space-between" })], { fond: LAVANDE, colonne: true, padV: ["56px", "44px", "36px"], padB: ["40px", "36px", "28px"], padH: ["48px", "32px", "20px"], nom: "Liens" });
+    return [G.racine(k, [heros, corps, bas(k, env, G, LAVANDE, "#554a78", ENCRE_V, "#1a123333")])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-273 « Barre de règlement » — néobanque pour indépendants — archétype D : LIGNE UNIQUE type « barre de navigation inversée », compacte
-// Idée : tout tient sur deux lignes sur un aplat vert citron : le nom, cinq liens en capitales mono, un bouton noir « Ouvrir un compte » et, dessous, les mentions. Chaque lien se remplit de noir au survol ;
-// un carré noir respire devant le nom. Pas de colonnes, pas de lettre. Police : Martian Mono. Mobile : la ligne passe à la ligne, chaque lien fait 44 px.
-const reglement = identite({
-  key: "c273", label: "Vert citron et noir", humeur: "light",
-  fond: "#d8ff3c", texte: "#0d0f08", discret: "#33380f", accent: "#0d0f08", surface: "#e7ff7a", encre: "#0d0f08",
-  police: "font.martian-mono", titres: "font.martian-mono",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#0d0f0855",
-});
+// ═════════ ft2-273 « Barre de règlement » — capture 2 inversée : TERMINAL DE PAIEMENT géant à gauche sur citron, message et liens en capitales mono à droite ═════════
+const reglement = identite({ key: "c273", label: "Vert citron et noir", humeur: "light", fond: "#d8ff3c", texte: "#0d0f08", discret: "#33380f", accent: "#0d0f08", surface: "#e7ff7a", encre: "#0d0f08", police: "font.martian-mono", titres: "font.martian-mono", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "1px", ligne: "#0d0f0855" });
 const CITRON = "#d8ff3c", NOIR_C = "#0d0f08";
-
 const barreDeReglement = modeleV2({
-  id: identifiantV2(273, "barre-de-reglement"), concept: "c-273-barre-de-reglement",
-  name: "Barre de règlement", family: FAM,
-  description: "Pour une néobanque d'indépendants : tout sur deux lignes, un aplat vert citron avec le nom, cinq liens en capitales mono qui se remplissent de noir au survol, un bouton noir et les mentions sous un filet noir épais. Compact, sans colonnes.",
-  tags: ["néobanque", "indépendants", "barre unique", "compact", "mono", "vert citron", "noir", "angles droits"],
-  identity: reglement,
-  racine: racineDe(CITRON),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  id: identifiantV2(273, "barre-de-reglement"), concept: "c-273-barre-de-reglement", name: "Barre de règlement", family: FAM,
+  description: "Pour une néobanque d'indépendants : sur vert citron, un grand terminal de paiement noir dessiné à gauche ; à droite, une phrase, un bouton noir, cinq liens en capitales mono qui se remplissent de noir au survol, le nom et des pastilles de réseaux.",
+  tags: ["néobanque", "indépendants", "terminal dessiné", "mono", "vert citron", "noir", "angles droits", "réseaux"],
+  identity: reglement, racine: racineDe(CITRON),
+  widgets: ["html", "sitetitle", "text", "link", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const nom = nomDuSite(k, env, 22, NOIR_C, { fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.02em" });
-    const marque = k.col([k.row([souffle(carre(k, NOIR_C, "14px"), 2800), caps(k, "Compte pro", { couleur: NOIR_C, suivi: "0.2em", taille: "11px" })], { gap: "10px", alignItems: "center" }), nom], { gap: "6px" });
-    const liens = ["Comptes", "Cartes", "Factures", "Tarifs", "Aide"].map((t) => lien(k, t, "/contact", { taille: 13, poids: "700", casse: "uppercase", suivi: "0.12em", couleur: NOIR_C, padH: "14px", survol: { backgroundColor: NOIR_C, color: CITRON, transform: { y: -2 } }, focus: NOIR_C }));
-    const ouvrir = lien(k, "Ouvrir un compte", "/contact", { taille: 13, poids: "800", casse: "uppercase", suivi: "0.1em", couleur: CITRON, h: "48px", padH: "22px", survol: { backgroundColor: "#ffffff", color: NOIR_C, transform: { y: -2 } }, focus: NOIR_C, extra: { backgroundColor: NOIR_C, borderStyle: "solid", borderWidth: "2px", borderColor: NOIR_C } });
-    const barre = G.ligne(k, [ouvrir, k.row(liens, { gap: "0px", flexWrap: "wrap", alignItems: "center", justifyContent: "center" }), marque], { justifie: "space-between", largeur: "100%", gap: "14px 28px" });
-    const corps = G.bande(k, [barre], { fond: CITRON, colonne: true, padV: ["30px", "26px", "22px"], padB: ["30px", "26px", "22px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "14px" }, nom: "Barre" });
-    const bas = G.bande(k, [G.ligneLegale({ taille: 12, sansCookies: true, couleur: "#33380f", liens: NOIR_C })(k, env)], { fond: CITRON, filetHaut: { epaisseur: "3px", couleur: NOIR_C }, colonne: true, padV: ["18px", "18px", "16px"], padB: ["18px", "18px", "16px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [corps, bas])];
+    const terminal = k.col(svgDeux(k, A.illTerminal(), null, { maxWidth: "420px" }), { flexGrow: 0.9, flexBasis: "0px", minWidth: "240px", alignItems: "center" });
+    const phrase = k.T("<p>Vos règlements, enfin au clair.</p>", { fontSize: "fluid:36-88", lineHeight: 1, fontWeight: "700", fontFamily: S.head, color: NOIR_C, maxWidth: "720px", overflowWrap: "anywhere" });
+    const liens = ["Comptes", "Cartes", "Virements", "Factures", "Aide"].map((t) => lien(k, t, "/contact", { taille: 15, poids: "700", casse: "uppercase", suivi: "0.08em", couleur: NOIR_C, padH: "12px", h: "48px", survol: { backgroundColor: NOIR_C, color: CITRON, transform: { y: -2 } }, focus: NOIR_C, extra: { borderStyle: "solid", borderWidth: "2px", borderColor: NOIR_C } }));
+    const nom = nomDuSite(k, env, 26, NOIR_C, { fontWeight: "700", textTransform: "uppercase" });
+    const droite = k.col([k.row([souffle(carre(k, NOIR_C, "12px"), 3000), caps(k, "Néobanque pour indépendants", { couleur: NOIR_C, suivi: "0.16em" })], { gap: "12px", alignItems: "center" }), phrase, bouton(k, "Ouvrir un compte", { texte: CITRON, fond: NOIR_C, survol: "#ffffff", surSurvol: NOIR_C, focus: NOIR_C }), k.row(liens, { columnGap: "12px", rowGap: "12px", flexWrap: "wrap" }), trait(k, NOIR_C, "3px"), k.row([nom, pastilles(k, env, RES, { couleur: NOIR_C, survolFond: NOIR_C, survolCouleur: CITRON, focus: NOIR_C })], { columnGap: "32px", rowGap: "16px", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", width: "100%" })], { gap: "28px", flexGrow: 1.4, flexBasis: "0px", minWidth: "300px" });
+    const corps = G.bande(k, [k.row([terminal, droite], { columnGap: "64px", rowGap: "32px", alignItems: "center", width: "100%", flexWrap: "wrap" })], { fond: CITRON, colonne: true, padV: ["72px", "56px", "36px"], padB: ["56px", "44px", "32px"], padH: ["48px", "32px", "20px"], nom: "Terminal" });
+    return [G.racine(k, [corps, bas(k, env, G, CITRON, "#33380f", NOIR_C, null)])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-274 « Deux rives » — plateforme de paiement pour associations — archétype E : DEUX DEMI-PAGES bord à bord (gauche = message, droite = actions)
-// Idée (capture : phrase en italique et bouton à gauche, colonnes et réseaux à droite) : à gauche un panneau vert sapin avec une grande phrase en serif italique, une ligne de texte et un bouton menthe ;
-// à droite un panneau menthe pâle avec cinq grandes rangées d'actions à filet et les réseaux en noms. Pas de lettre. Polices : IBM Plex Serif (phrase) et Golos Text. Mobile : le panneau sapin passe au-dessus.
-const rives = identite({
-  key: "c274", label: "Vert sapin et menthe pâle", humeur: "light",
-  fond: "#e4f6ec", texte: "#0a2a24", discret: "#3d5e55", accent: "#0f6b55", surface: "#ffffff", encre: "#0a2a24",
-  police: "font.golos-text", titres: "font.ibm-plex-serif",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#0a2a2433",
-});
+// ═════════ ft2-274 « Rives du paiement » — capture 3 : deux demi-pages (message / PAYSAGE de rives et fleuve), liens, et NOM GÉANT fantôme rogné en bas ═════════
+const rives = identite({ key: "c274", label: "Vert sapin et menthe pâle", humeur: "light", fond: "#e4f6ec", texte: "#0a2a24", discret: "#3d5e55", accent: "#0f6b55", surface: "#ffffff", encre: "#0a2a24", police: "font.golos-text", titres: "font.ibm-plex-serif", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#0a2a2433" });
 const SAPIN = "#0a2a24", MENTHE = "#e4f6ec", MENTHE_VIVE = "#7be3b5";
-
 const deuxRives = modeleV2({
-  id: identifiantV2(274, "deux-rives"), concept: "c-274-deux-rives",
-  name: "Rives du paiement", family: FAM,
-  description: "Pour une plateforme de paiement d'associations : deux demi-pages bord à bord, à gauche un panneau vert sapin avec une phrase en serif italique et un bouton menthe, à droite un panneau menthe pâle avec cinq grandes rangées d'actions à filet et les réseaux.",
-  tags: ["paiement", "associations", "deux panneaux", "serif italique", "sapin", "menthe", "angles droits", "réseaux"],
-  identity: rives,
-  racine: racineDe(MENTHE),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  id: identifiantV2(274, "deux-rives"), concept: "c-274-deux-rives", name: "Rives du paiement", family: FAM,
+  description: "Pour une plateforme de paiement d'associations : phrase italique sur sapin, paysage dessiné (deux rives, fleuve, pont, soleil en halo), liens et pastilles de réseaux, puis le nom du site géant, ton sur ton.",
+  tags: ["paiement", "associations", "paysage dessiné", "fleuve", "nom fantôme", "vert sapin", "menthe", "angles droits"],
+  identity: rives, racine: racineDe(MENTHE),
+  widgets: ["html", "sitetitle", "text", "link", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const nom = nomDuSite(k, env, 30, "#ffffff", { fontWeight: "600" });
-    const phrase = k.T("<p>Vos dons et vos cotisations, encaissés sans attendre.</p>", { fontSize: "fluid:36-72", lineHeight: 1.04, fontStyle: "italic", fontWeight: "500", fontFamily: S.head, color: "#ffffff", maxWidth: "640px", overflowWrap: "anywhere" });
-    const mot = k.T("<p>Un parcours simple pour ceux qui donnent, un suivi clair pour ceux qui gèrent.</p>", { fontSize: "18px", lineHeight: 1.55, color: "#cfe9de", fontFamily: S.font, maxWidth: "460px" });
-    const bouton = lien(k, "Collecter un paiement", "/contact", { taille: 18, poids: "700", couleur: SAPIN, h: "64px", padH: "32px", survol: { backgroundColor: "#ffffff", color: SAPIN, transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: MENTHE_VIVE, borderStyle: "solid", borderWidth: "2px", borderColor: MENTHE_VIVE } });
-    const gauche = panneau(k, [souffle(carre(k, MENTHE_VIVE, "12px"), 3200), nom, phrase, mot, bouton], { fond: SAPIN, gap: "24px", base: "0px", poids: 1.25, min: "340px", padV: ["96px", "56px", "44px"], padH: ["72px", "40px", "20px"] });
-    const actions = k.col(["Dons en ligne", "Cotisations", "Billetterie", "Reçus fiscaux", "Documentation"].map((x) => rangee(k, x, "/contact", { couleur: SAPIN, police: S.head, taille: 26, poids: "500", h: "62px", padH: "6px", fondSurvol: "#ffffff", couleurSurvol: "#0f6b55", focus: SAPIN, ligne: "#0a2a2455" })), { gap: "0px", width: "100%" });
-    const listes = k.col([caps(k, "Actions", { couleur: "#0f6b55", suivi: "0.22em" }), actions], { gap: "10px", width: "100%" });
-    const suivre = k.col([caps(k, "Nous suivre", { couleur: "#0f6b55", suivi: "0.22em" }), G.reseauxTexte([["LinkedIn", "https://www.linkedin.com/"], ["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 16, poids: "700", couleur: SAPIN, survol: "#0f6b55", focus: SAPIN })(k, env)], { gap: "10px" });
-    const droite = panneau(k, [listes, trait(k, "#0a2a2433"), suivre], { fond: MENTHE, gap: "32px", base: "0px", poids: 1, min: "340px", padV: ["96px", "56px", "44px"], padH: ["64px", "40px", "20px"], justifie: "center" });
-    return [G.racine(k, [G.bande(k, [rangeeDe(k, [gauche, droite])], { fond: MENTHE, colonne: true, max: "100%", ...PAGE_LARGEUR, aligne: "stretch", nom: "Pleine largeur" }), mentionsBande(k, env, G, MENTHE, "#3d5e55", SAPIN, { filetHaut: { epaisseur: "1px", couleur: "#0a2a2433" } })])];
+    const phrase = k.T("<p><em>Chaque don arrive de l'autre côté.</em></p>", { fontSize: "fluid:36-76", lineHeight: 1.06, fontWeight: "400", fontFamily: S.head, color: "#ffffff", maxWidth: "620px", overflowWrap: "anywhere" });
+    const gauche = panneau(k, [souffle(carre(k, MENTHE_VIVE, "12px"), 3200), phrase, k.T("<p>Des encaissements simples et traçables pour les associations et leurs bénévoles.</p>", { fontSize: "18px", lineHeight: 1.55, color: "#cfe9dd", fontFamily: S.font, maxWidth: "460px" }), bouton(k, "Collecter un don  →", { texte: SAPIN, fond: MENTHE_VIVE, survol: "#ffffff", surSurvol: SAPIN })], { fond: SAPIN, gap: "28px", justifie: "center", base: "0px", poids: 1, min: "320px", padV: ["80px", "56px", "44px"], padH: ["64px", "40px", "20px"] });
+    const paysage = k.col(svgDeux(k, A.illRives()), { flexGrow: 1, flexBasis: "0px", minWidth: "320px", backgroundColor: "#0a2a24" });
+    const nom = nomDuSite(k, env, 30, SAPIN, { fontWeight: "600" });
+    const g2 = k.col([nom, k.T("<p>Paiements pour associations, clairs de bout en bout.</p>", { fontSize: "17px", lineHeight: 1.55, color: S.mute, fontFamily: S.font, maxWidth: "380px" })], { gap: "16px", flexGrow: 1.5, flexBasis: "0px", minWidth: "260px" });
+    const l1 = colLiens(k, "Accueil", ["Collectes", "Dons réguliers", "Aide", "Contact"], { couleurTitre: SAPIN, couleur: S.mute, taille: 17, survol: { color: "#0f6b55", transform: { x: 4 } }, focus: SAPIN, gap: "2px" });
+    const suivre = k.col([caps(k, "Suivez-nous", { couleur: SAPIN }), pastilles(k, env, RES, { couleur: SAPIN, contour: "#0a2a2488", survolFond: SAPIN, survolCouleur: MENTHE, focus: SAPIN })], { gap: "14px", flexGrow: 1, flexBasis: "0px", minWidth: "240px" });
+    const liens = G.bande(k, [k.row([g2, l1, suivre], { rowGap: "36px", columnGap: "48px", alignItems: "flex-start", flexWrap: "wrap", width: "100%" })], { fond: MENTHE, colonne: true, padV: ["56px", "44px", "36px"], padB: ["24px", "20px", "16px"], padH: ["48px", "32px", "20px"], nom: "Liens" });
+    const geant = k.col([fantome(k, env, { couleur: "#2f6f5b", fond: MENTHE, casse: "uppercase", poids: "600" })], { width: "100%", backgroundColor: MENTHE, paddingLeft: "24px", paddingRight: "24px" });
+    return [G.racine(k, [G.bande(k, [rangeeDe(k, [gauche, paysage])], { fond: SAPIN, colonne: true, max: "100%", ...A.PAGE_LARGEUR, aligne: "stretch", nom: "Pleine largeur" }), liens, geant, bas(k, env, G, MENTHE, "#3d5e55", SAPIN, "#0a2a2433")])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-275 « Mosaïque de comptes » — banque en ligne pour PME — archétype H : MOSAÏQUE ASYMÉTRIQUE (une grande case + trois petites)
-// Idée (capture : marque monumentale rognée) : une grande case bleu marine avec une phrase, un bouton et le nom monumental rogné en bas (ton sur ton) ; à droite, trois petites cases empilées, jaune (produits), blanche (ressources)
-// et corail (parler à l'équipe, coordonnées). Au survol, une case se soulève de 8 px. Polices : Unbounded (nom) et Lexend Deca. Mobile : les cases s'empilent.
-const mosaique = identite({
-  key: "c275", label: "Marine, jaune, blanc et corail", humeur: "dark",
-  fond: "#0b1f4b", texte: "#ffffff", discret: "#b9c7ec", accent: "#ffd84d", surface: "#12306e", encre: "#0b1f4b",
-  police: "font.lexend-deca", titres: "font.unbounded",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#ffffff33",
-});
-const MARINE = "#0b1f4b", JAUNE_M = "#ffd84d", CORAIL = "#ff6b57", INK_M = "#0b1f4b";
-
+// ═════════ ft2-275 « Mosaïque de comptes » — capture 3 : GRANDE CASE (phrase + nom fantôme) et colonne de deux cases (BLOCS ISOMÉTRIQUES dessinés / liens et pastilles) ═════════
+const mosaique = identite({ key: "c275", label: "Marine, jaune, blanc et corail", humeur: "dark", fond: "#0b1f4b", texte: "#ffffff", discret: "#b9c7ec", accent: "#ffd84d", surface: "#12306e", encre: "#0b1f4b", police: "font.lexend-deca", titres: "font.unbounded", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#ffffff33" });
+const MARINE = "#0b1f4b", JAUNE_M = "#ffd84d", CORAIL = "#ff6b57";
 const mosaiqueDeComptes = modeleV2({
-  id: identifiantV2(275, "mosaique-de-comptes"), concept: "c-275-mosaique-de-comptes",
-  name: "Mosaïque de comptes", family: FAM,
-  description: "Pour une banque en ligne de PME : une grande case marine avec phrase, bouton et nom monumental rogné ton sur ton, et trois petites cases à droite (jaune, blanche, corail) qui se soulèvent au survol.",
-  tags: ["banque en ligne", "PME", "mosaïque", "asymétrique", "marine", "jaune", "corail", "angles droits"],
-  identity: mosaique,
-  racine: racineDe(MARINE),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  id: identifiantV2(275, "mosaique-de-comptes"), concept: "c-275-mosaique-de-comptes", name: "Mosaïque de comptes", family: FAM,
+  description: "Pour une banque en ligne de PME : une grande case marine avec phrase, bouton jaune et le nom géant, à côté d'une colonne de deux cases, l'une avec des blocs isométriques dessinés dans un halo jaune, l'autre corail avec liens et pastilles de réseaux.",
+  tags: ["banque", "PME", "blocs isométriques", "mosaïque", "halo", "marine", "jaune", "corail", "angles droits"],
+  identity: mosaique, racine: racineDe(MARINE),
+  widgets: ["html", "sitetitle", "text", "link", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = k.T("<p>Le compte de l'entreprise, enfin lisible.</p>", { fontSize: "fluid:30-58", lineHeight: 1.08, fontWeight: "600", fontFamily: S.head, color: "#ffffff", maxWidth: "640px", overflowWrap: "anywhere" });
-    const bouton = lien(k, "Ouvrir un compte pro", "/contact", { taille: 18, poids: "700", couleur: INK_M, h: "60px", padH: "30px", survol: { backgroundColor: "#ffffff", color: INK_M, transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: JAUNE_M, borderStyle: "solid", borderWidth: "2px", borderColor: JAUNE_M } });
-    const fantome = k.T("<p>NORD</p>", { fontSize: "fluid:80-170", lineHeight: 0.8, fontWeight: "700", fontFamily: S.head, color: "#5b7fd6", letterSpacing: "-0.03em", marginBottom: "-28px" });
-    const rogne = { type: "container", hideOn: ["mobile"], children: [fantome], ...sty({ overflow: "hidden", width: "100%", display: "flex", flexDirection: "column", alignItems: "flex-start", marginTop: "auto" }) };
-    const nom = nomDuSite(k, env, 26, "#ffffff", { fontWeight: "600" });
-    const grande = k.col([k.row([souffle(carre(k, JAUNE_M, "12px"), 3000), nom], { gap: "12px", alignItems: "center" }), phrase, bouton, rogne], { flexGrow: 1.7, flexBasis: "0px", minWidth: "340px", minHeight: "560px", gap: "24px", paddingTop: "48px", paddingLeft: "48px", paddingRight: "48px", paddingBottom: "0px", backgroundColor: MARINE, borderRadius: "0px", justifyContent: "flex-start" }, { paddingLeft: "32px", paddingRight: "32px", paddingTop: "40px" }, { paddingLeft: "20px", paddingRight: "20px", paddingTop: "32px", minWidth: "0px", flexBasis: "100%", minHeight: "0px" });
-    const petite = (fond, enfants) => { const c = k.col(enfants, { flexGrow: 1, flexBasis: "0px", minHeight: "180px", gap: "10px", justifyContent: "space-between", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "28px", paddingRight: "28px", backgroundColor: fond, borderRadius: "0px", transitionDuration: DOUX }); c.states = { hover: { transform: { y: -8 } } }; return c; };
-    const lienPetit = (t, couleur, survol) => lien(k, t, "/contact", { taille: 18, poids: "700", couleur, bloc: true, h: "44px", survol: { color: survol || couleur, transform: { x: 6 } }, focus: couleur });
-    const cJaune = petite(JAUNE_M, [caps(k, "Produits", { couleur: INK_M }), k.col([lienPetit("Compte courant", INK_M), lienPetit("Cartes", INK_M), lienPetit("Factures", INK_M)], { gap: "0px" })]);
-    const cBlanche = petite("#ffffff", [caps(k, "Ressources", { couleur: "#0b3fb5" }), k.col([lienPetit("Guides", INK_M, "#0b3fb5"), lienPetit("Documentation", INK_M, "#0b3fb5"), lienPetit("État du service", INK_M, "#0b3fb5")], { gap: "0px" })]);
-    const cCorail = petite(CORAIL, [caps(k, "Parler à l'équipe", { couleur: INK_M }), coordonnees(k, { taille: 16, couleur: INK_M, lien: INK_M, survol: "#ffffff", focus: INK_M })]);
-    const droite = k.col([cJaune, cBlanche, cCorail], { flexGrow: 1, flexBasis: "0px", minWidth: "300px", gap: "0px", alignItems: "stretch" }, undefined, { minWidth: "0px", flexBasis: "100%" });
-    const mosaiqueRow = k.row([grande, droite], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    return [G.racine(k, [G.bande(k, [mosaiqueRow], { fond: MARINE, colonne: true, max: "100%", ...PAGE_LARGEUR, aligne: "stretch", nom: "Pleine largeur" }), mentionsBande(k, env, G, "#081739", "#b9c7ec", "#ffffff")])];
+    const phrase = k.T("<p>Vos comptes d'entreprise, d'un seul regard.</p>", { fontSize: "fluid:34-72", lineHeight: 1.04, fontWeight: "600", fontFamily: S.head, color: "#ffffff", maxWidth: "640px", overflowWrap: "anywhere" });
+    const grande = k.col([k.col([souffle(carre(k, JAUNE_M, "12px"), 3000), phrase, bouton(k, "Ouvrir un compte", { texte: MARINE, fond: JAUNE_M, survol: "#ffffff", surSurvol: MARINE })], { gap: "28px", paddingTop: "72px", paddingLeft: "56px", paddingRight: "40px", paddingBottom: "56px" }, { paddingTop: "48px", paddingLeft: "32px", paddingRight: "24px" }, { paddingTop: "36px", paddingLeft: "20px", paddingRight: "20px" }), fantome(k, env, { couleur: "#86a2ee", fond: MARINE, casse: "uppercase", poids: "700", taille: "fluid:70-170" })], { flexGrow: 1.4, flexBasis: "0px", minWidth: "320px", backgroundColor: MARINE, justifyContent: "space-between", gap: "0px" });
+    const blocs = k.col(svgDeux(k, A.illBlocs(), null, { maxWidth: "460px" }), { backgroundColor: "#12306e", alignItems: "center", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "24px", paddingRight: "24px", width: "100%", boxSizing: "border-box" });
+    const nom = nomDuSite(k, env, 28, MARINE, { fontWeight: "700" });
+    const liens = ["Comptes", "Cartes", "Factures", "Aide", "Contact"].map((t) => lien(k, t, "/contact", { taille: 17, poids: "700", couleur: MARINE, bloc: true, h: "44px", survol: { color: "#ffffff", transform: { x: 6 } }, focus: MARINE }));
+    const corail = k.col([nom, k.col(liens, { gap: "0px" }), pastilles(k, env, RES, { couleur: MARINE, survolFond: MARINE, survolCouleur: "#ffffff", focus: MARINE })], { backgroundColor: CORAIL, gap: "18px", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "40px", paddingRight: "40px", width: "100%", flexGrow: 1 }, { paddingLeft: "28px", paddingRight: "28px" }, { paddingLeft: "20px", paddingRight: "20px" });
+    const droite = k.col([blocs, corail], { flexGrow: 1, flexBasis: "0px", minWidth: "300px", gap: "0px", alignItems: "stretch" });
+    return [G.racine(k, [G.bande(k, [rangeeDe(k, [grande, droite])], { fond: MARINE, colonne: true, max: "100%", ...A.PAGE_LARGEUR, aligne: "stretch", nom: "Mosaïque" }), bas(k, env, G, "#081739", "#b9c7ec", "#ffffff")])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-276 « Chemin du virement » — service de virements — archétype I : FRISE HORIZONTALE EN ÉTAPES (points carrés numérotés)
-// Idée : sur papier clair, le parcours d'un virement se lit comme une frise : quatre marches (Initier, Valider, Régler, Rapprocher), chacune un filet épais, un carré orange numéroté, un titre et une phrase ; la première marche
-// est la plus foncée et son carré respire. Dessous, une seule ligne de liens et les mentions. Pas de colonnes ni de lettre. Polices : Michroma (titres) et Familjen Grotesk. Mobile : les marches s'empilent.
-const chemin = identite({
-  key: "c276", label: "Papier chaud, indigo et orange", humeur: "light",
-  fond: "#fbf9f3", texte: "#1b1f3b", discret: "#4f5375", accent: "#c4410f", surface: "#ffffff", encre: "#1b1f3b",
-  police: "font.familjen-grotesk", titres: "font.michroma",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#1b1f3b33",
-});
+// ═════════ ft2-276 « Chemin du virement » — capture 3 en PANORAMA : phrase, SCHÉMA dessiné pleine largeur (banque, chemin de carrés, banque), liens en ligne, nom fantôme ═════════
+const chemin = identite({ key: "c276", label: "Papier chaud, indigo et orange", humeur: "light", fond: "#fbf9f3", texte: "#1b1f3b", discret: "#4f5375", accent: "#c4410f", surface: "#ffffff", encre: "#1b1f3b", police: "font.familjen-grotesk", titres: "font.michroma", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#1b1f3b33" });
 const INDIGO = "#1b1f3b", PAPIER = "#fbf9f3", ORANGE_V = "#c4410f";
-
 const cheminDuVirement = modeleV2({
-  id: identifiantV2(276, "chemin-du-virement"), concept: "c-276-chemin-du-virement",
-  name: "Chemin du virement", family: FAM,
-  description: "Pour un service de virements : sur papier clair, une frise de quatre marches (initier, valider, régler, rapprocher) à carrés orange numérotés dont le premier respire, puis une ligne de liens et les mentions.",
-  tags: ["virements", "frise", "étapes", "carrés numérotés", "indigo", "orange", "papier", "angles droits"],
-  identity: chemin,
-  racine: racineDe(PAPIER),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  id: identifiantV2(276, "chemin-du-virement"), concept: "c-276-chemin-du-virement", name: "Chemin du virement", family: FAM,
+  description: "Pour un service de virements : sur papier chaud, une phrase et un bouton, puis un grand schéma dessiné pleine largeur (deux banques et un chemin de carrés orange qui grossissent), une ligne de liens et le nom du site géant, ton sur ton.",
+  tags: ["virements", "schéma dessiné", "panorama", "nom fantôme", "papier chaud", "indigo", "orange", "angles droits"],
+  identity: chemin, racine: racineDe(PAPIER),
+  widgets: ["html", "sitetitle", "text", "link", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const nom = nomDuSite(k, env, 26, INDIGO, { fontWeight: "400", fontFamily: S.head });
-    const intro = k.T("<p>Un virement, quatre temps : ce que vous voyez, ce que nous vérifions.</p>", { fontSize: "20px", lineHeight: 1.45, color: INDIGO, fontFamily: S.font, maxWidth: "520px" });
-    const tete = G.ligne(k, [nom, intro], { justifie: "space-between", aligne: "flex-end", largeur: "100%", gap: "20px 48px" });
-    const marche = ([t, d], i) => {
-      const point = k.col([k.T(`<p>${i + 1}</p>`, { fontSize: "15px", fontWeight: "800", fontFamily: S.head, color: "#ffffff", lineHeight: 1, textAlign: "center" })], { width: "40px", height: "40px", backgroundColor: ORANGE_V, alignItems: "center", justifyContent: "center", borderRadius: "0px", flexShrink: 0 });
-      if (i === 0) souffle(point, 4000);
-      const c = k.col([k.col([], { width: "100%", height: "4px", backgroundColor: i === 0 ? INDIGO : "#1b1f3b55", borderRadius: "0px" }), point, k.T(`<p>${t}</p>`, { fontSize: "24px", fontFamily: S.head, color: INDIGO, lineHeight: 1.15 }), k.T(`<p>${d}</p>`, { fontSize: "16px", lineHeight: 1.55, color: S.mute, fontFamily: S.font })],
-        { flexGrow: 1, flexBasis: "0px", minWidth: "200px", gap: "16px", borderRadius: "0px", transitionDuration: DOUX });
-      c.states = { hover: { transform: { y: -5 } } };
-      return c;
-    };
-    const frise = k.row([["Initier", "Vous saisissez le bénéficiaire et le montant."], ["Valider", "Une confirmation protège chaque ordre."], ["Régler", "Le paiement part vers la banque du bénéficiaire."], ["Rapprocher", "Le relevé se met en face de vos factures."]].map(marche), { gap: "28px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    const liens = ["Documentation", "Tarifs", "État du service", "Aide", "Contact"].map((t) => lien(k, t, "/contact", { taille: 16, poids: "600", couleur: INDIGO, padH: "4px", survol: { color: ORANGE_V, transform: { y: -3 } }, focus: ORANGE_V, extra: { textDecoration: "underline", textDecorationColor: "#1b1f3b55", textUnderlineOffset: "6px" } }));
-    const ligneLiens = k.row(liens, { columnGap: "32px", rowGap: "0px", flexWrap: "wrap", alignItems: "center" });
-    const corps = G.bande(k, [tete, frise, trait(k, "#1b1f3b33"), ligneLiens], { fond: PAPIER, colonne: true, gap: "48px", padV: ["80px", "60px", "44px"], padB: ["44px", "36px", "32px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Frise" });
-    return [G.racine(k, [corps, mentionsBande(k, env, G, PAPIER, "#4f5375", INDIGO)])];
+    const phrase = k.T("<p>De votre compte au sien, sans détour.</p>", { fontSize: "fluid:34-72", lineHeight: 1.04, fontWeight: "400", fontFamily: S.head, color: INDIGO, maxWidth: "700px", overflowWrap: "anywhere", textTransform: "uppercase" });
+    const tete = G.ligne(k, [k.col([k.row([souffle(carre(k, ORANGE_V, "12px"), 3000), caps(k, "Virements nationaux et internationaux", { couleur: ORANGE_V, suivi: "0.2em" })], { gap: "12px", alignItems: "center" }), phrase], { gap: "20px", flexGrow: 1, flexBasis: "0px", minWidth: "300px" }), bouton(k, "Faire un virement", { texte: "#ffffff", fond: INDIGO, survol: ORANGE_V, surSurvol: "#ffffff" })], { largeur: "100%", justifie: "space-between", rowGap: "24px", columnGap: "40px" });
+    const schema = k.col(svgDeux(k, A.illVirement()), { width: "100%" });
+    const nom = nomDuSite(k, env, 26, INDIGO, { fontWeight: "400", textTransform: "uppercase" });
+    const ligneLiens = k.row([nom, ...["Virements", "Bénéficiaires", "Suivi", "Aide", "Contact"].map((t) => lien(k, t, "/contact", { taille: 16, poids: "700", couleur: INDIGO, padH: "6px", survol: { color: ORANGE_V, transform: { y: -2 } }, focus: INDIGO })), pastilles(k, env, RES.slice(0, 3), { couleur: INDIGO, survolFond: INDIGO, survolCouleur: PAPIER, focus: INDIGO })], { columnGap: "24px", rowGap: "8px", alignItems: "center", flexWrap: "wrap", width: "100%", justifyContent: "space-between" });
+    const corps = G.bande(k, [tete, schema, trait(k, "#1b1f3b33"), ligneLiens], { fond: PAPIER, colonne: true, gap: "40px", padV: ["72px", "56px", "40px"], padB: ["24px", "20px", "16px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "Panorama" });
+    const geant = k.col([fantome(k, env, { couleur: "#5e6385", fond: PAPIER, casse: "uppercase", poids: "400", suivi: "-0.04em", taille: "fluid:60-150" })], { width: "100%", backgroundColor: PAPIER, paddingLeft: "24px", paddingRight: "24px" });
+    return [G.racine(k, [corps, geant, bas(k, env, G, PAPIER, "#4f5375", INDIGO, "#1b1f3b33")])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-277 « Papier du trésorier » — établissement de paiement institutionnel — archétype J : PIED « PAPIER À EN-TÊTE »
-// Idée : une feuille crème à en-tête bordeaux : cadre à DOUBLE bordure, nom en capitales serif espacées, filet entre deux carrés, coordonnées centrées comme sur un courrier, une ligne centrée de liens, puis un « coupon »
-// à bordure pointillée contenant la lettre d'information. Sobre, symétrique, sans colonnes. Polices : Libre Baskerville (nom) et Commissioner. Mobile : tout reste centré en pile.
-const papier = identite({
-  key: "c277", label: "Crème, bordeaux et or sourd", humeur: "light",
-  fond: "#f6efe2", texte: "#3a0f1c", discret: "#6a4b52", accent: "#8c1d3f", surface: "#fffaf0", encre: "#3a0f1c",
-  police: "font.commissioner", titres: "font.libre-baskerville",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#3a0f1c33",
-});
-const BORDEAUX = "#5c1428", CREME_P = "#f6efe2", OR_P = "#7a5a14", ENCRE_P = "#3a0f1c";
-
+// ═════════ ft2-277 « Papier du trésorier » — capture 3 : médaillon central (ROSACE guillochée dessinée), texte et lien centrés, nom fantôme serif rogné ═════════
+const papier = identite({ key: "c277", label: "Crème, bordeaux et or sourd", humeur: "light", fond: "#f6efe2", texte: "#3a0f1c", discret: "#6a4b52", accent: "#8c1d3f", surface: "#fffaf0", encre: "#3a0f1c", police: "font.commissioner", titres: "font.libre-baskerville", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#3a0f1c33" });
+const BORDEAUX = "#5c1428", CREME_P = "#f6efe2", ENCRE_P = "#3a0f1c";
 const papierDuTresorier = modeleV2({
-  id: identifiantV2(277, "papier-du-tresorier"), concept: "c-277-papier-du-tresorier",
-  name: "Papier du trésorier", family: FAM,
-  description: "Pour un établissement de paiement institutionnel : une feuille crème à double bordure, nom en capitales serif espacées, une ligne de liens centrée en tête, un cartouche d'adresse et un coupon à bordure pointillée pour la lettre d'information.",
-  tags: ["paiement", "institutionnel", "papier à en-tête", "double bordure", "coupon", "bordeaux", "crème", "angles droits"],
-  identity: papier,
-  racine: racineDe(CREME_P),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  id: identifiantV2(277, "papier-du-tresorier"), concept: "c-277-papier-du-tresorier", name: "Papier du trésorier", family: FAM,
+  description: "Pour un établissement de paiement : sur crème, une grande rosace guillochée bordeaux au centre, une phrase en serif italique, un coupon de lettre d'information, liens et pastilles centrés, puis le nom du site géant, ton sur ton.",
+  tags: ["établissement de paiement", "rosace guillochée", "serif", "symétrique", "nom fantôme", "crème", "bordeaux", "angles droits"],
+  identity: papier, racine: racineDe(CREME_P),
+  widgets: ["html", "sitetitle", "text", "link", "social", "emailsubscribe", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const centrer = (n, max = "460px") => { n.styles.desktop = { ...n.styles.desktop, textAlign: "center", width: "100%", maxWidth: max }; return n; };
-    const nom = nomDuSite(k, env, 34, BORDEAUX, { fontWeight: "400", textTransform: "uppercase", letterSpacing: "0.22em", textAlign: "center", lineHeight: 1.2 });
-    const filet = k.row([trait(k, OR_P, "2px"), carre(k, OR_P, "8px"), trait(k, OR_P, "2px")], { gap: "14px", alignItems: "center", width: "100%", maxWidth: "360px", justifyContent: "center" });
-    const adresse = coordonnees(k, { taille: 16, lien: BORDEAUX, survol: OR_P, focus: BORDEAUX });
-    const liens = ["Particuliers", "Entreprises", "Tarifs", "Documentation", "Contact"].flatMap((t, i) => [...(i ? [carre(k, OR_P, "5px")] : []), lien(k, t, "/contact", { taille: 16, poids: "500", couleur: ENCRE_P, padH: "4px", survol: { color: OR_P, transform: { y: -2 } }, focus: BORDEAUX, extra: { textDecoration: "underline", textDecorationColor: "#7a5a1455", textUnderlineOffset: "6px" } })]);
-    const ligneLiens = k.row(liens, { rowGap: "6px", columnGap: "16px", alignItems: "center", justifyContent: "center", flexWrap: "wrap" });
-    const abo = lettre(k, env, G, { titre: "", intro: "Détachez ce coupon : recevez nos avis par e-mail.", bouton: "S'abonner", largeur: "100%", accent: BORDEAUX, texte: ENCRE_P, surBouton: "#ffffff", fond: "#fffaf0", fondChamp: "#ffffff", rembChamp: "10px", focus: BORDEAUX, survolBouton: ENCRE_P, survolTexte: "#ffffff" });
-    const coupon = k.col([caps(k, "Coupon — lettre d'information", { couleur: OR_P, suivi: "0.2em" }), abo], { alignItems: "flex-start", gap: "14px", flexGrow: 1.3, flexBasis: "0px", minWidth: "280px", borderStyle: "dashed", borderWidth: "2px", borderColor: BORDEAUX, borderRadius: "0px", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "24px", paddingRight: "24px", backgroundColor: "#fffaf0", textAlign: "left" }, { paddingLeft: "16px", paddingRight: "16px" });
-    const cartouche = k.col([caps(k, "Adresse", { couleur: OR_P, suivi: "0.2em" }), adresse], { alignItems: "flex-start", gap: "14px", flexGrow: 1, flexBasis: "0px", minWidth: "260px", borderStyle: "solid", borderWidth: "1px", borderColor: BORDEAUX, borderRadius: "0px", paddingTop: "24px", paddingBottom: "24px", paddingLeft: "24px", paddingRight: "24px", backgroundColor: "#fffaf0", textAlign: "left" }, { paddingLeft: "16px", paddingRight: "16px" });
-    const pt = souffle(carre(k, BORDEAUX, "10px"), 3400);
-    const bloc2 = k.row([cartouche, coupon], { gap: "20px", alignItems: "stretch", flexWrap: "wrap", width: "100%", justifyContent: "center" });
-    const interieur = k.col([ligneLiens, k.row([pt, caps(k, "Services de paiement", { couleur: OR_P, suivi: "0.3em" })], { gap: "12px", alignItems: "center", justifyContent: "center" }), nom, filet, bloc2],
-      { alignItems: "center", gap: "28px", borderStyle: "solid", borderWidth: "1px", borderColor: BORDEAUX, borderRadius: "0px", paddingTop: "48px", paddingBottom: "48px", paddingLeft: "40px", paddingRight: "40px", backgroundColor: "#fffaf0", textAlign: "center" }, { paddingLeft: "28px", paddingRight: "28px" }, { paddingTop: "32px", paddingBottom: "32px", paddingLeft: "14px", paddingRight: "14px" });
-    const cadre = k.col([interieur], { width: "100%", maxWidth: "1000px", borderStyle: "solid", borderWidth: "1px", borderColor: BORDEAUX, borderRadius: "0px", paddingTop: "7px", paddingBottom: "7px", paddingLeft: "7px", paddingRight: "7px", backgroundColor: "#fffaf0" });
-    const corps = G.bande(k, [cadre], { fond: CREME_P, colonne: true, aligne: "center", padV: ["64px", "52px", "36px"], padB: ["40px", "36px", "28px"], padH: ["48px", "32px", "16px"], nom: "Feuille" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#6a4b52", liens: ENCRE_P })(k, env, true);
-    const bas = G.bande(k, [mentions], { fond: CREME_P, colonne: true, padV: ["24px", "22px", "20px"], padB: ["24px", "22px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [corps, bas])];
+    const rosace = k.col(svgDeux(k, A.illRosace(), null, { maxWidth: "340px" }), { width: "100%", alignItems: "center" });
+    const phrase = k.T("<p><em>La confiance se règle à l'avance.</em></p>", { fontSize: "fluid:32-64", lineHeight: 1.1, fontWeight: "400", fontFamily: S.head, color: ENCRE_P, textAlign: "center", maxWidth: "680px", overflowWrap: "anywhere" });
+    const aboC = k.col([abo(k, env, G, { intro: "Recevez nos avis réglementaires par e-mail.", bouton: "S'abonner", accent: BORDEAUX, texte: ENCRE_P, surBouton: "#ffffff", fond: CREME_P, fondChamp: "#ffffff", survolBouton: ENCRE_P, survolTexte: "#ffffff" })], { width: "100%", maxWidth: "520px" });
+    const liens = k.row(["Services", "Documents", "Conformité", "Aide", "Contact"].map((t) => lien(k, t, "/contact", { taille: 16, poids: "700", couleur: ENCRE_P, padH: "8px", survol: { color: BORDEAUX, transform: { y: -2 } }, focus: BORDEAUX })), { columnGap: "20px", rowGap: "0px", flexWrap: "wrap", justifyContent: "center" });
+    const nom = nomDuSite(k, env, 26, ENCRE_P, { fontWeight: "700", letterSpacing: "0.14em", textTransform: "uppercase" });
+    const corps = G.bande(k, [rosace, k.row([souffle(carre(k, BORDEAUX, "12px"), 3200), caps(k, "Établissement de paiement", { couleur: BORDEAUX, suivi: "0.22em" })], { gap: "12px", alignItems: "center", justifyContent: "center" }), phrase, aboC, trait(k, "#3a0f1c33"), nom, liens, pastilles(k, env, RES, { couleur: ENCRE_P, survolFond: BORDEAUX, survolCouleur: "#ffffff", focus: BORDEAUX })], { fond: CREME_P, colonne: true, aligne: "center", gap: "26px", padV: ["72px", "52px", "36px"], padB: ["24px", "20px", "16px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "22px" }, nom: "Feuille" });
+    const geant = k.col([fantome(k, env, { couleur: "#7a4f5a", fond: CREME_P, casse: "uppercase", poids: "400", taille: "fluid:60-140", suivi: "0em" })], { width: "100%", backgroundColor: CREME_P, paddingLeft: "24px", paddingRight: "24px" });
+    return [G.racine(k, [corps, geant, bas(k, env, G, CREME_P, "#6a4b52", ENCRE_P, "#3a0f1c33")])];
   },
 }, FAM);
 
 module.exports = {
   key: FAM, label: "Fintech et paiement", target: 6, built: true,
-  description: "Pieds standard et très professionnels, angles droits, animations fluides : bandeau d'appel XXL, barre de règlement, deux rives, mosaïque de comptes, frise du virement, papier du trésorier.",
+  description: "Pieds standard et très professionnels, angles droits, avec de vraies illustrations dessinées : cartes dans un halo, terminal de paiement, paysage de rives, blocs isométriques, schéma de virement, rosace guillochée.",
   models: [appelEncaissement, barreDeReglement, deuxRives, mosaiqueDeComptes, cheminDuVirement, papierDuTresorier],
 };

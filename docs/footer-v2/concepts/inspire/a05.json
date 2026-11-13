@@ -7,7 +7,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "joaillerie",
       "directionArtistique": {
-        "texte": "Pour une joaillerie : une colonne champagne pleine hauteur à gauche (nom de la maison, description, coordonnées, rendez-vous, réseaux) et, sur noir, les quatre collections en très grands mots fins puis deux colonnes de liens. Archétype : A colonne latérale. Inspiration : capture à grands mots légers."
+        "texte": "Pour une joaillerie : fond bleu nuit en dégradé, halo champagne autour d'un brillant dessiné en traits (la marque), description et réseaux en icônes dessous ; colonnes Collections, La maison et Nos ateliers en pastilles hexagonales. Illustration : brillant taillé sous halo. Archétype : marque + colonnes. Inspiration : capture 16 (nuit à halo, logo dessiné, pastilles)."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -30,7 +30,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "haute joaillerie",
       "directionArtistique": {
-        "texte": "Pour une haute joaillerie : presque rien. Un cadre carré fin bordeaux et or rose contenant un monogramme géant, le nom espacé, une phrase et trois liens. Archétype : B monogramme. Inspiration : marque monumentale."
+        "texte": "Pour une haute joaillerie : noir pur, quatre très grands mots fins avec flèche, trois colonnes de liens (maison, aide, réseaux) et une immense marque art déco (arcs concentriques et losange) en or rose très pâle, rognée par le bas. Illustration : marque géométrique rognée. Inspiration : capture 17."
       },
       "typographies": {
         "titre": "Italiana",
@@ -54,7 +54,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "bijoutier créateur",
       "directionArtistique": {
-        "texte": "Pour un bijoutier créateur : une grande case marine (titre, guide des pierres, bouton) à gauche ; à droite deux cases moyennes (horaires, coordonnées) et une case large (lettre). Archétype : H mosaïque asymétrique. Inspiration : carte d'appel à droite du titre."
+        "texte": "Pour un bijoutier créateur : marine profond, grand titre, coordonnées avec icônes et réseaux à gauche, grande carte d'appel avec un livret « guide des pierres » dessiné et incliné qui déborde, puis le mot ATELIER monumental dessiné et rogné. Illustration : livret incliné + mot monumental. Inspiration : capture 18."
       },
       "typographies": {
         "titre": "Libre Caslon Display",
@@ -78,7 +78,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "bijouterie de tradition",
       "directionArtistique": {
-        "texte": "Pour une bijouterie de tradition : un pied en papier à lettres, filets doubles, nom en italique centré, cartouche d'adresse, liens en une ligne centrée, réseaux. Archétype : J papier à en-tête. Inspiration : logo, description et réseaux."
+        "texte": "Pour une bijouterie de tradition : ivoire, quatre grands mots fins, adresse et colonnes de liens, et un immense demi-sceau (couronne de laurier et losange de poinçon) ton sur ton qui monte du bas à droite. Illustration : demi-sceau de laurier. Inspiration : capture 17 en version claire."
       },
       "typographies": {
         "titre": "Cormorant",
@@ -103,7 +103,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "horlogerie",
       "directionArtistique": {
-        "texte": "Pour un horloger : un pied compact en deux lignes sur gris acier ; nom en capitales condensées et bouton d'entretien turquoise, liens séparés par de petits carrés, réseaux et mentions. Archétype : D barre unique. Inspiration : barre basse à séparateur."
+        "texte": "Pour un horloger : fond indigo en dégradé, halo turquoise autour d'un cadran dessiné entouré de rouages (la marque), colonne de liens, trois pastilles hexagonales (révision, montres anciennes, sertissage) et bouton d'entretien ; bande basse avec réseaux en icônes. Illustration : cadran sous halo. Inspiration : capture 16."
       },
       "typographies": {
         "titre": "Barlow Condensed",
@@ -126,7 +126,7 @@
       "famille": "Bijouterie et horlogerie",
       "secteur": "horlogerie d'art",
       "directionArtistique": {
-        "texte": "Pour une horlogerie d'art : le pied est une fenêtre d'interface à angles droits, barre de titre verte à trois carrés, commandes en police mono à gauche, adresse, horaires et lettre à droite. Archétype : K fenêtre. Inspiration : colonnes de liens sur panneau."
+        "texte": "Pour une horlogerie d'art : vert sapin mat, nom, adresse et horaires à gauche, commandes en police mono, grande carte « fiche de calibre » avec un livret technique (rouages) dessiné et incliné, puis le mot CALIBRE monumental rogné en sauge. Illustration : livret incliné + mot monumental. Inspiration : capture 18."
       },
       "typographies": {
         "titre": "IBM Plex Mono",
@@ -150,7 +150,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "épicerie fine",
       "directionArtistique": {
-        "texte": "Pour une épicerie fine : huit cases à angles droits sur charbon, chacune un lien ou une information (rayons, horaires, coordonnées, lettre) ; la case survolée vire à la tomate. Archétype : C damier. Inspiration : marques du groupe en pastilles."
+        "texte": "Pour une épicerie fine : fond aubergine en dégradé, halo tomate autour d'une tomate dessinée avec fromage et bocal (la marque), réseaux en icônes, rayons en pastilles hexagonales, coordonnées et horaires. Illustration : logo tomate sous halo. Inspiration : capture 16."
       },
       "typographies": {
         "titre": "Archivo Black",
@@ -173,7 +173,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "traiteur",
       "directionArtistique": {
-        "texte": "Pour un traiteur : deux demi-pages bord à bord, olive à gauche (grande phrase, devis, coordonnées), crème à droite (formules en lignes à filet, horaires, lettre). Archétype : E deux demi-pages. Inspiration : titre et carte d'appel."
+        "texte": "Pour un traiteur : olive profond, grande phrase, coordonnées avec icônes, horaires et formules ; bande-carte « menu du mois » avec un livret à l'assiette dessiné et incliné ; mot TABLE monumental rogné. Illustration : livret à l'assiette + mot monumental. Inspiration : capture 18."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -196,7 +196,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "produits du terroir en ligne",
       "directionArtistique": {
-        "texte": "Pour une boutique de terroir en ligne : bandeau moutarde monumental avec un énorme bouton de commande, puis bande brun café avec le nom et une seule colonne étroite de liens. Archétype : F appel XXL. Inspiration : grande carte d'appel."
+        "texte": "Pour une boutique de produits du terroir : brun café, grand titre en capitales, liste de liens à filets, grande carte moutarde avec un catalogue dessiné incliné (bocaux, pain, fruits) et le mot GRANGE monumental rogné. Illustration : catalogue incliné + mot monumental. Inspiration : capture 18."
       },
       "typographies": {
         "titre": "Anton",
@@ -219,7 +219,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "cave à manger",
       "directionArtistique": {
-        "texte": "Pour une cave à manger : cinq lignes pleine largeur en très grands mots fins, flèche et filet, qui glissent et passent à l'orange ; dessous une ligne de coordonnées, horaires et mentions. Archétype : G index. Inspiration : liste de grands mots légers."
+        "texte": "Pour une cave à manger : noir pur, cinq très grands mots fins avec flèche à gauche, à droite un grand verre à pied dessiné sous un halo orange et rogné par le bas, puis trois colonnes d'infos. Illustration : verre sous halo orange. Inspiration : capture 17."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -243,7 +243,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "producteur-boutique",
       "directionArtistique": {
-        "texte": "Pour un producteur-boutique : une frise horizontale à quatre étapes reliées par un filet à carrés (producteurs, atelier, boutique, votre table), puis coordonnées et horaires. Archétype : I frise. Inspiration : colonnes aérées."
+        "texte": "Pour un producteur-boutique : fond vert forêt en dégradé, grand titre, quatre étapes en pastilles hexagonales (épi, feuille, bocal, fromage) et une large bande de collines à sillons ondulés avec grange, arbres et soleil. Illustration : paysage de collines ondulées. Inspiration : capture 16."
       },
       "typographies": {
         "titre": "Young Serif",
@@ -267,7 +267,7 @@
       "famille": "Gastronomie et épicerie fine",
       "secteur": "caviste",
       "directionArtistique": {
-        "texte": "Pour un caviste : quatre paliers de largeurs décroissantes alignés à gauche, de la crème au bordeaux presque noir : nom et liens, rayons, lettre, mentions. Archétype : L escalier. Inspiration : nom monumental et cartes en retrait."
+        "texte": "Pour un caviste : noir profond, nom en grand, deux colonnes de liens et la lettre d'information, puis une immense marque de voûtes concentriques avec casier de bouteilles en grenat et sable, rognée par le bas. Illustration : voûtes et casier. Inspiration : capture 17."
       },
       "typographies": {
         "titre": "Bodoni Moda",

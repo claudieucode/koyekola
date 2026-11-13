@@ -7,7 +7,7 @@
       "famille": "Studios créatifs",
       "secteur": "studio de design graphique",
       "directionArtistique": {
-        "texte": "Pour un studio de design graphique : un bandeau orange brûlé XXL avec une phrase d'appel gigantesque (« On fait quoi ensemble ? ») et un bouton blanc, puis sur crème les coordonnées et une seule colonne étroite de liens à droite. Inspiré de la capture 10 (grande phrase d'appel centrée puis logo et liens) mais recomposé en bandeau plein. Archétype : F bandeau d'appel XXL."
+        "texte": "Refait d'après la capture 10 : phrase d'appel monumentale centrée sur dégradé crème vers pêche avec deux boutons, marque dessinée (pile d'affiches) à gauche, liens et coordonnées à droite, puis grande illustration SVG pleine largeur : skyline d'affiches sous un soleil couchant, ponton en perspective, promeneurs et reflets sur l'eau."
       },
       "typographies": {
         "titre": "Syne",
@@ -32,7 +32,7 @@
       "famille": "Studios créatifs",
       "secteur": "studio photo et de marque",
       "directionArtistique": {
-        "texte": "Pour un studio photo : un damier de huit cases carrées sur noir graphite (nom, portfolio, journal, projet, coordonnées, Instagram, questions, espace client) qui virent au lime acide au survol. Les colonnes de la capture 11 deviennent des cases. Archétype : C grille de cases égales."
+        "texte": "Refait d'après la capture 10 : halo lime sur noir, objectif dessiné (diaphragme à six lames), phrase d'appel centrée, trois colonnes de liens et coordonnées, puis planche illustrée de quatre vignettes dessinées (montagne, portrait, architecture, vagues) en pellicule."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -57,7 +57,7 @@
       "famille": "Studios créatifs",
       "secteur": "studio de motion design et de jeu",
       "directionArtistique": {
-        "texte": "Pour un studio de motion design : une fenêtre de terminal posée sur un aplat violet, barre de titre à trois carrés, commandes cliquables (« $ ouvrir portfolio »), sortie des coordonnées et curseur qui respire. La carte sombre de la capture 11 devient une fenêtre d'interface. Archétype : K fenêtre / console."
+        "texte": "Refait d'après la capture 10 : fantôme en pixels, phrase d'appel centrée en monospace, commandes cliquables et sortie de coordonnées au curseur qui respire, puis paysage de synthèse illustré (soleil en tranches, montagnes, grille en perspective, étoiles)."
       },
       "typographies": {
         "titre": "JetBrains Mono",
@@ -83,7 +83,7 @@
       "famille": "Studios créatifs",
       "secteur": "studio de lettrage",
       "directionArtistique": {
-        "texte": "Pour un studio de lettrage : le nom du site en immense serif centré sur jaune moutarde, un carré qui respire, trois liens soulignés et la ligne légale. Presque rien d'autre : le vide fait la signature. La marque monumentale de la capture 10, sans le reste. Archétype : B nom monumental."
+        "texte": "Refait d'après la capture 10 : phrase géante en serif sur moutarde, grand monogramme S dessiné à gauche, lettre d'information et liens à droite, puis cinq bandes ondulées qui montent du bas devant un soleil pâle."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -108,7 +108,7 @@
       "famille": "Studios créatifs",
       "secteur": "studio de production",
       "directionArtistique": {
-        "texte": "Pour un studio de production : deux demi-pages bord à bord, crème (venir au studio, adresse, horaires) et brique (lettre d'information, liens rapides sur deux colonnes, réseaux), puis une barre brique foncé. Reprend la logique de la capture 12 (accueil, lettre, liens rapides) en deux panneaux. Archétype : E deux demi-pages."
+        "texte": "Refait d'après la capture 11 : carte d'appel sombre éclairée par quatre faisceaux de projecteurs dessinés sur un plateau, fondu crème vers noir brique, pied en colonnes (clap dessiné, adresse, horaires, pages, réseaux)."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -133,7 +133,7 @@
       "famille": "Studios créatifs",
       "secteur": "agence de marque",
       "directionArtistique": {
-        "texte": "Pour une agence de marque : une frise de cinq points carrés sur menthe pâle (brief, esquisses, épreuves, production, livraison), chaque étape menant à une page utile, puis le titre, un bouton rouille et les coordonnées, et une bande vert forêt pour la ligne légale. Archétype : I frise en étapes."
+        "texte": "Refait d'après la capture 11 : carte vert forêt terminée par une frise de motifs de marque (carrés, quarts de cercle, triangles), fondu menthe vers vert forêt, pied en colonnes avec cube dessiné, parcours et coordonnées."
       },
       "typographies": {
         "titre": "Epilogue",
@@ -158,7 +158,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "agence d'architecture",
       "directionArtistique": {
-        "texte": "Pour une agence d'architecture : une colonne graphite pleine hauteur à gauche (nom, liens, coordonnées) et, sur béton clair, une grande phrase en serif, un bouton terre cuite et les horaires d'accueil. Logo à gauche et liens de la capture 10, recomposés en montant de cloison. Archétype : A colonne latérale."
+        "texte": "Refait d'après la capture 11 : carte graphite avec grande phrase en serif face à un plan d'élévation d'immeuble dessiné et coté, fondu béton vers graphite, pied en colonnes avec coupe dessinée."
       },
       "typographies": {
         "titre": "Source Serif 4",
@@ -183,7 +183,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "architecte d'intérieur",
       "directionArtistique": {
-        "texte": "Pour un architecte d'intérieur : une mosaïque asymétrique, une grande case bleu Klein avec l'appel en Bodoni et trois petites cases (réalisations sur ivoire, coordonnées sur jaune, lettre d'information sur nuit). Carte d'appel de la capture 11 découpée en volumes de maquette. Archétype : H mosaïque asymétrique."
+        "texte": "Refait d'après la capture 11 : carte bleu Klein avec six volumes isométriques jaune, ivoire et nuit sous un halo, appel en serif, fondu ivoire vers nuit, pied avec lettre d'information."
       },
       "typographies": {
         "titre": "Bodoni Moda",
@@ -208,7 +208,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "agence de design d'espace",
       "directionArtistique": {
-        "texte": "Pour une agence de design d'espace : un papier à en-tête sauge, adresse à gauche, nom centré en grand serif, horaires à droite, entre doubles filets, puis une ligne de liens centrée et la ligne légale. Archétype : J papier à en-tête."
+        "texte": "Refait d'après la capture 12 : demi-page sauge d'accueil avec médaillon de visite dessiné face à une carte de quartier dessinée (rivière, parcs, avenues, repères), bandeau de lettre olive, pied vert encre avec grande arche dessinée."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -233,7 +233,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "bureau d'architecture",
       "directionArtistique": {
-        "texte": "Pour un bureau d'architecture : un filet rouge de 4 px puis une seule ligne blanche en monospace (point, nom du site, quatre liens en capitales, e-mail) et la ligne légale dessous. Très compact, façon cote de plan. Archétype : D ligne unique."
+        "texte": "Refait d'après la capture 12 inversée : plan cadastral dessiné à gauche (parcelles, hachures, cotes rouges, nord), accueil blanc en monospace à droite, bandeau noir de lettre, pied rouge avec marque en équerre."
       },
       "typographies": {
         "titre": "DM Mono",
@@ -259,7 +259,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "atelier de design d'intérieur",
       "directionArtistique": {
-        "texte": "Pour un atelier de design d'intérieur : quatre gradins alignés à gauche, de plus en plus étroits et foncés, du sable clair au brun (nom et bouton, pages, coordonnées, accueil), chacun sur une seule ligne, sur papier blanc. Archétype : L pied en escalier."
+        "texte": "Refait d'après la capture 12 : accueil sable en trois colonnes, grand plan d'appartement dessiné pleine largeur (cloisons, lit, canapé, table), bandeau de lettre brun, pied papier avec fauteuil dessiné."
       },
       "typographies": {
         "titre": "Barlow Condensed",
@@ -284,7 +284,7 @@
       "famille": "Architecture et design d'intérieur",
       "secteur": "agence d'architecture et d'aménagement",
       "directionArtistique": {
-        "texte": "Pour une agence d'architecture : un sommaire de cinq lignes pleine largeur en grandes capitales condensées sur vert nuit, chacune terminée par une flèche, qui virent au vert vif au survol, avec une ligne de coordonnées et la ligne légale. Rubriques d'exemple. Archétype : G index en lignes."
+        "texte": "Refait d'après la capture 12 : accueil vert nuit en capitales condensées face à une carte de nuit dessinée avec itinéraire lime, bandeau vert vif de lettre, pied avec monogramme skyline."
       },
       "typographies": {
         "titre": "Oswald",

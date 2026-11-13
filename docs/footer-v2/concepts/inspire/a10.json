@@ -7,7 +7,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "mairie",
       "directionArtistique": {
-        "texte": "Pour une commune : le nom de la mairie en capitales géantes et centrées sur papier chaud, une barre terracotta pleine largeur, puis trois liens essentiels et la ligne légale. Un seul geste : le nom. Inspiré d'une capture à nom monumental sur fond blanc. Archétype : B nom monumental."
+        "texte": "Capture « KENNEDY » : filet, mention et deux colonnes de liens en haut, nom monumental pleine largeur en bas. Illustration : la façade de la mairie de Valclair dessinée (fronton, colonnes, horloge, drapeau, perron) occupe la place vide à gauche ; le nom en capitales géantes repose sur une barre terracotta. Papier chaud, bleu de Prusse."
       },
       "typographies": {
         "titre": "Archivo",
@@ -22,7 +22,8 @@
         "papier",
         "bleu",
         "terracotta",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -32,7 +33,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "communauté de communes",
       "directionArtistique": {
-        "texte": "Pour une communauté de communes : une haute colonne vert sapin à gauche (carré jaune qui respire, nom, réseaux) et à droite sur crème huit rubriques en cases blanches, horaires et contact. Inspiré d'une capture à logo et réseaux à gauche, colonnes à droite. Archétype : A colonne latérale."
+        "texte": "Capture « YMGrad » : à gauche bloc de marque jaune, pastilles de réseaux et le relief des trois rivières dessiné (collines, trois cours d'eau qui se rejoignent, soleil carré) ; à droite trois colonnes de démarches en capitales, lien souligné jaune, horaires, contact, retour en haut. Vert sapin."
       },
       "typographies": {
         "titre": "Zilla Slab",
@@ -47,7 +48,8 @@
         "horaires",
         "vert",
         "jaune",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -57,7 +59,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "ville",
       "directionArtistique": {
-        "texte": "Pour une ville : un énorme bandeau ambre avec « Une démarche à faire ? Commencez en ligne. » et deux boutons, puis sur bleu nuit le nom de la ville et une seule colonne étroite de liens à filets. Inspiré d'une capture à grande phrase serif et boutons. Archétype : F bandeau XXL + colonne étroite."
+        "texte": "Capture « Bruno » : grande phrase serif centrée et deux boutons entre des marches fantômes, marque FONTELUNE tracée en filigrane sous un filet, cinq colonnes de liens, fontaine ambre dessinée dans sa lueur. Bleu nuit et ambre."
       },
       "typographies": {
         "titre": "DM Serif Display",
@@ -72,7 +74,8 @@
         "bleu nuit",
         "ambre",
         "serif",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -82,7 +85,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "mairie",
       "directionArtistique": {
-        "texte": "Pour une mairie : six rubriques en lignes pleine largeur à grand titre serif, flèche et précision dessous, qui se teintent et se décalent au survol, puis le contact. Inspiré des listes de rubriques d'une capture à colonnes. Archétype : G index."
+        "texte": "Capture « Bruno » sur sable : rangée de quatre vignettes dessinées (mairie, école, cadre de vie, kiosque), phrase serif centrée et boutons, cinq colonnes, marque PRÉ-HAUT tracée en filigrane dans une lueur brique à étincelles."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -98,7 +101,8 @@
         "serif",
         "sable",
         "rouge brique",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -108,7 +112,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "ville",
       "directionArtistique": {
-        "texte": "Pour une ville : un damier de huit cases égales à angles droits, horaires et contact de l'hôtel de ville, six services en cases qui se remplissent de violet au survol. Inspiré des grilles de rubriques d'une capture. Archétype : C damier."
+        "texte": "Capture « YMGrad » : bloc de marque violet clair et pastilles en tête, grand plan de la ville dessiné en bandeau (rues, parc, voie ferrée, rivage, bateaux, épingle), quatre colonnes (services, ville, horaires, contact). Aubergine et lilas."
       },
       "typographies": {
         "titre": "IBM Plex Mono",
@@ -123,7 +127,8 @@
         "services",
         "horaires",
         "violet",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -133,7 +138,7 @@
       "famille": "Collectivités et services publics",
       "secteur": "commune",
       "directionArtistique": {
-        "texte": "Pour une commune : un pied en courrier officiel, double filet, nom en grand serif italique, coordonnées et horaires centrés, ligne de liens centrée et sceau d'or qui respire. Archétype : J papier à en-tête."
+        "texte": "Capture « KENNEDY » : double filet, médaillon d'or dessiné (lauriers, tour, étoile, ruban) à gauche, liens, coordonnées et horaires à droite, nom SAINT-AUBIN en serif italique monumental pleine largeur. Crème, marine et or."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -149,7 +154,8 @@
         "serif",
         "crème",
         "marine",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -159,7 +165,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "cabinet connecté",
       "directionArtistique": {
-        "texte": "Pour un cabinet connecté : un liseré menthe, deux demi-pages bord à bord, un panneau sarcelle avec « Se soigner, simplement. » en grand serif, un panneau crème avec quatre actions en rangées à flèche. Inspiré d'une capture à grande phrase serif et actions. Archétype : E deux demi-pages."
+        "texte": "Capture « Bruno » : « Se soigner, simplement. » en grand serif centré sur un halo d'anneaux menthe traversé d'un tracé de battement, deux boutons, marque AUBÉPINE tracée en filigrane dans sa lueur menthe à étincelles, quatre colonnes dont les horaires. Sarcelle et menthe."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -174,7 +180,8 @@
         "grand serif",
         "sarcelle",
         "crème",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -184,7 +191,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "pharmacie",
       "directionArtistique": {
-        "texte": "Pour une pharmacie : une barre verte très compacte, croix blanche qui respire, nom et quatre liens en capitales séparés par des filets sur une seule ligne, puis une ligne sombre pour les mentions. Archétype : D barre unique."
+        "texte": "Capture « KENNEDY » : devanture de pharmacie dessinée en tête (enseigne à croix, auvent rayé festonné, vitrine à flacons), filet, mention d'urgence et deux colonnes, PHARMACIE DU MARCHÉ en capitales monumentales blanches sur vert."
       },
       "typographies": {
         "titre": "Barlow Semi Condensed",
@@ -199,7 +206,8 @@
         "croix",
         "vert",
         "jaune citron",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -209,7 +217,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "service de santé numérique",
       "directionArtistique": {
-        "texte": "Pour un service de santé numérique : une fenêtre étroite à angles droits, barre de titre à trois carrés, commandes-liens en police mono, curseur menthe qui respire, lettre d'information en champ de formulaire, barre d'état. Archétype : K fenêtre / console."
+        "texte": "Capture « YMGrad » inversée : colonnes de liens en police mono et lettre d'information à gauche ; à droite bloc de marque menthe, pastilles et moniteur de battements dessiné sur quadrillage. Graphite et menthe."
       },
       "typographies": {
         "titre": "JetBrains Mono",
@@ -224,7 +232,8 @@
         "police mono",
         "graphite",
         "menthe",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -234,7 +243,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "service de santé en ligne",
       "directionArtistique": {
-        "texte": "Pour un service de santé en ligne : une frise de quatre étapes sur bleu ciel, chaque titre-lien sous un point carré et un filet épais (le premier respire), puis une bande marine avec mention d'urgence, coordonnées et mentions. Archétype : I frise à points carrés."
+        "texte": "Capture « YMGrad » : paysage dessiné en tête (collines bleues, soleil carré, chemin sinueux jalonné de quatre étapes), puis sur bleu nuit bloc de marque, pastilles, contact et quatre listes en grille 2 x 2."
       },
       "typographies": {
         "titre": "Lexend",
@@ -249,7 +258,8 @@
         "points carrés",
         "bleu ciel",
         "marine",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -259,7 +269,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "service de santé",
       "directionArtistique": {
-        "texte": "Pour un service de santé : une grande case pêche avec « Votre santé, en clair. » et un bouton, trois petites cases (annuaire ardoise qui se remplit au survol, contact blanc, réseaux miel). Archétype : H mosaïque asymétrique."
+        "texte": "Capture « Bruno » sur pêche : phrase serif et bouton à gauche, plante en pot sous un grand soleil miel dessinée à droite, trois cartes (contact, annuaire, réseaux), marque CLAIRVIE tracée en filigrane."
       },
       "typographies": {
         "titre": "Young Serif",
@@ -275,7 +285,8 @@
         "pêche",
         "ardoise",
         "miel",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     },
     {
@@ -285,7 +296,7 @@
       "famille": "Santé numérique et pharmacie",
       "secteur": "plateforme de santé",
       "directionArtistique": {
-        "texte": "Pour une plateforme de santé : quatre marches de plus en plus étroites et sombres alignées à gauche, le nom monumental sur lavande, les services, horaires et contact sur violet vif, les mentions sur nuit. Inspiré d'une capture à nom monumental. Archétype : L escalier."
+        "texte": "Capture « KENNEDY » : panneau dessiné à gauche (anneaux violets, croix lavande, battement, petites marches), services, horaires et contact à droite, MEDILIS en capitales monumentales lavande pleine largeur. Lavande et nuit."
       },
       "typographies": {
         "titre": "Sora",
@@ -300,7 +311,8 @@
         "lavande",
         "violet",
         "nuit",
-        "angles droits"
+        "angles droits",
+        "illustration"
       ]
     }
   ]

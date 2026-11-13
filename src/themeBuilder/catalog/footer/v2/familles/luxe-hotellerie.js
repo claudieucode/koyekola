@@ -1,90 +1,35 @@
-// Famille v2 « Luxe et hôtellerie de prestige » — 6 modèles (ft2-428 à ft2-433), lot « inspiré de captures » : ANGLES DROITS partout (aucun border-radius non nul).
-// Inspirations (idées de composition seulement) : capture 40 = grand nom à deux tons et lettre à gauche, liens à droite, filet puis copyright et réseaux ; capture 41 = bandeau marque + réseaux, filet pleine largeur,
-// colonnes à petit soulignement d'accent, abonnement, bande sombre de mentions. Traduit ici en index, mosaïque, chronologie, papier à en-tête, console, escalier.
-// Marques fictives ; AUCUNE coordonnée, tarif, classement, étoile ni label inventé : adresse, téléphone et horaires viennent des Données de l'entreprise du site. Libellés d'EXEMPLE à renommer dans l'éditeur.
-// Chaque modèle : palette, polices (2 au plus) et archétype de composition propres (mode « solo »).
-//
-// MOUVEMENT (tout disparaît sous « prefers-reduced-motion: reduce ») : transitions de 360 ms, décalages de 2 à 6 px ; UNE animation visible par modèle (carré-signal qui « respire », ligne qui s'indente, case qui se soulève).
-// Ni animation d'entrée ni défilement continu.
+// Famille v2 « Luxe et hôtellerie de prestige » — 6 modèles (ft2-428 à ft2-433), lot « inspiré de captures », REFAIT avec de vraies illustrations vectorielles : ANGLES DROITS partout.
+// Capture 40 (FoodFiesta, fond sombre) : marque monumentale à deux tons + lettre à gauche, trois colonnes à droite, filet, copyright en italique et icônes de réseaux → ft2-428, 429, 430.
+// Capture 41 (CodingLab, bleu nuit) : barre marque dessinée + pastilles de réseaux colorées, filet, colonnes à petit soulignement + abonnement, bande sombre de mentions → ft2-431, 432, 433.
+// Marques fictives ; AUCUNE coordonnée, chiffre ni certification inventés (adresse, téléphone, horaires = Données de l'entreprise). Dessins : aides-illus-a13.js (SVG inline, aria-hidden).
+// MOUVEMENT : transitions 360 ms ; UNE animation douce par modèle (carré qui respire / bouton qui se soulève) ; tout est immobile sous « prefers-reduced-motion ». Ni animation d'entrée ni défilement.
 const FAM = "luxe-hotellerie";
-const { modeleV2, identifiantV2, identite, G: GK, Moteur } = require("../kit-v2");
-const { compact } = require("../../../kit");
-
-
-const DOUX = 360; // ms : durée des transitions de survol / focus
-
-// ── Aides LOCALES à la famille (toutes à angles droits) ──────────────────────────────────────────────────────────────────────────────────────
-const racineDe = (fond) => ({ desktop: { backgroundColor: fond, gap: "0px" } });
-function lien(k, label, url, o = {}) {
-  const S = k.S, n = k.LINK(label, url, compact({ fontSize: `${o.taille || 15}px`, fontWeight: o.poids || "500", fontFamily: o.police || S.font, color: o.couleur || S.fg, textDecoration: o.soulign ? "underline" : "none", display: o.bloc ? "flex" : "inline-flex", alignItems: "center", minHeight: o.h || "44px", paddingLeft: o.padH, paddingRight: o.padH, lineHeight: o.lh, letterSpacing: o.suivi, textTransform: o.casse, borderRadius: "0px", transitionDuration: DOUX, ...(o.extra || {}) }));
-  return GK.fini(k, n, { hover: o.survol || { color: S.accent, textDecoration: "underline" }, focus: GK.focus(o.focus || S.accent) });
-}
-const caps = (k, texte, o = {}) => k.T(`<p>${texte}</p>`, compact({ fontSize: o.taille || "12px", lineHeight: 1.4, fontWeight: o.poids || "700", textTransform: "uppercase", letterSpacing: o.suivi || "0.14em", color: o.couleur || k.S.mute, fontFamily: o.police || k.S.font, ...(o.extra || {}) }));
-const trait = (k, couleur, epaisseur = "1px") => k.divider({ width: "100%", borderColor: couleur, borderTopWidth: epaisseur, marginTop: "0px", marginBottom: "0px" });
-const souffle = (n, ms = 3200) => { n.motion = { entrance: "pulse", trigger: "load", duration: ms, iterations: "infinite", easing: "ease-in-out" }; return n; };
-const carre = (k, couleur, t = "12px") => k.col([], { width: t, height: t, backgroundColor: couleur, flexShrink: 0, borderRadius: "0px" });
-function partie(n, nom, styles, etats) {
-  const p = (n.parts || {})[nom] || {};
-  n.parts = { ...(n.parts || {}), [nom]: { ...p, styles: { ...(p.styles || {}), desktop: { ...((p.styles || {}).desktop || {}), ...styles } }, states: { ...(p.states || {}), ...(etats || {}) } } };
-  return n;
-}
-const horaires = (k, o = {}) => Moteur.finishNode(k.S, k.W("bizhours", { title: "", showOpenNow: false, /* le point rond « ouvert / fermé » du widget a un arrondi de 50 % imposé : écarté */ groupDays: true, showExceptions: true, showNote: true, closedLabel: "Fermé" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: o.police || k.S.font, lineHeight: 1.55, width: "100%" }));
-const coordonnees = (k, o = {}) => {
-  const n = Moteur.finishNode(k.S, k.W("bizcontact", { title: "", showName: false, showAddress: true, showPhone: true, showEmail: true, showIcons: o.icones === true, layout: o.layout || "stack" }, { color: o.couleur || k.S.fg, fontSize: `${o.taille || 15}px`, fontFamily: o.police || k.S.font, lineHeight: 1.55, width: "100%", textAlign: o.align, ...(o.align === "center" ? { display: "flex", justifyContent: "center" } : {}) }));
-  return partie(n, "link", { color: o.lien || o.couleur || k.S.fg, textDecoration: "underline", transitionDuration: DOUX }, { hover: { color: o.survol || k.S.accent }, focus: GK.focus(o.focus || k.S.accent) });
-};
-const bloc = (k, titre, enfants, o = {}) => GK.colonne(k, [caps(k, titre, { couleur: o.couleurTitre, police: o.police, taille: o.tailleTitre, suivi: o.suiviTitre }), ...enfants], { poids: o.poids ?? 1, min: o.min || "220px", gap: o.gap || "12px", extra: o.extra, mobile: o.mobile });
-const abonnement = (k, env, o) => {
-  const n = GK.abonnement({ rayonBouton: "0px", rayonChamp: "0px", soulignement: "2px", ...o })(k, env);
-  n.parts.missing.styles.desktop = { ...n.parts.missing.styles.desktop, color: o.texte || k.S.fg }; // message « non configuré » lisible sur le fond de SA bande
-  return n;
-};
-// Bouton plein ou à contour, angles droits, qui se soulève et change de couleur au survol
-const bouton = (k, t, u, o) => lien(k, t, u, { taille: o.taille || 16, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: o.texte, h: "54px", padH: "28px", police: o.police, survol: o.survol, focus: o.focus, extra: { backgroundColor: o.fond, borderStyle: "solid", borderWidth: "2px", borderColor: o.bord || o.fond || o.texte, justifyContent: "center", ...(o.extra || {}) } });
-// Bande de couleur franche (barre pleine largeur de hauteur fixe)
-const barre = (G, k, couleur, h = ["12px", "10px", "8px"]) => G.bande(k, [], { fond: couleur, padV: h, padB: h, padH: ["0px", "0px", "0px"], nom: "Barre" });
-// Lettre d'information habillée aux couleurs de la bande (titre, intro, bouton plein à angles droits)
-const lettre = (k, env, o) => {
-  const abo = abonnement(k, env, { titre: o.titre, intro: o.intro, bouton: o.bouton || "Je m'abonne", largeur: o.largeur || "340px", accent: o.accent, texte: o.texte });
-  abo.parts.title.styles.desktop = { ...abo.parts.title.styles.desktop, color: o.couleurTitre || o.accent, lineHeight: 1.4 };
-  abo.parts.intro.styles.desktop = { ...abo.parts.intro.styles.desktop, color: o.couleurIntro || o.texte };
-  abo.parts.button.styles.desktop = { ...abo.parts.button.styles.desktop, color: o.surBouton };
-  abo.parts.button.states = { hover: { backgroundColor: o.survolBouton || o.texte, color: o.surSurvol || o.surBouton }, focus: GK.focus(o.focus || o.texte) };
-  return abo;
-};
-const MARGES = ["48px", "32px", "20px"];
-// Texte courant simple
-const para = (k, texte, o = {}) => k.T(`<p>${texte}</p>`, compact({ fontSize: `${o.taille || 16}px`, lineHeight: o.lh || 1.6, color: o.couleur || k.S.mute, fontFamily: o.police || k.S.font, maxWidth: o.max, textAlign: o.align, fontWeight: o.poids }));
-// Ligne-index : grand libellé, flèche, filet bas (pleine largeur)
-const indexLigne = (k, label, url, o) => k.row([lien(k, label, url, { taille: o.taille || 44, poids: o.poids || "400", police: o.police, couleur: o.couleur, h: o.h || "72px", survol: { color: o.survol, paddingLeft: "16px" }, focus: o.survol, extra: { flexGrow: 1 } }), k.T("<p>→</p>", { fontSize: "28px", color: o.survol, fontFamily: k.S.font, flexShrink: 0 })], { width: "100%", alignItems: "center", flexWrap: "nowrap", gap: "12px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: o.filet });
-const filetC = (k, couleur, l = "28px", e = "3px") => k.divider({ width: l, borderColor: couleur, borderTopWidth: e, marginTop: "0px", marginBottom: "0px" });
-const reseauxEx = [["Facebook", "https://www.facebook.com/"], ["Instagram", "https://www.instagram.com/"], ["LinkedIn", "https://www.linkedin.com/"]];
-// Colonne de liens : titre en capitales, petit filet d'accent, liens qui s'indentent au survol
-const colLiens = (k, titre, items, o) => k.col([caps(k, titre, { couleur: o.titre, suivi: "0.16em", taille: "13px", police: o.policeTitre }), filetC(k, o.filet || o.titre), ...items.map(([t, u]) => lien(k, t, u, { taille: o.taille || 16, poids: o.poids || "500", couleur: o.lien, survol: { color: o.survol, paddingLeft: "6px" }, focus: o.survol }))], { flexGrow: 1, flexBasis: o.base || "160px", minWidth: o.min || "140px", gap: "6px" });
+const { modeleV2, identifiantV2, identite } = require("../kit-v2");
+const { racineDe, MARGES, reseauxIcones, trait, colLiens, reseauxEx, lien, caps, souffle, carre, horaires, coordonnees, lettre, para, bouton, filetC, pied40, pied41, art, dessin, duo, glyphe } = require("../aides-illus-a13");
 
 // ═══ ft2-428 « Registre des maisons » — palace  [archétype G : index en lignes pleine largeur]
 // Idée : un sommaire de livre d'or. Six grandes lignes pleine largeur (Cormorant 40 px, flèche, filet) : Les suites, Le spa, La table, Les événements, La conciergerie, Réserver. Chaque ligne s'indente en or au survol.
 // En tête, le nom et les réseaux ; en pied, adresse en ligne et mentions. Aucune carte. Ivoire, encre, or. Polices : Cormorant Garamond (titres) et Jost (texte). Mobile : lignes plus petites.
-const IVO = "#f7f2e8", ENCRE2 = "#1c1a17", OR2 = "#8d6b2a";
+const IVO = "#f7f2e8", ENCRE2 = "#1c1a17", OR2 = "#7a5b1f";
 const registreId = identite({ key: "c428", label: "Ivoire, encre et or", humeur: "light", fond: IVO, texte: ENCRE2, discret: "#4d4840", accent: OR2, surface: "#fffdf8", encre: ENCRE2, surEncre: IVO, police: "font.jost", titres: "font.cormorant-garamond", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#1c1a174d" });
 const registre = modeleV2({
   id: identifiantV2(428, "registre-des-maisons"), concept: "c-428-registre-des-maisons", name: "Registre des maisons", family: FAM,
   description: "Pour un palace ou un hôtel de prestige : un sommaire en six grandes lignes pleine largeur (suites, spa, table, événements, conciergerie, réserver) qui s'indentent en or, nom et réseaux en tête. Ivoire, encre, or.",
   tags: ["palace", "hôtel de luxe", "index", "sommaire", "grandes lignes", "ivoire", "or"],
   identity: registreId, racine: racineDe(IVO),
-  widgets: [ "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizlegal", "copyright", "emailsubscribe", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const nom = k.row([souffle(carre(k, OR2, "10px"), 3400), lien(k, "Maison Aurélien", "/", { taille: 22, poids: "600", police: S.head, suivi: "0.12em", casse: "uppercase", couleur: ENCRE2, survol: { color: OR2 }, focus: OR2 })], { gap: "12px", alignItems: "center", flexWrap: "nowrap" });
-    const reseaux = G.reseauxTexte(reseauxEx, { taille: 14, couleur: ENCRE2, survol: OR2, focus: OR2 })(k, env);
-    const tete = k.row([nom, reseaux], { width: "100%", justifyContent: "space-between", alignItems: "center", rowGap: "6px", columnGap: "32px" });
-    const idx = (t, u) => lien(k, `${t}   →`, u, { taille: 40, poids: "500", police: S.head, couleur: ENCRE2, bloc: true, h: "84px", survol: { color: OR2, paddingLeft: "24px" }, focus: OR2, extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#1c1a174d", boxSizing: "border-box" } });
-    const lignes = k.col([idx("Les suites", "/catalogue"), idx("Le spa", "/blog"), idx("La table", "/blog"), idx("Les événements", "/faq"), idx("La conciergerie", "/faq"), idx("Réserver", "/contact")], { width: "100%", gap: "0px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: ENCRE2 });
-    const adresse = coordonnees(k, { layout: "inline", couleur: "#4d4840", lien: ENCRE2, survol: OR2, focus: OR2, taille: 14 });
-    const mentions = G.ligneLegale({ taille: 13, couleur: "#4d4840", liens: ENCRE2, sansCookies: true })(k, env);
-    const bande = G.bande(k, [tete, lignes, k.row([adresse, mentions], { width: "100%", justifyContent: "space-between", alignItems: "center", rowGap: "10px", columnGap: "36px" })], { fond: IVO, colonne: true, aligne: "stretch", gap: "36px", padV: ["56px", "44px", "32px"], padB: ["40px", "32px", "26px"], padH: MARGES, nom: "Registre" });
-    bande.styles.desktop.color = ENCRE2;
-    return [G.racine(k, [bande])];
+    const nom = G.geant(`<p>Maison <span style="color:${OR2}">Aurélien</span></p>`, { taille: [44, 112], tablette: { taille: [52, 84] }, mobile: { taille: [40, 52] }, lh: 0.98, suivi: "0", poids: "600", police: S.head, couleur: ENCRE2 })(k, env);
+    const blasonN = k.col([dessin(k, 320, 320, art.blason(320, 320), { width: "100%", maxWidth: "280px" })], { flexGrow: 0, flexBasis: "260px", minWidth: "200px" });
+    const abo = lettre(k, env, { titre: "", intro: "Recevoir le carnet de la maison.", largeur: "360px", accent: OR2, texte: ENCRE2, couleurIntro: "#4d4840", surBouton: IVO, survolBouton: ENCRE2, surSurvol: IVO });
+    const haut = G.bande(k, [k.col([caps(k, "Palace", { couleur: "#7a5a1e", suivi: "0.3em", poids: "800" }), nom, abo], { flexGrow: 1, flexBasis: "50%", minWidth: "280px", gap: "22px" }), blasonN], { fond: IVO, aligne: "center", gap: "32px 64px", padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: MARGES, nom: "Marque et blason" });
+    const idx = (t, u) => lien(k, `${t}   →`, u, { taille: 34, poids: "500", police: S.head, couleur: ENCRE2, bloc: true, h: "68px", survol: { color: OR2, paddingLeft: "22px" }, focus: OR2, extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#1c1a174d", boxSizing: "border-box" } });
+    const lignes = k.col([idx("Les suites", "/catalogue"), idx("Le spa", "/blog"), idx("La table", "/blog"), idx("Les événements", "/faq"), idx("Réserver", "/contact")], { width: "100%", gap: "0px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: ENCRE2 });
+    const milieu = G.bande(k, [lignes], { fond: IVO, colonne: true, aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["36px", "28px", "24px"], padH: MARGES, nom: "Index" });
+    const fin = G.bande(k, [coordonnees(k, { layout: "inline", couleur: "#4d4840", lien: ENCRE2, survol: OR2, focus: OR2, taille: 14 }), reseauxIcones(k, env, ["instagram", "facebook", "linkedin"], { contour: ENCRE2, couleur: ENCRE2, survolFond: OR2, survolCouleur: "#ffffff" }), G.ligneLegale({ taille: 13, couleur: "#4d4840", liens: ENCRE2, sansCookies: true })(k, env)], { fond: "#efe6d2", colonne: true, aligne: "stretch", gap: "14px", padV: ["24px", "22px", "20px"], padB: ["24px", "22px", "20px"], padH: MARGES, nom: "Adresse et mentions" });
+    [haut, milieu, fin].forEach((b) => { b.styles.desktop.color = ENCRE2; });
+    return [G.racine(k, [haut, milieu, fin])];
   },
 }, FAM);
 
@@ -98,23 +43,16 @@ const mosaique = modeleV2({
   description: "Pour une maison d'exception : une grande case champagne avec phrase et réservation, et trois cases (adresse, lettre, liens et mentions) à joints d'émeraude. Émeraude, champagne, ivoire.",
   tags: ["maison d'exception", "mosaïque", "asymétrique", "réservation", "émeraude", "champagne", "cases"],
   identity: mosId, racine: racineDe(EME),
-  widgets: ["text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizlegal", "copyright", "emailsubscribe", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>L'art de recevoir, sans compter le temps<span style="color:#7a1f2b">.</span></p>`, { taille: [34, 64], lh: 1.08, suivi: "-0.01em", poids: "500", police: S.head, couleur: EME })(k, env);
-    const b = souffle(bouton(k, "Réserver un séjour", "/contact", { texte: CHAMP, fond: EME, survol: { backgroundColor: "#7a1f2b", borderColor: "#7a1f2b", color: "#ffffff", transform: { y: -3 } }, focus: "#7a1f2b", taille: 15 }), 4000);
-    const grande = k.col([caps(k, "Hôtel Villa Émeraude", { couleur: "#5a3d00", suivi: "0.24em", poids: "800" }), phrase, b], { flexGrow: 1, flexBasis: "55%", minWidth: "300px", gap: "30px", justifyContent: "space-between", backgroundColor: CHAMP, paddingTop: "56px", paddingBottom: "56px", paddingLeft: "48px", paddingRight: "48px", boxSizing: "border-box", borderRadius: "0px" }, { flexBasis: "100%" }, { flexBasis: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "36px", paddingBottom: "36px" });
-    const petite = (fond, enfants) => k.col(enfants, { width: "100%", gap: "12px", backgroundColor: fond, paddingTop: "28px", paddingBottom: "28px", paddingLeft: "32px", paddingRight: "32px", boxSizing: "border-box", borderRadius: "0px" }, undefined, { paddingLeft: "20px", paddingRight: "20px" });
-    const abo = lettre(k, env, { titre: "La lettre de la villa", intro: "Une nouvelle de temps en temps.", largeur: "100%", accent: EME, texte: EME, couleurTitre: "#7a1f2b", couleurIntro: "#26443a", surBouton: IV3, survolBouton: "#7a1f2b", surSurvol: "#ffffff" });
-    const liens = k.row([["Chambres", "/catalogue"], ["Table", "/blog"], ["Spa", "/blog"], ["Contact", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 15, poids: "600", couleur: IV3, padH: "4px", survol: { color: CHAMP, transform: { y: -2 } }, focus: CHAMP })), { rowGap: "0px", columnGap: "20px" });
-    const droite = k.col([
-      petite(EME2, [caps(k, "Adresse", { couleur: CHAMP, suivi: "0.2em", poids: "800" }), coordonnees(k, { couleur: IV3, lien: IV3, survol: CHAMP, focus: CHAMP, taille: 15 })]),
-      petite(IV3, [abo]),
-      petite(EME3, [liens, G.ligneLegale({ taille: 13, couleur: "#c5d6cd", liens: IV3, sansCookies: true })(k, env)]),
-    ], { flexGrow: 1, flexBasis: "38%", minWidth: "300px", gap: "6px", borderRadius: "0px" }, { flexBasis: "100%" }, { flexBasis: "100%" });
-    const bande = G.bande(k, [grande, droite], { fond: EME, gap: "6px", aligne: "stretch", max: "100%", padV: ["6px", "6px", "6px"], padB: ["6px", "6px", "6px"], padH: ["6px", "6px", "6px"], nom: "Mosaïque" });
-    bande.styles.desktop.color = IV3;
-    return [G.racine(k, [bande])];
+    const vign = G.bande(k, duo(k, art.vignettes, [1200, 210], [480, 360]), { fond: EME, colonne: true, aligne: "stretch", gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Vignettes" });
+    const nom = G.geant(`<p style="text-align:center">Villa <span style="color:${CHAMP}">Émeraude</span></p>`, { taille: [44, 110], tablette: { taille: [52, 84] }, mobile: { taille: [38, 50] }, lh: 1, suivi: "0", poids: "600", police: S.head, couleur: IV3 })(k, env);
+    const liens = k.row([["Chambres", "/catalogue"], ["Table", "/blog"], ["Spa", "/blog"], ["Contact", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", casse: "uppercase", suivi: "0.16em", couleur: IV3, padH: "10px", survol: { color: CHAMP, transform: { y: -3 } }, focus: CHAMP })), { rowGap: "0px", columnGap: "16px", justifyContent: "center" });
+    const abo = lettre(k, env, { titre: "", intro: "La lettre de la villa.", largeur: "420px", accent: CHAMP, texte: IV3, couleurIntro: "#c5d6cd", surBouton: EME, survolBouton: IV3, surSurvol: EME });
+    const centre = G.bande(k, [caps(k, "Hôtel Villa", { couleur: CHAMP, suivi: "0.3em", poids: "800" }), nom, liens, abo, coordonnees(k, { align: "center", layout: "inline", couleur: "#c5d6cd", lien: IV3, survol: CHAMP, focus: CHAMP, taille: 14 }), reseauxIcones(k, env, ["instagram", "facebook", "youtube"], { fond: CHAMP, couleur: EME, survolFond: IV3, survolCouleur: EME }), trait(k, "#f4efe24d"), G.ligneLegale({ taille: 13, couleur: "#c5d6cd", liens: IV3, sansCookies: true })(k, env, true)], { fond: EME, colonne: true, aligne: "center", gap: "26px", padV: ["64px", "48px", "36px"], padB: ["32px", "28px", "24px"], padH: MARGES, nom: "Maison centrée" });
+    centre.styles.desktop.color = IV3; centre.styles.desktop.textAlign = "center";
+    return [G.racine(k, [vign, centre])];
   },
 }, FAM);
 
@@ -128,17 +66,18 @@ const chrono = modeleV2({
   description: "Pour un hôtel de charme : chronologie verticale sur filet d'or à cinq points carrés (arrivée, suites, table, bien-être, départ), grande phrase, adresse et mentions à gauche. Bordeaux, or pâle, crème.",
   tags: ["hôtel de charme", "chronologie", "séjour", "points carrés", "bordeaux", "or", "vertical"],
   identity: chronoId, racine: racineDe(BORD),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizlegal", "copyright", "emailsubscribe", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const phrase = G.geant(`<p>Cinq temps, un seul séjour<span style="color:${OR3}">.</span></p>`, { taille: [38, 76], tablette: { taille: [48, 64] }, mobile: { taille: [36, 46] }, lh: 1.04, suivi: "-0.01em", poids: "400", police: S.head, couleur: CREME })(k, env);
-    const gauche = k.col([caps(k, "Hôtel Le Vermeil", { couleur: OR3, suivi: "0.24em", poids: "800" }), phrase, coordonnees(k, { couleur: "#e1cbc0", lien: CREME, survol: OR3, focus: OR3, taille: 15 }), G.ligneLegale({ taille: 13, couleur: "#e1cbc0", liens: CREME, sansCookies: true, pile: true })(k, env)], { flexGrow: 1, flexBasis: "45%", minWidth: "280px", gap: "28px", justifyContent: "space-between" });
-    const etape = (n, nom, texte, url, pulse) => k.row([pulse ? souffle(carre(k, OR3, "15px"), 3000) : carre(k, OR3, "15px"), k.col([lien(k, nom, url, { taille: 30, poids: "400", police: S.head, couleur: CREME, h: "48px", survol: { color: OR3, paddingLeft: "10px" }, focus: OR3 }), para(k, texte, { taille: 15, couleur: "#e1cbc0", max: "360px" })], { gap: "2px" })], { width: "100%", flexWrap: "nowrap", alignItems: "flex-start", gap: "29px", marginLeft: "-44px", paddingTop: "4px", boxSizing: "border-box" });
-    const rail = k.col([etape(1, "L'arrivée", "Conditions d'arrivée et accès.", "/faq", true), etape(2, "Les suites", "Les chambres, une à une.", "/catalogue"), etape(3, "La table", "La carte et les salons.", "/blog"), etape(4, "Le bien-être", "Soins, bassin et détente.", "/blog"), etape(5, "Le départ", "Conditions de départ.", "/faq")], { width: "100%", gap: "34px", paddingLeft: "44px", paddingTop: "8px", paddingBottom: "8px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "1px", borderColor: OR3, boxSizing: "border-box" });
-    const droite = k.col([rail], { flexGrow: 1, flexBasis: "45%", minWidth: "280px", paddingLeft: "7px", boxSizing: "border-box" });
-    const bande = G.bande(k, [gauche, droite], { fond: BORD, gap: "40px 96px", aligne: "stretch", padV: ["80px", "64px", "44px"], padB: ["72px", "56px", "40px"], padH: MARGES, nom: "Chronologie" });
-    bande.styles.desktop.color = CREME;
-    return [G.racine(k, [bande])];
+    const waves = G.bande(k, duo(k, art.vaguesOr, [1200, 190], [480, 170]), { fond: BORD, colonne: true, aligne: "stretch", gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Vagues" });
+    const nom = G.geant(`<p style="text-align:center">LE <span style="color:${OR3}">VERMEIL</span></p>`, { taille: [48, 128], tablette: { taille: [56, 92] }, mobile: { taille: [44, 58] }, lh: 1, suivi: "0.04em", poids: "400", police: S.head, couleur: CREME })(k, env);
+    const liens = k.row([["L'arrivée", "/faq"], ["Les suites", "/catalogue"], ["La table", "/blog"], ["Le bien-être", "/blog"], ["Le départ", "/faq"]].map(([t, u], i) => lien(k, t, u, { taille: 17, poids: "500", police: S.head, couleur: CREME, padH: "8px", survol: { color: OR3, transform: { y: -3 } }, focus: OR3 })), { rowGap: "0px", columnGap: "24px", justifyContent: "center" });
+    const haut = G.bande(k, [souffle(carre(k, OR3, "14px"), 3200), nom, liens], { fond: BORD, colonne: true, aligne: "center", gap: "22px", padV: ["40px", "32px", "28px"], padB: ["32px", "28px", "24px"], padH: MARGES, nom: "Nom et liens" });
+    const abo = lettre(k, env, { titre: "La lettre du Vermeil", intro: "Une nouvelle de temps en temps.", largeur: "400px", accent: OR3, texte: CREME, couleurTitre: OR3, couleurIntro: "#e1cbc0", surBouton: BORD, survolBouton: CREME, surSurvol: BORD });
+    const pied = G.bande(k, [k.col([caps(k, "Hôtel de charme", { couleur: OR3, suivi: "0.24em", poids: "800" }), coordonnees(k, { couleur: "#e1cbc0", lien: CREME, survol: OR3, focus: OR3, taille: 15 })], { flexGrow: 1, flexBasis: "260px", minWidth: "240px", gap: "12px" }), abo, reseauxIcones(k, env, ["instagram", "facebook"], { fond: OR3, couleur: BORD, survolFond: CREME, survolCouleur: BORD })], { fond: "#2a0a14", aligne: "center", gap: "28px 56px", padV: ["36px", "30px", "26px"], padB: ["24px", "22px", "20px"], padH: MARGES, nom: "Adresse et lettre" });
+    const fin = G.bande(k, [G.ligneLegale({ taille: 13, couleur: "#e1cbc0", liens: CREME, sansCookies: true })(k, env)], { fond: "#2a0a14", colonne: true, aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["24px", "22px", "20px"], padH: MARGES, nom: "Mentions" });
+    [waves, haut, pied, fin].forEach((b) => { b.styles.desktop.color = CREME; });
+    return [G.racine(k, [waves, haut, pied, fin])];
   },
 }, FAM);
 
@@ -152,19 +91,19 @@ const papier = modeleV2({
   description: "Pour une maison historique : pied en papier à en-tête, entièrement centré, double filet cuivre, monogramme carré, nom en grandes capitales, cartouche à double bordure (adresse, horaires) et liens en ligne. Papier blanc, bleu nuit, cuivre.",
   tags: ["maison historique", "papier à en-tête", "centré", "cartouche", "double filet", "cuivre", "bleu nuit"],
   identity: papierId, racine: racineDe(PAPB),
-  widgets: ["text", "link", "bizcontact", "bizhours", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizhours", "bizlegal", "copyright", "emailsubscribe", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const regle = k.row([trait(k, CUIV, "3px"), souffle(carre(k, CUIV, "12px"), 4200), trait(k, CUIV, "3px")], { width: "100%", alignItems: "center", flexWrap: "nowrap", gap: "16px" });
-    const mono = k.col([k.T(`<p style="text-align:center">V</p>`, { fontSize: "34px", color: MIN, fontFamily: S.head, textAlign: "center", lineHeight: 1 })], { width: "64px", height: "64px", alignItems: "center", justifyContent: "center", borderStyle: "solid", borderWidth: "2px", borderColor: CUIV, boxSizing: "border-box", borderRadius: "0px" });
-    const nom = G.geant(`<p style="text-align:center">HÔTEL VALMONT</p>`, { taille: [36, 84], tablette: { taille: [44, 64] }, mobile: { taille: [30, 40] }, lh: 1, suivi: "0.12em", poids: "400", police: S.head, couleur: MIN })(k, env);
+    const guil = G.bande(k, duo(k, art.guilloche, [1200, 56], [480, 56]), { fond: MIN, colonne: true, aligne: "stretch", gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Guilloché" });
+    const emb = k.col([dessin(k, 260, 260, art.emblemeGrave(260, 260), { width: "100%", maxWidth: "220px" })], { alignItems: "center", width: "100%" });
+    const nom = G.geant(`<p style="text-align:center">HÔTEL VALMONT</p>`, { taille: [34, 84], tablette: { taille: [44, 64] }, mobile: { taille: [30, 40] }, lh: 1, suivi: "0.14em", poids: "400", police: S.head, couleur: MIN })(k, env);
     const cell = (titre, enfant) => k.col([caps(k, titre, { couleur: CUIV, suivi: "0.22em", poids: "800", extra: { textAlign: "center" } }), enfant], { flexGrow: 1, flexBasis: "240px", minWidth: "220px", gap: "8px", alignItems: "center", paddingTop: "22px", paddingBottom: "22px", paddingLeft: "22px", paddingRight: "22px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "1px", borderColor: MIN, borderRadius: "0px" });
-    const cartouche = k.row([cell("Adresse", coordonnees(k, { align: "center", couleur: MIN, lien: MIN, survol: CUIV, focus: CUIV, taille: 17 })), cell("Horaires", horaires(k, { couleur: MIN, taille: 17 }))], { width: "100%", maxWidth: "820px", gap: "6px", padding: "6px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "3px", borderColor: MIN, borderRadius: "0px" });
-    const liens = k.row([["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Salons", "/faq"], ["Histoire", "/"], ["Réserver", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 17, poids: "500", couleur: MIN, casse: "uppercase", suivi: "0.16em", padH: "12px", survol: { color: CUIV, transform: { y: -2 } }, focus: CUIV })), { rowGap: "0px", columnGap: "12px", justifyContent: "center", alignItems: "center" });
-    const mentions = G.ligneLegale({ taille: 13, couleur: "#454e63", liens: MIN, sansCookies: true })(k, env, true);
-    const bande = G.bande(k, [regle, mono, nom, cartouche, liens, trait(k, CUIV, "1px"), mentions], { fond: PAPB, colonne: true, aligne: "center", gap: "28px", padV: ["48px", "40px", "28px"], padB: ["36px", "30px", "24px"], padH: MARGES, nom: "Papier à en-tête" });
-    bande.styles.desktop.color = MIN; bande.styles.desktop.textAlign = "center";
-    return [G.racine(k, [bande])];
+    const cellules = k.row([cell("Adresse", coordonnees(k, { align: "center", couleur: MIN, lien: MIN, survol: CUIV, focus: CUIV, taille: 16 })), cell("Horaires", horaires(k, { couleur: MIN, taille: 16 })), cell("Courrier", lettre(k, env, { titre: "", intro: "Une lettre de temps en temps.", largeur: "100%", accent: CUIV, texte: MIN, couleurIntro: "#454e63", surBouton: "#ffffff", survolBouton: MIN, surSurvol: "#ffffff" }))], { width: "100%", maxWidth: "1000px", gap: "6px", padding: "6px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "3px", borderColor: MIN, borderRadius: "0px" });
+    const liens = k.row([["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Salons", "/faq"], ["Histoire", "/"], ["Réserver", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "500", couleur: MIN, casse: "uppercase", suivi: "0.16em", padH: "12px", survol: { color: CUIV, transform: { y: -2 } }, focus: CUIV })), { rowGap: "0px", columnGap: "12px", justifyContent: "center" });
+    const corps = G.bande(k, [emb, nom, liens, cellules, reseauxIcones(k, env, ["facebook", "instagram", "linkedin"], { fond: MIN, couleur: PAPB, survolFond: CUIV, survolCouleur: "#ffffff" })], { fond: PAPB, colonne: true, aligne: "center", gap: "24px", padV: ["40px", "32px", "28px"], padB: ["40px", "32px", "28px"], padH: MARGES, nom: "Papier à en-tête" });
+    const fin = G.bande(k, [G.ligneLegale({ taille: 13, couleur: "#454e63", liens: MIN, sansCookies: true })(k, env)], { fond: "#eee7d6", colonne: true, aligne: "stretch", padV: ["22px", "20px", "18px"], padB: ["22px", "20px", "18px"], padH: MARGES, nom: "Mentions" });
+    [guil, corps, fin].forEach((b) => { b.styles.desktop.color = MIN; b.styles.desktop.textAlign = "center"; });
+    return [G.racine(k, [guil, corps, fin])];
   },
 }, FAM);
 
@@ -178,23 +117,15 @@ const consoleC = modeleV2({
   description: "Pour une conciergerie ou un hôtel de luxe : pied en fenêtre avec onglets verticaux, panneau de contact (adresse, horaires, lettre, bouton au concierge) et barre d'état de mentions. Anthracite, platine, or rose.",
   tags: ["conciergerie", "hôtel de luxe", "fenêtre", "onglets", "console", "anthracite", "or rose"],
   identity: consoleId, racine: racineDe(ANT),
-  widgets: ["text", "link", "bizcontact", "bizhours", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizlegal", "copyright", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const titreBarre = k.row([caps(k, "Conciergerie · Hôtel Solstice", { couleur: ANT, suivi: "0.2em", poids: "800" }), k.row([carre(k, ANT, "12px"), carre(k, ROSEOR, "12px"), carre(k, ANT, "12px")], { gap: "6px", flexWrap: "nowrap" })], { width: "100%", justifyContent: "space-between", alignItems: "center", backgroundColor: PLAT, paddingTop: "12px", paddingBottom: "12px", paddingLeft: "20px", paddingRight: "20px", flexWrap: "nowrap", boxSizing: "border-box" });
-    const onglet = (t, u) => lien(k, t, u, { taille: 17, poids: "500", police: S.head, couleur: PLAT, bloc: true, h: "56px", padH: "22px", survol: { backgroundColor: ROSEOR, color: ANT, paddingLeft: "32px" }, focus: ROSEOR, extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#e7e5e033", boxSizing: "border-box" } });
-    const onglets = k.col([onglet("Les suites", "/catalogue"), onglet("Le spa", "/blog"), onglet("La table", "/blog"), onglet("Les événements", "/faq"), onglet("La conciergerie", "/faq")], { flexGrow: 0, flexShrink: 0, flexBasis: "260px", minWidth: "220px", gap: "0px", backgroundColor: ANT2, borderStyle: "solid", borderWidth: "0px", borderRightWidth: "1px", borderColor: "#e7e5e066", borderRadius: "0px" }, { flexBasis: "100%", borderRightWidth: "0px" }, { flexBasis: "100%", borderRightWidth: "0px" });
+    const marque = [glyphe(k, "cloche", ROSEOR, ANT, 48), k.T(`<p>Hôtel Solstice</p>`, { fontSize: "30px", lineHeight: 1.1, letterSpacing: "0.08em", fontFamily: S.head, color: PLAT })];
+    const cloche = k.col([dessin(k, 300, 260, art.clocheCles(300, 260), { width: "100%", maxWidth: "300px" })], { flexGrow: 0, flexBasis: "280px", minWidth: "220px" });
     const b = souffle(bouton(k, "Écrire au concierge", "/contact", { texte: ANT, fond: ROSEOR, survol: { backgroundColor: PLAT, borderColor: PLAT, color: ANT, transform: { y: -3 } }, focus: PLAT, taille: 15 }), 4200);
-    const abo = lettre(k, env, { titre: "Lettre du concierge", intro: "Adresses et attentions, de temps en temps.", largeur: "320px", accent: ROSEOR, texte: PLAT, couleurTitre: ROSEOR, couleurIntro: "#b9b7b1", surBouton: ANT, survolBouton: PLAT, surSurvol: ANT });
-    const panneau = k.col([caps(k, "Demande au concierge", { couleur: ROSEOR, suivi: "0.22em", poids: "800" }), para(k, "Une demande particulière, un transfert, une table : écrivez-nous, nous nous en occupons.", { taille: 17, couleur: "#d4d2cc", max: "480px" }), b], { flexGrow: 1, flexBasis: "0px", minWidth: "300px", gap: "22px", justifyContent: "center", paddingTop: "32px", paddingBottom: "32px", paddingLeft: "36px", paddingRight: "36px", boxSizing: "border-box", backgroundColor: ANT, borderRadius: "0px" }, undefined, { paddingLeft: "18px", paddingRight: "18px" });
-    const corps = k.row([onglets, panneau], { width: "100%", gap: "0px", alignItems: "stretch", flexWrap: "wrap" });
-    const cC = (enfants, poids) => k.col(enfants, { flexGrow: poids, flexBasis: "200px", minWidth: "200px", gap: "8px" });
-    const contact = k.row([cC([caps(k, "Adresse", { couleur: "#b9b7b1" }), coordonnees(k, { couleur: PLAT, lien: PLAT, survol: ROSEOR, focus: ROSEOR, taille: 15 })], 1), cC([caps(k, "Horaires", { couleur: "#b9b7b1" }), horaires(k, { couleur: PLAT, taille: 15 })], 1), cC([abo], 1.2)], { width: "100%", rowGap: "24px", columnGap: "40px", alignItems: "flex-start", paddingTop: "24px", paddingBottom: "28px", paddingLeft: "36px", paddingRight: "36px", boxSizing: "border-box", backgroundColor: ANT, borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#e7e5e066" }, undefined, { paddingLeft: "18px", paddingRight: "18px" });
-    const etat = k.col([G.ligneLegale({ taille: 13, couleur: "#b9b7b1", liens: PLAT, sansCookies: true })(k, env)], { width: "100%", backgroundColor: ANT2, paddingTop: "12px", paddingBottom: "12px", paddingLeft: "24px", paddingRight: "24px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#e7e5e066", borderRadius: "0px" }, undefined, { paddingLeft: "18px", paddingRight: "18px" });
-    const fenetre = k.col([titreBarre, corps, contact, etat], { width: "100%", maxWidth: "1100px", gap: "0px", borderStyle: "solid", borderWidth: "2px", borderColor: PLAT, boxSizing: "border-box", borderRadius: "0px" });
-    const bande = G.bande(k, [fenetre], { fond: ANT, colonne: true, aligne: "center", padV: ["56px", "44px", "28px"], padB: ["56px", "44px", "28px"], padH: MARGES, nom: "Console" });
-    bande.styles.desktop.color = PLAT;
-    return [G.racine(k, [bande])];
+    const abo = k.col([caps(k, "Conciergerie", { couleur: ROSEOR, suivi: "0.16em", taille: "13px" }), filetC(k, ROSEOR), para(k, "Une table, un transfert, une attention : écrivez-nous.", { taille: 15, couleur: "#d4d2cc" }), b, coordonnees(k, { couleur: PLAT, lien: PLAT, survol: ROSEOR, focus: ROSEOR, taille: 15 })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "14px" });
+    return pied41(k, env, G, { fond: ANT, fondBas: "#111114", fg: PLAT, mute: "#b9b7b1", titre: ROSEOR, accent: ROSEOR, ligne: "#e7e5e066", marque, reseaux: { liste: ["instagram", "facebook", "youtube"], fond: ROSEOR, couleur: ANT, survolFond: PLAT, survolCouleur: ANT }, sansFilet: true,
+      colonnes: [["Séjour", [["Les suites", "/catalogue"], ["Le spa", "/blog"], ["La table", "/blog"]]], ["Services", [["Événements", "/faq"], ["Conciergerie", "/faq"]]]], fin: [abo, cloche] });
   },
 }, FAM);
 
@@ -208,20 +139,18 @@ const marches = modeleV2({
   description: "Pour un grand hôtel : quatre marches alignées à gauche, de plus en plus étroites et claires (nom, liens, adresse et horaires, lettre et mentions), sur fond ivoire. Prune, ivoire, or.",
   tags: ["grand hôtel", "escalier", "étagé", "bandes décroissantes", "prune", "ivoire", "or"],
   identity: marchesId, racine: racineDe(IV4),
-  widgets: ["text", "link", "bizcontact", "bizhours", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["bizcontact", "bizhours", "bizlegal", "copyright", "emailsubscribe", "html", "link", "social", "text"],
   compose(k, env, G) {
     const S = k.S;
-    const marche = (fond, largeur, enfants, pad) => k.col(enfants, { width: largeur, gap: "20px", backgroundColor: fond, paddingTop: pad, paddingBottom: pad, paddingLeft: "48px", paddingRight: "48px", boxSizing: "border-box", borderRadius: "0px" }, { width: largeur === "100%" ? "100%" : "88%" }, { width: "100%", paddingLeft: "20px", paddingRight: "20px" });
-    const nom = G.geant(`<p>Grand Hôtel Sélène<span style="color:${OR4}">.</span></p>`, { taille: [36, 92], tablette: { taille: [44, 64] }, mobile: { taille: [32, 42] }, lh: 1.02, suivi: "-0.01em", poids: "400", police: S.head, couleur: IV4 })(k, env);
-    const m1 = marche(PR1, "100%", [k.row([souffle(carre(k, OR4, "12px"), 3400), caps(k, "Hôtel de prestige", { couleur: OR4, suivi: "0.26em", poids: "800" })], { gap: "12px", alignItems: "center", flexWrap: "nowrap" }), nom], "56px");
-    const liens = k.row([["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Spa", "/blog"], ["Séminaires", "/faq"], ["Réserver", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 18, poids: "500", police: S.head, couleur: IV4, survol: { color: OR4, transform: { y: -3 } }, focus: OR4 })), { rowGap: "2px", columnGap: "32px" });
-    const m2 = marche(PR2, "78%", [liens], "20px");
-    const m3 = marche(PR3, "56%", [G.ligne(k, [G.colonne(k, [caps(k, "Adresse", { couleur: OR4, suivi: "0.2em", poids: "800" }), coordonnees(k, { couleur: IV4, lien: IV4, survol: OR4, focus: OR4, taille: 15 })], { poids: 1, min: "200px", gap: "8px" }), G.colonne(k, [caps(k, "Horaires", { couleur: OR4, suivi: "0.2em", poids: "800" }), horaires(k, { couleur: IV4, taille: 15 })], { poids: 1, min: "200px", gap: "8px" })], { gap: "20px 40px", aligne: "flex-start", largeur: "100%" })], "28px");
-    const abo = lettre(k, env, { titre: "Lettre du Grand Hôtel", intro: "Une nouvelle de temps en temps.", largeur: "100%", accent: IV4, texte: IV4, couleurTitre: "#ffffff", couleurIntro: "#ffffff", surBouton: PR1, survolBouton: OR4, surSurvol: PR1 });
-    const m4 = marche(PR4, "34%", [abo, G.ligneLegale({ taille: 13, couleur: "#ffffff", liens: "#ffffff", sansCookies: true, pile: true })(k, env)], "28px");
-    const bande = G.bande(k, [m1, m2, m3, m4], { fond: IV4, colonne: true, aligne: "flex-start", gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Marches" });
-    bande.styles.desktop.color = "#2b1030";
-    return [G.racine(k, [bande])];
+    const arcades = G.bande(k, duo(k, art.arcades, [1200, 260], [480, 280]), { fond: "#26092f", colonne: true, aligne: "stretch", gap: "0px", max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Arcades" });
+    const marque = k.row([glyphe(k, "arche", PR1, OR4, 48), k.T(`<p>Grand Hôtel Sélène</p>`, { fontSize: "32px", lineHeight: 1.1, fontFamily: S.head, color: PR1 })], { alignItems: "center", columnGap: "16px", flexWrap: "nowrap" });
+    const haut = G.bande(k, [marque, k.row([["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Spa", "/blog"], ["Réserver", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 17, poids: "500", police: S.head, couleur: PR1, padH: "6px", survol: { color: "#8a5a10", transform: { y: -3 } }, focus: "#8a5a10" })), { rowGap: "0px", columnGap: "20px" })], { fond: IV4, aligne: "center", gap: "12px 40px", padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: MARGES, nom: "Marque et liens" });
+    const carte = (fond, fg, enfants) => k.col(enfants, { flexGrow: 1, flexBasis: "220px", minWidth: "200px", gap: "10px", backgroundColor: fond, color: fg, paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", boxSizing: "border-box", borderRadius: "0px" });
+    const abo = lettre(k, env, { titre: "", intro: "Une nouvelle de temps en temps.", largeur: "100%", accent: IV4, texte: IV4, couleurIntro: "#ffffff", surBouton: PR1, survolBouton: OR4, surSurvol: PR1 });
+    const cartes = G.bande(k, [carte(PR2, IV4, [caps(k, "Adresse", { couleur: OR4, suivi: "0.2em", poids: "800" }), coordonnees(k, { couleur: IV4, lien: IV4, survol: OR4, focus: OR4, taille: 15 })]), carte(PR3, "#ffffff", [caps(k, "Horaires", { couleur: OR4, suivi: "0.2em", poids: "800" }), horaires(k, { couleur: "#ffffff", taille: 15 })]), carte(PR4, "#ffffff", [caps(k, "Lettre", { couleur: "#ffffff", suivi: "0.2em", poids: "800" }), abo, reseauxIcones(k, env, ["facebook", "instagram", "linkedin"], { fond: IV4, couleur: PR1, survolFond: OR4, survolCouleur: PR1 })])], { fond: IV4, aligne: "stretch", gap: "6px", max: "100%", padV: ["6px", "6px", "6px"], padB: ["6px", "6px", "6px"], padH: ["6px", "6px", "6px"], nom: "Cartes" });
+    const fin = G.bande(k, [G.ligneLegale({ taille: 13, couleur: "#52445a", liens: PR1, sansCookies: true })(k, env)], { fond: "#efe6d2", colonne: true, aligne: "stretch", padV: ["22px", "20px", "18px"], padB: ["22px", "20px", "18px"], padH: MARGES, nom: "Mentions" });
+    [arcades, haut, cartes, fin].forEach((b) => { b.styles.desktop.color = "#2b1030"; });
+    return [G.racine(k, [arcades, haut, cartes, fin])];
   },
 }, FAM);
 

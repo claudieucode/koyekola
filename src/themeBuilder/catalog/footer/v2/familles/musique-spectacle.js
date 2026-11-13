@@ -47,10 +47,13 @@ const mentionsBande = (G, k, env, fond, o = {}) => {
 };
 
 const FAM = "musique-spectacle";
+const I = require("../aides-illus-musgal");
+const bandeIllus = (G, k, sc, fond, o = {}) => G.bande(k, I.illus(k, sc, o.st), { fond, colonne: true, gap: "0px", aligne: "stretch", padV: o.padV || ["0px", "0px", "0px"], padB: o.padB || ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: o.nom || "Illustration" });
+const marqueW = (k, i, o, t = "64px") => k.W("html", { html: I.marque(i, o) }, { width: t, display: "block", fontSize: "0px", lineHeight: 0.8, flexShrink: 0 });
+const colLiens = (G, k, titre, liste, o = {}) => G.colonne(k, [caps(k, titre, { couleur: o.titre, suivi: "0.16em" }), ...liste.map(([t, u]) => lien(k, t, u, { taille: o.taille || 16, poids: "500", couleur: o.couleur, h: "44px", survol: o.survol, focus: o.focus }))], { poids: 1, min: o.min || "170px", gap: "2px" });
+const rangLien = (k, t, u, o) => lien(k, `${t}  →`, u, { taille: o.taille || 18, poids: o.poids || "600", police: o.police, couleur: o.couleur, h: "58px", bloc: true, padH: "6px", survol: o.survol, focus: o.focus, extra: { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: o.filet } });
 
-// ═══ ft2-350 « Programme de salle » — maison de musique (archétype G : index en lignes pleine largeur)
-// Inspiration : la liste de régions à filets de la capture 23 (lignes pleine largeur) et le fond nuit de la capture 24. Noir velours et or : six grandes lignes de programme (grand serif Bodoni, filet or),
-// chaque ligne s'indente et se remplit d'or au survol. Un petit carré d'or « respire » devant « À l'affiche ». Pas de colonnes, pas de cartes.
+// ═══ ft2-350 « Programme de salle » — maison de musique. Parti pris de la capture 24 : fond noir profond, grand objet lumineux au centre (ici un disque vinyle doré, arcs roses, objets flottants), puis marque et quatre colonnes de liens.
 const velours = identite({
   key: "c350", label: "Noir velours et or", humeur: "dark",
   fond: "#100d0a", texte: "#f4ead6", discret: "#b9ac95", accent: "#d9a441", surface: "#1a1612", encre: "#100d0a", surEncre: "#f4ead6",
@@ -60,29 +63,30 @@ const velours = identite({
 const programmeDeSalle = modeleV2({
   id: identifiantV2(350, "programme-de-salle"), concept: "c-350-programme-de-salle",
   name: "Programme de salle", family: FAM,
-  description: "Pour une maison de musique : six grandes lignes de programme en serif sur filets d'or, qui s'indentent et se remplissent d'or au survol ; titre et bouton de réservation à gauche, coordonnées dessous. Noir velours et or.",
-  tags: ["salle de concert", "musique", "programme", "index", "billetterie", "noir", "or", "angles droits"],
+  description: "Pour une maison de musique : un grand disque vinyle doré qui rayonne sur noir velours, avec arcs lumineux et objets flottants, puis la marque, un bouton de réservation et quatre colonnes de liens. Noir velours et or.",
+  tags: ["salle de concert", "musique", "vinyle", "illustration", "billetterie", "noir", "or", "angles droits"],
   identity: velours,
   racine: racineDe("#100d0a"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizcontact", "html", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, OR = "#d9a441", NOIR = "#100d0a", IVOIRE = "#f4ead6";
-    const marque = k.row([souffle(carre(k, OR, "12px"), 3000), caps(k, "À l'affiche", { couleur: OR, suivi: "0.28em" })], { gap: "12px", flexWrap: "nowrap" });
-    const titre = G.geant(`<p>La saison<br>au programme.</p>`, { taille: [44, 80], tablette: { taille: [56, 72] }, mobile: { taille: [40, 52] }, lh: 1.02, suivi: "-0.01em", poids: "400", police: S.head, couleur: IVOIRE })(k, env);
-    const grosBtn = souffle(bouton(k, "Réserver une place", "/contact", { texte: NOIR, fond: OR, h: "64px", taille: 16, padH: "32px", survol: { backgroundColor: IVOIRE, borderColor: IVOIRE, color: NOIR, transform: { y: -3 } }, focus: IVOIRE, extra: { alignSelf: "flex-start" } }), 5000);
-    const gauche = G.colonne(k, [marque, titre, grosBtn, k.col([], { height: "12px" }), caps(k, "Nous trouver", { couleur: OR }), coordonnees(k, { couleur: IVOIRE, lien: IVOIRE, survol: OR, focus: OR })], { poids: 1, min: "280px", gap: "22px" });
-    const ligneP = (num, nom, url, bordG) => lien(k, `${num}   ${nom}  →`, url, { taille: 34, poids: "400", police: S.head, couleur: IVOIRE, h: "96px", bloc: true, padH: "16px", lh: 1.1, survol: { backgroundColor: OR, color: NOIR, paddingLeft: "32px" }, focus: IVOIRE, extra: { flexGrow: 1, flexBasis: "260px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderLeftWidth: bordG ? "1px" : "0px", borderColor: "#d9a44199" } });
-    const paire = (a, b) => k.row([ligneP(...a, false), ligneP(...b, true)], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    const liste = k.col([paire(["01", "Concerts", "/blog"], ["02", "Saison", "/faq"]), paire(["03", "Billetterie", "/contact"], ["04", "Résidences", "/blog"]), paire(["05", "Salle et accès", "/contact"], ["06", "Presse", "/contact"])], { gap: "0px", width: "100%", alignItems: "stretch", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#d9a44199" });
-    const droite = G.colonne(k, [liste], { poids: 2, min: "300px", aligne: "stretch" });
-    const milieu = G.bande(k, [gauche, droite], { fond: NOIR, gap: "40px 72px", aligne: "flex-start", padV: ["88px", "64px", "44px"], padB: ["72px", "56px", "40px"], padH: PH, nom: "Programme" });
-    return [G.racine(k, [milieu, mentionsBande(G, k, env, NOIR, { couleur: "#b9ac95", liens: IVOIRE })])];
+    const S = k.S, OR = "#d9a441", NOIR = "#100d0a", IV = "#f4ead6";
+    const haut = bandeIllus(G, k, "s350", NOIR, { padV: ["40px", "24px", "8px"], padB: ["0px", "0px", "0px"], nom: "Disque" });
+    const marque = k.row([marqueW(k, 0, { fond: NOIR, trait: OR, accent: IV }), texte(k, "Maison Aria", { taille: 28, police: S.head, couleur: IV, lh: 1.1 })], { gap: "14px", flexWrap: "nowrap", alignItems: "center" });
+    const btn = souffle(bouton(k, "Réserver une place", "/contact", { texte: NOIR, fond: OR, h: "56px", survol: { backgroundColor: IV, borderColor: IV, color: NOIR, transform: { y: -3 } }, focus: IV }), 4800);
+    const gauche = G.colonne(k, [marque, texte(k, "Concerts, résidences et rencontres : la saison de la maison se lit ici.", { taille: 16, couleur: "#d6cbb6", max: "340px" }), btn], { poids: 2, min: "280px", gap: "20px" });
+    const coord = G.colonne(k, [caps(k, "Nous trouver", { couleur: OR, suivi: "0.16em" }), coordonnees(k, { couleur: IV, lien: IV, survol: OR, focus: OR, taille: 15 })], { poids: 1, min: "220px", gap: "10px" });
+    gauche.children.push(coord);
+    const ligneP = (num, nom, url, bordG) => lien(k, `${num}   ${nom}  →`, url, { taille: 30, poids: "400", police: S.head, couleur: IV, h: "88px", bloc: true, padH: "16px", lh: 1.1, survol: { backgroundColor: OR, color: NOIR, paddingLeft: "32px" }, focus: IV, extra: { flexGrow: 1, flexBasis: "240px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderLeftWidth: bordG ? "1px" : "0px", borderColor: "#d9a44199" } });
+    const paire = (x, y) => k.row([ligneP(...x, false), ligneP(...y, true)], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
+    const liste = k.col([paire(["01", "Concerts", "/blog"], ["02", "Saison", "/blog"]), paire(["03", "Billetterie", "/contact"], ["04", "Résidences", "/blog"]), paire(["05", "Salle et accès", "/contact"], ["06", "Presse", "/contact"])], { gap: "0px", width: "100%", alignItems: "stretch", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#d9a44199" });
+    const corps = G.bande(k, [gauche, G.colonne(k, [liste], { poids: 2, min: "300px", aligne: "stretch" })], { fond: NOIR, gap: "40px 64px", aligne: "flex-start", padV: ["48px", "40px", "32px"], padB: ["40px", "32px", "28px"], padH: PH, nom: "Programme" });
+    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"], ["Spotify", "https://open.spotify.com/"]], { taille: 15, poids: "600", couleur: IV, survol: OR, focus: OR })(k, env);
+    const bas = G.bande(k, [trait(k, "#d9a44166"), reseaux], { fond: NOIR, colonne: true, gap: "8px", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: PH, nom: "Réseaux" });
+    return [G.racine(k, [haut, corps, bas, mentionsBande(G, k, env, NOIR, { couleur: "#b9ac95", liens: IV })])];
   },
 }, FAM);
 
-// ═══ ft2-351 « Rideau rouge » — théâtre (archétype E : deux demi-pages bord à bord)
-// Inspiration : la bande de marque + bouton d'action de la capture 22, retournée en deux panneaux. À gauche, un rideau bordeaux (grand « Le rideau se lève. » en gras Abril, lettre d'information) ;
-// à droite, un panneau crème avec un énorme bouton de réservation qui « respire », quatre liens à filets et les horaires de billetterie. Mobile : le rideau puis le panneau crème.
+// ═══ ft2-351 « Rideau rouge » — théâtre. Parti pris de la capture 22 : fond clair, marque + phrase + bouton à gauche, colonnes de liens à droite, grande scène PEINTE pleine largeur en bas (ici la scène, rideaux, projecteurs, public).
 const rideau = identite({
   key: "c351", label: "Bordeaux et crème", humeur: "light",
   fond: "#f4ecdd", texte: "#2a0d10", discret: "#5e4a4a", accent: "#a3182b", surface: "#ebe0cc", encre: "#7d0f1f",
@@ -92,29 +96,27 @@ const rideau = identite({
 const rideauRouge = modeleV2({
   id: identifiantV2(351, "rideau-rouge"), concept: "c-351-rideau-rouge",
   name: "Rideau rouge", family: FAM,
-  description: "Pour un théâtre : deux demi-pages bord à bord. Rideau bordeaux avec « Le rideau se lève. » et la lettre d'information ; panneau crème avec un énorme bouton de réservation, liens à filets et horaires de billetterie.",
-  tags: ["théâtre", "spectacle vivant", "réservation", "deux panneaux", "bordeaux", "crème", "horaires", "angles droits"],
+  description: "Pour un théâtre : marque, phrase, bouton de réservation et lettre d'information à gauche, colonnes de liens et horaires à droite, puis une grande scène illustrée pleine largeur (rideaux bordeaux, projecteurs, silhouettes, public). Bordeaux et crème.",
+  tags: ["théâtre", "spectacle vivant", "réservation", "illustration", "scène", "bordeaux", "crème", "angles droits"],
   identity: rideau,
   racine: racineDe("#f4ecdd"),
-  widgets: ["text", "link", "bizhours", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizhours", "emailsubscribe", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, BORD = "#7d0f1f", BORD2 = "#5f0b17", CREME = "#f4ecdd", ROSE = "#f0c9ce";
-    const plis = k.row([0, 1, 2, 3, 4, 5, 6].map((i) => k.col([], { flexGrow: 1, flexBasis: "0px", height: "14px", backgroundColor: i % 2 ? BORD2 : "#8e1426", borderRadius: "0px" })), { gap: "0px", width: "100%", flexWrap: "nowrap", alignItems: "stretch" });
-    const phrase = G.geant(`<p>Le rideau<br>se lève.</p>`, { taille: [52, 120], tablette: { taille: [72, 100] }, mobile: { taille: [48, 64] }, lh: 1.0, suivi: "-0.01em", poids: "400", police: S.head, couleur: CREME })(k, env);
-    const abo = abonnement(k, env, { titre: "La lettre du théâtre", intro: "Nouveaux spectacles, reprises, rencontres : un message de temps en temps.", bouton: "Je m'abonne", largeur: "380px", accent: CREME, texte: CREME, titreCouleur: ROSE, introCouleur: "#f1dcdc", boutonTexte: BORD, boutonSurvol: { backgroundColor: ROSE, color: BORD2 } });
-    const gauche = G.colonne(k, [plis, k.col([caps(k, "Théâtre et spectacle vivant", { couleur: ROSE, suivi: "0.24em" }), phrase, abo], { gap: "28px", alignItems: "flex-start", paddingTop: "40px", paddingBottom: "72px", paddingLeft: "48px", paddingRight: "40px", boxSizing: "border-box", width: "100%" }, { paddingLeft: "32px", paddingRight: "28px" }, { paddingLeft: "20px", paddingRight: "20px", paddingBottom: "48px" })], { poids: 1, min: "340px", gap: "0px", aligne: "stretch", extra: { backgroundColor: BORD } });
-    const reserver = souffle(bouton(k, "Réserver une place", "/contact", { texte: CREME, fond: BORD, h: "84px", taille: 20, padH: "40px", survol: { backgroundColor: "#2a0d10", borderColor: "#2a0d10", color: CREME, transform: { y: -3 } }, focus: "#2a0d10", extra: { alignSelf: "stretch" } }), 4200);
-    const rang = (t, u) => lien(k, t, u, { taille: 20, poids: "600", police: S.head, couleur: "#2a0d10", h: "58px", bloc: true, padH: "4px", survol: { color: BORD, paddingLeft: "16px" }, focus: BORD, extra: { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#2a0d1055" } });
+    const S = k.S, BORD = "#7d0f1f", CREME = "#f4ecdd", ENC = "#2a0d10";
+    const marque = k.row([marqueW(k, 1, { fond: BORD, trait: CREME, accent: "#e6b34a" }), texte(k, "Théâtre du Rideau", { taille: 28, police: S.head, couleur: BORD, lh: 1.1 })], { gap: "14px", flexWrap: "nowrap", alignItems: "center" });
+    const btn = souffle(bouton(k, "Réserver une place", "/contact", { texte: CREME, fond: BORD, h: "60px", survol: { backgroundColor: ENC, borderColor: ENC, color: CREME, transform: { y: -3 } }, focus: ENC }), 4200);
+    const abo = abonnement(k, env, { titre: "La lettre du théâtre", intro: "Nouveaux spectacles et rencontres : un message de temps en temps.", bouton: "Je m'abonne", largeur: "340px", accent: BORD, texte: ENC, titreCouleur: BORD, introCouleur: "#5e4a4a", boutonTexte: CREME, boutonSurvol: { backgroundColor: ENC, color: CREME } });
+    const boite = k.col([abo], { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "2px", borderColor: ENC, paddingTop: "20px", paddingBottom: "20px", paddingLeft: "20px", paddingRight: "20px", backgroundColor: "#ebe0cc" });
+    const gauche = G.colonne(k, [marque, texte(k, "Le rideau se lève : théâtre, musique et spectacle vivant toute la saison.", { taille: 17, couleur: ENC, max: "360px" }), btn, boite], { poids: 2, min: "300px", gap: "20px" });
+    const rang = (t, u) => rangLien(k, t, u, { taille: 20, poids: "600", police: S.head, couleur: ENC, survol: { color: BORD, paddingLeft: "16px" }, focus: BORD, filet: "#2a0d1055" });
     const liens = k.col([rang("Le programme", "/blog"), rang("Abonnements et tarifs", "/faq"), rang("Groupes et scolaires", "/contact"), rang("Accès et accessibilité", "/contact")], { gap: "0px", width: "100%", alignItems: "stretch" });
-    const droite = G.colonne(k, [caps(k, "Venir au spectacle", { couleur: BORD }), reserver, liens, caps(k, "Horaires de la billetterie", { couleur: BORD }), horaires(k, { couleur: "#2a0d10", taille: 16 })], { poids: 1, min: "340px", gap: "20px", aligne: "stretch", extra: { paddingTop: "56px", paddingBottom: "56px", paddingLeft: "48px", paddingRight: "48px", boxSizing: "border-box", backgroundColor: CREME }, tablette: { paddingLeft: "32px", paddingRight: "32px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "40px" } });
-    const deux = G.bande(k, [gauche, droite], { fond: CREME, gap: "0px", aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Deux panneaux" });
-    return [G.racine(k, [deux, mentionsBande(G, k, env, CREME, { couleur: "#5e4a4a", liens: "#2a0d10" })])];
+    const droite = G.colonne(k, [caps(k, "Venir au spectacle", { couleur: BORD, suivi: "0.16em" }), liens, caps(k, "Horaires de la billetterie", { couleur: BORD, suivi: "0.16em" }), horaires(k, { couleur: ENC, taille: 15 })], { poids: 2, min: "320px", gap: "14px", aligne: "stretch" });
+    const texteB = G.bande(k, [gauche, droite], { fond: CREME, gap: "36px 72px", aligne: "flex-start", padV: ["72px", "56px", "40px"], padB: ["56px", "44px", "32px"], padH: PH, nom: "Texte" });
+    return [G.racine(k, [bandeIllus(G, k, "s351", CREME, { nom: "Scène" }), texteB, mentionsBande(G, k, env, "#14070a", { couleur: "#d9c3c6", liens: "#ffffff" })])];
   },
 }, FAM);
 
-// ═══ ft2-352 « Console de mixage » — studio / club de musiques actuelles (archétype K : fenêtre-console)
-// Inspiration : le texte discret en notes et l'atmosphère nuit de la capture 24. Le pied est une FENÊTRE : barre de titre à trois carrés, liste de commandes « > Programme » qui s'allument au survol,
-// invite de commande avec curseur vert qui « respire », formulaire de lettre. Mono IBM Plex et JetBrains, noir graphite et vert phosphore.
+// ═══ ft2-352 « Console de mixage » — club. Parti pris de la capture 24 : nuit profonde, grand objet lumineux en tête (ici un soleil vert rayé sur des rangées d'égaliseur), puis invite de commande, onglets et lettre en barre d'état.
 const phosphore = identite({
   key: "c352", label: "Graphite et vert phosphore", humeur: "dark",
   fond: "#0f1115", texte: "#d8e1d6", discret: "#93a39a", accent: "#6dff9a", surface: "#171a20", encre: "#0f1115", surEncre: "#d8e1d6",
@@ -124,63 +126,57 @@ const phosphore = identite({
 const consoleDeMixage = modeleV2({
   id: identifiantV2(352, "console-de-mixage"), concept: "c-352-console-de-mixage",
   name: "Console de mixage", family: FAM,
-  description: "Pour un club de musiques actuelles : le pied est une fenêtre de console, barre de titre à trois carrés, commandes qui s'allument au survol, curseur vert qui respire, lettre d'information et coordonnées. Mono, graphite et vert.",
-  tags: ["club", "musiques actuelles", "console", "fenêtre", "mono", "graphite", "vert", "angles droits"],
+  description: "Pour un club de musiques actuelles : un soleil vert lumineux sur des rangées d'égaliseur en tête de pied, puis invite de commande, cinq onglets qui s'allument, lettre d'information et coordonnées. Mono, graphite et vert phosphore.",
+  tags: ["club", "musiques actuelles", "égaliseur", "illustration", "mono", "graphite", "vert", "angles droits"],
   identity: phosphore,
   racine: racineDe("#0f1115"),
-  widgets: ["text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizcontact", "emailsubscribe", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, VERT = "#6dff9a", GRAPH = "#0f1115", PANNEAU = "#171a20", BORD = "#2f4a3a";
-    const titreBarre = k.row([k.row([carre(k, VERT, "12px"), carre(k, "#93a39a", "12px"), carre(k, "#3a4650", "12px")], { gap: "6px", flexWrap: "nowrap" }), caps(k, "console / programme de la salle", { couleur: S.mute, suivi: "0.06em", poids: "500", taille: "13px" })], { gap: "16px", flexWrap: "nowrap", paddingTop: "12px", paddingBottom: "12px", paddingLeft: "16px", paddingRight: "16px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: BORD, width: "100%", boxSizing: "border-box", backgroundColor: "#1d2127" });
-    const cmd = (t, u) => lien(k, `> ${t}`, u, { taille: 17, poids: "500", couleur: S.fg, h: "46px", bloc: true, padH: "10px", survol: { backgroundColor: "#1f2a22", color: VERT, paddingLeft: "22px" }, focus: VERT, extra: { width: "100%", boxSizing: "border-box" } });
+    const S = k.S, VERT = "#6dff9a", GRAPH = "#0f1115", BORD = "#2f4a3a";
+    const haut = bandeIllus(G, k, "s352", GRAPH, { padV: ["32px", "20px", "8px"], nom: "Soleil" });
     const invite = k.row([texte(k, "salle@scène:~$ ls programme", { taille: 15, couleur: VERT }), souffle(carre(k, VERT, "10px"), 1600)], { gap: "8px", flexWrap: "nowrap", alignItems: "center" });
     const cellule = (t, u) => lien(k, `> ${t}`, u, { taille: 16, poids: "500", couleur: S.fg, h: "52px", bloc: true, padH: "14px", survol: { backgroundColor: "#1f2a22", color: VERT }, focus: VERT, extra: { flexGrow: 1, flexBasis: "180px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "2px", borderColor: BORD } });
-    const onglets = k.row([cellule("Concerts", "/blog"), cellule("Résidences", "/contact"), cellule("Billetterie", "/contact"), cellule("Infos pratiques", "/faq"), cellule("Presse", "/contact")], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: BORD });
+    const onglets = k.row([cellule("Concerts", "/blog"), cellule("Résidences", "/contact"), cellule("Billetterie", "/contact"), cellule("Infos pratiques", "/faq"), cellule("Presse", "/contact")], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderBottomWidth: "2px", borderColor: BORD });
     const abo = abonnement(k, env, { titre: "$ subscribe --lettre", intro: "Les dates, les premières parties et les soirées à venir.", bouton: "Envoyer", largeur: "380px", accent: VERT, texte: S.fg, titreCouleur: VERT, introCouleur: S.mute, boutonTexte: GRAPH, boutonSurvol: { backgroundColor: S.fg, color: GRAPH } });
     const coord = G.colonne(k, [caps(k, "# coordonnées", { couleur: VERT, taille: "13px", poids: "500" }), coordonnees(k, { couleur: S.fg, lien: S.fg, survol: VERT, focus: VERT, taille: 14 })], { poids: 1, min: "260px", gap: "12px" });
-    const etat = k.row([G.colonne(k, [abo], { poids: 1, min: "280px" }), coord], { ...gp("28px 56px"), alignItems: "flex-start", flexWrap: "wrap", paddingTop: "28px", paddingBottom: "32px", paddingLeft: "24px", paddingRight: "24px", boxSizing: "border-box", width: "100%" }, undefined, { paddingLeft: "14px", paddingRight: "14px" });
-    const corps = k.col([k.col([invite], { paddingTop: "22px", paddingBottom: "18px", paddingLeft: "24px", paddingRight: "24px" }), onglets, etat], { gap: "0px", width: "100%" });
-    const fenetre = k.col([titreBarre, corps], { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "2px", borderColor: BORD, backgroundColor: PANNEAU });
-    const haut = G.bande(k, [fenetre], { fond: GRAPH, colonne: true, padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Console" });
-    return [G.racine(k, [haut, mentionsBande(G, k, env, GRAPH, { couleur: "#93a39a", liens: "#d8e1d6" })])];
+    const etat = k.row([G.colonne(k, [abo], { poids: 1, min: "280px" }), coord], { ...gp("28px 56px"), alignItems: "flex-start", flexWrap: "wrap", width: "100%" });
+    const corps = G.bande(k, [invite, onglets, etat], { fond: GRAPH, colonne: true, gap: "24px", padV: ["28px", "24px", "20px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Console" });
+    return [G.racine(k, [haut, corps, mentionsBande(G, k, env, GRAPH, { couleur: "#93a39a", liens: "#d8e1d6" })])];
   },
 }, FAM);
 
-// ═══ ft2-353 « Affiche en mosaïque » — festival (archétype H : mosaïque asymétrique)
-// Inspiration : l'illustration monumentale de la capture 24 et ses petits objets flottants, traduits en grands aplats. Une grande case jaune (« EN SCÈNE » en Anton, billetterie, coordonnées) et trois cases empilées
-// (rose, bleu électrique, blanc) qui sont des liens et se remplissent de jaune au survol. Mobile : la grande case puis les trois cases en pile.
+// ═══ ft2-353 « Affiche en mosaïque » — festival. Parti pris de la capture 23 : bande claire en haut avec une ligne d'objets en silhouette posés sur un trait de sol, puis pied sombre (écusson de marque, colonnes, appel à l'action, lignes à filets).
 const affiche = identite({
-  key: "c353", label: "Jaune, rose et bleu électrique", humeur: "dark",
-  fond: "#111111", texte: "#ffffff", discret: "#cfcfcf", accent: "#ff2e88", surface: "#1c1c1c", encre: "#111111", surEncre: "#ffffff",
+  key: "c353", label: "Jaune, rose et noir", humeur: "dark",
+  fond: "#111111", texte: "#ffffff", discret: "#cfcfcf", accent: "#ffd400", surface: "#1c1c1c", encre: "#111111", surEncre: "#ffffff",
   police: "font.space-grotesk", titres: "font.anton",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "700", bordure: "0px", ligne: "#ffffff44",
 });
 const afficheFestival = modeleV2({
   id: identifiantV2(353, "affiche-en-mosaique"), concept: "c-353-affiche-en-mosaique",
   name: "Affiche en mosaïque", family: FAM,
-  description: "Pour un festival : mosaïque asymétrique, une grande case jaune « EN SCÈNE » avec billetterie et coordonnées, trois cases empilées (programme, artistes, infos) rose, bleu et blanc qui virent au jaune au survol. Anton, aplats francs.",
-  tags: ["festival", "concerts", "billetterie", "mosaïque", "jaune", "rose", "bleu", "angles droits"],
+  description: "Pour un festival : une bande jaune où la scène, la grande roue, le chapiteau, les arbres et le camion se détachent en silhouette sur une ligne de sol, puis un pied noir (écusson, colonnes, billetterie, lignes à filets). Anton, jaune, rose.",
+  tags: ["festival", "concerts", "silhouettes", "illustration", "billetterie", "jaune", "rose", "noir", "angles droits"],
   identity: affiche,
   racine: racineDe("#111111"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["text", "link", "bizcontact", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, JAUNE = "#ffd400", NOIR = "#111111", ROSE = "#ff2e88", BLEU = "#1f3bff";
-    const titre = G.geant(`<p>EN<br>SCÈNE</p>`, { taille: [96, 190], tablette: { taille: [120, 170] }, mobile: { taille: [88, 120] }, lh: 0.92, suivi: "0em", poids: "400", police: S.head, couleur: NOIR })(k, env);
-    const intro = texte(k, "Trois jours de concerts, des scènes en plein air et une programmation à découvrir.", { taille: 18, couleur: NOIR, max: "420px", poids: "500" });
-    const b = souffle(bouton(k, "Billetterie", "/contact", { texte: JAUNE, fond: NOIR, h: "64px", taille: 18, padH: "36px", survol: { backgroundColor: ROSE, borderColor: ROSE, color: "#ffffff", transform: { y: -3 } }, focus: "#ffffff", extra: { alignSelf: "flex-start" } }), 4200);
-    const grande = G.colonne(k, [caps(k, "Festival de musiques", { couleur: NOIR, suivi: "0.24em" }), titre, intro, b, coordonnees(k, { couleur: NOIR, lien: NOIR, survol: "#ffffff", focus: NOIR, taille: 15 })], { poids: 2, min: "320px", gap: "22px", extra: { backgroundColor: JAUNE, boxSizing: "border-box", paddingTop: "56px", paddingBottom: "56px", paddingLeft: "48px", paddingRight: "48px" }, tablette: { paddingLeft: "32px", paddingRight: "32px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "40px" } });
-    const petite = (nom, url, fond, couleur, bord) => lien(k, `${nom}  ↗`, url, { taille: 34, poids: "400", police: S.head, casse: "uppercase", suivi: "0.02em", couleur, bloc: true, h: "150px", survol: { backgroundColor: JAUNE, color: NOIR, paddingLeft: "40px" }, focus: JAUNE, extra: { width: "100%", flexGrow: 1, boxSizing: "border-box", paddingLeft: "28px", paddingRight: "20px", paddingTop: "20px", paddingBottom: "20px", alignItems: "flex-end", backgroundColor: fond, borderStyle: "solid", borderWidth: bord ? "3px" : "0px", borderColor: "#ffffff" } });
-    const pile = G.colonne(k, [petite("Programme", "/blog", ROSE, NOIR), petite("Artistes", "/blog", BLEU, "#ffffff"), petite("Infos pratiques", "/faq", NOIR, "#ffffff", true)], { poids: 1, min: "280px", gap: "0px", aligne: "stretch", extra: { flexBasis: "320px" } });
-    const mosaique = G.bande(k, [grande, pile], { fond: NOIR, gap: "0px", aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Mosaïque" });
-    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"], ["Spotify", "https://open.spotify.com/"]], { taille: 15, poids: "700", couleur: "#ffffff", survol: JAUNE, focus: JAUNE })(k, env);
-    const reseauBande = G.bande(k, [reseaux], { fond: NOIR, colonne: true, padV: ["24px", "20px", "16px"], padB: ["0px", "0px", "0px"], padH: PH, nom: "Réseaux" });
-    return [G.racine(k, [mosaique, reseauBande, mentionsBande(G, k, env, NOIR, { couleur: "#cfcfcf", liens: "#ffffff" })])];
+    const S = k.S, JAUNE = "#ffd400", NOIR = "#111111", ROSE = "#ff2e88", BL = "#ffffff";
+    const haut = bandeIllus(G, k, "s353", JAUNE, { padV: ["40px", "28px", "20px"], padB: ["0px", "0px", "0px"], nom: "Silhouettes" });
+    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"], ["Spotify", "https://open.spotify.com/"]], { taille: 15, poids: "700", couleur: BL, survol: JAUNE, focus: JAUNE })(k, env);
+    const gauche = G.colonne(k, [marqueW(k, 3, { fond: NOIR, trait: JAUNE, accent: ROSE }, "96px"), texte(k, "Festival de musiques", { taille: 34, police: S.head, couleur: BL, lh: 1.1, extra: { textTransform: "uppercase" } }), reseaux], { poids: 1, min: "240px", gap: "18px" });
+    const o = { titre: JAUNE, couleur: BL, survol: { color: JAUNE, textDecoration: "underline" }, focus: JAUNE };
+    const coord = G.colonne(k, [caps(k, "Infos pratiques", { couleur: JAUNE }), coordonnees(k, { couleur: BL, lien: BL, survol: JAUNE, focus: JAUNE, taille: 15 })], { poids: 1, min: "230px", gap: "10px" });
+    const btn = souffle(bouton(k, "Billetterie", "/contact", { texte: NOIR, fond: JAUNE, h: "56px", survol: { backgroundColor: ROSE, borderColor: ROSE, color: BL, transform: { y: -3 } }, focus: BL }), 4200);
+    const appel = G.colonne(k, [texte(k, "Prêt pour la scène ?", { taille: 30, police: S.head, couleur: BL, lh: 1.1, extra: { textTransform: "uppercase" } }), texte(k, "Trois jours de concerts et de scènes en plein air.", { taille: 16, couleur: "#cfcfcf", max: "280px" }), btn], { poids: 1, min: "260px", gap: "16px" });
+    const cols = G.bande(k, [gauche, colLiens(G, k, "Le festival", [["Programme", "/blog"], ["Artistes", "/blog"], ["Scènes", "/blog"]], o), coord, appel], { fond: NOIR, gap: "36px 48px", aligne: "flex-start", padV: ["64px", "48px", "40px"], padB: ["40px", "32px", "28px"], padH: PH, nom: "Colonnes" });
+    const r = (t, u) => rangLien(k, t, u, { taille: 22, poids: "400", police: S.head, couleur: BL, survol: { backgroundColor: JAUNE, color: NOIR, paddingLeft: "20px" }, focus: JAUNE, filet: "#ffffff66" });
+    const rows = G.bande(k, [caps(k, "Scènes et lieux", { couleur: JAUNE }), k.col([r("Grande scène", "/blog"), r("Scène des jardins", "/blog"), r("Chapiteau", "/blog"), r("Infos et accès", "/faq")], { gap: "0px", width: "100%", alignItems: "stretch", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#ffffff66" })], { fond: NOIR, colonne: true, gap: "14px", padV: ["8px", "8px", "8px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Lieux" });
+    return [G.racine(k, [haut, cols, rows, mentionsBande(G, k, env, NOIR, { couleur: "#cfcfcf", liens: BL })])];
   },
 }, FAM);
 
-// ═══ ft2-354 « Saison en frise » — orchestre / saison culturelle (archétype I : frise à points carrés)
-// Inspiration : la silhouette horizontale posée sur une ligne de la capture 23 (moulin, entrepôt, camion, maison alignés sur un trait) : ici quatre étapes (automne, hiver, printemps, été) alignées sur un trait marine,
-// chacune marquée d'un point carré orange (le premier « respire ») et d'un lien de programme qui glisse au survol. Aucune date inventée. Fraunces et Public Sans, gris bleuté clair.
+// ═══ ft2-354 « Saison en frise » — orchestre. Parti pris de la capture 23 (objets en silhouette sur un trait de sol), ici une ligne d'instruments : violoncelle, harpe, pupitres, chef, piano à queue, trompette, timbales.
 const frise = identite({
   key: "c354", label: "Gris bleuté, marine et orange", humeur: "light",
   fond: "#e9eef2", texte: "#14213d", discret: "#4a5a73", accent: "#a23304", surface: "#dbe3ea", encre: "#14213d",
@@ -190,64 +186,60 @@ const frise = identite({
 const saisonEnFrise = modeleV2({
   id: identifiantV2(354, "saison-en-frise"), concept: "c-354-saison-en-frise",
   name: "Saison en frise", family: FAM,
-  description: "Pour un orchestre ou une saison culturelle : une frise horizontale en quatre temps (automne, hiver, printemps, été) sur un trait marine, points carrés orange, liens de programme qui glissent. Gris bleuté, marine, orange.",
-  tags: ["orchestre", "saison", "frise", "chronologie", "programme", "marine", "orange", "angles droits"],
+  description: "Pour un orchestre : titre et frise des quatre saisons, puis une ligne d'instruments en silhouette (violoncelle, harpe, chef, piano, trompette, timbales) posée sur un trait marine, et un pied marine avec écusson, coordonnées et liens. Gris bleuté, marine, orange.",
+  tags: ["orchestre", "saison", "frise", "instruments", "illustration", "silhouettes", "marine", "orange", "angles droits"],
   identity: frise,
-  racine: racineDe("#dbe3ea"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  racine: racineDe("#14213d"),
+  widgets: ["text", "link", "bizcontact", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, MAR = "#14213d", ORA = "#a23304", CLAIR = "#e9eef2", SURF = "#dbe3ea";
+    const S = k.S, MAR = "#14213d", ORA = "#a23304", CLAIR = "#e9eef2", ORC = "#ff9a66";
     const titre = G.geant(`<p>La saison en<br>quatre temps.</p>`, { taille: [44, 92], tablette: { taille: [64, 84] }, mobile: { taille: [40, 56] }, lh: 1.02, suivi: "-0.02em", poids: "600", police: S.head, couleur: MAR })(k, env);
     const prog = bouton(k, "Voir le programme", "/blog", { texte: CLAIR, fond: MAR, survol: { backgroundColor: ORA, borderColor: ORA, color: "#ffffff", transform: { y: -3 } }, focus: ORA });
-    const tete = G.bande(k, [G.colonne(k, [caps(k, "Orchestre et chœur", { couleur: ORA, suivi: "0.22em" }), titre], { poids: 3, min: "300px", gap: "16px" }), prog], { fond: CLAIR, gap: "28px 48px", aligne: "flex-end", padV: ["80px", "64px", "44px"], padB: ["56px", "48px", "36px"], padH: PH, nom: "Titre" });
+    const tete = G.bande(k, [G.colonne(k, [caps(k, "Orchestre et chœur", { couleur: ORA, suivi: "0.22em" }), titre], { poids: 3, min: "300px", gap: "16px" }), prog], { fond: CLAIR, gap: "28px 48px", aligne: "flex-end", padV: ["72px", "56px", "40px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Titre" });
     const etape = (i, saison, nom, url) => {
       const point = i === 0 ? souffle(carre(k, ORA, "18px"), 2800) : carre(k, ORA, "18px");
       point.styles.desktop.marginTop = "-12px";
       const l = lien(k, nom, url, { taille: 21, poids: "600", police: S.head, couleur: MAR, h: "56px", bloc: true, lh: 1.2, survol: { color: ORA, paddingLeft: "10px" }, focus: ORA });
-      return k.col([point, caps(k, saison, { couleur: ORA, suivi: "0.2em" }), l], { flexGrow: 1, flexBasis: "200px", minWidth: "160px", gap: "10px", alignItems: "flex-start", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderColor: MAR, paddingTop: "0px", paddingRight: "20px" });
+      return k.col([point, caps(k, saison, { couleur: ORA, suivi: "0.2em" }), l], { flexGrow: 1, flexBasis: "200px", minWidth: "160px", gap: "10px", alignItems: "flex-start", boxSizing: "border-box", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderColor: MAR, paddingRight: "20px" });
     };
     const rail = k.row([etape(0, "Automne", "Concerts de rentrée", "/blog"), etape(1, "Hiver", "Soirées d'hiver", "/blog"), etape(2, "Printemps", "Festival de printemps", "/blog"), etape(3, "Été", "Scènes en plein air", "/blog")], { ...gp("40px 0px"), alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    const frBande = G.bande(k, [rail], { fond: CLAIR, colonne: true, padV: ["24px", "20px", "16px"], padB: ["72px", "56px", "48px"], padH: PH, nom: "Frise" });
-    const coord = G.colonne(k, [caps(k, "Nous trouver", { couleur: ORA }), coordonnees(k, { couleur: MAR, lien: MAR, survol: ORA, focus: ORA })], { poids: 1, min: "260px", gap: "12px" });
-    const rapide = ["Billetterie|/contact", "Accès et salle|/contact", "Presse|/contact", "Mécénat|/contact"].map((s) => { const [t, u] = s.split("|"); return lien(k, t, u, { taille: 16, poids: "700", couleur: MAR, survol: { color: ORA, transform: { x: 4 } }, focus: ORA }); });
-    const liens = G.colonne(k, [caps(k, "Pratique", { couleur: ORA }), k.row(rapide, { ...gp("0px 28px"), flexWrap: "wrap" })], { poids: 2, min: "280px", gap: "8px" });
-    const bas = G.bande(k, [coord, liens], { fond: SURF, gap: "28px 56px", aligne: "flex-start", padV: ["48px", "40px", "32px"], padB: ["12px", "12px", "8px"], padH: PH, nom: "Infos" });
-    return [G.racine(k, [tete, frBande, bas, mentionsBande(G, k, env, SURF, { couleur: "#4a5a73", liens: MAR })])];
+    const frBande = G.bande(k, [rail], { fond: CLAIR, colonne: true, padV: ["24px", "20px", "16px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Frise" });
+    const ill = bandeIllus(G, k, "s354", CLAIR, { nom: "Instruments" });
+    const o = { titre: ORC, couleur: "#ffffff", survol: { color: ORC, textDecoration: "underline" }, focus: ORC };
+    const coord = G.colonne(k, [caps(k, "Nous trouver", { couleur: ORC }), coordonnees(k, { couleur: "#ffffff", lien: "#ffffff", survol: ORC, focus: ORC })], { poids: 1, min: "250px", gap: "10px" });
+    const marque = G.colonne(k, [marqueW(k, 4, { fond: MAR, trait: "#ffffff", accent: ORC }, "88px"), texte(k, "Orchestre et chœur", { taille: 24, police: S.head, couleur: "#ffffff", lh: 1.1 })], { poids: 1, min: "220px", gap: "14px" });
+    const pied = G.bande(k, [marque, colLiens(G, k, "Saison", [["Concerts", "/blog"], ["Abonnements", "/faq"], ["Jeune public", "/blog"]], o), colLiens(G, k, "Pratique", [["Billetterie", "/contact"], ["Accès et salle", "/contact"], ["Presse", "/contact"], ["Mécénat", "/contact"]], o), coord], { fond: MAR, gap: "36px 48px", aligne: "flex-start", padV: ["40px", "36px", "32px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Pied marine" });
+    return [G.racine(k, [tete, frBande, ill, pied, mentionsBande(G, k, env, MAR, { couleur: "#c8d2e4", liens: "#ffffff" })])];
   },
 }, FAM);
 
-// ═══ ft2-355 « Coulisses » — théâtre / compagnie (archétype A : colonne latérale pleine hauteur)
-// Inspiration : le bloc « logo, phrase, bouton » à gauche et les colonnes de liens à droite de la capture 22. Barre verticale vert-de-gris pleine hauteur (nom, phrase, bouton ambre qui « respire », réseaux)
-// et zone crème avec grande phrase, liens soulignés et lettre en boîte (la barre est à droite). Libre Caslon et Inter Tight. Mobile : la zone crème puis la barre.
+// ═══ ft2-355 « Coulisses » — compagnie. Parti pris de la capture 22 : paysage PEINT pleine largeur (collines, arbres, chemin, roulotte de théâtre, guirlande, panneau, enfant qui montre du doigt) dont la colline proche se prolonge dans le pied vert-de-gris.
 const coulisses = identite({
-  key: "c355", label: "Vert-de-gris, crème et ambre", humeur: "light",
-  fond: "#f6f1e7", texte: "#10292b", discret: "#4b5f5f", accent: "#a14a0b", surface: "#e9e2d2", encre: "#0b3b3c",
+  key: "c355", label: "Vert-de-gris, crème et ambre", humeur: "dark",
+  fond: "#0b3b3c", texte: "#f6f1e7", discret: "#cfe0dc", accent: "#f2b45a", surface: "#0f4a4b", encre: "#0b3b3c", surEncre: "#f6f1e7",
   police: "font.inter-tight", titres: "font.libre-caslon-text",
-  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "0px", ligne: "#10292b55",
+  rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "0px", ligne: "#f6f1e755",
 });
 const coulissesM = modeleV2({
   id: identifiantV2(355, "coulisses"), concept: "c-355-coulisses",
   name: "Coulisses", family: FAM,
-  description: "Pour une compagnie ou un théâtre : une zone crème (grande phrase, liens soulignés, lettre en boîte) et, à droite, une barre verticale vert-de-gris pleine hauteur (nom, phrase, bouton ambre, réseaux). Libre Caslon, crème, ambre.",
-  tags: ["compagnie", "théâtre", "colonne latérale", "réservation", "vert-de-gris", "crème", "ambre", "angles droits"],
+  description: "Pour une compagnie de théâtre : un grand paysage illustré (collines, arbres, roulotte, guirlande de fanions, chemin, enfant) dont la colline se prolonge dans un pied vert-de-gris avec nom, bouton ambre, liens et lettre. Libre Caslon, vert-de-gris, crème, ambre.",
+  tags: ["compagnie", "théâtre", "paysage", "illustration", "roulotte", "vert-de-gris", "crème", "ambre", "angles droits"],
   identity: coulisses,
-  racine: racineDe("#f6f1e7"),
-  widgets: ["text", "link", "emailsubscribe", "copyright", "bizlegal"],
+  racine: racineDe("#0b3b3c"),
+  widgets: ["text", "link", "emailsubscribe", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, TEAL = "#0b3b3c", CREME = "#f6f1e7", AMBRE = "#f2b45a", ENCRE = "#10292b", MARRON = "#a14a0b";
-    const nom = G.geant(`<p>Les<br>Coulisses</p>`, { taille: [44, 64], tablette: { taille: [48, 64] }, mobile: { taille: [44, 52] }, lh: 1.02, suivi: "-0.01em", poids: "400", police: S.head, couleur: CREME })(k, env);
-    const phrase = texte(k, "Du texte, de la musique, des corps en scène : une maison pour les créations.", { taille: 17, couleur: "#cfe0dc", max: "300px" });
+    const S = k.S, TEAL = "#0b3b3c", CREME = "#f6f1e7", AMBRE = "#f2b45a";
+    const haut = bandeIllus(G, k, "s355", CREME, { nom: "Paysage" });
+    const marque = k.col([marqueW(k, 5, { fond: TEAL, trait: CREME, accent: AMBRE }, "72px"), G.geant(`<p>Les Coulisses</p>`, { taille: [44, 92], tablette: { taille: [56, 80] }, mobile: { taille: [40, 52] }, lh: 1.0, suivi: "-0.01em", poids: "400", police: S.head, couleur: CREME, extra: { textAlign: "center" } })(k, env)], { gap: "10px", alignItems: "center", width: "100%" });
     const resa = souffle(bouton(k, "Réserver", "/contact", { texte: TEAL, fond: AMBRE, survol: { backgroundColor: CREME, borderColor: CREME, color: TEAL, transform: { y: -3 } }, focus: CREME }), 4200);
-    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"], ["Facebook", "https://www.facebook.com/"]], { taille: 15, poids: "600", couleur: CREME, survol: AMBRE, focus: AMBRE })(k, env);
-    const barreL = G.colonne(k, [caps(k, "Compagnie et théâtre", { couleur: AMBRE, suivi: "0.22em" }), nom, phrase, resa, k.col([], { height: "16px" }), reseaux], { poids: 0, base: "340px", min: "280px", gap: "20px", justifie: "flex-start", extra: { flexShrink: 0, backgroundColor: TEAL, boxSizing: "border-box", paddingTop: "64px", paddingBottom: "64px", paddingLeft: "40px", paddingRight: "40px" }, tablette: { paddingLeft: "32px", paddingRight: "32px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "44px", paddingBottom: "44px" } });
-    const gros = G.geant(`<p>La maison est<br>ouverte à tous.</p>`, { taille: [36, 68], tablette: { taille: [44, 60] }, mobile: { taille: [34, 44] }, lh: 1.08, suivi: "-0.01em", poids: "400", police: S.head, couleur: ENCRE })(k, env);
-    const mot = (t, u) => lien(k, t, u, { taille: 20, poids: "500", police: S.head, couleur: ENCRE, soulign: true, h: "48px", survol: { color: MARRON, paddingLeft: "6px" }, focus: MARRON });
-    const mots = k.row([mot("La saison", "/blog"), mot("Jeune public", "/blog"), mot("Créations", "/blog"), mot("Billetterie", "/contact"), mot("Accès", "/contact"), mot("Mécénat", "/contact"), mot("Presse", "/contact")], { ...gp("0px 28px"), flexWrap: "wrap" });
-    const abo = abonnement(k, env, { titre: "La lettre de la compagnie", intro: "Nouvelles créations et rencontres : un message de temps en temps.", bouton: "Je m'abonne", largeur: "460px", accent: MARRON, texte: ENCRE, titreCouleur: MARRON, introCouleur: "#3d4f4f", boutonTexte: "#ffffff", boutonSurvol: { backgroundColor: TEAL, color: "#ffffff" } });
-    const boite = k.col([abo], { width: "100%", boxSizing: "border-box", borderStyle: "solid", borderWidth: "2px", borderColor: ENCRE, paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", backgroundColor: "#efe7d6" }, undefined, { paddingLeft: "18px", paddingRight: "18px" });
-    const zone = G.colonne(k, [caps(k, "Entrez dans la maison", { couleur: MARRON, suivi: "0.22em" }), gros, mots, boite], { poids: 1, min: "340px", gap: "28px", aligne: "stretch", extra: { backgroundColor: CREME, boxSizing: "border-box", paddingTop: "64px", paddingBottom: "56px", paddingLeft: "56px", paddingRight: "48px" }, tablette: { paddingLeft: "32px", paddingRight: "32px" }, mobile: { paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "40px" } });
-    const deux = G.bande(k, [zone, barreL], { fond: CREME, gap: "0px", aligne: "stretch", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Contenu et barre" });
-    return [G.racine(k, [deux, mentionsBande(G, k, env, CREME, { couleur: "#4b5f5f", liens: ENCRE })])];
+    const mot = (t, u) => lien(k, t, u, { taille: 19, poids: "500", police: S.head, couleur: CREME, soulign: true, h: "48px", survol: { color: AMBRE, paddingLeft: "6px" }, focus: AMBRE });
+    const mots = k.row([mot("La saison", "/blog"), mot("Jeune public", "/blog"), mot("Créations", "/blog"), mot("Billetterie", "/contact"), mot("Accès", "/contact"), mot("Mécénat", "/contact"), mot("Presse", "/contact")], { ...gp("0px 28px"), flexWrap: "wrap", justifyContent: "center" });
+    const abo = abonnement(k, env, { titre: "La lettre de la compagnie", intro: "Nouvelles créations et rencontres : un message de temps en temps.", bouton: "Je m'abonne", largeur: "460px", accent: AMBRE, texte: CREME, titreCouleur: AMBRE, introCouleur: "#cfe0dc", boutonTexte: TEAL, boutonSurvol: { backgroundColor: CREME, color: TEAL } });
+    const boite = k.col([abo], { width: "100%", maxWidth: "620px", boxSizing: "border-box", borderStyle: "solid", borderWidth: "2px", borderColor: CREME, paddingTop: "24px", paddingBottom: "24px", paddingLeft: "28px", paddingRight: "28px" }, undefined, { paddingLeft: "16px", paddingRight: "16px" });
+    const reseaux = G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"], ["Facebook", "https://www.facebook.com/"]], { taille: 15, poids: "600", couleur: CREME, survol: AMBRE, focus: AMBRE })(k, env, true);
+    const pied = G.bande(k, [marque, texte(k, "Du texte, de la musique, des corps en scène : une maison pour les créations.", { taille: 18, couleur: "#cfe0dc", max: "420px", align: "center" }), resa, mots, boite, reseaux], { fond: TEAL, colonne: true, gap: "20px", aligne: "center", padV: ["24px", "24px", "16px"], padB: ["48px", "40px", "32px"], padH: PH, nom: "Pied centré" });
+    return [G.racine(k, [haut, pied, mentionsBande(G, k, env, TEAL, { couleur: "#cfe0dc", liens: CREME })])];
   },
 }, FAM);
 

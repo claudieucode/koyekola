@@ -7,7 +7,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "fournisseur cloud",
       "directionArtistique": {
-        "texte": "Archétype B (nom monumental). Inspiré d'une capture au nom géant fondu dans un dégradé : ardoise vers vert-de-gris, trois grands liens à gauche, coordonnées à droite, nom « Cumulo » sur toute la largeur. Un carré de statut respire."
+        "texte": "Refonte d'après la capture 04 (carte sombre, navigation à gauche, contact à droite, nom géant fondu dans un halo). Dégradé ardoise vers vert-de-gris, grands liens, pastilles de réseaux, puis le nom CUMULO dessiné en lettres épaisses à angles droits dont le trait naît du fond et devient turquoise lumineux ; halo radial et nuage doux derrière."
       },
       "typographies": {
         "titre": "Sora",
@@ -31,7 +31,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "hébergeur",
       "directionArtistique": {
-        "texte": "Archétype G (index en lignes pleine largeur). Papier chaud et vermillon : six lignes numérotées en grand serif avec description et flèche qui glisse, filets d'encre, la ligne s'indente et se teinte au survol."
+        "texte": "Refonte d'après la capture 04, version papier : six services en grandes lignes serif à flèche vermillon, pile isométrique de six plaques dessinée à droite (encre et vermillon), puis le nom ARCADE géant dans un halo vermillon pâle sur papier chaud."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -55,7 +55,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "cloud pour développeurs",
       "directionArtistique": {
-        "texte": "Archétype K (fenêtre / console). Fenêtre de terminal à angles droits, noir et vert : barre de titre à trois carrés, invites « $ » pour commandes, contact et lettre, curseur carré qui respire."
+        "texte": "Refonte d'après la capture 06 (sombre, pastilles en haut à gauche, quatre colonnes titrées, rangée de vignettes) : fenêtre de terminal noire et verte, barre de titre à trois carrés, pastilles « $ », quatre colonnes dont une rangée de quatre vignettes filaires dessinées (cube, globe, pyramide, cylindre)."
       },
       "typographies": {
         "titre": "JetBrains Mono",
@@ -79,7 +79,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "fournisseur d'infrastructure",
       "directionArtistique": {
-        "texte": "Archétype C (damier de huit cases). Blanc, noir et jaune signal à filets noirs : marque, cinq services en cases-liens, support (coordonnées) et horaires. La case survolée se soulève."
+        "texte": "Refonte d'après la capture 05 (clair, pastilles, quatre colonnes titrées, rangée de 4 vignettes) : fond blanc, gros filet jaune signal, pastilles jaunes, quatre vignettes de baies de serveurs dessinées sur jaune, bas noir."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -103,7 +103,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "plateforme cloud",
       "directionArtistique": {
-        "texte": "Archétype A (colonne latérale pleine hauteur). Inspiré des colonnes titrées de la capture claire et sombre : barre marine (nom, statut qui respire, contact, réseaux) et trois colonnes de liens sur gris clair, puis la lettre."
+        "texte": "Refonte d'après la capture 05 : grand bandeau marine illustré d'un centre de données aux fenêtres orange sous un nuage fil de fer, puis sur gris clair quatre colonnes titrées dont une grille 2×2 de vignettes de villes dessinées."
       },
       "typographies": {
         "titre": "Saira Extra Condensed",
@@ -127,7 +127,7 @@
       "famille": "Cloud et infrastructure",
       "secteur": "cloud et déploiement",
       "directionArtistique": {
-        "texte": "Archétype I (frise en étapes). Rose pâle, prune et menthe : quatre étapes reliées par un filet à points carrés (connecter, configurer, déployer, superviser), le dernier point respire ; liens et mentions en bas."
+        "texte": "Refonte d'après la capture 05 : phrase serif en tête, quatre colonnes-étapes surmontées chacune d'une vignette de paysage à l'aube dessinée (dunes et soleil, rose, prune, menthe), bas sombre avec lettre."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -151,7 +151,7 @@
       "famille": "Cybersécurité",
       "secteur": "cabinet de cybersécurité",
       "directionArtistique": {
-        "texte": "Archétype E (deux demi-pages). Noir et jaune acide : à gauche le message en lettres condensées géantes, à droite les boutons de signalement et d'audit, liens soulignés qui se remplissent, coordonnées."
+        "texte": "Refonte d'après la capture 04 : grand bouclier dessiné en filets acides concentriques à chevrons, navigation en capitales condensées et pastilles, nom REMPART géant en lettres épaisses fondues dans un halo jaune acide, bande de chantier."
       },
       "typographies": {
         "titre": "League Gothic",
@@ -175,7 +175,7 @@
       "famille": "Cybersécurité",
       "secteur": "éditeur de cybersécurité",
       "directionArtistique": {
-        "texte": "Archétype F (bandeau XXL + colonne étroite). Bandeau rouge sirène aux lettres Anton énormes avec bouton blanc ; dessous, coordonnées à gauche et une seule colonne étroite de liens à droite, sur aubergine."
+        "texte": "Refonte d'après la capture 04 : radar à balayage dessiné (cercles, secteur lumineux, graduations, échos) entre navigation en capitales et coordonnées, nom VIGIE géant fondu dans un halo rouge sirène sur dégradé aubergine vers rouge."
       },
       "typographies": {
         "titre": "Anton",
@@ -199,7 +199,7 @@
       "famille": "Cybersécurité",
       "secteur": "centre de cybersécurité",
       "directionArtistique": {
-        "texte": "Archétype H (mosaïque asymétrique). Indigo, cyan et lavande : trois petites cases-liens empilées à gauche, grande case à droite (nom, phrase, lettre, contact) ; cases séparées de 6 px qui se soulèvent."
+        "texte": "Refonte d'après la capture 06 : bandeau pleine largeur de maillage de nœuds cyan sur grille indigo, pastilles, quatre colonnes titrées dont une grille 2×2 de vignettes de cartes en points."
       },
       "typographies": {
         "titre": "Chivo",
@@ -223,7 +223,7 @@
       "famille": "Cybersécurité",
       "secteur": "conseil en sécurité des systèmes d'information",
       "directionArtistique": {
-        "texte": "Archétype J (papier à en-tête). Crème, marine et bordeaux : filets doubles, nom serif centré, cartouche d'adresse, liens en ligne centrée séparés de carrés, lettre centrée et sceau carré qui respire, barre marine de mentions."
+        "texte": "Refonte d'après la capture 05 en papier à en-tête : sceau guilloché dessiné (rosace, bouclier, clé), à propos et liens, large rangée de quatre vignettes d'anneaux de chiffrement légendées entre filets doubles, bas marine avec lettre."
       },
       "typographies": {
         "titre": "Libre Baskerville",
@@ -247,7 +247,7 @@
       "famille": "Cybersécurité",
       "secteur": "éditeur de sécurité",
       "directionArtistique": {
-        "texte": "Archétype D (ligne unique compacte). Barre noir graphite à filet ambre : nom, quatre liens et voyant « statut » qui respire sur une seule ligne, mentions dessous. Aucun bloc supplémentaire."
+        "texte": "Refonte d'après la capture 06, version compacte : bande d'oscilloscope ambre pleine largeur (tracé ondulé à impulsions sur grille), puis une rangée serrée de colonnes dont quatre vignettes de tracés dessinées, sur graphite."
       },
       "typographies": {
         "titre": "Geist Mono",
@@ -271,7 +271,7 @@
       "famille": "Cybersécurité",
       "secteur": "entreprise de cybersécurité",
       "directionArtistique": {
-        "texte": "Archétype L (escalier). Quatre marches alignées à gauche de 100, 85, 70 et 52 % de largeur, du gris acier à l'encre : message, liens et bouton, coordonnées, mentions. Un carré orange respire."
+        "texte": "Refonte d'après la capture 06 : pastilles, quatre colonnes décalées en escalier avec vignettes de blocs en gradins, grande bande de cellules emboîtées en gradins acier et orange."
       },
       "typographies": {
         "titre": "Teko",
