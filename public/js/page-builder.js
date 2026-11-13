@@ -14,6 +14,7 @@
   var IS_COMPONENT = Boolean(PAGE.component);
   var BASE = PAGE.base || "/marketing/pages/" + PAGE.id;
   var canWrite = boot.canWrite;
+  var REVIEW = boot.review || null; // demande de validation en cours (page d'une personne qui ne peut pas publier)
   var NT = {}; SPEC.types.forEach(function (t) { NT[t.type] = t; });
   var LEGACY = {}; boot.types.forEach(function (t) { LEGACY[t.type] = t; });
   var SP = {}; SPEC.styleProps.forEach(function (p) { SP[p.key] = p; });
@@ -9171,7 +9172,11 @@ function selectField(label, value, options, onChange, opts) {
     el.classList.toggle("is-live", live && !hasDraft);
     var pub = $("[data-pb-publish]");
     pub.hidden = !canWrite || (live && !hasDraft) || Boolean(PAGE.abTest);
-    pub.textContent = live ? "Publier les modifications" : "Publier";
+    // Sans le droit de publier : le bouton devient « Demander la validation » (un éditeur relit puis publie)
+    pub.textContent = !boot.canPublish !== false ? (REVIEW ? "Validation demandée" : "Demander la validation") : live ? "Publier les modifications" : "Publier";
+    pub.disabled = Boolean(!boot.canPublish !== false && REVIEW);
+    if (REVIEW && !boot.canPublish !== false) pub.setAttribute("data-tip", "Demande envoyée le " + String(REVIEW.requested_at).slice(0, 16).replace("T", " ") + " : un éditeur doit relire et publier.");
+    if (REVIEW && boot.canPublish !== false) el.textContent += " · validation demandée" + (REVIEW.by_name ? " par " + REVIEW.by_name : "");
     if (PAGE.abTest) el.textContent = "Version B d'un test A/B";
   }
   // Éditeur d'un composant ordinaire : « Mettre à jour » diffuse le brouillon. Global → aperçu des pages touchées avant propagation ; standard → seul le modèle change.
@@ -9204,6 +9209,14 @@ function selectField(label, value, options, onChange, opts) {
   $("[data-pb-publish]").addEventListener("click", function () {
     var btn = this;
     if (IS_COMPONENT) { if (PAGE.component) publishComponentUpdate(btn); return; }
+    if (!boot.canPublish !== false) {
+      btn.disabled = true;
+      saveNow().then(function () {
+        if (dirty || blocked || saving) { btn.disabled = false; toast("Enregistrez d'abord vos modifications (voir le message en haut).", true); return; }
+        return api("POST", "/marketing/pages/" + PAGE.id + "/demander-validation.json", {}).then(function (r) { REVIEW = r.review; updateStatus(); toast("Validation demandée : un éditeur pourra relire et publier cette page."); }, apiFail);
+      }).then(function () { updateStatus(); });
+      return;
+    }
     if (window.pbQuality) window.pbQuality.beforePublish();
     if (editing) commitEdit();
     btn.disabled = true;

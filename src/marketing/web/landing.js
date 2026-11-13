@@ -100,7 +100,8 @@ module.exports = () => {
     const perPage = cmsPages.clampPerPage(req.query.par || (cookiePar && cookiePar[1]) || cmsPages.PER_PAGE);
     if (req.query.par) res.cookie("mk_pg_par", String(perPage), { path: "/marketing", sameSite: "lax", httpOnly: true, maxAge: 365 * 864e5 });
     const result = cmsPages.queryPages(ctx, { state, q: filters.q, siteId: filters.site, authorId: filters.auteur, month, sort: filters.tri, dir: filters.ordre, page: req.query.page, perPage });
-    res.render("marketing/landing-list", { layoutFormats: require("../pages/layoutFormat").FORMATS, newPageOpen: req.query.nouvelle === "1",
+    const reviewMap = {}; try { for (const r of require("../pages/reviews").pending(ctx)) reviewMap[r.page_id] = r; } catch { /* table absente : aucune demande */ }
+    res.render("marketing/landing-list", { reviewMap, layoutFormats: require("../pages/layoutFormat").FORMATS, newPageOpen: req.query.nouvelle === "1",
       title: "Pages", active: "landing", state, filters, result, pages: result.rows, perPage, months: cmsPages.months(ctx, state), authors: cmsPages.authorsOfPages(ctx), sites: siteId || principal ? [] : pages.listSites(ctx), moveSites: pages.listSites(ctx), templates: require("../pages/templates").catalog(),
       userTemplates: pages.listPageTemplates(ctx, siteId ? { siteId } : principal ? { siteId: null } : undefined), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), canDelete: req.mk.can("pages.delete"), cmsPagesJs: true, cmsArticlesJs: true,
       fixedSite: siteId ? { id: siteId } : principal ? { id: null } : null, listBase: listBase(siteId, principal),
@@ -410,7 +411,7 @@ module.exports = () => {
         abTest: component ? null : (ctx.db.prepare("SELECT id, page_id FROM mk_page_tests WHERE variant_page_id = ? AND organization_id = ?").get(page.id, ctx.organizationId)) || null,
         // Édition d'un composant : adresses de l'éditeur propres au composant (rendu, enregistrement) et retour à la fiche du site
         ...(component ? { base: `/marketing/site-web/composants/${component.id}`, component: { id: component.id, name: component.name, role: component.role, kind: component.kind, hasDraft: component.hasDraft, version: component.version, instances: pages.componentInstances(ctx, component.id).reduce((n, p) => n + p.count, 0) } } : {}) },
-      content: page.working, types: blanks(media.forSite(ctx, page.site_id)), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"),
+      content: page.working, types: blanks(media.forSite(ctx, page.site_id)), spec: nodesLib.editorSpec(), canWrite: req.mk.can("forms.write"), canPublish: req.mk.can("pages.publish"), review: component ? null : require("../pages/reviews").get(ctx, page.id),
       // Permissions exigées par certains widgets (cadenas de la bibliothèque ; revérifiées à l'enregistrement)
       perms: { "pages.code": req.mk.can("pages.code") },
       // Formulaires proposés au widget « Formulaire » (état réel : un brouillon ne s'affiche pas sur la page)
@@ -608,6 +609,21 @@ module.exports = () => {
     } catch (error) { jsonError(res, next, error); }
   });
 
+  // Demande de validation : une personne qui ne peut pas publier demande la relecture ; publier la page retire la demande
+  router.post("/pages/:id(\\d+)/demander-validation.json", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try {
+      const r = require("../pages/reviews").request(req.mk.ctx, page.id, req.body && req.body.note);
+      if (!r.ok) return res.status(404).json({ error: { message: r.error } });
+      res.json({ ok: true, review: require("../pages/reviews").get(req.mk.ctx, page.id) });
+    } catch (error) { jsonError(res, next, error); }
+  });
+  router.post("/pages/:id(\\d+)/annuler-validation.json", need("forms.write"), (req, res, next) => {
+    const page = load(req, res);
+    if (!page) return;
+    try { res.json({ ok: true, cleared: require("../pages/reviews").clear(req.mk.ctx, page.id) }); } catch (error) { jsonError(res, next, error); }
+  });
   router.post("/pages/:id(\\d+)/publier", need("pages.publish"), (req, res, next) => {
     const page = load(req, res);
     if (!page) return;

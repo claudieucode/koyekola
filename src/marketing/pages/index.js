@@ -201,6 +201,7 @@ function publish(ctx, id) {
       .run(JSON.stringify(content.sections), JSON.stringify(content.theme), content.title, content.description, JSON.stringify(content.seo), id);
     // Historique borné : les plus anciennes versions au-delà de MAX_VERSIONS sont effacées
     ctx.db.prepare("DELETE FROM mk_page_versions WHERE page_id = ? AND number <= ?").run(id, number - MAX_VERSIONS);
+    try { ctx.db.prepare("DELETE FROM mk_page_reviews WHERE page_id = ?").run(id); } catch { /* demande de validation : table absente sur une très ancienne base */ } // publier répond à la demande de validation
     audit(ctx, "page.published", "landing", id, { version: number, slug: page.slug });
     if (!page.published_at) { try { require("../../services/navigation").autoAddPage(id); } catch { /* l'ajout au menu ne bloque jamais la publication */ } }
     return { version: number };
