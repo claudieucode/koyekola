@@ -35,7 +35,7 @@
   <% if ((order.refunds || []).length) { %><ul class="mk-list"><% order.refunds.forEach((r) => { %><li><%= String(r.created_at).slice(0, 16) %> — <%= money(r.amount_cents) %> · <%= r.provider === "stripe" ? "Stripe" : "hors plateforme" %> · <%= { pending: "en cours", succeeded: "effectué", failed: "refusé" }[r.status] %><%= r.restock ? " · remis en stock" : "" %><%= r.reason ? " — " + r.reason : "" %></li><% }) %></ul><% } %>
   <% if (refundable && canPay && left > 0) { %>
   <form class="mk-form" method="post" action="<%= base %>/commandes/<%= order.id %>/remboursement">
-    <input type="hidden" name="idempotency_key" value="<%= require("node:crypto").randomBytes(12).toString("hex") %>">
+    <input type="hidden" name="idempotency_key" value="<%= refundKey %>">
     <p class="mk-sub">Laissez le montant vide pour rembourser tout le reste (<%= money(left) %>), ou indiquez un montant, ou des quantités d'articles : le montant est alors calculé (prix, remise et taxes au prorata).</p>
     <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Articles à rembourser</caption><thead><tr><th scope="col">Article</th><th scope="col">Quantité à rembourser</th></tr></thead><tbody>
     <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %> (commandé : <%= i.quantity %>)</th><td><input type="number" min="0" max="<%= i.quantity %>" name="qty_<%= i.id %>" value="0" aria-label="Quantité à rembourser : <%= i.name %>"></td></tr><% }) %>
