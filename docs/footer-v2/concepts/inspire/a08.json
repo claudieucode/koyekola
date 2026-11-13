@@ -7,7 +7,7 @@
       "famille": "Édition et librairie",
       "secteur": "maison d'édition et librairie",
       "directionArtistique": {
-        "texte": "Archétype A (inspiré de la capture « logo + colonnes ») : colonne de marque bordeaux pleine hauteur à gauche (monogramme Maison Verso, phrase, lettre d'information, carré doré qui respire), grande zone crème à droite en trois colonnes (catalogue, horaires de la librairie, la maison). Bordeaux, crème, or."
+        "texte": "Capture « Timon » (objet 3D côtelé sur fond noir, étiquettes flottantes, bande claire en bas) : une pelote de pages bordeaux et or dessinée en grand à droite, trois étiquettes inclinées devant, phrase de la maison à gauche, colonnes en bande propre, bande crème (marque, mentions, icônes réseaux). Bordeaux nuit, or, crème."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -30,7 +30,7 @@
       "famille": "Édition et librairie",
       "secteur": "maison d'édition de romans et de poésie",
       "directionArtistique": {
-        "texte": "Archétype B (capture « marque monumentale ») : grand vide vert nuit, nom Épilogue géant en Instrument Serif rogné par le bas, trois liens seulement, un carré pistache qui respire devant la phrase. Vert nuit, pistache."
+        "texte": "Capture « Amplifyed » (halo flou, rideaux de lumière, nom géant dégradé) : halo pistache flouté sur vert nuit avec rideaux verticaux, nom ÉPILOGUE géant dessiné en lettres tracées qui s'efface par le bas, marque et trois colonnes en haut. Vert nuit, pistache."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -53,7 +53,7 @@
       "famille": "Édition et librairie",
       "secteur": "éditeur d'essais",
       "directionArtistique": {
-        "texte": "Archétype G : le pied est une table des matières ; six rubriques en lignes pleine largeur (numéro, grand titre Newsreader, précision, flèche) séparées par des filets, qui se remplissent de jaune au survol. Blanc, noir, jaune."
+        "texte": "Capture « Horizon » (bande blanche, bande grise de colonnes, mot géant rogné) : marque sur blanc, colonnes grises (sommaire, aide, lettre et icônes), MARGE géant gris rogné avec point jaune et rangée de livres dessinés devant. Blanc, gris, noir, jaune."
       },
       "typographies": {
         "titre": "Newsreader",
@@ -76,7 +76,7 @@
       "famille": "Édition et librairie",
       "secteur": "librairie-papeterie",
       "directionArtistique": {
-        "texte": "Archétype J : papier à en-tête ivoire, double filet, nom Alinéa centré en Cardo entre deux volets (horaires à gauche, adresse à droite, Données de l'entreprise), carré qui respire, ligne de rubriques centrée entre doubles filets. Sans lettre. Ivoire et bleu marine."
+        "texte": "Capture « Horizon » en papier à lettres : bande ivoire de quatre colonnes (marque, rayons, horaires, adresse et icônes), puis ALINÉA géant rogné sur papier réglé avec marge rouge, traversé d'une plume dessinée. Ivoire, bleu marine."
       },
       "typographies": {
         "titre": "Cardo",
@@ -100,7 +100,7 @@
       "famille": "Édition et librairie",
       "secteur": "librairie indépendante",
       "directionArtistique": {
-        "texte": "Archétype H : mosaïque asymétrique de cases à angles droits, une grande case moutarde (« Lisez. » en DM Serif Display et lettre d'information) et trois petites (catalogue canard, horaires écru, contact noir) qui se soulèvent au survol. Moutarde, canard, écru."
+        "texte": "Capture « Horizon » : bande moutarde (« Lisez. » et lettre), colonnes blanches, étagère dessinée pleine largeur (livres variés, plante, chat) avec LISEZ géant pâle derrière, rognée par le bas. Moutarde, canard, écru."
       },
       "typographies": {
         "titre": "DM Serif Display",
@@ -123,7 +123,7 @@
       "famille": "Édition et librairie",
       "secteur": "éditeur de livres d'art",
       "directionArtistique": {
-        "texte": "Archétype E : un livre ouvert, deux demi-pages bord à bord de couleurs opposées ; page gauche indigo avec le message en grand Fraunces, page droite pêche avec deux boutons (le premier respire), liste de liens à filets et contact. Indigo et pêche."
+        "texte": "Capture « Amplifyed » : soleil pêche flouté et rideaux de lumière sur indigo, grand livre ouvert dessiné au premier plan, phrase géante à gauche, deux boutons (un respire) et deux colonnes à droite. Indigo, pêche."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -146,7 +146,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "média de jeux vidéo",
       "directionArtistique": {
-        "texte": "Archétype C : damier de huit cases carrées égales (bleu électrique, jaune, blanc, noir) ; la première porte la marque en Press Start 2P (carré qui respire), six sont des liens qui s'inversent au survol, la dernière contient la lettre d'information. Style arcade."
+        "texte": "Capture « Horizon » en pixel art : SUPER CASES géant jaune rogné sur une scène de jeu en pixels (nuages, invaders, sol de briques) puis bande bleue de colonnes (marque, liens, aide, icônes). Bleu électrique, jaune, noir."
       },
       "typographies": {
         "titre": "Press Start 2P",
@@ -169,7 +169,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "plateforme de jeux",
       "directionArtistique": {
-        "texte": "Archétype D : une seule ligne type barre de console : nom en Orbitron, six liens en ligne, bouton Se connecter qui respire ; filet cyan en haut, ligne légale dessous. Compact. Violet nuit et cyan."
+        "texte": "Capture « Timon » : grande phrase centrée sur nuit violette, à droite un anneau néon 3D incliné (cyan, violet, rose) avec étiquettes flottantes, colonnes à gauche, bouton qui respire, bande claire en bas. Violet nuit, cyan."
       },
       "typographies": {
         "titre": "Orbitron",
@@ -192,7 +192,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "studio de jeux indépendant",
       "directionArtistique": {
-        "texte": "Archétype F (capture « grande phrase ») : bandeau orange avec « Prêt, joueur ? » en Anton géant et énorme bouton noir qui respire ; dessous, noir : un mot du studio à gauche et une seule colonne étroite de liens à filets qui glissent au survol. Orange vif et noir."
+        "texte": "Capture « Amplifyed » : grand halo orange et rouge avec rideaux de lumière, PRÊT JOUEUR géant dégradé qui s'efface, puis mot du studio, gros bouton qui respire et colonnes. Orange, noir."
       },
       "typographies": {
         "titre": "Anton",
@@ -215,7 +215,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "communauté de joueurs",
       "directionArtistique": {
-        "texte": "Archétype I : frise horizontale de cinq niveaux (découvrir, jouer, rejoindre, concourir, contribuer) qui monte comme une courbe de progression, points carrés ambre sur une ligne marine, chaque étape se remplit au survol. Bleu glacier, marine, ambre."
+        "texte": "Capture « Timon » : relief en terrasses 3D (gâteau de niveaux bleus, chemin de points, cinq jalons carrés ambre) avec étiquettes flottantes, titre et liste des cinq niveaux à gauche, bande ambre en bas. Marine, glacier, ambre."
       },
       "typographies": {
         "titre": "Oxanium",
@@ -238,7 +238,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "équipe d'esport",
       "directionArtistique": {
-        "texte": "Archétype K : le pied est une fenêtre de terminal à angles droits (barre de titre menthe à trois carrés, contour menthe), lignes de commande qui s'inversent au survol, champ e-mail en ligne de commande, curseur bloc qui bat lentement. Vert terminal et menthe, monospace."
+        "texte": "Capture « Timon » : cristal 3D à facettes vertes sur grille de sol avec étiquettes flottantes, fenêtre de terminal à angles droits (commandes, e-mail, curseur qui bat), bande menthe en bas. Vert terminal, menthe."
       },
       "typographies": {
         "titre": "JetBrains Mono",
@@ -261,7 +261,7 @@
       "famille": "Jeux vidéo et esport",
       "secteur": "éditeur de jeux mobiles",
       "directionArtistique": {
-        "texte": "Archétype L (capture « marque monumentale ») : pied en escalier, quatre marches de largeurs décroissantes alignées à gauche (rose avec NEXT LEVEL géant en Bowlby One, noir pour les liens, jaune pour la lettre, violet pour les réseaux). Crème, rose, noir, jaune, violet."
+        "texte": "Capture « Amplifyed » : halo rose, jaune et violet avec rideaux, NEXT LEVEL géant, escalier de quatre marches colorées gravi par un petit personnage vers une étoile ; phrase, lettre d'information et liens dessous. Nuit violette, rose, jaune."
       },
       "typographies": {
         "titre": "Bowlby One",

@@ -7,7 +7,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "aéronautique",
       "directionArtistique": {
-        "texte": "Pour un bureau d'études aéronautique : grande colonne ambre pleine hauteur (nom, signal qui respire, lettre technique) à gauche ; à droite, sur marine profond, cinq colonnes de liens à petit filet d'accent, adresse et mentions. Les liens s'indentent d'un cran au survol."
+        "texte": "Capture 40 (marque monumentale à deux tons, lettre, trois colonnes, filet, réseaux) pour un bureau d'études aéronautique : AÉRO/DYNE géant blanc et ambre sur marine, lettre à gauche, trois colonnes à droite ; ILLUSTRATION pleine largeur d'un horizon d'aérodrome (piste en perspective, balisage, radar à balayage, tour de contrôle) ; pastilles de réseaux ambre."
       },
       "typographies": {
         "titre": "Exo 2",
@@ -21,7 +21,9 @@
         "lettre",
         "marine",
         "ambre",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -31,7 +33,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "spatial",
       "directionArtistique": {
-        "texte": "Pour une entreprise spatiale : nom monumental en deux tons au centre d'un grand vide noir, légende, trois liens empilés, carré orange qui respire et ligne de mentions. Rien d'autre."
+        "texte": "Capture 40 pour une entreprise spatiale : ORBI/TE géant en deux tons sur noir, lettre et trois liens à gauche ; à droite, grande ILLUSTRATION d'une planète au limbe incandescent (halo orange flouté, orbite, satellite carré, étoiles) ; pastilles de réseaux à contour."
       },
       "typographies": {
         "titre": "Syncopate",
@@ -46,7 +48,9 @@
         "noir",
         "orange",
         "centré",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -56,7 +60,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "aviation commerciale",
       "directionArtistique": {
-        "texte": "Pour une compagnie ou un aéroport : titre en capitales condensées puis damier de huit cases carrées à joint noir (quatre liens colorés qui se soulèvent, adresse, horaires, lettre, mentions), comme un tableau d'affichage."
+        "texte": "Capture 40 en version claire pour une compagnie : DÉPARTS géant acier et rouge, lettre à droite ; bande ILLUSTRÉE d'une piste vue du ciel avec avion en silhouette ; quatre cartes (compagnie, services, adresse, horaires) à cadre franc ; réseaux en texte."
       },
       "typographies": {
         "titre": "Barlow Condensed",
@@ -70,7 +74,9 @@
         "cases",
         "acier",
         "rouge signal",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -80,7 +86,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "aéroclub",
       "directionArtistique": {
-        "texte": "Pour un aéroclub ou une compagnie régionale : deux lignes cobalt seulement ; sur la première le nom, cinq liens séparés par des carrés dont un respire et deux réseaux, sur la seconde l'adresse en ligne et les mentions."
+        "texte": "Capture 41 (barre marque + pastilles, filet, colonnes soulignées + abonnement, bande sombre) pour une compagnie régionale : glyphe rose des vents dessiné + AEROLINE, cinq pastilles jaunes de réseaux ; bandeau ILLUSTRÉ de nappes de nuages ondulées avec route aérienne pointillée et escales ; trois colonnes et lettre de bord."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -94,7 +100,9 @@
         "barre",
         "cobalt",
         "jaune",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -104,7 +112,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "constructeur aéronautique",
       "directionArtistique": {
-        "texte": "Pour un constructeur : deux demi-pages bord à bord, ciel pâle (grande phrase en serif, coordonnées) et nuit (lettre, cinq grands liens, réseaux), puis fine bande de mentions."
+        "texte": "Capture 41 pour un constructeur : barre marque (croissant dessiné), grande ILLUSTRATION de crête montagneuse sous un soleil vermillon avec traînée d'avion, grand index de six liens en serif, lettre et adresse, bande de mentions."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -118,7 +126,9 @@
         "grande phrase",
         "bleu nuit",
         "vermillon",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -128,7 +138,7 @@
       "famille": "Aéronautique et spatial",
       "secteur": "lancement spatial",
       "directionArtistique": {
-        "texte": "Pour un service de lancement : bandeau d'appel violet géant (jusqu'à 170 px) avec bouton lime qui respire, puis bande sombre avec adresse, mentions et une colonne étroite de liens numérotés bordée de lime."
+        "texte": "Capture 41 pour une start-up spatiale : barre marque (glyphe fusée) + pastilles lime ; grande ILLUSTRATION d'une fusée au décollage dans un halo violet-lime ; titre géant DÉCOLLONS ENSEMBLE, bouton qui respire, colonne étroite de liens numérotés."
       },
       "typographies": {
         "titre": "Big Shoulders",
@@ -143,7 +153,9 @@
         "violet",
         "lime",
         "colonne étroite",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -153,7 +165,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "palace",
       "directionArtistique": {
-        "texte": "Pour un palace : en-tête (nom, réseaux), six grandes lignes pleine largeur en Cormorant 40 px avec filet qui s'indentent en or au survol, puis adresse en ligne et mentions. Ivoire, encre, or."
+        "texte": "Capture 40 pour un palace : Maison Aurélien monumental à deux tons et lettre à gauche, grand BLASON doré dessiné à droite (éventail de rayons, monogramme A, lauriers) ; index de cinq grandes lignes à filet ; adresse, pastilles de réseaux à contour."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -167,7 +179,9 @@
         "sommaire",
         "ivoire",
         "or",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -177,7 +191,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "maison d'exception",
       "directionArtistique": {
-        "texte": "Pour une maison d'exception : grande case champagne (phrase en Bodoni, réservation) et trois cases empilées (adresse, lettre, liens et mentions) à joints d'émeraude."
+        "texte": "Capture 40 recomposée en colonne centrée pour une villa : rangée de quatre VIGNETTES dessinées (suite, cave, bien-être, façade) en tête, nom Villa Émeraude à deux tons, liens, lettre, adresse et pastilles champagne."
       },
       "typographies": {
         "titre": "Bodoni Moda",
@@ -191,7 +205,9 @@
         "émeraude",
         "champagne",
         "réservation",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -201,7 +217,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "hôtel de charme",
       "directionArtistique": {
-        "texte": "Pour un hôtel de charme : chronologie verticale sur filet d'or à cinq points carrés (arrivée, suites, table, bien-être, départ) à droite ; grande phrase, adresse et mentions à gauche. Bordeaux, or pâle, crème."
+        "texte": "Capture 40 pour un hôtel de charme : grande ILLUSTRATION de vagues dorées sous un soleil bas en tête, nom LE VERMEIL monumental à deux tons, liens centrés, adresse, lettre et pastilles or pâle sur bordeaux."
       },
       "typographies": {
         "titre": "Gloock",
@@ -215,7 +231,9 @@
         "points carrés",
         "bordeaux",
         "or",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -225,7 +243,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "maison historique",
       "directionArtistique": {
-        "texte": "Pour une maison historique : papier à en-tête centré, règle cuivre avec carré qui respire, monogramme carré, nom en grandes capitales, cartouche à double bordure (adresse, horaires), liens en ligne, filet et mentions."
+        "texte": "Capture 41 pour une maison historique : bandeau guilloché dessiné, grand ÉMBLÈME gravé (cercles, V, losanges, lauriers) au-dessus du nom, liens, trois cellules à cadre (adresse, horaires, courrier), pastilles bleu nuit, bande de mentions."
       },
       "typographies": {
         "titre": "Italiana",
@@ -239,7 +257,9 @@
         "cartouche",
         "cuivre",
         "bleu nuit",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -249,7 +269,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "conciergerie",
       "directionArtistique": {
-        "texte": "Pour une conciergerie : pied en fenêtre anthracite, barre de titre platine, onglets verticaux qui s'allument en or rose, panneau de demande (bouton qui respire, adresse, horaires, lettre) et barre d'état de mentions."
+        "texte": "Capture 41 pour une conciergerie : barre marque (glyphe cloche) + pastilles or rose ; colonnes à petit soulignement, appel au concierge et grande ILLUSTRATION au trait d'une cloche de comptoir et de clés, sur anthracite."
       },
       "typographies": {
         "titre": "Tenor Sans",
@@ -263,7 +283,9 @@
         "onglets",
         "anthracite",
         "or rose",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     },
     {
@@ -273,7 +295,7 @@
       "famille": "Luxe et hôtellerie de prestige",
       "secteur": "grand hôtel",
       "directionArtistique": {
-        "texte": "Pour un grand hôtel : quatre marches alignées à gauche, 100 %, 78 %, 56 %, 34 % de largeur et de plus en plus claires en prune (nom, liens, adresse et horaires, lettre et mentions) sur fond ivoire."
+        "texte": "Capture 41 pour un grand hôtel : grand bandeau ILLUSTRÉ (lune à halo, arcades éclairées, marches) puis barre marque (glyphe arche) et liens ; trois cartes prune à angles droits (adresse, horaires, lettre) et bande de mentions."
       },
       "typographies": {
         "titre": "Prata",
@@ -287,7 +309,9 @@
         "prune",
         "ivoire",
         "or",
-        "angles droits"
+        "angles droits",
+        "illustration",
+        "vectoriel"
       ]
     }
   ]

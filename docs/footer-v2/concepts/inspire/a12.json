@@ -7,7 +7,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "linge de maison et poterie",
       "directionArtistique": {
-        "texte": "Archétype B (inspiré de la capture 37 : nom de marque monumental) : aplat terre cuite, nom en très grandes lettres rognées, quelques liens discrets, réseaux en texte, bande basse plus sombre. Carré qui respire. Aucune photo."
+        "texte": "Capture 37 (nom monumental sur aplat vif + grande image) : aplat terre cuite dégradé, nom « Lin & Terre® » en très grandes lettres, puis ILLUSTRATION pleine largeur : rangée de sept poteries (amphores, cruches, vase à tiges et feuilles) posées sur un lin rayé, bande de sol sombre ; pied de liens en trois colonnes + présentation et réseaux en pastilles. Angles droits, aucune photo."
       },
       "typographies": {
         "titre": "DM Serif Display",
@@ -29,7 +29,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "magasin de meubles",
       "directionArtistique": {
-        "texte": "Archétype E (capture 38 : lettre d'information en tête) : deux demi-pages bord à bord, vert sapin à gauche (phrase, lettre, engagements), lin clair à droite (contact, rubriques par pièce, réseaux, bouton de rendez-vous qui respire)."
+        "texte": "Capture 38 (logo épais, lettre en haut à droite, filet, colonnes) : vert sapin, logo bicolore (lin + or) à gauche, lettre à droite (champ blanc), filet, trois colonnes et ILLUSTRATION d'un salon vu par la fenêtre (canapé sapin, lampadaire à halo, plante, soleil, collines). Réseaux en pastilles carrées."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -51,7 +51,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "showroom de design d'intérieur",
       "directionArtistique": {
-        "texte": "Archétype C (capture 39 : carte sombre sur aplat vif) : damier de huit cases noir encre dans un cadre sur aplat ocre ; chaque case est un lien ou une information (horaires, contact, lettre). Carré qui respire."
+        "texte": "Capture 39 (carte sombre sur aplat dégradé orangé) : carte noir encre posée sur un aplat ocre vers orange, ouverte par une ILLUSTRATION en frise de huit carreaux graphiques (quarts de cercle, rayures, pois, damier) ; nom, rubriques, horaires, contact, lettre, pastilles de réseaux."
       },
       "typographies": {
         "titre": "Archivo Black",
@@ -73,7 +73,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "mobilier sur mesure",
       "directionArtistique": {
-        "texte": "Archétype G (capture 37 : grands libellés) : sommaire en cinq lignes pleine largeur en serif monumental ; la ligne survolée se remplit de vermillon et se décale. Blanc cassé, noir, vermillon."
+        "texte": "Capture 37 (nom monumental) : sommaire de cinq lignes qui se remplissent de vermillon, ILLUSTRATION centrale en planche d'atelier au trait (table, chaise, bibliothèque, tabouret avec cotes vermillon sur papier quadrillé), et « SOREL » monumental rogné en bas. Blanc cassé, noir, vermillon."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -95,7 +95,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "décoration et art de la table",
       "directionArtistique": {
-        "texte": "Archétype J (capture 38 : bloc logo + lettre) : papier à en-tête rose poudré dans un cadre à double filet, nom en Cormorant, cartouche adresse et horaires, rubriques en italique, lettre centrée, bouton de rendez-vous."
+        "texte": "Capture 38 (fond sombre, logo épais bicolore, lettre à droite, colonnes) : fond prune, logo « Maison Delorme » bicolore en Cormorant, lettre, trois colonnes dont horaires, ILLUSTRATION en médaillon (assiette, fleurs en couronne, couverts) avec une phrase et un bouton de rendez-vous, et bande ONDULÉE rose ancien en bas."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -117,7 +117,7 @@
       "famille": "Maison, mobilier et déco",
       "secteur": "ébénisterie et meubles en bois",
       "directionArtistique": {
-        "texte": "Archétype L (capture 39 : carte sur aplat) : quatre marches de largeurs décroissantes alignées à gauche, noyer foncé, noyer moyen, laiton (lettre) et sable (mentions). Chaque marche s'éclaircit au survol."
+        "texte": "Capture 39 (carte sombre sur aplat dégradé) : carte noyer posée sur un aplat sable vers laiton ; à gauche ILLUSTRATION de la coupe d'un tronc de noyer (cernes, fentes) et le nom ; à droite lettre d'information, trois colonnes dont pastilles de réseaux."
       },
       "typographies": {
         "titre": "Bodoni Moda",
@@ -139,7 +139,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "vélociste électrique",
       "directionArtistique": {
-        "texte": "Archétype A (capture 37 : nom en grand) : barre verticale citron vif pleine hauteur (nom, réseaux), zone principale charbon (trois colonnes de liens, lettre, horaires). Carré qui respire."
+        "texte": "Capture 37 (nom monumental + grande image) : charbon, « Volt® » monumental citron, puis ILLUSTRATION d'un grand vélo électrique au trait (batterie, éclair) dans un halo vert lumineux avec bouton d'essai et lettre ; trois colonnes, horaires, pastilles."
       },
       "typographies": {
         "titre": "Unbounded",
@@ -161,7 +161,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "vélos en libre-service",
       "directionArtistique": {
-        "texte": "Archétype D (capture 38 : réseaux en bout de ligne) : barre compacte turquoise en deux lignes (nom en capitales condensées, rubriques, bouton, réseaux, mentions). Bouton qui respire."
+        "texte": "Capture 37 : aplat turquoise, « PÉDALE URBAINE® » monumental en capitales condensées, grande ILLUSTRATION de ville (immeubles aux fenêtres allumées, soleil, piste cyclable en tirets, cycliste), puis pied sombre avec rubriques en ligne, bouton de compte et pastilles."
       },
       "typographies": {
         "titre": "Oswald",
@@ -182,7 +182,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "scooters et motos électriques",
       "directionArtistique": {
-        "texte": "Archétype F (capture 37 : nom monumental) : bandeau d'appel orange XXL « Roulez électrique » avec bouton d'essai, puis graphite : lettre et contact à gauche, une colonne étroite de liens à droite."
+        "texte": "Capture 38 : graphite, logo épais blanc et orange (Anton) et lettre à droite avec champ blanc ; ILLUSTRATION d'un éclair géant dans huit anneaux de choc et 24 rayons sur carré orange, liste de rubriques et coordonnées, pastilles."
       },
       "typographies": {
         "titre": "Anton",
@@ -204,7 +204,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "bornes de recharge et installation",
       "directionArtistique": {
-        "texte": "Archétype H (capture 39 : cartes sur aplat) : mosaïque asymétrique, grande case violette (nom, lettre) et trois petites cases jaune, graphite et blanche (horaires, contact, rubriques)."
+        "texte": "Capture 39 : carte bleu nuit sur aplat dégradé violet vers jaune, deux demi-colonnes : à gauche logo, rubriques, horaires, pastilles ; à droite grande ILLUSTRATION d'une station de recharge (trois bornes à écran et câble, deux voitures, immeubles, soleil) puis lettre et contact."
       },
       "typographies": {
         "titre": "Syne",
@@ -226,7 +226,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "concessionnaire vélos et trottinettes",
       "directionArtistique": {
-        "texte": "Archétype I (capture 38 : colonnes de liens) : frise horizontale de quatre étapes à points carrés (choisir, essayer, acheter, entretenir) sur bleu océan, accents corail ; adresse et lettre dessous. Premier point qui respire."
+        "texte": "Capture 39 : carte marine sur aplat dégradé bleu océan vers corail ; ILLUSTRATION de route sinueuse en tirets sur collines bleues, quatre jalons carrés alignés sur les quatre étapes (liens) placées dessous ; coordonnées, lettre, pastilles."
       },
       "typographies": {
         "titre": "Sora",
@@ -248,7 +248,7 @@
       "famille": "Mobilité électrique et vélos",
       "secteur": "suivi de recharge et flottes",
       "directionArtistique": {
-        "texte": "Archétype K (capture 39 : carte sombre) : fenêtre de console à angles droits, barre de titre à trois carrés, lignes de commande en monospace, curseur ambre qui respire, lettre et contact à droite."
+        "texte": "Capture 38 : noir console, logo monospace bicolore « wattmètre_ » et lettre à droite ; ILLUSTRATION d'un panneau de mesure (grille, courbe de puissance ambre en aire, jauge de charge) ; quatre colonnes de commandes, contact, pastilles."
       },
       "typographies": {
         "titre": "JetBrains Mono",

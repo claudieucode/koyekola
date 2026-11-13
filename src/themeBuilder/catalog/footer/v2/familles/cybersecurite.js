@@ -50,8 +50,15 @@ const reseaux = (k, env, G, o) => G.reseauxTexte([["LinkedIn", "https://www.link
 const PH = ["48px", "32px", "20px"];
 const PLAT = [["Accueil", "/"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Contact", "/contact"], ["Espace client", "/connexion"]];
 
-// ═══ ft2-284 « Ligne de défense » — [E : deux demi-pages bord à bord de couleurs opposées] ═══════════════════════════════════════════════════
-// Idée : le pied est coupé en deux moitiés. À gauche, sur noir, le message en lettres condensées géantes « Détecter. Contenir. Rétablir. » ; à droite, sur jaune acide, les actions : deux boutons, liens et coordonnées. Au survol les liens se remplissent de noir. Polices : League Gothic et IBM Plex Sans.
+// ── Aides de la REFONTE « captures » : illustrations vectorielles (aides-illus-a01.js), pastilles, colonnes titrées ───────────────────────────────
+const IL = require("../aides-illus-a01");
+const pastille = (k, t, u, o) => lien(k, t, u, { taille: 14, poids: "700", couleur: o.texte, h: "44px", padH: "18px", survol: o.survol || { backgroundColor: o.texte, color: o.fond, transform: { y: -2 } }, focus: o.focus || o.texte, extra: { backgroundColor: o.fondP, borderStyle: "solid", borderWidth: "2px", borderColor: o.bord || o.texte, justifyContent: "center" } });
+const pastilles = (k, items, o) => k.row(items.map(([t, u]) => pastille(k, t, u, o)), { gap: "12px", flexWrap: "wrap", alignItems: "center" });
+const titreCol = (k, t, c, o = {}) => k.T(`<p>${t}</p>`, { fontSize: "26px", lineHeight: 1.2, fontWeight: "700", color: c, fontFamily: k.S.head, ...o });
+const colQ = (k, G, enfants, o = {}) => G.colonne(k, enfants, { poids: 1, min: "220px", gap: "16px", ...o });
+const monoLiens = (k, items, o) => items.map(([t, u]) => lien(k, t, u, { taille: o.taille || 16, poids: o.poids || "600", couleur: o.couleur, survol: { color: o.survol, transform: { x: 6 } }, focus: o.survol, police: o.police, h: o.h || "44px", lh: o.lh, extra: o.extra }));
+
+// ═══ ft2-284 « Ligne de défense » — [capture 04 : carte sombre, bouclier monumental dessiné à gauche, navigation et pastilles à droite, NOM géant fondu dans un halo acide] ═
 const defenseId = identite({
   key: "c284", label: "Noir et jaune acide", humeur: "dark",
   fond: "#0a0a0a", texte: "#ffffff", discret: "#bdbdbd", accent: "#c8ff00", surface: "#1a1a1a", encre: "#0a0a0a", surEncre: "#ffffff",
@@ -59,31 +66,27 @@ const defenseId = identite({
 });
 const ligneDefense = modeleV2({
   id: identifiantV2(284, "ligne-de-defense"), concept: "c-284-ligne-de-defense", name: "Ligne de défense", family: FAM,
-  description: "Pour un cabinet de cybersécurité : deux demi-pages bord à bord, noir (message en lettres condensées géantes) et jaune acide (boutons de signalement et d'audit, liens, coordonnées), puis une barre de mentions.",
-  tags: ["cybersécurité", "deux moitiés", "noir", "jaune acide", "condensé", "incident", "angles droits"],
+  description: "Pour un cabinet de cybersécurité : un grand bouclier dessiné à bandes de chantier à gauche, navigation en lettres condensées et pastilles à droite, puis le nom « Rempart » géant dans un halo jaune acide sur noir.",
+  tags: ["cybersécurité", "bouclier", "nom géant", "halo", "noir", "jaune acide", "condensé", "angles droits"],
   identity: defenseId, racine: racineDe("#0a0a0a"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["html", "text", "link", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S, N = "#0a0a0a", L = "#c8ff00";
-    const phrase = G.geant(`<p>Détecter.<br>Contenir.<br><span style="color:${L}">Rétablir.</span></p>`, { taille: [72, 190], lh: 0.92, suivi: "0.005em", poids: "400", police: S.head, couleur: "#ffffff", extra: { textTransform: "uppercase" } })(k, env);
-    const gauche = G.colonne(k, [caps(k, "Cybersécurité", { couleur: L, suivi: "0.24em" }), phrase, texte(k, "Cabinet de conseil en cybersécurité.", { taille: 15, couleur: "#bdbdbd", max: "380px" })], { poids: 1, min: "340px", gap: "24px", extra: { flexBasis: "50%", backgroundColor: N, paddingTop: "72px", paddingBottom: "72px", paddingLeft: "48px", paddingRight: "40px", borderRadius: "0px" }, mobile: { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "40px", paddingBottom: "40px" }, tablette: { paddingLeft: "32px" } });
-    const b1 = bouton(k, "Signaler un incident", "/contact", { texte: "#ffffff", fond: N, survol: { backgroundColor: "#ffffff", color: N, borderColor: N, transform: { y: -3 } }, focus: N, taille: 15, casse: "uppercase", suivi: "0.08em" });
-    const b2 = bouton(k, "Demander un audit", "/contact", { texte: N, fond: undefined, bord: N, survol: { backgroundColor: N, color: L, transform: { y: -3 } }, focus: N, taille: 15, casse: "uppercase", suivi: "0.08em" });
-    const alerte = k.row([souffle(carre(k, N, "12px"), 2400), caps(k, "Signalement", { couleur: N, suivi: "0.2em" })], { gap: "10px", alignItems: "center", flexWrap: "nowrap" });
-    const LIENS = [["Services", "/faq"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]];
-    const liste = k.col(LIENS.map(([t, u]) => { const l = lien(k, t, u, { taille: 22, poids: "500", couleur: N, survol: { backgroundColor: N, color: L, paddingLeft: "14px" }, focus: N, h: "52px", extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: N } }); return l; }), { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: N });
-    const droite = G.colonne(k, [alerte, k.row([b1, b2], { gap: "12px" }), liste, coordonnees(k, { taille: 15, couleur: N, lien: N, survol: "#3b4a00", focus: N })], { poids: 1, min: "340px", gap: "24px", extra: { flexBasis: "50%", backgroundColor: L, paddingTop: "72px", paddingBottom: "56px", paddingLeft: "40px", paddingRight: "48px", borderRadius: "0px" }, mobile: { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "36px", paddingBottom: "36px" }, tablette: { paddingRight: "32px" } });
-    droite.children = droite.children.map((c, i) => { if (i === 2) c.styles.desktop = { ...c.styles.desktop, width: "100%" }; return c; });
-    const deux = G.bande(k, [gauche, droite], { fond: N, gap: "0px", aligne: "stretch", max: "1920px", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Deux moitiés" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d0d0d0", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: N, padV: ["22px", "20px", "16px"], padB: ["22px", "20px", "16px"], padH: PH, nom: "Mentions" });
+    const bouclier = G.colonne(k, [IL.noeud(k, IL.bouclier(), { maxWidth: "360px" })], { poids: 3, min: "240px", aligne: "flex-start", soi: "flex-start" });
+    const alerte = k.row([souffle(carre(k, L, "12px"), 2400), caps(k, "Signalement d'incident", { couleur: L, suivi: "0.2em" })], { gap: "10px", alignItems: "center", flexWrap: "nowrap" });
+    const nav = monoLiens(k, [["Services", "/faq"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]], { taille: 36, poids: "400", couleur: "#ffffff", survol: L, police: S.head, h: "52px", extra: { textTransform: "uppercase" } });
+    const droite = G.colonne(k, [alerte, ...nav, pastilles(k, [["Signaler un incident", "/contact"], ["Demander un audit", "/contact"]], { texte: L, fond: N, fondP: "#00000000", bord: L, survol: { backgroundColor: L, color: N, transform: { y: -3 } }, focus: "#ffffff" }), coordonnees(k, { taille: 15, couleur: "#d0d0d0", lien: "#ffffff", survol: L, focus: L })], { poids: 5, min: "300px", gap: "8px", soi: "center" });
+    const nom = IL.motBande(k, { u: "r284", nom: "REMPART", police: S.head, poids: 400, haut: "#0a0a0a", bas: "#c8ff00", halo: "#9ccc00", mt: "8px" });
+    const haut = G.bande(k, [G.ligne(k, [bouclier, droite], { gap: "24px 56px", aligne: "flex-start", justifie: "space-between", largeur: "100%" })], { fond: N, colonne: true, max: "1500px", padV: ["56px", "44px", "32px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Bouclier" });
+    const nomB = G.bande(k, nom, { fond: N, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Nom géant" });
+    const chantier = G.bande(k, IL.bandeSvg(k, IL.chantier, { hL: 28, hE: 18 }).map((n) => n), { fond: N, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Bande de chantier" });
+    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d0d0d0", liens: "#ffffff" })(k, env)], { fond: N, padV: ["20px", "18px", "16px"], padB: ["20px", "18px", "16px"], padH: PH, nom: "Mentions" });
     bas.styles.desktop.color = "#ffffff";
-    return [G.racine(k, [deux, bas])];
+    return [G.racine(k, [haut, nomB, chantier, bas])];
   },
 }, FAM);
 
-// ═══ ft2-285 « Alerte rouge » — [F : bandeau d'appel à l'action XXL en haut + liens en une seule colonne étroite à droite] ═══════════════════
-// Idée : un bandeau rouge sirène aux lettres Anton énormes « Une alerte ? Parlons-en. » avec un bouton blanc ; dessous, sur aubergine très sombre, les coordonnées à gauche et UNE colonne étroite de liens à droite, filets entre chaque lien. Polices : Anton et Libre Franklin.
+// ═══ ft2-285 « Alerte rouge » — [capture 04 : navigation en grandes capitales, radar dessiné, NOM géant dans un halo rouge sirène] ══════════════════════
 const alerteId = identite({
   key: "c285", label: "Rouge sirène et aubergine", humeur: "dark",
   fond: "#14070a", texte: "#fff4f4", discret: "#d1aeb2", accent: "#ff6b73", surface: "#22090e", encre: "#14070a", surEncre: "#fff4f4",
@@ -91,28 +94,26 @@ const alerteId = identite({
 });
 const alerteRouge = modeleV2({
   id: identifiantV2(285, "alerte-rouge"), concept: "c-285-alerte-rouge", name: "Alerte rouge", family: FAM,
-  description: "Pour un éditeur de cybersécurité : un bandeau rouge d'appel à l'action en lettres géantes, puis, sur aubergine, les coordonnées à gauche et une seule colonne étroite de liens à droite, avec flèche qui glisse.",
-  tags: ["cybersécurité", "appel à l'action", "bandeau", "rouge", "colonne étroite", "alerte", "angles droits"],
-  identity: alerteId, racine: racineDe("#14070a"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  description: "Pour un éditeur de cybersécurité : un radar à balayage dessiné entre la navigation en capitales et les coordonnées, puis le nom « Vigie » géant fondu dans un halo rouge sirène sur dégradé aubergine.",
+  tags: ["cybersécurité", "radar", "halo", "nom géant", "rouge", "aubergine", "alerte", "angles droits"],
+  identity: alerteId, racine: racineDe("#c1121f"),
+  widgets: ["html", "text", "link", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, R = "#c1121f", F = "#14070a";
-    const phrase = G.geant("<p>Une alerte ?<br>Parlons-en.</p>", { taille: [56, 180], lh: 0.95, suivi: "0.005em", poids: "400", police: S.head, couleur: "#ffffff", extra: { textTransform: "uppercase" } })(k, env);
-    const btn = bouton(k, "Contacter l'équipe  →", "/contact", { texte: R, fond: "#ffffff", survol: { backgroundColor: F, borderColor: F, color: "#ffffff", transform: { x: 8 } }, focus: F, taille: 18, casse: "uppercase", suivi: "0.08em", extra: { alignSelf: "flex-start", paddingLeft: "36px", paddingRight: "36px", minHeight: "64px" } });
-    const haut = G.bande(k, [souffle(carre(k, "#ffffff", "14px"), 2200), phrase, btn], { fond: R, colonne: true, aligne: "flex-start", gap: "24px", padV: ["72px", "56px", "40px"], padB: ["64px", "48px", "36px"], padH: PH, nom: "Appel" });
-    const gauche = G.colonne(k, [caps(k, "Nous joindre", { couleur: "#ff6b73", suivi: "0.22em" }), coordonnees(k, { taille: 16, couleur: "#fff4f4", lien: "#ffffff", survol: "#ff6b73", focus: "#ffffff" }), texte(k, "Décrivez la situation : l'équipe vous répondra.", { taille: 15, couleur: "#d1aeb2", max: "340px" })], { poids: 1, min: "260px", gap: "18px" });
-    const LIENS = [["Services", "/faq"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Espace client", "/connexion"]];
-    const colonne = k.col(LIENS.map(([t, u]) => { const l = lien(k, t, u, { taille: 17, poids: "600", couleur: "#fff4f4", survol: { color: "#ff6b73", transform: { x: 8 } }, focus: "#ff6b73", h: "52px", extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#fff4f444" } }); return l; }), { gap: "0px", width: "100%", maxWidth: "280px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: "#ff6b73" }, undefined, { maxWidth: "100%" });
-    const corps = G.bande(k, [gauche, G.colonne(k, [colonne], { poids: 0, min: "240px", extra: { flexBasis: "280px", flexGrow: 0 } })], { fond: F, aligne: "flex-start", gap: "40px 80px", padV: ["56px", "44px", "36px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Contacts et liens" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d1aeb2", liens: "#fff4f4" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: F, padV: ["12px", "12px", "8px"], padB: ["28px", "24px", "20px"], padH: PH, nom: "Mentions" });
-    bas.styles.desktop.color = "#fff4f4";
-    return [G.racine(k, [haut, corps, bas])];
+    const S = k.S, R = "#ff6b73", F = "#14070a";
+    const nav = monoLiens(k, [["Services", "/faq"], ["Actualités", "/blog"], ["Contact", "/contact"], ["Espace client", "/connexion"]], { taille: 34, poids: "400", couleur: "#fff4f4", survol: R, police: S.head, h: "52px", extra: { textTransform: "uppercase" } });
+    const gauche = G.colonne(k, [souffle(carre(k, "#ffffff", "14px"), 2200), ...nav], { poids: 4, min: "240px", gap: "4px" });
+    const radar = G.colonne(k, [IL.noeud(k, IL.radar(), { maxWidth: "340px" })], { poids: 4, min: "220px", aligne: "center", soi: "center", mobile: { display: "none" } });
+    const droite = G.colonne(k, [pastilles(k, [["LinkedIn", "https://www.linkedin.com/"], ["GitHub", "https://github.com/"], ["X", "https://x.com/"]], { texte: "#ffffff", fond: F, fondP: "#14070a66", bord: "#ffffff99", focus: "#ffffff" }), coordonnees(k, { taille: 16, couleur: "#fff4f4", lien: "#ffffff", survol: "#ffd0d3", focus: "#ffffff", align: "right" }), texte(k, "Décrivez la situation : l'équipe vous répondra.", { taille: 15, couleur: "#f6cdd0", align: "right", max: "300px" })], { poids: 4, min: "260px", gap: "20px", aligne: "flex-end", soi: "flex-start", mobile: { alignItems: "flex-start" } });
+    const nom = IL.motBande(k, { u: "v285", nom: "VIGIE", police: S.head, poids: 400, haut: "#c1121f", bas: "#ffc2c6", halo: "#ff6b73", mt: "0px" });
+    const b1 = G.bande(k, nom, { degrade: { from: "#c1121f", to: "#6e0a12", angle: 180 }, colonne: true, max: "100%", padV: ["24px", "20px", "16px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Nom géant" });
+    const haut = G.bande(k, [G.ligne(k, [radar, gauche, droite], { gap: "24px 40px", aligne: "center", largeur: "100%" })], { degrade: { from: "#6e0a12", to: "#14070a", angle: 180 }, colonne: true, max: "1500px", padV: ["40px", "32px", "24px"], padB: ["48px", "40px", "32px"], padH: PH, nom: "Radar" });
+    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#ffe0e2", liens: "#ffffff" })(k, env)], { fond: "#14070a", aligne: "center", padV: ["18px", "16px", "14px"], padB: ["18px", "16px", "14px"], padH: PH, nom: "Mentions" });
+    bas.styles.desktop.color = "#ffffff";
+    return [G.racine(k, [b1, haut, bas])];
   },
 }, FAM);
 
-// ═══ ft2-286 « Salle des opérations » — [H : mosaïque asymétrique, une grande case + trois petites] ═══════════════════════════════════════════
-// Idée : une mosaïque inversée. Trois petites cases empilées à GAUCHE (Signaler, Audit, Documentation : lien, flèche qui glisse) et la GRANDE case indigo à droite (nom, phrase, lettre d'information, coordonnées). Cases séparées de 6 px. Polices : Chivo (titres, 800) et Source Sans 3.
+// ═══ ft2-286 « Salle des opérations » — [capture 06 : sombre, pastilles en haut, quatre colonnes ; au-dessus, bandeau de maillage de nœuds] ═══════════
 const operationsId = identite({
   key: "c286", label: "Indigo, cyan et lavande", humeur: "dark",
   fond: "#10173a", texte: "#f1f3ff", discret: "#b9c1ee", accent: "#38d5e8", surface: "#1b2563", encre: "#10173a", surEncre: "#f1f3ff",
@@ -120,34 +121,29 @@ const operationsId = identite({
 });
 const salleOperations = modeleV2({
   id: identifiantV2(286, "salle-des-operations"), concept: "c-286-salle-des-operations", name: "Salle des opérations", family: FAM,
-  description: "Pour un centre de cybersécurité : mosaïque asymétrique en indigo, cyan et lavande ; trois petites cases-liens empilées à gauche, une grande case à droite avec le nom, la lettre d'information et les coordonnées.",
-  tags: ["cybersécurité", "mosaïque", "indigo", "cyan", "opérations", "lettre", "angles droits"],
+  description: "Pour un centre de cybersécurité : bandeau pleine largeur de maillage de nœuds cyan sur grille indigo, pastilles, puis quatre colonnes titrées (à propos, lettre, grille de quatre vignettes de cartes en points, réseaux).",
+  tags: ["cybersécurité", "maillage", "carte", "vignettes", "indigo", "cyan", "colonnes", "angles droits"],
   identity: operationsId, racine: racineDe("#10173a"),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, IND = "#1b2563", FOND = "#10173a", CY = "#38d5e8", LAV = "#dfe3ff";
-    const petite = (num, t, d, u, fond, encre, vif) => {
-      const titre = lien(k, t, u, { taille: 26, poids: "800", police: S.head, couleur: encre, survol: { color: vif, transform: { x: 6 } }, focus: vif === "#ffffff" ? "#ffffff" : encre, h: "48px", lh: 1.1 });
-      const c = k.col([k.row([caps(k, num, { couleur: encre, suivi: "0.2em" }), k.T("<p>→</p>", { fontSize: "26px", color: encre, fontFamily: S.font, lineHeight: 1 })], { justifyContent: "space-between", alignItems: "center", width: "100%" }), k.col([titre, texte(k, d, { taille: 15, couleur: encre })], { gap: "4px" })], { flexGrow: 1, flexBasis: "auto", minHeight: "150px", justifyContent: "space-between", gap: "18px", paddingTop: "20px", paddingBottom: "20px", paddingLeft: "26px", paddingRight: "22px", backgroundColor: fond, borderRadius: "0px", transitionDuration: DOUX, width: "100%" }, undefined, { minHeight: "0px", paddingLeft: "20px" });
-      c.states = { hover: { transform: { y: -4 } } };
-      return c;
-    };
-    const petites = G.colonne(k, [petite("01", "Signaler", "Un incident, un doute.", "/contact", CY, FOND, "#ffffff"), petite("02", "Auditer", "Faire le point sur vos systèmes.", "/contact", LAV, FOND, "#1b2563"), petite("03", "Comprendre", "Guides et questions fréquentes.", "/faq", "#2b3a8f", "#f1f3ff", CY)], { poids: 4, min: "300px", gap: "6px", extra: { alignSelf: "stretch" } });
-    const nom = nomDuSite(k, env, 30, "#ffffff", { fontWeight: "800" });
-    const phrase = G.geant("<p>Chaque alerte<br>mérite une réponse.</p>", { taille: [32, 64], lh: 1.02, suivi: "-0.02em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env);
-    const abo = lettre(k, env, G, { titre: "Lettre d'information", intro: "Alertes et bonnes pratiques par e-mail.", bouton: "S'abonner", largeur: "400px", accent: CY, surBouton: FOND, texte: "#f1f3ff", couleurTitre: CY, fond: IND, survolBouton: "#ffffff", survolTexte: FOND, focus: "#ffffff" });
-    const coord = G.colonne(k, [caps(k, "Contact", { couleur: CY, suivi: "0.2em" }), coordonnees(k, { taille: 15, couleur: "#f1f3ff", lien: "#ffffff", survol: CY, focus: "#ffffff" })], { poids: 1, min: "240px", gap: "10px" });
-    const grande = G.colonne(k, [nom, phrase, G.ligne(k, [G.colonne(k, [abo], { poids: 1.2, min: "280px" }), coord], { gap: "28px 40px", aligne: "flex-start", largeur: "100%" })], { poids: 8, min: "340px", gap: "28px", extra: { backgroundColor: IND, paddingTop: "48px", paddingBottom: "48px", paddingLeft: "48px", paddingRight: "44px", borderRadius: "0px" }, mobile: { minWidth: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "32px", paddingBottom: "32px" } });
-    const mosaique = G.bande(k, [petites, grande], { fond: FOND, gap: "6px", aligne: "stretch", padV: ["6px", "6px", "6px"], padB: ["6px", "6px", "6px"], padH: ["6px", "6px", "6px"], max: "1920px", nom: "Mosaïque" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d4daf7", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: FOND, padV: ["20px", "18px", "16px"], padB: ["20px", "18px", "16px"], padH: PH, nom: "Mentions" });
+    const S = k.S, IND = "#1b2563", FOND = "#10173a", CY = "#38d5e8";
+    const maille = G.bande(k, [IL.noeud(k, IL.maillage(), { minHeight: "120px" })], { fond: FOND, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Maillage" });
+    const pil = pastilles(k, [["Signaler", "/contact"], ["Audit", "/contact"], ["Guides", "/faq"]], { texte: "#ffffff", fond: FOND, fondP: "#000000", bord: "#000000", survol: { backgroundColor: CY, color: FOND, transform: { y: -2 } }, focus: CY });
+    const about = colQ(k, G, [titreCol(k, "À propos", "#ffffff", { fontWeight: "800" }), nomDuSite(k, env, 22, CY, { fontWeight: "800" }), texte(k, "Chaque alerte mérite une réponse.", { taille: 15, couleur: "#d4daf7", max: "300px" }), coordonnees(k, { taille: 15, couleur: "#f1f3ff", lien: "#ffffff", survol: CY, focus: "#ffffff" })], { poids: 1.3 });
+    const abo = lettre(k, env, G, { titre: "", intro: "Alertes et bonnes pratiques par e-mail.", bouton: "→", largeur: "340px", accent: CY, surBouton: FOND, texte: "#f1f3ff", fond: FOND, fondChamp: "#000000", survolBouton: "#ffffff", survolTexte: FOND, focus: "#ffffff" });
+    const lettreC = colQ(k, G, [titreCol(k, "Lettre d'information", "#ffffff", { fontWeight: "800" }), abo], { poids: 1.3 });
+    const suivre = colQ(k, G, [titreCol(k, "Suivez-nous", "#ffffff", { fontWeight: "800" }), reseaux(k, env, G, { couleur: "#f1f3ff", survol: CY, focus: "#ffffff" })], { poids: 1 });
+    const V4 = IL.VIGNETTES(k, "points", { bg: "#1b2563", a: "#38d5e8", b: "#8f9cff", c: "#ffffff", d: "#ffffff" }, { t: "100%" });
+    const haut2 = G.bande(k, [G.colonne(k, [pil, about], { poids: 1, min: "280px", gap: "28px" }), G.colonne(k, [lettreC, suivre], { poids: 1, min: "300px", gap: "28px" })], { fond: FOND, gap: "32px 64px", aligne: "flex-start", padV: ["40px", "32px", "28px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Contact et lettre" });
+    const strip = G.bande(k, [titreCol(k, "Cartes de menaces", "#ffffff", { fontWeight: "800" }), G.ligne(k, V4.map((v) => G.colonne(k, [v], { poids: 1, min: "120px" })), { gap: "8px", aligne: "flex-start", largeur: "100%" })], { fond: FOND, colonne: true, gap: "16px", padV: ["8px", "8px", "8px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Vignettes" });
+    const corps = [haut2, strip];
+    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d4daf7", liens: "#ffffff" })(k, env, true)], { fond: FOND, aligne: "center", justifie: "center", padV: ["8px", "8px", "8px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Mentions" });
     bas.styles.desktop.color = "#ffffff";
-    return [G.racine(k, [mosaique, bas])];
+    return [G.racine(k, [maille, ...corps, bas])];
   },
 }, FAM);
 
-// ═══ ft2-287 « Cabinet de sécurité » — [J : papier à en-tête, cartouche centré, filets doubles, liens en ligne centrée] ═══════════════════════
-// Idée : le pied d'un CABINET sur papier crème : filets doubles en haut, nom en serif centré, adresse en cartouche, liens en une ligne centrée, sceau carré bordeaux, filets doubles en bas, mentions centrées. Aucune animation spectaculaire : le sceau respire, les liens se soulignent. Polices : Libre Baskerville et Karla.
+// ═══ ft2-287 « Cabinet de sécurité » — [capture 05 en papier à en-tête : sceau guilloché, à propos et liens, large rangée de 4 vignettes d'anneaux, lettre] ═
 const cabinetId = identite({
   key: "c287", label: "Crème, marine et bordeaux", humeur: "light",
   fond: "#f5f0e6", texte: "#1a2540", discret: "#4a4f6a", accent: "#8b1a1a", surface: "#ffffff", encre: "#1a2540", surEncre: "#f5f0e6",
@@ -155,30 +151,29 @@ const cabinetId = identite({
 });
 const cabinetSecurite = modeleV2({
   id: identifiantV2(287, "cabinet-de-securite"), concept: "c-287-cabinet-de-securite", name: "Cabinet de sécurité", family: FAM,
-  description: "Pour un cabinet de conseil en cybersécurité : pied « papier à en-tête » centré, filets doubles, nom serif, cartouche d'adresse, liens en une ligne et sceau carré bordeaux, sur crème et marine.",
-  tags: ["cybersécurité", "cabinet", "papier à en-tête", "centré", "serif", "crème", "bordeaux", "angles droits"],
+  description: "Pour un cabinet de cybersécurité : papier à en-tête crème, sceau guilloché dessiné, à propos et liens, large rangée de quatre vignettes d'anneaux de chiffrement, filets doubles, lettre du cabinet.",
+  tags: ["cybersécurité", "cabinet", "sceau", "guilloché", "vignettes", "serif", "crème", "bordeaux", "angles droits"],
   identity: cabinetId, racine: racineDe("#1a2540"),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S, ENC = "#1a2540", BORD = "#8b1a1a", CREME = "#f5f0e6";
     const doubles = () => k.col([trait(k, ENC, "3px"), trait(k, ENC, "1px")], { gap: "4px", width: "100%" });
-    const sceau = souffle(carre(k, BORD, "16px"), 3400);
-    const nom = nomDuSite(k, env, 40, ENC, { fontFamily: S.head, fontWeight: "700", textAlign: "center" });
-    const sous = caps(k, "Conseil en sécurité des systèmes d'information", { couleur: BORD, suivi: "0.22em", extra: { textAlign: "center" } });
-    const cartouche = k.col([caps(k, "Cabinet", { couleur: S.mute, suivi: "0.24em", extra: { textAlign: "center" } }), coordonnees(k, { taille: 16, couleur: ENC, lien: ENC, survol: BORD, focus: BORD, align: "center" })], { gap: "8px", alignItems: "center", paddingTop: "20px", paddingBottom: "20px", paddingLeft: "40px", paddingRight: "40px", borderStyle: "solid", borderWidth: "1px", borderColor: ENC, borderRadius: "0px", maxWidth: "460px", width: "100%" }, undefined, { paddingLeft: "16px", paddingRight: "16px" });
-    const liens = G.ligne(k, [["Services", "/faq"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Contact", "/contact"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 15, poids: "700", couleur: ENC, soulign: false, survol: { color: BORD, borderColor: BORD }, focus: BORD, padH: "6px", extra: { borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "2px", borderColor: "#f5f0e600" } })), { gap: "0px 24px", aligne: "center", justifie: "center", largeur: "100%" });
-    const abo = lettre(k, env, G, { titre: "Lettre du cabinet", intro: "Un message d'information, de temps en temps.", bouton: "S'abonner", largeur: "420px", accent: BORD, surBouton: "#ffffff", texte: ENC, couleurTitre: BORD, fond: CREME, survolBouton: ENC, survolTexte: "#ffffff", focus: ENC });
-    const sep = () => carre(k, "#1a254066", "6px");
-    const liensSep = G.ligne(k, liens.children.flatMap((l, i) => (i ? [sep(), l] : [l])), { gap: "0px 10px", aligne: "center", justifie: "center", largeur: "100%" });
-    const corps = G.bande(k, [sceau, nom, doubles(), sous, cartouche, doubles(), liensSep, abo], { fond: CREME, colonne: true, aligne: "center", gap: "22px", max: "960px", padV: ["56px", "44px", "32px"], padB: ["40px", "32px", "28px"], padH: PH, nom: "En-tête" });
-    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#e3e6f0", liens: "#ffffff" })(k, env, true)], { fond: ENC, aligne: "center", padV: ["22px", "20px", "16px"], padB: ["22px", "20px", "16px"], padH: PH, nom: "Mentions" });
+    const sceau = G.colonne(k, [IL.noeud(k, IL.sceau(), { maxWidth: "190px" })], { poids: 2, min: "170px", aligne: "flex-start", soi: "flex-start" });
+    const propos = G.colonne(k, [nomDuSite(k, env, 36, ENC, { fontFamily: S.head }), caps(k, "Conseil en sécurité des systèmes d'information", { couleur: BORD, suivi: "0.2em" }), coordonnees(k, { taille: 16, couleur: ENC, lien: ENC, survol: BORD, focus: BORD })], { poids: 4, min: "260px", gap: "12px", soi: "center" });
+    const liens = G.colonne(k, [titreCol(k, "Le cabinet", BORD, { fontSize: "22px" }), ...monoLiens(k, [["Services", "/faq"], ["Actualités", "/blog"], ["Questions fréquentes", "/faq"], ["Contact", "/contact"], ["Espace client", "/connexion"]], { taille: 16, poids: "700", couleur: ENC, survol: BORD })], { poids: 3, min: "220px", gap: "2px" });
+    const tete = G.bande(k, [sceau, propos, liens], { fond: CREME, gap: "28px 40px", aligne: "center", max: "1200px", padV: ["56px", "44px", "32px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "En-tête" });
+    const V = IL.VIGNETTES(k, "anneaux", { bg: "#efe6d2", a: "#1a2540", b: "#8b1a1a", c: "#4a4f6a", d: "#8b1a1a" }, { t: "100%", bord: ENC });
+    const legendes = ["Chiffrement", "Journalisation", "Cloisonnement", "Reprise"];
+    const strip = G.ligne(k, V.map((v, i) => G.colonne(k, [v, caps(k, legendes[i], { couleur: ENC, suivi: "0.18em" })], { poids: 1, min: "150px", gap: "10px" })), { gap: "20px", aligne: "flex-start", largeur: "100%" });
+    const milieu = G.bande(k, [doubles(), strip, doubles()], { fond: CREME, colonne: true, gap: "24px", max: "1200px", padV: ["8px", "8px", "8px"], padB: ["32px", "28px", "24px"], padH: PH, nom: "Vignettes" });
+    const abo = lettre(k, env, G, { titre: "Lettre du cabinet", intro: "Un message d'information, de temps en temps.", bouton: "S'abonner", largeur: "420px", accent: "#f0b8b8", surBouton: ENC, texte: "#ffffff", couleurTitre: "#f0b8b8", fond: ENC, survolBouton: "#ffffff", survolTexte: ENC, focus: "#ffffff" });
+    const bas = G.bande(k, [souffle(carre(k, "#d9a0a0", "14px"), 3400), abo, G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#e3e6f0", liens: "#ffffff" })(k, env, true)], { fond: ENC, colonne: true, aligne: "center", gap: "18px", padV: ["36px", "28px", "24px"], padB: ["22px", "20px", "16px"], padH: PH, nom: "Lettre et mentions" });
     bas.styles.desktop.color = "#ffffff";
-    return [G.racine(k, [corps, bas])];
+    return [G.racine(k, [tete, milieu, bas])];
   },
 }, FAM);
 
-// ═══ ft2-288 « Veille permanente » — [D : une seule ligne horizontale type barre de navigation inversée] ═════════════════════════════════════════
-// Idée : pied COMPACT, tout sur deux lignes d'une barre noire : nom, quatre liens, voyant ambre qui respire (« Statut ») ; en dessous les mentions. Aucune colonne, aucune lettre : le contraire d'un gros pied. Polices : Geist Mono (titres) et Geist.
+// ═══ ft2-288 « Veille permanente » — [capture 06 compacte : bande oscilloscope ondulée en tête, une rangée de colonnes serrées, vignettes de tracés] ═════
 const veilleId = identite({
   key: "c288", label: "Noir graphite et ambre", humeur: "dark",
   fond: "#0b0d10", texte: "#f2f2f2", discret: "#a1a7ae", accent: "#ffb000", surface: "#15181d", encre: "#0b0d10", surEncre: "#f2f2f2",
@@ -186,55 +181,57 @@ const veilleId = identite({
 });
 const veillePermanente = modeleV2({
   id: identifiantV2(288, "veille-permanente"), concept: "c-288-veille-permanente", name: "Veille permanente", family: FAM,
-  description: "Pour un éditeur de sécurité : un pied compact en barre noire, nom, quatre liens et voyant ambre « statut » qui respire sur une seule ligne, les mentions dessous. Sans colonnes ni lettre.",
-  tags: ["cybersécurité", "compact", "barre", "une ligne", "noir", "ambre", "statut", "angles droits"],
+  description: "Pour un éditeur de sécurité : bande ondulée d'oscilloscope ambre pleine largeur, puis une rangée serrée de colonnes (nom et statut, liens, rangée de quatre vignettes de tracés, lettre) sur graphite.",
+  tags: ["cybersécurité", "oscilloscope", "bande ondulée", "tracés", "compact", "graphite", "ambre", "angles droits"],
   identity: veilleId, racine: racineDe("#0b0d10"),
-  widgets: ["sitetitle", "link", "copyright", "bizlegal"],
+  widgets: ["html", "sitetitle", "text", "link", "emailsubscribe", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, AMB = "#ffb000", F = "#0b0d10";
-    const nom = nomDuSite(k, env, 20, "#f2f2f2", { fontFamily: S.head, fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.08em" });
-    const liens = k.row([["Services", "/faq"], ["Actualités", "/blog"], ["Contact", "/contact"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 15, poids: "500", couleur: "#f2f2f2", survol: { color: AMB, transform: { y: -2 } }, focus: AMB, padH: "14px", police: S.head })).flat(), { gap: "0px", alignItems: "center", flexWrap: "wrap" });
+    const S = k.S, AMB = "#ffb000", F = "#0b0d10", CL = "#f2f2f2", MU = "#a1a7ae";
+    const onde = G.bande(k, IL.bandeSvg(k, IL.oscillo, { hL: 150, hE: 110 }), { fond: F, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], filetHaut: { epaisseur: "4px", couleur: AMB }, nom: "Oscilloscope" });
     const statut = k.row([souffle(carre(k, AMB, "10px"), 2200), lien(k, "Statut", "/faq", { taille: 15, poids: "700", couleur: AMB, survol: { color: "#ffffff", transform: { x: 3 } }, focus: "#ffffff", police: S.head })], { gap: "8px", alignItems: "center", flexWrap: "nowrap" });
-    const barre = G.bande(k, [nom, liens, statut], { fond: F, aligne: "center", justifie: "space-between", gap: "8px 32px", padV: ["20px", "18px", "16px"], padB: ["8px", "8px", "8px"], padH: PH, filetHaut: { epaisseur: "4px", couleur: AMB }, max: "1500px", nom: "Barre" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#a1a7ae", liens: "#f2f2f2" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: F, padV: ["8px", "8px", "8px"], padB: ["20px", "18px", "16px"], padH: PH, max: "1500px", nom: "Mentions" });
-    bas.styles.desktop.color = "#f2f2f2";
-    return [G.racine(k, [barre, bas])];
+    const marque = colQ(k, G, [nomDuSite(k, env, 22, CL, { fontFamily: S.head, textTransform: "uppercase", letterSpacing: "0.08em" }), texte(k, "Détection, journalisation, réponse.", { taille: 14, couleur: MU, max: "260px" }), statut], { poids: 1.2, gap: "12px" });
+    const liens = colQ(k, G, [titreCol(k, "Liens", AMB, { fontSize: "16px", textTransform: "uppercase", letterSpacing: "0.12em" }), ...monoLiens(k, [["Services", "/faq"], ["Actualités", "/blog"], ["Contact", "/contact"], ["Espace client", "/connexion"]], { taille: 15, poids: "500", couleur: CL, survol: AMB, police: S.head })], { poids: 1, gap: "0px" });
+    const feed = colQ(k, G, [titreCol(k, "Tracés", AMB, { fontSize: "16px", textTransform: "uppercase", letterSpacing: "0.12em" }), k.row(IL.VIGNETTES(k, "trace", { bg: "#15181d", a: "#ffb000", b: "#a1a7ae", c: "#ffffff", d: "#ffffff" }, { t: "72px", bord: "#ffb00088" }), { gap: "10px", flexWrap: "wrap" })], { poids: 1.6, min: "260px", gap: "12px" });
+    const abo = lettre(k, env, G, { titre: "", intro: "Alertes par e-mail.", bouton: "→", largeur: "300px", accent: AMB, surBouton: F, texte: CL, fond: F, survolBouton: "#ffffff", survolTexte: F, focus: "#ffffff" });
+    const lettreC = colQ(k, G, [titreCol(k, "Lettre", AMB, { fontSize: "16px", textTransform: "uppercase", letterSpacing: "0.12em" }), abo], { poids: 1.3, gap: "12px" });
+    const cols = G.bande(k, [G.ligne(k, [marque, liens, feed, lettreC], { gap: "32px 32px", aligne: "flex-start", largeur: "100%" })], { fond: F, colonne: true, max: "1500px", padV: ["36px", "32px", "28px"], padB: ["24px", "20px", "16px"], padH: PH, nom: "Colonnes serrées" });
+    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: MU, liens: CL })(k, env, true)], { fond: F, aligne: "center", justifie: "center", padV: ["6px", "6px", "6px"], padB: ["20px", "18px", "16px"], padH: PH, nom: "Mentions" });
+    bas.styles.desktop.color = CL;
+    return [G.racine(k, [onde, cols, bas])];
   },
 }, FAM);
 
-// ═══ ft2-289 « Paliers de confinement » — [L : pied en escalier, bandes de largeurs décroissantes alignées à gauche] ═══════════════════════════
-// Idée : un ESCALIER de quatre marches de largeurs 100 %, 85 %, 70 %, 52 % alignées à gauche, de plus en plus sombres : le message, les liens et le bouton, les coordonnées, enfin les mentions. Le vide à droite est l'encre de la racine. Un carré orange respire sur la 3e marche. Polices : Teko (titres) et Hanken Grotesk.
+// ═══ ft2-289 « Paliers de confinement » — [capture 06 : sombre, pastilles, quatre colonnes décalées en ESCALIER, vignettes de blocs ; bande de cellules emboîtées] ═
 const paliersId = identite({
-  key: "c289", label: "Acier, bleu froid et orange", humeur: "light",
-  fond: "#e8edf3", texte: "#14202c", discret: "#3d4f61", accent: "#a63d00", surface: "#ffffff", encre: "#14202c", surEncre: "#e8edf3",
-  police: "font.hanken-grotesk", titres: "font.teko", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "2px", ligne: "#14202c55",
+  key: "c289", label: "Acier sombre et orange", humeur: "dark",
+  fond: "#14202c", texte: "#e8edf3", discret: "#a9bacb", accent: "#ff8a3d", surface: "#1d3144", encre: "#14202c", surEncre: "#e8edf3",
+  police: "font.hanken-grotesk", titres: "font.teko", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "2px", ligne: "#e8edf355",
 });
 const paliersConfinement = modeleV2({
   id: identifiantV2(289, "paliers-de-confinement"), concept: "c-289-paliers-de-confinement", name: "Paliers de confinement", family: FAM,
-  description: "Pour une entreprise de cybersécurité : un pied en escalier à quatre marches de largeurs décroissantes alignées à gauche (message, liens et bouton, coordonnées, mentions), du gris acier à l'encre.",
-  tags: ["cybersécurité", "escalier", "marches", "acier", "orange", "paliers", "angles droits"],
+  description: "Pour une entreprise de cybersécurité : pied acier sombre à pastilles, quatre colonnes décalées en escalier (à propos, lettre, vignettes de blocs, réseaux) et grande bande de cellules emboîtées en gradins orange.",
+  tags: ["cybersécurité", "escalier", "colonnes décalées", "blocs", "cellules", "acier", "orange", "angles droits"],
   identity: paliersId, racine: racineDe("#14202c"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["html", "text", "link", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, ENC = "#14202c", OR = "#a63d00", ORL = "#ff8a3d";
-    const marche = (enfants, fond, largeur, pad) => k.col(enfants, { width: largeur, backgroundColor: fond, gap: "16px", paddingTop: pad[0], paddingBottom: pad[1], paddingLeft: "48px", paddingRight: "40px", borderRadius: "0px", alignItems: "flex-start" }, { width: "100%", paddingLeft: "32px" }, { width: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "28px", paddingBottom: "28px" });
-    const phrase = G.geant("<p>Contenir vite,<br>réparer bien.</p>", { taille: [48, 140], lh: 0.95, suivi: "0em", poids: "600", police: S.head, couleur: ENC, extra: { textTransform: "uppercase" } })(k, env);
-    const m1 = marche([caps(k, "Cybersécurité", { couleur: OR, suivi: "0.24em" }), phrase], "#e8edf3", "100%", ["64px", "40px"]);
-    const liens = G.ligne(k, PLAT.slice(0, 4).map(([t, u]) => lien(k, t, u, { taille: 17, poids: "700", couleur: ENC, soulign: true, survol: { color: OR, transform: { x: 4 } }, focus: OR, padH: "0px", extra: { marginRight: "24px" } })), { gap: "0px", aligne: "center", largeur: "100%" });
-    const btn = bouton(k, "Signaler un incident", "/contact", { texte: "#ffffff", fond: ENC, survol: { backgroundColor: OR, borderColor: OR, color: "#ffffff", transform: { x: 6 } }, focus: OR, taille: 15, casse: "uppercase", suivi: "0.08em" });
-    const m2 = marche([liens, btn], "#c5d3e0", "85%", ["32px", "32px"]);
-    const m3 = marche([k.row([souffle(carre(k, OR, "12px"), 2800), caps(k, "Nous joindre", { couleur: ENC, suivi: "0.2em" })], { gap: "10px", alignItems: "center", flexWrap: "nowrap" }), coordonnees(k, { taille: 15, couleur: ENC, lien: ENC, survol: OR, focus: OR })], "#8fa9c0", "70%", ["28px", "28px"]);
-    const m4 = marche([reseaux(k, env, G, { couleur: "#ffffff", survol: ORL, focus: ORL, taille: 14 }), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d6dee7", liens: "#ffffff", })(k, env)], ENC, "52%", ["24px", "28px"]);
-    m4.styles.desktop.gap = "10px";
-    const bande = G.bande(k, [m1, m2, m3, m4], { fond: ENC, colonne: true, aligne: "flex-start", gap: "0px", max: "1920px", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Escalier" });
-    bande.styles.desktop.color = "#ffffff";
-    return [G.racine(k, [bande])];
+    const S = k.S, ENC = "#14202c", OR = "#ff8a3d", CL = "#e8edf3", MU = "#a9bacb";
+    const phrase = G.geant("<p>Contenir vite, réparer bien.</p>", { taille: [40, 96], lh: 0.95, suivi: "0em", poids: "600", police: S.head, couleur: CL, extra: { textTransform: "uppercase" } })(k, env);
+    const pil = pastilles(k, [["Signaler un incident", "/contact"], ["Services", "/faq"], ["Actualités", "/blog"]], { texte: CL, fond: ENC, fondP: "#0c141c", bord: "#0c141c", survol: { backgroundColor: OR, color: ENC, transform: { y: -2 } }, focus: OR });
+    const tete = G.ligne(k, [G.colonne(k, [caps(k, "Cybersécurité", { couleur: OR, suivi: "0.24em" }), phrase], { poids: 4, min: "300px", gap: "12px" }), G.colonne(k, [pil], { poids: 2, min: "280px", aligne: "flex-end", soi: "flex-end", mobile: { alignItems: "flex-start" } })], { gap: "24px 40px", aligne: "flex-end", justifie: "space-between", largeur: "100%" });
+    const about = colQ(k, G, [texte(k, "Du premier signalement au retour à la normale, une équipe qui répond.", { taille: 16, couleur: MU, max: "360px" }), coordonnees(k, { taille: 15, couleur: CL, lien: "#ffffff", survol: OR, focus: OR })], { poids: 1, min: "240px", gap: "14px" });
+    const abo = lettre(k, env, G, { titre: "", intro: "Alertes et bonnes pratiques.", bouton: "→", largeur: "320px", accent: OR, surBouton: ENC, texte: CL, fond: ENC, fondChamp: "#0c141c", survolBouton: "#ffffff", survolTexte: ENC, focus: "#ffffff" });
+    const gche = G.colonne(k, [caps(k, "Cybersécurité", { couleur: OR, suivi: "0.24em" }), phrase, pil, G.ligne(k, [about, colQ(k, G, [abo, souffle(carre(k, OR, "12px"), 2800)], { poids: 1, min: "240px", gap: "14px" })], { gap: "24px 32px", aligne: "flex-start", largeur: "100%" })], { poids: 5, min: "320px", gap: "28px" });
+    const paliers = G.colonne(k, [titreCol(k, "Paliers", OR, { fontSize: "34px" }), k.row(IL.VIGNETTES(k, "blocs", { bg: "#1d3144", a: "#47708f", b: "#6f93b0", c: "#a9bacb", d: "#ff8a3d" }, { t: "72px" }), { gap: "10px", flexWrap: "wrap" }), titreCol(k, "Suivez-nous", OR, { fontSize: "34px" }), reseaux(k, env, G, { couleur: CL, survol: OR, focus: OR })], { poids: 3, min: "260px", gap: "18px", extra: { backgroundColor: "#1d3144", paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", borderRadius: "0px" } });
+    const haut = G.bande(k, [gche, paliers], { fond: ENC, gap: "40px 56px", aligne: "stretch", max: "1500px", padV: ["56px", "44px", "32px"], padB: ["40px", "32px", "28px"], padH: PH, nom: "Paliers" });
+    const cellules = G.bande(k, IL.bandeSvg(k, IL.cellules, { hL: 220, hE: 150 }), { fond: ENC, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Cellules" });
+    const bas = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true, couleur: MU, liens: CL })(k, env, true)], { fond: ENC, aligne: "center", justifie: "center", padV: ["18px", "16px", "14px"], padB: ["18px", "16px", "14px"], padH: PH, nom: "Mentions" });
+    bas.styles.desktop.color = CL;
+    return [G.racine(k, [haut, cellules, bas])];
   },
 }, FAM);
 
 module.exports = {
   key: FAM, label: "Cybersécurité", target: 6, built: true,
-  description: "Pieds de cabinets et d'éditeurs de cybersécurité, angles droits : deux moitiés noir et jaune, bandeau d'alerte, mosaïque d'opérations, papier à en-tête, barre compacte, escalier à quatre marches.",
+  description: "Pieds de cabinets et d'éditeurs de cybersécurité, angles droits, illustrés : bouclier et nom monumental, radar rouge, maillage de nœuds, sceau guilloché, oscilloscope, escalier de cellules.",
   models: [ligneDefense, alerteRouge, salleOperations, cabinetSecurite, veillePermanente, paliersConfinement],
 };

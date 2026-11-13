@@ -1,0 +1,138 @@
+// Famille v2 « Luxe et hôtellerie de prestige » — 6 modèles (ft2-428 à ft2-433), lot « inspiré de captures », REFAIT avec de vraies illustrations vectorielles : ANGLES DROITS partout.
+// Capture 40 (FoodFiesta, fond sombre) : marque monumentale à deux tons + lettre à gauche, trois colonnes à droite, filet, copyright en italique et icônes de réseaux → ft2-428, 429, 430.
+// Capture 41 (CodingLab, bleu nuit) : barre marque dessinée + pastilles de réseaux colorées, filet, colonnes à petit soulignement + abonnement, bande sombre de mentions → ft2-431, 432, 433.
+// Marques fictives ; AUCUNE coordonnée, chiffre ni certification inventés (adresse, téléphone, horaires = Données de l'entreprise). Dessins : aides-illus-a13.js (SVG inline, aria-hidden).
+// MOUVEMENT : transitions 360 ms ; UNE animation douce par modèle (carré qui respire / bouton qui se soulève) ; tout est immobile sous « prefers-reduced-motion ». Ni animation d'entrée ni défilement.
+const FAM = "luxe-hotellerie";
+const { modeleV2, identifiantV2, identite } = require("../kit-v2");
+const { lien, caps, souffle, carre, horaires, coordonnees, lettre, para, bouton, filetC, pied40, pied41, art, dessin, duo, glyphe } = require("../aides-illus-a13");
+
+// ═══ ft2-428 « Registre des maisons » — palace  [archétype G : index en lignes pleine largeur]
+// Idée : un sommaire de livre d'or. Six grandes lignes pleine largeur (Cormorant 40 px, flèche, filet) : Les suites, Le spa, La table, Les événements, La conciergerie, Réserver. Chaque ligne s'indente en or au survol.
+// En tête, le nom et les réseaux ; en pied, adresse en ligne et mentions. Aucune carte. Ivoire, encre, or. Polices : Cormorant Garamond (titres) et Jost (texte). Mobile : lignes plus petites.
+const IVO = "#f7f2e8", ENCRE2 = "#1c1a17", OR2 = "#8d6b2a";
+const registreId = identite({ key: "c428", label: "Ivoire, encre et or", humeur: "light", fond: IVO, texte: ENCRE2, discret: "#4d4840", accent: OR2, surface: "#fffdf8", encre: ENCRE2, surEncre: IVO, police: "font.jost", titres: "font.cormorant-garamond", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#1c1a174d" });
+const registre = modeleV2({
+  id: identifiantV2(428, "registre-des-maisons"), concept: "c-428-registre-des-maisons", name: "Registre des maisons", family: FAM,
+  description: "Pour un palace ou un hôtel de prestige : un sommaire en six grandes lignes pleine largeur (suites, spa, table, événements, conciergerie, réserver) qui s'indentent en or, nom et réseaux en tête. Ivoire, encre, or.",
+  tags: ["palace", "hôtel de luxe", "index", "sommaire", "grandes lignes", "ivoire", "or"],
+  identity: registreId, racine: racineDe(IVO),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p>Maison<br><span style="color:${OR2}">Aurélien</span></p>`, { taille: [44, 100], tablette: { taille: [52, 80] }, mobile: { taille: [44, 56] }, lh: 0.98, suivi: "0", poids: "600", police: S.head, couleur: ENCRE2 })(k, env);
+    const blasonN = dessin(k, 320, 320, art.blason(320, 320), { width: "100%", maxWidth: "240px" });
+    const cols = [["La maison", [["Les suites", "/catalogue"], ["Le spa", "/blog"], ["La table", "/blog"]]], ["Services", [["Événements", "/faq"], ["Conciergerie", "/faq"], ["Réserver", "/contact"]]]];
+    return pied40(k, env, G, { fond: IVO, fg: ENCRE2, mute: "#4d4840", accent: OR2, ligne: "#1c1a174d", avant: [blasonN], nom: [nom], lettre: { titre: "", intro: "Le carnet de la maison, de temps en temps.", largeur: "340px", accent: OR2, texte: ENCRE2, couleurIntro: "#4d4840", surBouton: IVO, survolBouton: ENCRE2, surSurvol: IVO },
+      colonnes: cols, extraDroite: [k.col([caps(k, "Adresse", { couleur: OR2, suivi: "0.16em", taille: "13px" }), filetC(k, OR2), coordonnees(k, { couleur: ENCRE2, lien: ENCRE2, survol: OR2, focus: OR2, taille: 15 })], { flexGrow: 1, flexBasis: "200px", minWidth: "180px", gap: "6px" })], reseaux: { contour: ENCRE2, couleur: ENCRE2, survolFond: OR2, survolCouleur: "#ffffff" } });
+  },
+}, FAM);
+
+// ═══ ft2-429 « Mosaïque de la maison » — maison d'exception  [archétype H : une grande case et trois petites]
+// Idée : mosaïque asymétrique à joints d'émeraude. Grande case CHAMPAGNE à gauche (grande phrase en Bodoni Moda, bouton de réservation dont le carré respire) ; à droite trois cases empilées : adresse (vert clair),
+// lettre (ivoire), liens et mentions (vert nuit). Émeraude, champagne, ivoire. Polices : Bodoni Moda (titres) et Raleway (texte). Mobile : les quatre cases s'empilent.
+const EME = "#0f2a22", EME2 = "#1b4637", EME3 = "#0a1c16", CHAMP = "#d8c18a", IV3 = "#f4efe2";
+const mosId = identite({ key: "c429", label: "Émeraude, champagne et ivoire", humeur: "dark", fond: EME, texte: IV3, discret: "#c5d6cd", accent: CHAMP, surface: EME2, encre: EME, surEncre: IV3, police: "font.raleway", titres: "font.bodoni-moda", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f4efe24d" });
+const mosaique = modeleV2({
+  id: identifiantV2(429, "mosaique-de-la-maison"), concept: "c-429-mosaique-de-la-maison", name: "Mosaïque de la maison", family: FAM,
+  description: "Pour une maison d'exception : une grande case champagne avec phrase et réservation, et trois cases (adresse, lettre, liens et mentions) à joints d'émeraude. Émeraude, champagne, ivoire.",
+  tags: ["maison d'exception", "mosaïque", "asymétrique", "réservation", "émeraude", "champagne", "cases"],
+  identity: mosId, racine: racineDe(EME),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p>Villa<br><span style="color:${CHAMP}">Émeraude</span></p>`, { taille: [44, 104], tablette: { taille: [52, 84] }, mobile: { taille: [44, 56] }, lh: 0.98, suivi: "0", poids: "600", police: S.head, couleur: IV3 })(k, env);
+    const adr = k.col([caps(k, "Adresse", { couleur: CHAMP, suivi: "0.16em", taille: "13px" }), filetC(k, CHAMP), coordonnees(k, { couleur: IV3, lien: IV3, survol: CHAMP, focus: CHAMP, taille: 15 })], { flexGrow: 1, flexBasis: "200px", minWidth: "180px", gap: "6px" });
+    return pied40(k, env, G, { fond: EME, fg: IV3, mute: "#c5d6cd", accent: CHAMP, ligne: "#f4efe24d", artHaut: duo(k, art.vignettes, [1200, 210], [480, 360]), artPlein: true, fondArtHaut: EME, nom: [nom], lettre: { titre: "", intro: "La lettre de la villa.", largeur: "340px", accent: CHAMP, texte: IV3, couleurIntro: "#c5d6cd", surBouton: EME, survolBouton: IV3, surSurvol: EME },
+      colonnes: [["Séjour", [["Chambres", "/catalogue"], ["Table", "/blog"], ["Spa", "/blog"], ["Contact", "/contact"]]]], extraDroite: [adr], reseaux: { fond: CHAMP, couleur: EME, survolFond: IV3, survolCouleur: EME }, padV: ["64px", "48px", "36px"] });
+  },
+}, FAM);
+
+// ═══ ft2-430 « Chronologie du séjour » — hôtel de charme  [archétype I : chronologie à points carrés]
+// Idée : à droite, une CHRONOLOGIE VERTICALE sur un filet d'or : cinq points carrés (Arrivée, Les suites, La table, Le bien-être, Le départ), chacun avec son titre-lien en Gloock et une ligne d'explication ; le
+// premier point respire. À gauche, une grande phrase, l'adresse et les mentions. Bordeaux, or pâle, crème. Polices : Gloock (titres) et Mulish (texte). Mobile : phrase puis chronologie.
+const BORD = "#3a0f1c", OR3 = "#e3c37b", CREME = "#f7ecdd";
+const chronoId = identite({ key: "c430", label: "Bordeaux, or pâle et crème", humeur: "dark", fond: BORD, texte: CREME, discret: "#e1cbc0", accent: OR3, surface: "#4a1a2a", encre: BORD, surEncre: CREME, police: "font.mulish", titres: "font.gloock", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f7ecdd4d" });
+const chrono = modeleV2({
+  id: identifiantV2(430, "chronologie-du-sejour"), concept: "c-430-chronologie-du-sejour", name: "Chronologie du séjour", family: FAM,
+  description: "Pour un hôtel de charme : chronologie verticale sur filet d'or à cinq points carrés (arrivée, suites, table, bien-être, départ), grande phrase, adresse et mentions à gauche. Bordeaux, or pâle, crème.",
+  tags: ["hôtel de charme", "chronologie", "séjour", "points carrés", "bordeaux", "or", "vertical"],
+  identity: chronoId, racine: racineDe(BORD),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const nom = G.geant(`<p>LE <span style="color:${OR3}">VERMEIL</span></p>`, { taille: [48, 120], tablette: { taille: [56, 90] }, mobile: { taille: [44, 58] }, lh: 1, suivi: "0.02em", poids: "400", police: S.head, couleur: CREME })(k, env);
+    const cols = [["Le séjour", [["L'arrivée", "/faq"], ["Les suites", "/catalogue"], ["La table", "/blog"]]], ["Bien-être", [["Soins", "/blog"], ["Bassin", "/blog"], ["Le départ", "/faq"]]], ["Contact", [["Réserver", "/contact"], ["Écrire", "/contact"]]]];
+    return pied40(k, env, G, { fond: BORD, fg: CREME, mute: "#e1cbc0", accent: OR3, ligne: "#f7ecdd4d", avant: [caps(k, "Hôtel de charme", { couleur: OR3, suivi: "0.24em", poids: "800" })], nom: [nom, coordonnees(k, { couleur: "#e1cbc0", lien: CREME, survol: OR3, focus: OR3, taille: 15 })], lettre: { titre: "", intro: "Une nouvelle de temps en temps.", largeur: "340px", accent: OR3, texte: CREME, couleurIntro: "#e1cbc0", surBouton: BORD, survolBouton: CREME, surSurvol: BORD },
+      colonnes: cols, reseaux: { fond: OR3, couleur: BORD, survolFond: CREME, survolCouleur: BORD }, padB: ["24px", "20px", "16px"], artBas: duo(k, art.vaguesOr, [1200, 160], [480, 140]), artPlein: true, fondArtBas: "#3a0f1c" });
+  },
+}, FAM);
+
+// ═══ ft2-431 « Papier du palace » — maison historique  [archétype J : papier à en-tête centré]
+// Idée : un papier à en-tête. Tout est centré : double filet cuivre, monogramme dans un carré, nom en Italiana et grandes capitales, cartouche à double bordure (adresse et horaires), ligne de liens centrée, double filet, mentions.
+// Papier blanc, bleu nuit, cuivre. Polices : Italiana (nom) et EB Garamond (texte). Mobile : tout reste centré et s'empile.
+const PAPB = "#fbfaf7", MIN = "#0f1b33", CUIV = "#a4632f";
+const papierId = identite({ key: "c431", label: "Papier blanc, bleu nuit et cuivre", humeur: "light", fond: PAPB, texte: MIN, discret: "#454e63", accent: CUIV, surface: "#ffffff", encre: MIN, surEncre: PAPB, police: "font.eb-garamond", titres: "font.italiana", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#0f1b334d" });
+const papier = modeleV2({
+  id: identifiantV2(431, "papier-du-palace"), concept: "c-431-papier-du-palace", name: "Papier du palace", family: FAM,
+  description: "Pour une maison historique : pied en papier à en-tête, entièrement centré, double filet cuivre, monogramme carré, nom en grandes capitales, cartouche à double bordure (adresse, horaires) et liens en ligne. Papier blanc, bleu nuit, cuivre.",
+  tags: ["maison historique", "papier à en-tête", "centré", "cartouche", "double filet", "cuivre", "bleu nuit"],
+  identity: papierId, racine: racineDe(PAPB),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [dessin(k, 260, 260, art.emblemeGrave(260, 260), { width: "120px", flexShrink: 0 }), k.T(`<p>HÔTEL<br>VALMONT</p>`, { fontSize: "38px", lineHeight: 1.05, letterSpacing: "0.14em", fontFamily: S.head, color: MIN })];
+    const abo = k.col([caps(k, "Courrier de la maison", { couleur: CUIV, suivi: "0.16em", taille: "13px" }), filetC(k, CUIV), lettre(k, env, { titre: "", intro: "Une lettre de temps en temps.", largeur: "100%", accent: CUIV, texte: MIN, couleurIntro: "#454e63", surBouton: "#ffffff", survolBouton: MIN, surSurvol: "#ffffff" }), horaires(k, { couleur: MIN, taille: 14 })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "10px" });
+    return pied41(k, env, G, { fond: PAPB, fondBas: MIN, fg: MIN, fgBas: PAPB, muteBas: "#c9d0e0", mute: "#454e63", titre: CUIV, accent: CUIV, ligne: "#0f1b3366", marque, reseaux: { liste: ["facebook", "instagram", "linkedin"], fond: MIN, couleur: PAPB, survolFond: CUIV, survolCouleur: "#ffffff" },
+      artSous: duo(k, art.guilloche, [1200, 56], [480, 56]), artPlein: true, fondArt: PAPB, colonnes: [["Séjourner", [["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Salons", "/faq"]]], ["La maison", [["Histoire", "/"], ["Presse", "/blog"], ["Réserver", "/contact"]]]], fin: [k.col([caps(k, "Adresse", { couleur: CUIV, suivi: "0.16em", taille: "13px" }), filetC(k, CUIV), coordonnees(k, { couleur: MIN, lien: MIN, survol: CUIV, focus: CUIV, taille: 15 })], { flexGrow: 1, flexBasis: "200px", minWidth: "180px", gap: "6px" }), abo] });
+  },
+}, FAM);
+
+// ═══ ft2-432 « Console du concierge » — conciergerie  [archétype K : fenêtre / console]
+// Idée : le pied est une fenêtre de conciergerie sur fond anthracite : barre de titre platine avec trois carrés, colonne d'onglets verticaux (Suites, Spa, Table, Événements, Conciergerie) qui s'allument en or rose, panneau
+// de droite avec message, bouton « Écrire au concierge » (le carré respire), adresse, horaires et lettre ; barre d'état avec les mentions. Anthracite, platine, or rose. Polices : Tenor Sans et Manrope.
+const ANT = "#1b1b1f", PLAT = "#e7e5e0", ROSEOR = "#d7a28c", ANT2 = "#26262c";
+const consoleId = identite({ key: "c432", label: "Anthracite, platine et or rose", humeur: "dark", fond: ANT, texte: PLAT, discret: "#b9b7b1", accent: ROSEOR, surface: ANT2, encre: ANT, surEncre: PLAT, police: "font.manrope", titres: "font.tenor-sans", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#e7e5e04d" });
+const consoleC = modeleV2({
+  id: identifiantV2(432, "console-du-concierge"), concept: "c-432-console-du-concierge", name: "Console du concierge", family: FAM,
+  description: "Pour une conciergerie ou un hôtel de luxe : pied en fenêtre avec onglets verticaux, panneau de contact (adresse, horaires, lettre, bouton au concierge) et barre d'état de mentions. Anthracite, platine, or rose.",
+  tags: ["conciergerie", "hôtel de luxe", "fenêtre", "onglets", "console", "anthracite", "or rose"],
+  identity: consoleId, racine: racineDe(ANT),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [glyphe(k, "cloche", ROSEOR, ANT, 48), k.T(`<p>Hôtel Solstice</p>`, { fontSize: "30px", lineHeight: 1.1, letterSpacing: "0.08em", fontFamily: S.head, color: PLAT })];
+    const cloche = k.col([dessin(k, 300, 260, art.clocheCles(300, 260), { width: "100%", maxWidth: "300px" })], { flexGrow: 0, flexBasis: "280px", minWidth: "220px" });
+    const b = souffle(bouton(k, "Écrire au concierge", "/contact", { texte: ANT, fond: ROSEOR, survol: { backgroundColor: PLAT, borderColor: PLAT, color: ANT, transform: { y: -3 } }, focus: PLAT, taille: 15 }), 4200);
+    const abo = k.col([caps(k, "Conciergerie", { couleur: ROSEOR, suivi: "0.16em", taille: "13px" }), filetC(k, ROSEOR), para(k, "Une table, un transfert, une attention : écrivez-nous.", { taille: 15, couleur: "#d4d2cc" }), b, lettre(k, env, { titre: "", intro: "", largeur: "100%", accent: ROSEOR, texte: PLAT, couleurIntro: "#b9b7b1", surBouton: ANT, survolBouton: PLAT, surSurvol: ANT })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "14px" });
+    return pied41(k, env, G, { fond: ANT, fondBas: "#111114", fg: PLAT, mute: "#b9b7b1", titre: ROSEOR, accent: ROSEOR, ligne: "#e7e5e066", marque, reseaux: { liste: ["instagram", "facebook", "youtube"], fond: ROSEOR, couleur: ANT, survolFond: PLAT, survolCouleur: ANT }, artCol: [cloche],
+      colonnes: [["Séjour", [["Les suites", "/catalogue"], ["Le spa", "/blog"], ["La table", "/blog"]]], ["Services", [["Événements", "/faq"], ["Conciergerie", "/faq"]]]], fin: [abo] });
+  },
+}, FAM);
+
+// ═══ ft2-433 « Marches du palace » — grand hôtel  [archétype L : escalier de bandes décroissantes]
+// Idée : quatre marches alignées à gauche, de plus en plus étroites (100 %, 78 %, 56 %, 34 %) et de plus en plus claires en prune : le nom en Prata sur la grande marche, les cinq liens, l'adresse et les horaires, puis
+// la lettre et les mentions sur la petite marche. Le vide à droite reste ivoire. Prune, ivoire, or. Polices : Prata (titres) et Jost (texte). Mobile : les marches prennent toute la largeur.
+const PR1 = "#2b1030", PR2 = "#43204a", PR3 = "#5e3267", PR4 = "#7a4a85", IV4 = "#f6efe4", OR4 = "#e6c27a";
+const marchesId = identite({ key: "c433", label: "Prune, ivoire et or", humeur: "light", fond: IV4, texte: "#2b1030", discret: "#52445a", accent: "#8a5a10", surface: "#fffaf2", encre: PR1, surEncre: IV4, police: "font.jost", titres: "font.prata", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#2b10304d" });
+const marches = modeleV2({
+  id: identifiantV2(433, "marches-du-palace"), concept: "c-433-marches-du-palace", name: "Marches du palace", family: FAM,
+  description: "Pour un grand hôtel : quatre marches alignées à gauche, de plus en plus étroites et claires (nom, liens, adresse et horaires, lettre et mentions), sur fond ivoire. Prune, ivoire, or.",
+  tags: ["grand hôtel", "escalier", "étagé", "bandes décroissantes", "prune", "ivoire", "or"],
+  identity: marchesId, racine: racineDe(IV4),
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "bizhours", "social", "copyright", "bizlegal"],
+  compose(k, env, G) {
+    const S = k.S;
+    const marque = [glyphe(k, "arche", PR1, "#e6c27a", 48), k.T(`<p>Grand Hôtel Sélène</p>`, { fontSize: "32px", lineHeight: 1.1, fontFamily: S.head, color: PR1 })];
+    const abo = k.col([caps(k, "Lettre du Grand Hôtel", { couleur: "#6b4608", suivi: "0.16em", taille: "13px" }), filetC(k, "#8a5a10"), lettre(k, env, { titre: "", intro: "Une nouvelle de temps en temps.", largeur: "100%", accent: "#8a5a10", texte: PR1, couleurIntro: "#52445a", surBouton: IV4, survolBouton: PR1, surSurvol: IV4 })], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "10px" });
+    const adr = k.col([caps(k, "Adresse et horaires", { couleur: "#6b4608", suivi: "0.16em", taille: "13px" }), filetC(k, "#8a5a10"), coordonnees(k, { couleur: PR1, lien: PR1, survol: "#8a5a10", focus: "#8a5a10", taille: 15 }), horaires(k, { couleur: PR1, taille: 14 })], { flexGrow: 1, flexBasis: "220px", minWidth: "200px", gap: "8px" });
+    return pied41(k, env, G, { fond: IV4, fondBas: PR1, fg: PR1, fgBas: IV4, mute: "#f6efe4", titre: "#6b4608", accent: "#8a5a10", ligne: "#2b103033", marque, reseaux: { liste: ["facebook", "instagram", "linkedin"], fond: PR1, couleur: IV4, survolFond: "#8a5a10", survolCouleur: "#ffffff" },
+      artHaut: null, artSous: duo(k, art.arcades, [1200, 250], [480, 270]), artPlein: true, fondArt: "#26092f", colonnes: [["Séjour", [["Chambres", "/catalogue"], ["Restaurant", "/blog"], ["Spa", "/blog"]]], ["Services", [["Séminaires", "/faq"], ["Réserver", "/contact"]]]], fin: [adr, abo] });
+  },
+}, FAM);
+
+module.exports = {
+  key: FAM, label: "Luxe et hôtellerie de prestige", target: 6, built: true,
+  description: "Pieds inspirés de captures, angles droits, animations fluides : palace, maison d'exception, hôtel de charme, maison historique, conciergerie, grand hôtel.",
+  models: [registre, mosaique, chrono, papier, consoleC, marches],
+};

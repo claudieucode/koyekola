@@ -7,7 +7,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "studio de yoga",
       "directionArtistique": {
-        "texte": "Pour un studio de yoga : colonne verte pleine hauteur à gauche (nom, phrase, réseaux, bouton de réservation qui respire) et zone crème à droite avec pratiques, journal à puces et coordonnées sous des titres soulignés d'un court trait. Inspiré des captures 34/35. Archétype A colonne latérale."
+        "texte": "Pour un studio de yoga, d’après la capture 35 : colonne latérale sauge portant un grand lotus dessiné sur un soleil bas et des rides d’eau, nom, phrase et pastilles de réseaux ; à droite trois colonnes à titre souligné d une onde (pratiques à chevrons, journal, contact à icônes) ; bande de vagues sauge en bas. Illustration : lotus et soleil en SVG."
       },
       "typographies": {
         "titre": "Tenor Sans",
@@ -31,7 +31,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "salle de musculation",
       "directionArtistique": {
-        "texte": "Pour une salle de musculation : le nom FONTE en énormes capitales condensées vert volt, rogné par le bord de la bande, puis coordonnées, repère carré avec bouton d'inscription, réseaux et liens. Inspiré de la capture 36. Archétype B nom monumental."
+        "texte": "Pour une salle de musculation, d’après la capture 36 : le mot FONTE monumental vert volt avec équerres de coin et ombres lumineuses dessinées, à côté d un grand haltère géométrique (parallélogrammes et carré) ; puis rangée adresse et bouton, liens, réseaux. Illustration : haltère en SVG."
       },
       "typographies": {
         "titre": "League Gothic",
@@ -54,7 +54,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "studio de pilates",
       "directionArtistique": {
-        "texte": "Pour un studio de pilates : enseigne puis damier de huit cases égales en violet et menthe, liens numérotés qui se remplissent au survol, horaires, coordonnées, réseaux et case d'inscription qui respire. Inspiré des colonnes de liens des captures 34/35. Archétype C damier."
+        "texte": "Pour un studio de pilates, d’après la capture 34 : deux moitiés violettes, à gauche anneaux entrelacés dessinés, nom, phrase, réseaux et horaires ; à droite liens à chevrons et contact à icônes ; crêtes ondulées violettes en bas. Illustration : anneaux de pilates en SVG."
       },
       "typographies": {
         "titre": "Gabarito",
@@ -78,7 +78,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "coaching nutrition et forme",
       "directionArtistique": {
-        "texte": "Pour un coach en nutrition : une barre corail compacte (nom, réseaux, bouton marine), une ligne de quatre liens numérotés et une ligne marine de mentions. Archétype D ligne unique compacte."
+        "texte": "Pour un coach en nutrition, d’après la capture 35 : bandeau de tête avec une planche de vignettes dessinées (pomme, avocat, citron, carotte), puis phrase et réseaux, liens, lettre d’information, contact à icônes ; vagues corail en bas. Illustration : vignettes d’aliments en SVG."
       },
       "typographies": {
         "titre": "Kanit",
@@ -102,7 +102,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "spa et massages",
       "directionArtistique": {
-        "texte": "Pour un spa : deux demi-pages bord à bord, panneau vert thermal (phrase en capitales, liens, lettre d'information) et panneau sable (énorme bouton de réservation, horaires, coordonnées, réseaux), mentions en bande basse. Inspiré de la capture 36 (blocs aux deux bords). Archétype E deux demi-pages."
+        "texte": "Pour un spa, d’après la capture 34 : colonne centrée sombre avec un halo doré en cercles translucides, pierres empilées, vapeur et rides dessinés, nom, phrase, liens en ligne, réseaux, horaires et contact ; vagues thermales en bas. Illustration : pierres et halo en SVG."
       },
       "typographies": {
         "titre": "Cinzel",
@@ -126,7 +126,7 @@
       "famille": "Fitness, yoga et bien-être",
       "secteur": "club de boxe",
       "directionArtistique": {
-        "texte": "Pour un club de boxe : bandeau magenta d'appel à l'action en très grandes capitales avec énorme bouton blanc, puis bande noire avec horaires, coordonnées et une seule colonne étroite de liens à filets. Archétype F bandeau XXL."
+        "texte": "Pour un club de boxe, d’après la capture 36 : le mot ROUND monumental blanc sur magenta avec équerres noires, bande d’appel à l’action avec grand bouton, horaires et coordonnées, liens, réseaux et grand gant de boxe sur éclat de rayons. Illustration : gant et rayons en SVG."
       },
       "typographies": {
         "titre": "Bowlby One",
@@ -150,7 +150,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "randonnée",
       "directionArtistique": {
-        "texte": "Pour un site de randonnée : index de six rubriques en lignes pleine largeur (grand libellé en slab, numéro, filet) qui glissent et passent à l'ocre au survol, puis coordonnées, réseaux et mentions. Inspiré de la capture 36. Archétype G index."
+        "texte": "Pour un site de randonnée, d’après la capture 34 : écusson de massif (soleil ocre, crêtes, sentier en points) puis trois cartes de colonnes (liens à chevrons, journal, contact à icônes) ; crêtes de montagnes en bas. Illustration : massif en SVG."
       },
       "typographies": {
         "titre": "Alfa Slab One",
@@ -174,7 +174,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "alpinisme et matériel",
       "directionArtistique": {
-        "texte": "Pour une boutique d'alpinisme : une grande case marine (nom, phrase, bouton orange qui respire) accompagnée de trois petites cases franches (liens, coordonnées, horaires et réseaux) en mosaïque asymétrique. Archétype H mosaïque."
+        "texte": "Pour une boutique d’alpinisme, d’après la capture 36 : bande du grand sommet géométrique à drapeau orange, adresse et bouton, liens, réseaux, puis le mot CORDÉE monumental marine avec équerres et ombres en bas de pied. Illustration : sommet en SVG."
       },
       "typographies": {
         "titre": "Saira Condensed",
@@ -198,7 +198,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "voyage en autonomie",
       "directionArtistique": {
-        "texte": "Pour un site de voyage en autonomie : frise horizontale de quatre étapes reliées par un filet à repères carrés, puis bande rouille avec coordonnées, réseaux et mentions. Inspiré des captures 34/35. Archétype I frise."
+        "texte": "Pour un site de voyage en autonomie, d’après la capture 35 : scène de camp dessinée (tente, feu, lune, étoiles) avec nom, phrase et réseaux, frise de quatre étapes à repères carrés, contact à icônes, dunes qui descendent jusqu au rouille. Illustration : scène de camp en SVG."
       },
       "typographies": {
         "titre": "Yeseva One",
@@ -222,7 +222,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "guides de haute montagne",
       "directionArtistique": {
-        "texte": "Pour un bureau de guides : papier à en-tête crème, filets doubles, nom en capitales, horaires et coordonnées centrés, liens en ligne séparés par des carrés, réseaux. Archétype J papier à en-tête."
+        "texte": "Pour un bureau de guides de haute montagne, d’après la capture 35 : papier centré à filets doubles avec grand sceau dessiné (sommets, piolets croisés, lauriers), nom, horaires, contact, liens séparés par des carrés, réseaux ; vagues bleu glacier jusqu à l’encre. Illustration : sceau en SVG."
       },
       "typographies": {
         "titre": "Libre Caslon Text",
@@ -246,7 +246,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "application de trail",
       "directionArtistique": {
-        "texte": "Pour une application de trail : le pied est une fenêtre de terminal à bords nets avec barre de titre à trois carrés, rubriques en liste, coordonnées et lettre d'information en invites. Tout en monospace, bleu nuit et cyan. Archétype K console."
+        "texte": "Pour une application de trail, d’après la capture 34 : fenêtre de terminal avec une carte topographique dessinée (courbes de niveau, tracé en points, repère), liens, contact à icônes, réseaux et lettre d’information ; crêtes numériques en bas. Illustration : carte topographique en SVG."
       },
       "typographies": {
         "titre": "Martian Mono",
@@ -271,7 +271,7 @@
       "famille": "Outdoor et aventure",
       "secteur": "cyclo-voyage",
       "directionArtistique": {
-        "texte": "Pour un site de cyclo-voyage : quatre bandes en escalier alignées à gauche, de largeurs décroissantes (100, 72, 48, 32 %) et de plus en plus sombres : nom et bouton, liens, coordonnées, réseaux et mentions. Archétype L escalier."
+        "texte": "Pour un site de cyclo-voyage, d’après la capture 36 : le mot DÉNIVELÉ monumental ambre au-dessus d un profil d’altitude dessiné, grande roue de vélo sur parallélogramme, pastilles de réseaux, adresse et liens. Illustration : profil d’altitude et roue en SVG."
       },
       "typographies": {
         "titre": "Oxanium",

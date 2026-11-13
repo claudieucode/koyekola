@@ -5,6 +5,7 @@
 const FAM = "ong-solidarite";
 const { modeleV2, identifiantV2, identite, G: GK, Moteur } = require("../kit-v2");
 const { compact } = require("../../../kit");
+const I = require("../aides-illus-a09");
 
 const DOUX = 360; // ms : transitions de survol / focus
 
@@ -68,7 +69,7 @@ const barreDon = modeleV2({
   tags: ["association", "humanitaire", "barre latérale", "don", "terre cuite", "sable", "slab serif", "angles droits"],
   identity: sable,
   racine: racineDe(SABLE),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 22, TERRE, { fontWeight: "800" });
@@ -86,7 +87,7 @@ const barreDon = modeleV2({
     };
     const mot = G.geant(`<p>Agir.</p>`, { taille: [56, 96], tablette: { taille: [56, 80] }, mobile: { taille: [56, 80] }, lh: 0.9, suivi: "0em", poids: "800", police: S.head, couleur: "#ffffff", extra: { textTransform: "uppercase" } })(k, env);
     const btn = lien(k, "Faire un don", "/contact", { taille: 17, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: TERRE, h: "58px", padH: "32px", survol: { backgroundColor: CAFE, color: "#ffffff", transform: { y: -3 } }, focus: "#ffffff", extra: { backgroundColor: "#ffffff", justifyContent: "center", alignSelf: "stretch" } });
-    const barre = k.col([caps(k, "Trois façons d'aider", { couleur: "#ffffff", suivi: "0.2em" }), mot, k.col([aide("Donner", "/contact"), aide("Devenir bénévole", "/contact"), aide("Relayer notre appel", "/blog")], { gap: "0px", width: "100%" }), btn], { flexGrow: 0, flexShrink: 0, flexBasis: "340px", width: "340px", gap: "26px", paddingTop: "72px", paddingBottom: "56px", paddingLeft: "36px", paddingRight: "36px", backgroundColor: TERRE, borderRadius: "0px" }, { width: "280px", flexBasis: "280px", paddingLeft: "24px", paddingRight: "24px" }, { width: "100%", flexBasis: "auto", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "20px", paddingRight: "20px" });
+    const barre = k.col([I.W(k, I.dunes380(), { maxWidth: "300px" }), caps(k, "Trois façons d'aider", { couleur: "#ffffff", suivi: "0.2em" }), mot, k.col([aide("Donner", "/contact"), aide("Devenir bénévole", "/contact"), aide("Relayer notre appel", "/blog")], { gap: "0px", width: "100%" }), btn], { flexGrow: 0, flexShrink: 0, flexBasis: "340px", width: "340px", gap: "26px", paddingTop: "72px", paddingBottom: "56px", paddingLeft: "36px", paddingRight: "36px", backgroundColor: TERRE, borderRadius: "0px" }, { width: "280px", flexBasis: "280px", paddingLeft: "24px", paddingRight: "24px" }, { width: "100%", flexBasis: "auto", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "20px", paddingRight: "20px" });
     const corps = G.bande(k, [k.row([principal, barre], { gap: "0px", flexWrap: "wrap", alignItems: "stretch", width: "100%" })], { fond: SABLE, gap: "0px", aligne: "stretch", max: "1920px", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Barre latérale" });
     const pied = G.bande(k, [G.colonne(k, [adresse], { poids: 1, min: "260px" }), G.colonne(k, [mentions], { poids: 2, min: "300px", soi: "flex-end" })], { fond: SABLE, gap: "20px 40px", aligne: "flex-end", padV: ["24px", "24px", "24px"], padB: ["28px", "28px", "24px"], padH: ["64px", "32px", "20px"], filetHaut: { epaisseur: "1px", couleur: "#2a1b1433" }, nom: "Adresse" });
     return [G.racine(k, [corps, pied])];
@@ -112,12 +113,13 @@ const appelAgir = modeleV2({
   tags: ["ONG", "droits humains", "appel", "bandeau XXL", "jaune", "noir", "condensé", "angles droits"],
   identity: tournesol,
   racine: racineDe(NOIR3),
-  widgets: ["sitetitle", "text", "link", "emailsubscribe", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "emailsubscribe", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const appel = G.geant(`<p>Se taire n'est<br>pas une option.</p>`, { taille: [64, 200], tablette: { taille: [96, 160] }, mobile: { taille: [60, 80] }, lh: 0.88, suivi: "0.005em", poids: "400", police: S.head, couleur: NOIR3, extra: { textTransform: "uppercase" } })(k, env);
     const btn = lien(k, "Signer et agir", "/contact", { taille: 20, poids: "800", casse: "uppercase", suivi: "0.08em", couleur: JAUNE2, h: "68px", padH: "40px", survol: { backgroundColor: "#ffffff", color: NOIR3, transform: { y: -4 } }, focus: NOIR3, extra: { backgroundColor: NOIR3, justifyContent: "center", alignSelf: "flex-start" } });
-    const haut = G.bande(k, [caps(k, "Pétitions et campagnes", { couleur: NOIR3, suivi: "0.24em" }), appel, btn], { fond: JAUNE2, colonne: true, gap: "28px", padV: ["88px", "72px", "48px"], padB: ["80px", "64px", "44px"], padH: ["48px", "32px", "20px"], nom: "Appel" });
+    const haut = G.bande(k, [caps(k, "Pétitions et campagnes", { couleur: NOIR3, suivi: "0.24em" }), appel, btn], { fond: JAUNE2, colonne: true, gap: "28px", padV: ["88px", "72px", "48px"], padB: ["40px", "32px", "24px"], padH: ["48px", "32px", "20px"], nom: "Appel" });
+    const cortege = G.bande(k, [I.W(k, I.cortege381())], { fond: JAUNE2, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Cortège" });
     const nom = nomDuSite(k, env, 24, BLANC3, { fontWeight: "400", fontFamily: S.head, letterSpacing: "0.04em" });
     const abo = lettre(k, env, G, { titre: "Suivre les campagnes", intro: "Un message de temps en temps, jamais de pression.", bouton: "S'abonner", largeur: "400px", accent: JAUNE2, surBouton: NOIR3, texte: BLANC3, couleurTitre: JAUNE2, fond: NOIR3, survolBouton: BLANC3, survolTexte: NOIR3, focus: BLANC3 });
     const gauche = G.colonne(k, [nom, G.ligne(k, [G.colonne(k, [abo], { poids: 1, min: "260px" }), G.colonne(k, [coordonnees(k, { taille: 15, lien: BLANC3, survol: JAUNE2, focus: JAUNE2 })], { poids: 1, min: "200px" })], { gap: "28px 40px", aligne: "flex-start", largeur: "100%" })], { poids: 3, min: "280px", gap: "28px" });
@@ -127,7 +129,7 @@ const appelAgir = modeleV2({
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#bdbdb4", liens: BLANC3 })(k, env);
     const bas = G.bande(k, [mentions], { fond: NOIR3, colonne: true, padV: ["0px", "0px", "0px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
     bas.styles.desktop.color = BLANC3;
-    return [G.racine(k, [haut, milieu, bas])];
+    return [G.racine(k, [haut, cortege, milieu, bas])];
   },
 }, FAM);
 
@@ -150,7 +152,7 @@ const mosaiqueSolidaire = modeleV2({
   tags: ["association", "entraide", "mosaïque", "vert", "rose", "jaune", "serif", "angles droits"],
   identity: prairie,
   racine: racineDe(VERTF),
-  widgets: ["sitetitle", "text", "link", "emailsubscribe", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "emailsubscribe", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 34, "#ffffff", { fontWeight: "400" });
@@ -170,7 +172,8 @@ const mosaiqueSolidaire = modeleV2({
     const bas = G.bande(k, [trait(k, "#ffffff55"), k.row([adresse, G.colonne(k, [mentions], { poids: 2, min: "300px", soi: "flex-end" })], { rowGap: "20px", columnGap: "40px", alignItems: "flex-end", width: "100%" })], { fond: VERTF, colonne: true, gap: "24px", padV: ["32px", "28px", "24px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Adresse" });
     bas.styles.desktop.color = "#ffffff";
     const entete = G.bande(k, [caps(k, "Association d'entraide", { couleur: VERTF, suivi: "0.24em" }), caps(k, "Bénévoles et voisins", { couleur: VERT, suivi: "0.24em" })], { fond: CREME2, gap: "10px 40px", aligne: "center", padV: ["40px", "32px", "24px"], padB: ["0px", "0px", "0px"], padH: ["48px", "32px", "20px"], nom: "Titre" });
-    return [G.racine(k, [entete, haut, bas])];
+    const rue = G.bande(k, [I.W(k, I.quartier382())], { fond: CREME2, colonne: true, padV: ["16px", "12px", "8px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Quartier" });
+    return [G.racine(k, [entete, rue, haut, bas])];
   },
 }, FAM);
 
@@ -193,7 +196,7 @@ const barreEntraide = modeleV2({
   tags: ["fondation", "ligne unique", "compact", "barre", "bleu roi", "ambre", "condensé", "angles droits"],
   identity: roi,
   racine: racineDe(ROI2),
-  widgets: ["sitetitle", "text", "link", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 26, GLACE2, { fontWeight: "700", letterSpacing: "0.02em" });
@@ -205,7 +208,8 @@ const barreEntraide = modeleV2({
     const bas = G.bande(k, [mentions], { fond: ROI2, colonne: true, padV: ["16px", "14px", "14px"], padB: ["16px", "14px", "14px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
     bas.styles.desktop.color = GLACE2;
     const fine = G.bande(k, [caps(k, "Fondation reconnue d'intérêt général", { couleur: AMBRE, suivi: "0.24em" })], { fond: ROI2, colonne: true, padV: ["14px", "12px", "12px"], padB: ["14px", "12px", "12px"], padH: ["48px", "32px", "20px"], filetHaut: { epaisseur: "0px", couleur: ROI2 }, nom: "Mention" });
-    return [G.racine(k, [fine, ligne1, bas])];
+    const onde = G.bande(k, [I.W(k, I.vagues383())], { fond: ROI, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Vagues" });
+    return [G.racine(k, [fine, ligne1, onde, bas])];
   },
 }, FAM);
 
@@ -228,7 +232,7 @@ const cheminDon = modeleV2({
   tags: ["ONG", "santé", "frise", "étapes", "blanc", "magenta", "noir", "angles droits"],
   identity: magenta,
   racine: racineDe(ENCRE4),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
     const nom = nomDuSite(k, env, 24, ENCRE4, { fontWeight: "800" });
@@ -249,7 +253,8 @@ const cheminDon = modeleV2({
     const lm = (t, u) => lien(k, t, u, { taille: 16, poids: "600", couleur: "#ffffff", padH: "4px", survol: { color: "#f9a8d4", transform: { y: -2 } }, focus: "#f9a8d4" });
     const bas = G.bande(k, [k.row([lm("Missions", "/faq"), lm("Rapports", "/blog"), lm("Presse", "/blog"), lm("Contact", "/contact"), btn], { rowGap: "4px", columnGap: "24px", alignItems: "center", width: "100%" }), trait(k, "#ffffff55"), adresse, mentions], { fond: ENCRE4, colonne: true, gap: "24px", padV: ["48px", "40px", "32px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], nom: "Contact" });
     bas.styles.desktop.color = "#ffffff";
-    return [G.racine(k, [milieu, bas])];
+    const pouls = G.bande(k, [I.W(k, I.pouls384b())], { fond: "#0b050a", colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], nom: "Pouls" });
+    return [G.racine(k, [milieu, pouls, bas])];
   },
 }, FAM);
 
@@ -272,7 +277,7 @@ const papierAssociation = modeleV2({
   tags: ["association", "caritatif", "papier à en-tête", "centré", "doubles filets", "brun", "or", "serif", "angles droits"],
   identity: brun,
   racine: racineDe(BRUN),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["sitetitle", "text", "link", "html", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k, env, G) {
     const S = k.S;
     const double = () => k.col([trait(k, OR, "1px"), trait(k, OR, "1px")], { gap: "5px", width: "100%" });
@@ -284,7 +289,7 @@ const papierAssociation = modeleV2({
     const adresse = coordonnees(k, { taille: 15, lien: PAPIER, survol: OR, focus: OR, couleur: "#dcc3a4" });
     const adr = k.col([adresse], { alignItems: "center", textAlign: "center", width: "100%", maxWidth: "340px", marginLeft: "auto", marginRight: "auto" });
     const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#dcc3a4", liens: PAPIER })(k, env, true);
-    const tete = G.bande(k, [k.col([double(), k.col([caps(k, "Association d'entraide", { couleur: OR, suivi: "0.3em", extra: { textAlign: "center" } }), nom, devise], { gap: "14px", alignItems: "center", width: "100%" }), liens, double()], { gap: "36px", alignItems: "stretch", width: "100%", boxSizing: "border-box", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "40px", paddingRight: "40px", borderStyle: "solid", borderWidth: "1px", borderColor: "#f0b36a88", borderRadius: "0px" })], { fond: BRUN, colonne: true, gap: "36px", padV: ["80px", "64px", "44px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "En-tête" });
+    const tete = G.bande(k, [k.col([double(), I.W(k, I.sceau385(), { maxWidth: "180px", marginLeft: "auto", marginRight: "auto" }), k.col([caps(k, "Association d'entraide", { couleur: OR, suivi: "0.3em", extra: { textAlign: "center" } }), nom, devise], { gap: "14px", alignItems: "center", width: "100%" }), liens, double()], { gap: "36px", alignItems: "stretch", width: "100%", boxSizing: "border-box", paddingTop: "40px", paddingBottom: "40px", paddingLeft: "40px", paddingRight: "40px", borderStyle: "solid", borderWidth: "1px", borderColor: "#f0b36a88", borderRadius: "0px" })], { fond: BRUN, colonne: true, gap: "36px", padV: ["80px", "64px", "44px"], padB: ["32px", "28px", "24px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "28px" }, nom: "En-tête" });
     const bas = G.bande(k, [adr, mentions], { fond: BRUN, colonne: true, gap: "28px", padV: ["16px", "12px", "8px"], padB: ["40px", "32px", "28px"], padH: ["48px", "32px", "20px"], innerMobile: { rowGap: "20px" }, nom: "Adresse" });
     bas.styles.desktop.color = PAPIER;
     return [G.racine(k, [tete, bas])];

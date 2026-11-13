@@ -1,167 +1,141 @@
-// Famille v2 « Cosmétique et parfumerie » — 6 modèles (ft2-320 à ft2-325), pieds « inspirés de captures » : ANGLES DROITS partout.
+// Famille v2 « Cosmétique et parfumerie » — 6 modèles (ft2-320 à ft2-325), pieds « inspirés de captures » REFAITS avec de vraies illustrations vectorielles : ANGLES DROITS partout.
 // Marques fictives (Essence, Ambre & Sauge, Quatre gestes, Maison Aurèle, Néroli Lab, Rosée) ; aucune coordonnée ni chiffre inventé : horaires, adresse et téléphone viendraient des Données de l'entreprise du site.
 // Rubriques (Parfums, Soins…) = intitulés d'EXEMPLE à renommer dans l'éditeur ; adresses de réseaux = exemples.
-// Archétypes : 320 G (index en lignes) · 321 H (mosaïque asymétrique) · 322 I (frise en étapes) · 323 J (papier à en-tête) · 324 K (fenêtre / console) · 325 L (gradins).
-// MOUVEMENT (coupé sous « prefers-reduced-motion: reduce ») : transitions de 360 ms ; une animation visible par modèle (ligne qui s'indente et se remplit, carré qui respire, curseur qui respire) ; pas d'animation d'entrée.
+// Partis pris : 320 et 323 = nom monumental dessiné (capture « static ») · 321 et 324 = appel centré, curseurs flottants, rangée de pictos, pied de colonnes (capture « WorkScale ») · 322 et 325 = grande scène illustrée en bas + mascotte (capture « BOTSnDOTS »).
+// MOUVEMENT (coupé sous « prefers-reduced-motion: reduce ») : transitions de 360 ms ; une animation visible par modèle (bouton ou carré qui respire) ; pas d'animation d'entrée.
 const { modeleV2, identifiantV2 } = require("../kit-v2");
 const A = require("../aides-a04");
-const { identite, GK, DOUX, PAD, racineDe, lien, caps, texte, trait, souffle, carre, bloc, mentions, reseaux, abonnement, horaires, coordonnees } = A;
+const IB = require("../aides-illus-a04b");
+const I_ = require("../aides-illus-a04");
+const { identite, PAD, racineDe, lien, caps, texte, trait, souffle, carre, bouton, bloc, mentions, reseaux, coordonnees } = A;
 const FAM = "cosmetique-parfumerie";
+const liensCol = (k, l, o) => l.map(([a, u]) => lien(k, a, u, { taille: 17, poids: "500", couleur: o.c, survol: { color: o.s, transform: { x: 4 } }, focus: o.s }));
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-320 « Index des essences » — maison de parfum. Archétype G : sommaire en lignes pleine largeur (grand libellé, flèche, filet), sans cartes (inspiré d'une capture : marque à gauche, grandes listes de liens à droite).
-const essence = identite({ key: "i320", label: "Ivoire et vin", humeur: "light", fond: "#f7f1e8", texte: "#2a1a1f", discret: "#6b5560", accent: "#7a1f3d", surface: "#efe6d8", encre: "#f7f1e8", surEncre: "#2a1a1f", police: "font.jost", titres: "font.cormorant-garamond", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#2a1a1f33" });
+// flacons de parfum (320) : halo doré, grand flacon, deux petits
+const flacons = (W, H) => I_.halo(180, 175, 150, "#e6c675", 6, 0.08)
+  + `<rect x="130" y="130" width="120" height="190" fill="#b8913c"/><rect x="150" y="130" width="80" height="190" fill="#d9b85c"/><rect x="170" y="130" width="40" height="190" fill="#f0d68a"/><rect x="152" y="196" width="76" height="74" fill="#f7f1e8"/><rect x="162" y="214" width="56" height="3" fill="#4a0f25"/><rect x="162" y="228" width="56" height="2" fill="#4a0f25"/><rect x="162" y="244" width="30" height="3" fill="#4a0f25"/><rect x="170" y="100" width="40" height="30" fill="#f7f1e8"/><rect x="156" y="58" width="68" height="42" fill="#e6c675"/><rect x="156" y="58" width="68" height="6" fill="#fff3c9"/>`
+  + `<rect x="40" y="210" width="62" height="110" fill="none" stroke="#f7f1e8" stroke-width="3"/><rect x="48" y="250" width="46" height="62" fill="#e6c675" opacity="0.7"/><rect x="58" y="186" width="26" height="24" fill="#f7f1e8"/>`
+  + `<circle cx="296" cy="268" r="46" fill="none" stroke="#f7f1e8" stroke-width="3"/><path d="M250,268 a46,46 0 0 0 92,0 Z" fill="#e6c675" opacity="0.8"/><rect x="286" y="212" width="20" height="10" fill="#f7f1e8"/><rect x="278" y="198" width="36" height="14" fill="#e6c675"/><rect x="20" y="320" width="320" height="3" fill="#f7f1e8"/>`
+  + `<circle cx="262" cy="150" r="5" fill="#e6c675"/><circle cx="284" cy="120" r="3.5" fill="#e6c675" opacity="0.7"/><circle cx="108" cy="150" r="4" fill="#e6c675" opacity="0.7"/>`;
+// alambic gravé dans un médaillon (323)
+function alambic(W, H) {
+  const I = "#1d2a3a", O = "#7a5f22"; let s = `<circle cx="210" cy="150" r="146" fill="none" stroke="${I}" stroke-width="1.5"/><circle cx="210" cy="150" r="138" fill="none" stroke="${I}" stroke-width="1.5"/>`;
+  s += `<circle cx="150" cy="190" r="62" fill="none" stroke="${I}" stroke-width="3"/><path d="M96,196 a62,62 0 0 0 108,0 Z" fill="${O}" opacity="0.55"/>`;
+  for (let i = 0; i < 8; i++) s += `<line x1="${112 + i * 11}" y1="${200 + (i % 3) * 8}" x2="${124 + i * 11}" y2="${222 + (i % 3) * 6}" stroke="${I}" stroke-width="1"/>`;
+  s += `<rect x="138" y="118" width="24" height="14" fill="none" stroke="${I}" stroke-width="3"/><path d="M134,118 Q150,70 166,118 Z" fill="none" stroke="${I}" stroke-width="3"/><path d="M150,86 C190,56 240,52 292,92" stroke="${I}" stroke-width="3" fill="none"/>`;
+  for (let i = 0; i < 5; i++) s += `<path d="M${230 + i * 12},${60 + i * 8} l8,22" stroke="${I}" stroke-width="2" fill="none"/>`;
+  s += `<path d="M292,92 L292,148" stroke="${I}" stroke-width="3"/><rect x="262" y="148" width="60" height="64" fill="none" stroke="${I}" stroke-width="3"/><rect x="262" y="180" width="60" height="32" fill="${O}" opacity="0.6"/><circle cx="292" cy="224" r="3.5" fill="${O}"/><circle cx="292" cy="238" r="2.5" fill="${O}"/>`;
+  return s + `<rect x="96" y="250" width="108" height="10" fill="${I}"/><rect x="86" y="260" width="128" height="6" fill="none" stroke="${I}" stroke-width="2"/>`;
+}
+
+// ── ft2-320 « Index des essences » — capture 14 : nom « essence » dessiné en ivoire sur vin profond, sur toute la largeur, puis flacons dessinés et index de liens.
+const essence = identite({ key: "i320", label: "Vin profond, ivoire et or", humeur: "dark", fond: "#4a0f25", texte: "#f7f1e8", discret: "#e8d3d6", accent: "#e6c675", surface: "#5c1830", encre: "#4a0f25", surEncre: "#f7f1e8", police: "font.jost", titres: "font.cormorant-garamond", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f7f1e84d" });
 const essenceMod = modeleV2({
   id: identifiantV2(320, "index-des-essences"), concept: "c-320-index-des-essences", name: "Index des essences", family: FAM,
-  description: "Pour une maison de parfum : un sommaire en six grandes lignes pleine largeur (parfums, soins, maquillage, corps, coffrets, conseils), chacune avec flèche et filet, qui s'indente et se remplit de vin au survol. Ivoire et vin.",
-  tags: ["parfumerie", "index", "sommaire", "grandes lignes", "ivoire", "vin", "angles droits"],
-  identity: essence, racine: racineDe("#f7f1e8"), widgets: ["text", "link", "copyright", "bizlegal"],
+  description: "Pour une maison de parfum : le nom « essence » dessiné en lettres ivoire géantes sur vin profond, puis des flacons dessinés dans un halo doré et un index de liens (parfums, soins, maison) avec les coordonnées. Vin, ivoire et or.",
+  tags: ["parfumerie", "nom monumental", "illustration", "flacons", "vin", "ivoire", "or", "angles droits"],
+  identity: essence, racine: racineDe("#4a0f25"), widgets: ["text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k0, env, G) {
-    const k = A.fixe(k0);
-    const S = k.S, IV = "#f7f1e8", VIN = "#7a1f3d", INK = "#2a1a1f";
-    const tete = G.ligne(k, [k.T("<p>Essence</p>", { fontSize: "30px", fontFamily: S.head, fontWeight: "600", color: INK, lineHeight: 1.1, letterSpacing: "0.02em" }), caps(k, "Maison de parfum — l'index", { couleur: "#6b5560", suivi: "0.22em" })], { gap: "8px 32px", aligne: "baseline", justifie: "space-between", largeur: "100%" });
-    const ligneIdx = (t, u, premier) => lien(k, `${t} →`, u, { taille: 40, poids: "500", police: S.head, couleur: INK, bloc: true, h: "88px", survol: { backgroundColor: VIN, color: IV, paddingLeft: "28px" }, focus: INK, extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderTopWidth: premier ? "1px" : "0px", borderColor: "#2a1a1f55", paddingLeft: "0px", boxSizing: "border-box" } });
-    const lignes = k.col([["Parfums", "/boutique"], ["Soins du visage", "/boutique"], ["Maquillage", "/boutique"], ["Corps et bain", "/boutique"], ["Coffrets cadeaux", "/boutique"], ["Conseils et livraison", "/faq"]].map(([t, u], i) => k.row([ligneIdx(t, u, i === 0)], { width: "100%", justifyContent: "space-between", flexGrow: 1.3, flexWrap: "nowrap" })), { gap: "0px", alignItems: "stretch", width: "100%" }, undefined, undefined);
-    const entete = G.bande(k, [tete], { fond: IV, colonne: true, padV: ["56px", "44px", "36px"], padB: ["40px", "32px", "24px"], padH: PAD, nom: "Marque" });
-    const haut = G.bande(k, [lignes], { fond: IV, colonne: true, padV: ["0px", "0px", "0px"], padB: ["24px", "20px", "16px"], padH: PAD, nom: "Index" });
-    const bas = G.bande(k, [reseaux(k, env, { couleur: INK, survol: VIN, focus: VIN }), mentions(k, env, { couleur: "#6b5560", liens: INK })], { fond: IV, gap: "16px 40px", aligne: "center", padV: ["20px", "18px", "16px"], padB: ["24px", "20px", "18px"], padH: PAD, nom: "Mentions" });
-    bas.styles.desktop.color = "#6b5560";
-    return [G.racine(k, [entete, haut, bas])];
+    const k = A.fixe(k0); const IV = "#f7f1e8", OR = "#e6c675", D = "#e8d3d6", V = "#4a0f25";
+    const tete = G.bande(k, [souffle(carre(k, OR, "12px"), 3200), caps(k, "Maison de parfum — l'index", { couleur: OR, suivi: "0.22em" }), lien(k, "Écrire à la maison →", "/contact", { taille: 16, poids: "600", couleur: IV, soulign: true, survol: { color: OR }, focus: OR })], { fond: V, gap: "12px 20px", aligne: "center", justifie: "flex-start", padV: ["40px", "32px", "28px"], padB: ["12px", "12px", "8px"], padH: PAD, nom: "Marque" });
+    const mono = IB.bandeMot(k, G, { texte: "essence", couleur: IV, fond: V, marge: 60, sw: 26, ecart: 22, deco: () => `<path d="M520,-40 L502,-4 A18,18 0 1 0 538,-4 Z" fill="${OR}"/>` });
+    const col = (t, l) => bloc(k, t, liensCol(k, l, { c: IV, s: OR }), { couleurTitre: OR, gap: "0px", min: "150px" });
+    const fl = k.col(I_.dessin(k, [360, 340, flacons]), { flexGrow: 0.7, flexBasis: "280px", maxWidth: "360px", minWidth: "220px" });
+    const liens = k.row([col("Parfums", [["Pour elle", "/boutique"], ["Pour lui", "/boutique"], ["Mixtes", "/boutique"]]), col("Soins", [["Visage", "/boutique"], ["Corps et bain", "/boutique"], ["Coffrets", "/boutique"]]), col("Maison", [["Conseils", "/faq"], ["Livraison", "/faq"], ["Contact", "/contact"]]), bloc(k, "Nous trouver", [coordonnees(k, { couleur: D, lien: IV, survol: OR, focus: OR })], { couleurTitre: OR, min: "200px", poids: 1.4 })], { gap: "28px 40px", alignItems: "flex-start", flexWrap: "wrap", flexGrow: 3, flexBasis: "520px" });
+    const corps = G.bande(k, [fl, liens], { fond: V, gap: "32px 56px", aligne: "center", padV: ["32px", "28px", "20px"], padB: ["40px", "32px", "28px"], padH: PAD, nom: "Flacons et index" });
+    const bas = G.bande(k, [reseaux(k, env, { couleur: IV, survol: OR, focus: OR }), mentions(k, env, { couleur: D, liens: IV })], { fond: V, gap: "16px 40px", aligne: "center", padV: ["16px", "14px", "12px"], padB: ["28px", "24px", "20px"], padH: PAD, filetHaut: { epaisseur: "1px", couleur: "#f7f1e84d" }, nom: "Mentions" });
+    bas.styles.desktop.color = D;
+    return [G.racine(k, [tete, mono, corps, bas])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-321 « Mosaïque d'ambre » — cosmétique naturelle. Archétype H : une grande case verte (nom + lettre) et trois cases plus petites de couleurs différentes (contact, horaires, liens et réseaux) ; inspiré d'une capture aux coordonnées + réseaux à gauche.
-const ambre = identite({ key: "i321", label: "Vert sapin, sable, sauge et pêche", humeur: "dark", fond: "#1f3b2d", texte: "#f5efe3", discret: "#cfdccf", accent: "#e9c9a0", surface: "#294a39", encre: "#1f3b2d", surEncre: "#f5efe3", police: "font.dm-sans", titres: "font.fraunces", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "0px", ligne: "#f5efe33a" });
+// ── ft2-321 « Mosaïque d'ambre » — capture 13 : appel centré sur crème, curseurs d'ingrédients, rangée de cinq pictos de plantes, pied vert à colonnes et coordonnées.
+const ambre = identite({ key: "i321", label: "Crème, vert sapin et ambre", humeur: "light", fond: "#f5efe3", texte: "#1f3b2d", discret: "#445a4b", accent: "#1f3b2d", surface: "#e9d8c4", encre: "#f5efe3", surEncre: "#1f3b2d", police: "font.dm-sans", titres: "font.fraunces", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "0px", ligne: "#1f3b2d33" });
 const ambreMod = modeleV2({
   id: identifiantV2(321, "mosaique-d-ambre"), concept: "c-321-mosaique-d-ambre", name: "Mosaïque d'ambre", family: FAM,
-  description: "Pour une marque de cosmétique naturelle : une grande case vert sapin avec le nom et la lettre d'information, et trois cases de couleurs différentes (sable : contact, sauge : horaires, pêche : liens et réseaux). Mosaïque à angles droits.",
-  tags: ["cosmétique naturelle", "mosaïque", "cases asymétriques", "contact", "horaires", "lettre", "vert", "angles droits"],
-  identity: ambre, racine: racineDe("#1f3b2d"), widgets: ["text", "link", "bizhours", "bizcontact", "emailsubscribe", "copyright", "bizlegal"],
+  description: "Pour une marque de cosmétique naturelle : un appel centré sur crème, des étiquettes de curseurs flottantes, une rangée de cinq plantes et gouttes dessinées, puis un pied vert à quatre colonnes avec coordonnées et pastilles de réseaux.",
+  tags: ["cosmétique naturelle", "appel centré", "curseurs", "plantes dessinées", "crème", "vert", "angles droits"],
+  identity: ambre, racine: racineDe("#f5efe3"), widgets: ["text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k0, env, G) {
     const k = A.fixe(k0);
-    const S = k.S, V = "#1f3b2d", CR = "#f5efe3", AM = "#e9c9a0";
-    const pad = (h, v) => ({ boxSizing: "border-box", paddingTop: v, paddingBottom: v, paddingLeft: h, paddingRight: h });
-    const nom = k.row([souffle(carre(k, AM, "14px"), 3200), k.T("<p>Ambre &amp; Sauge</p>", { fontSize: "40px", fontFamily: S.head, fontWeight: "600", color: CR, lineHeight: 1.1 })], { gap: "14px", flexWrap: "nowrap" });
-    const mot = texte(k, "Soins du visage et du corps à base de plantes, pensés pour une routine simple.", { taille: 16, couleur: "#cfdccf", largeur: "360px" });
-    const abo = abonnement(k, env, { titre: "La lettre de l'atelier", intro: "Nouveautés et conseils de saison.", bouton: "Je m'abonne", largeur: "100%", accent: AM, texte: CR, titreC: AM, introC: "#cfdccf", boutonC: V, boutonH: [CR, V] });
-    const grande = k.col([k.col([nom, mot], { gap: "16px" }), abo], { flexGrow: 1.1, flexBasis: "380px", minWidth: "280px", minHeight: "440px", backgroundColor: V, justifyContent: "space-between", gap: "40px", alignItems: "stretch", ...pad("48px", "64px") }, pad("32px", "48px"), pad("20px", "40px"));
-    const sable = k.col([caps(k, "Nous trouver", { couleur: "#6b3f12" }), coordonnees(k, { couleur: "#2b2218", lien: "#2b2218", survol: "#6b3f12", focus: "#6b3f12" })], { flexGrow: 1, flexBasis: "240px", minWidth: "220px", backgroundColor: "#e9d8c4", gap: "14px", alignItems: "flex-start", ...pad("32px", "36px") }, pad("28px", "32px"), pad("20px", "28px"));
-    const sauge = k.col([caps(k, "Horaires", { couleur: "#1f3b2d" }), horaires(k, { couleur: "#1f3b2d" })], { flexGrow: 1, flexBasis: "240px", minWidth: "220px", backgroundColor: "#c9d6b8", gap: "14px", alignItems: "flex-start", ...pad("32px", "36px") }, pad("28px", "32px"), pad("20px", "28px"));
-    const lk = [["Visage", "/boutique"], ["Corps", "/boutique"], ["Livraison", "/faq"], ["Contact", "/contact"]].map(([a, u]) => lien(k, a, u, { taille: 18, poids: "700", police: S.head, couleur: "#3a1d10", padH: "0px", survol: { color: "#7a2e0a", transform: { x: 5 } }, focus: "#3a1d10" }));
-    const peche = k.col([k.row(lk, { gap: "4px 28px", alignItems: "center", flexWrap: "wrap" }), reseaux(k, env, { couleur: "#3a1d10", survol: "#7a2e0a", focus: "#3a1d10" })], { backgroundColor: "#f3b89c", gap: "10px", alignItems: "flex-start", ...pad("32px", "28px") }, pad("28px", "24px"), pad("20px", "20px"));
-    const droite = k.col([k.row([sable, sauge], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%", flexGrow: 1.25 }), peche], { flexGrow: 2, flexBasis: "520px", minWidth: "280px", gap: "0px", alignItems: "stretch" });
-    const mosaique = G.bande(k, [k.row([grande, droite], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" })], { fond: V, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Mosaïque" });
-    const bas = G.bande(k, [mentions(k, env, { couleur: "#cfdccf", liens: CR })], { fond: V, colonne: true, padV: ["22px", "20px", "18px"], padB: ["22px", "20px", "18px"], padH: PAD, nom: "Mentions" });
-    bas.styles.desktop.color = "#cfdccf";
-    return [G.racine(k, [mosaique, bas])];
+    const bandes = IB.heros(k, env, G, { v: 3, cv: 2, fond: "#f5efe3", fondRangee: "#e9d8c4", fondPied: "#f5efe3", encre: "#1f3b2d", discret: "#445a4b", accent: "#1f3b2d", accent2: "#8a5a1c", survol: "#8a5a1c", surTexte: "#ffffff", titreCol: "#8a5a1c", filet: "#1f3b2d33", emblemeForme: "feuille",
+      curseurs: ["#1f3b2d", "#c98a3a", "#6f8f68", "#b8573a", "#6b3f12"], pictos: I_.ingredients, traitRangee: "#1f3b2d", accentRangee: "#c98a3a", poidsTitre: "600", suivi: "-0.01em", ordre: "chrp", contactCol: true,
+      titre: "<p>Des soins simples,<br>cueillis avec soin.</p>", sous: "Visage et corps, à base de plantes. Une routine courte, des gestes doux, des conseils par écrit.", b1: ["Voir les soins", "/boutique", "#1f3b2d", "#f5efe3"], b2: ["Demander conseil", "/contact", "#f5efe3"], marqueNom: "Ambre &amp; Sauge",
+      phrase: "Soins du visage et du corps à base de plantes.", cols: [["Visage", [["Nettoyants", "/boutique"], ["Sérums", "/boutique"], ["Crèmes", "/boutique"]]], ["Corps", [["Huiles", "/boutique"], ["Baumes", "/boutique"]]], ["Aide", [["Livraison", "/faq"], ["Retours", "/faq"], ["Conseils", "/blog"]]]] });
+    return [G.racine(k, bandes)];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-322 « Quatre gestes » — soin et beauté. Archétype I : frise horizontale en quatre étapes à points carrés dorés (choisir, essayer, offrir, prendre soin).
+// ── ft2-322 « Quatre gestes » — capture 15 : marque et phrase à gauche, petite goutte-mascotte, colonnes à titres or, grande scène d'îles flottantes de nuit.
 const gestes = identite({ key: "i322", label: "Bleu nuit, ivoire et or", humeur: "dark", fond: "#0e1a2b", texte: "#f2ead7", discret: "#c3cbd8", accent: "#e2b857", surface: "#16263d", encre: "#0e1a2b", surEncre: "#f2ead7", police: "font.jost", titres: "font.playfair-display", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#f2ead933" });
 const gestesMod = modeleV2({
   id: identifiantV2(322, "quatre-gestes"), concept: "c-322-quatre-gestes", name: "Quatre gestes", family: FAM,
-  description: "Pour une marque de soins : une frise horizontale en quatre étapes à points carrés dorés (choisir, essayer, offrir, prendre soin), chaque étape est un lien avec sa phrase, puis réseaux et mentions. Bleu nuit, ivoire et or.",
-  tags: ["soin", "beauté", "frise", "étapes", "points carrés", "bleu nuit", "or", "angles droits"],
-  identity: gestes, racine: racineDe("#0e1a2b"), widgets: ["text", "link", "copyright", "bizlegal", "divider"],
+  description: "Pour une marque de soins : la marque, sa phrase et les pastilles de réseaux à gauche, une goutte qui salue, quatre colonnes de liens aux titres or, et en bas une grande scène dessinée d'îles flottantes de nuit, cascades, tours et arbres d'or.",
+  tags: ["soin", "beauté", "scène illustrée", "îles flottantes", "mascotte", "bleu nuit", "or", "angles droits"],
+  identity: gestes, racine: racineDe("#0e1a2b"), widgets: ["text", "link", "html", "copyright", "bizlegal"],
   compose(k0, env, G) {
     const k = A.fixe(k0);
-    const S = k.S, N = "#0e1a2b", IV = "#f2ead7", OR = "#e2b857";
-    const titre = G.geant(`<p>Quatre gestes,<br>un seul soin.</p>`, { taille: [44, 84], tablette: { taille: [56, 72] }, mobile: { taille: [40, 52] }, lh: 1, suivi: "-0.01em", poids: "500", police: S.head, couleur: IV })(k, env);
-    const etape = (n, nom, url, phrase, i) => {
-      const pt = carre(k, OR, "16px"); if (i === 0) souffle(pt, 3000);
-      const ligne = k.row([pt, k.col([], { height: "2px", flexGrow: 1, backgroundColor: OR, borderRadius: "0px", minWidth: "20px" })], { gap: "0px", flexWrap: "nowrap", width: "100%", alignItems: "center" });
-      const l = lien(k, nom, url, { taille: 26, poids: "500", police: S.head, couleur: IV, padH: "0px", survol: { color: OR, transform: { x: 6 } }, focus: OR });
-      return k.col([ligne, k.col([caps(k, `Étape ${n}`, { couleur: OR, suivi: "0.22em" }), k.col([l, texte(k, phrase, { taille: 15, couleur: "#c3cbd8", largeur: "240px" })], { gap: "6px", flexGrow: 0.8, justifyContent: "space-between" })], { gap: "10px", justifyContent: "space-between", alignItems: "flex-start" })], { flexGrow: 1 + i * 0.15, flexBasis: "220px", minWidth: "200px", gap: "14px", alignItems: "flex-start" });
-    };
-    const frise = k.row([etape("1", "Choisir", "/blog", "Trouver la routine qui convient à sa peau.", 0), etape("2", "Essayer", "/contact", "Demander un conseil ou un échantillon.", 1), etape("3", "Offrir", "/boutique", "Composer un coffret pour quelqu'un.", 2), etape("4", "Prendre soin", "/faq", "Les gestes et les bons usages, pas à pas.", 3)], { gap: "40px 32px", alignItems: "flex-start", flexWrap: "wrap", width: "100%" });
-    const entete = G.bande(k, [titre], { fond: N, colonne: true, padV: ["80px", "64px", "48px"], padB: ["56px", "48px", "36px"], padH: PAD, nom: "Titre" });
-    const haut = G.bande(k, [frise], { fond: N, colonne: true, padV: ["0px", "0px", "0px"], padB: ["56px", "48px", "36px"], padH: PAD, nom: "Frise" });
-    const bas = G.bande(k, [reseaux(k, env, { couleur: IV, survol: OR, focus: OR }), trait(k, "#f2ead933"), mentions(k, env, { couleur: "#c3cbd8", liens: IV })], { fond: N, colonne: true, gap: "18px", padV: ["8px", "8px", "8px"], padB: ["28px", "24px", "20px"], padH: PAD, nom: "Mentions" });
-    bas.styles.desktop.color = "#c3cbd8";
-    return [G.racine(k, [entete, haut, bas])];
+    const bandes = IB.paysage(k, env, G, { v: 3, cv: 2, fond: "#0e1a2b", encre: "#f2ead7", discret: "#c3cbd8", accent: "#e2b857", accent2: "#e2b857", titreCol: "#e2b857", filet: "#f2ead933", emblemeForme: "soleil", marqueNom: "Quatre gestes",
+      phrase: "Un soin en quatre gestes : choisir, essayer, offrir, prendre soin.", cols: [["Choisir", [["Conseils", "/blog"], ["Soins", "/boutique"]]], ["Essayer", [["Demander un échantillon", "/contact"], ["Questions", "/faq"]]], ["Offrir", [["Coffrets", "/boutique"], ["Cartes cadeaux", "/boutique"]]], ["Prendre soin", [["Les bons gestes", "/faq"], ["Livraison", "/faq"], ["Contact", "/contact"]]]],
+      scene: I_.ilesNuit, mascotte: I_.gouttePilote });
+    return [G.racine(k, bandes)];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-323 « Papier de parfumeur » — parfumeur indépendant. Archétype J : papier à en-tête, cartouche centré entre filets doubles, liens en ligne centrée.
-const aurele = identite({ key: "i323", label: "Papier blanc cassé, encre bleue et or vieilli", humeur: "light", fond: "#fbfaf6", texte: "#1d2a3a", discret: "#55606e", accent: "#7a5f22", surface: "#f1efe6", encre: "#fbfaf6", surEncre: "#1d2a3a", police: "font.libre-caslon-text", titres: "font.cormorant-sc", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "400", bordure: "0px", ligne: "#1d2a3a40" });
+// ── ft2-323 « Papier de parfumeur » — capture 14 : papier à en-tête, alambic gravé en médaillon, NOM « aurèle » dessiné en encre sur toute la largeur, coordonnées et liens centrés.
+const aurele = identite({ key: "i323", label: "Papier blanc cassé, encre bleue et or vieilli", humeur: "light", fond: "#fbfaf6", texte: "#1d2a3a", discret: "#4d5967", accent: "#7a5f22", surface: "#f1efe6", encre: "#fbfaf6", surEncre: "#1d2a3a", police: "font.libre-caslon-text", titres: "font.cormorant-sc", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "400", bordure: "0px", ligne: "#1d2a3a40" });
 const aureleMod = modeleV2({
   id: identifiantV2(323, "papier-de-parfumeur"), concept: "c-323-papier-de-parfumeur", name: "Papier de parfumeur", family: FAM,
-  description: "Pour un parfumeur indépendant : un pied en papier à en-tête, filets doubles, nom en petites capitales, coordonnées centrées, liens sur une seule ligne et mentions légales. Blanc cassé, encre bleue et or vieilli.",
-  tags: ["parfumeur", "papier à en-tête", "centré", "filets doubles", "serif", "encre", "angles droits"],
-  identity: aurele, racine: racineDe("#fbfaf6"), widgets: ["text", "link", "bizcontact", "copyright", "bizlegal", "divider"],
+  description: "Pour un parfumeur indépendant : un alambic gravé dans un médaillon à double filet, le nom « aurèle » dessiné en lettres d'encre sur toute la largeur avec son accent doré, puis coordonnées, liens et mentions centrés sur papier blanc cassé.",
+  tags: ["parfumeur", "nom monumental", "alambic", "papier à en-tête", "centré", "encre", "or", "angles droits"],
+  identity: aurele, racine: racineDe("#fbfaf6"), widgets: ["text", "link", "html", "bizcontact", "copyright", "bizlegal", "divider"],
   compose(k0, env, G) {
-    const k = A.fixe(k0);
-    const S = k.S, P = "#fbfaf6", INK = "#1d2a3a", OR = "#7a5f22";
-    const doubles = () => k.col([trait(k, INK, "1px"), trait(k, INK, "1px")], { gap: "5px", width: "100%" });
-    const nom = k.T("<p>Maison Aurèle</p>", { fontSize: "52px", fontFamily: S.head, fontWeight: "500", color: INK, lineHeight: 1.1, letterSpacing: "0.14em", textAlign: "center" }, undefined, { fontSize: "34px" });
-    const sous = caps(k, "Parfumeur indépendant", { couleur: OR, suivi: "0.3em", extra: { textAlign: "center" } });
-    const adresse = coordonnees(k, { couleur: INK, lien: INK, survol: OR, focus: OR, taille: 16, police: S.font }); adresse.styles.desktop = { ...adresse.styles.desktop, textAlign: "center", maxWidth: "420px" };
-    const liens = k.row([["Parfums", "/boutique"], ["Soins", "/boutique"], ["Coffrets", "/boutique"], ["Livraison", "/faq"], ["Contact", "/contact"]].map(([a, u]) => lien(k, a, u, { taille: 16, poids: "400", couleur: INK, soulign: false, padH: "10px", casse: "uppercase", suivi: "0.14em", survol: { color: OR, transform: { y: -3 } }, focus: OR })), { gap: "0px 14px", alignItems: "center", justifyContent: "center", flexWrap: "wrap" });
-    const cartouche = k.col([souffle(carre(k, OR, "10px"), 3200), k.col([nom, sous], { gap: "10px", alignItems: "center", flexGrow: 0.6 }), k.row([adresse], { justifyContent: "center", width: "100%" }), liens], { gap: "20px", alignItems: "center", width: "100%" });
-    const haut = G.bande(k, [doubles(), cartouche, doubles(), mentions(k, env, { couleur: "#55606e", liens: INK, centre: true })], { fond: P, colonne: true, gap: "40px", aligne: "center", padV: ["64px", "52px", "40px"], padB: ["28px", "24px", "20px"], padH: PAD, max: "900px", nom: "Papier à en-tête" });
-    haut.styles.desktop.color = "#55606e";
-    return [G.racine(k, [haut])];
+    const k = A.fixe(k0); const P = "#fbfaf6", INK = "#1d2a3a", OR = "#7a5f22", D = "#4d5967";
+    const medaillon = G.bande(k, [k.col(I_.dessin(k, [420, 300, alambic], null, { width: "100%" }), { width: "300px", maxWidth: "100%", alignSelf: "center" }), souffle(carre(k, OR, "10px"), 3200), caps(k, "Maison", { couleur: OR, suivi: "0.4em", extra: { textAlign: "center" } })], { fond: P, colonne: true, gap: "14px", aligne: "center", padV: ["56px", "44px", "32px"], padB: ["8px", "8px", "4px"], padH: PAD, nom: "Médaillon" });
+    const mono = IB.bandeMot(k, G, { texte: "aurele", couleur: INK, fond: P, marge: 50, sw: 22, ecart: 24, deco: () => `<path d="M366,-30 L398,4" stroke="${OR}" stroke-width="14" fill="none"/>` });
+    const liens = k.row([["Parfums", "/boutique"], ["Soins", "/boutique"], ["Coffrets", "/boutique"], ["Livraison", "/faq"], ["Contact", "/contact"]].map(([a, u]) => lien(k, a, u, { taille: 16, poids: "400", couleur: INK, padH: "10px", casse: "uppercase", suivi: "0.14em", survol: { color: OR, transform: { y: -3 } }, focus: OR })), { gap: "0px 14px", alignItems: "center", justifyContent: "center", flexWrap: "wrap" });
+    const adresse = coordonnees(k, { couleur: INK, lien: INK, survol: OR, focus: OR, taille: 16 }); adresse.styles.desktop = { ...adresse.styles.desktop, textAlign: "center", maxWidth: "420px" };
+    const pied = G.bande(k, [caps(k, "Parfumeur indépendant", { couleur: OR, suivi: "0.3em", extra: { textAlign: "center" } }), k.row([adresse], { justifyContent: "center", width: "100%" }), liens, trait(k, "#1d2a3a55"), mentions(k, env, { couleur: D, liens: INK, centre: true })], { fond: P, colonne: true, gap: "20px", aligne: "center", padV: ["8px", "8px", "8px"], padB: ["36px", "28px", "24px"], padH: PAD, max: "900px", nom: "Coordonnées et liens" });
+    pied.styles.desktop.color = D;
+    return [G.racine(k, [medaillon, mono, pied])];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-324 « Console du laboratoire » — laboratoire de cosmétique. Archétype K : le pied est une fenêtre (barre de titre à trois carrés, lignes de commande pour les liens, abonnement à droite).
+// ── ft2-324 « Console du laboratoire » — capture 13 : rangée de molécules en tête, appel centré, curseurs flottants, pied sombre à colonnes.
 const nerolilab = identite({ key: "i324", label: "Nuit, menthe et blanc", humeur: "dark", fond: "#0b0f14", texte: "#e4fbf3", discret: "#8fb8aa", accent: "#6ff2c2", surface: "#101820", encre: "#0b0f14", surEncre: "#e4fbf3", police: "font.dm-mono", titres: "font.space-grotesk", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#6ff2c240" });
 const nerolilabMod = modeleV2({
   id: identifiantV2(324, "console-du-laboratoire"), concept: "c-324-console-du-laboratoire", name: "Console du laboratoire", family: FAM,
-  description: "Pour un laboratoire de cosmétique : le pied est une fenêtre à bord menthe, barre de titre à trois carrés, liens en lignes de commande à gauche et formulaire d'abonnement à droite. Nuit, menthe, texte monospace.",
-  tags: ["laboratoire", "cosmétique", "console", "fenêtre", "monospace", "menthe", "formulaire", "angles droits"],
-  identity: nerolilab, racine: racineDe("#0b0f14"), widgets: ["text", "link", "emailsubscribe", "copyright", "bizlegal"],
+  description: "Pour un laboratoire de cosmétique : une rangée de cinq pictogrammes de laboratoire (molécule, fiole, atome, flacon, courbe) en tête, un appel centré, des étiquettes de curseurs flottantes, puis un pied sombre à quatre colonnes. Nuit, menthe, texte monospace.",
+  tags: ["laboratoire", "cosmétique", "appel centré", "curseurs", "molécules dessinées", "nuit", "menthe", "angles droits"],
+  identity: nerolilab, racine: racineDe("#0b0f14"), widgets: ["text", "link", "html", "copyright", "bizlegal"],
   compose(k0, env, G) {
     const k = A.fixe(k0);
-    const S = k.S, NUIT = "#0b0f14", FEN = "#101820", ME = "#6ff2c2", TX = "#e4fbf3";
-    const barre = k.row([k.T("<p>neroli-lab / formules.txt</p>", { fontSize: "14px", fontWeight: "700", color: NUIT, fontFamily: S.font, lineHeight: 1.3 }), k.row([carre(k, NUIT, "12px"), carre(k, NUIT, "12px"), carre(k, NUIT, "12px")], { gap: "8px", flexWrap: "nowrap" })], { gap: "12px", justifyContent: "space-between", flexWrap: "nowrap", backgroundColor: ME, width: "100%", boxSizing: "border-box", paddingTop: "10px", paddingBottom: "10px", paddingLeft: "16px", paddingRight: "16px" });
-    const cmd = (t, u) => lien(k, `› ${t}`, u, { taille: 17, poids: "500", couleur: TX, padH: "0px", survol: { color: ME, transform: { x: 8 } }, focus: ME });
-    const curseur = souffle(k.col([], { width: "12px", height: "22px", backgroundColor: ME, borderRadius: "0px" }), 1800);
-    const gauche = k.col([k.row([k.T("<p>$ ls rayons/</p>", { fontSize: "15px", color: "#8fb8aa", fontFamily: S.font }), curseur], { gap: "10px", flexWrap: "nowrap" }), ...[["parfums", "/boutique"], ["soins-du-visage", "/boutique"], ["corps", "/boutique"], ["livraison", "/faq"], ["contact", "/contact"]].map(([t, u]) => cmd(t, u))], { flexGrow: 1, flexBasis: "260px", minWidth: "220px", gap: "0px", alignItems: "flex-start" });
-    const abo = abonnement(k, env, { titre: "$ recevoir --formule", intro: "Nouvelles formules et conseils d'usage, par e-mail.", bouton: "Envoyer", largeur: "100%", accent: ME, texte: TX, titreC: ME, introC: "#8fb8aa", boutonC: NUIT, boutonH: [TX, NUIT] });
-    const droite = k.col([abo], { flexGrow: 1.2, flexBasis: "320px", minWidth: "260px", gap: "12px", alignItems: "stretch" });
-    const corps = k.row([gauche, droite], { gap: "32px 56px", alignItems: "flex-start", flexWrap: "wrap", backgroundColor: FEN, width: "100%", boxSizing: "border-box", paddingTop: "36px", paddingBottom: "40px", paddingLeft: "32px", paddingRight: "32px" }, { paddingLeft: "24px", paddingRight: "24px" }, { paddingLeft: "16px", paddingRight: "16px", paddingTop: "28px" });
-    const fenetre = k.col([barre, corps], { gap: "0px", width: "100%", alignItems: "stretch", borderStyle: "solid", borderWidth: "2px", borderColor: ME, boxSizing: "border-box" });
-    const haut = G.bande(k, [fenetre], { fond: NUIT, colonne: true, padV: ["72px", "56px", "40px"], padB: ["32px", "28px", "24px"], padH: PAD, max: "1080px", nom: "Fenêtre" });
-    const bas = G.bande(k, [reseaux(k, env, { couleur: TX, survol: ME, focus: ME }), mentions(k, env, { couleur: "#8fb8aa", liens: TX })], { fond: NUIT, gap: "16px 40px", aligne: "center", padV: ["8px", "8px", "8px"], padB: ["32px", "28px", "24px"], padH: PAD, nom: "Mentions" });
-    bas.styles.desktop.color = "#8fb8aa";
-    return [G.racine(k, [haut, bas])];
+    const bandes = IB.heros(k, env, G, { v: 4, cv: 4, fond: "#0b0f14", fondRangee: "#101820", fondPied: "#0b0f14", encre: "#e4fbf3", discret: "#8fb8aa", accent: "#6ff2c2", accent2: "#6ff2c2", survol: "#e4fbf3", surTexte: "#0b0f14", titreCol: "#6ff2c2", filet: "#6ff2c240", emblemeForme: "fiole",
+      curseurs: ["#6ff2c2", "#f2c96f", "#7aa2ff", "#ff8fb1", "#c9a6ff"], pictos: I_.molecules, traitRangee: "#8fb8aa", accentRangee: "#6ff2c2", poidsTitre: "600", suivi: "-0.03em", ordre: "rhcp",
+      titre: "<p>Des formules claires,<br>testées au labo.</p>", sous: "Chaque soin a sa formule, ses ingrédients et son mode d'emploi. Posez vos questions, nous répondons par écrit.", b1: ["Voir les formules", "/boutique", "#6ff2c2", "#0b0f14"], b2: ["Poser une question", "/faq", "#0b0f14"], marqueNom: "Néroli Lab",
+      phrase: "Laboratoire de cosmétique : formules lisibles et gestes simples.", cols: [["Formules", [["Visage", "/boutique"], ["Corps", "/boutique"], ["Parfums", "/boutique"]]], ["Ingrédients", [["Liste complète", "/faq"], ["Conseils", "/blog"]]], ["Aide", [["Livraison", "/faq"], ["Retours", "/faq"], ["Contact", "/contact"]]], ["Marque", [["Questions", "/faq"], ["Journal", "/blog"]]]] });
+    return [G.racine(k, bandes)];
   },
 }, FAM);
 
-// ═════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-325 « Gradins de rosée » — marque de soin rosé. Archétype L : pied en escalier, quatre bandes de largeurs décroissantes (100, 80, 60, 40 %) alignées à gauche, de rose clair à rose profond.
-const rosee = identite({ key: "i325", label: "Rose poudré dégradé en gradins", humeur: "light", fond: "#fbf3ef", texte: "#2b1512", discret: "#5b3a33", accent: "#7a2b1e", surface: "#f4d9d0", encre: "#fbf3ef", surEncre: "#2b1512", police: "font.libre-franklin", titres: "font.italiana", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#2b151240" });
+// ── ft2-325 « Gradins de rosée » — capture 15 : coordonnées et marque, goutte-mascotte, colonnes, scène de rizières en gradins roses et de gouttes de rosée.
+const rosee = identite({ key: "i325", label: "Rose poudré, rosée et brique", humeur: "light", fond: "#fbf3ef", texte: "#2b1512", discret: "#5b3a33", accent: "#7a2b1e", surface: "#f4d9d0", encre: "#fbf3ef", surEncre: "#2b1512", police: "font.libre-franklin", titres: "font.italiana", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "0px", ligne: "#2b151240" });
 const roseeMod = modeleV2({
   id: identifiantV2(325, "gradins-de-rosee"), concept: "c-325-gradins-de-rosee", name: "Gradins de rosée", family: FAM,
-  description: "Pour une marque de soin : un pied en escalier de quatre bandes alignées à gauche, de plus en plus étroites et de plus en plus rosées : nom et phrase, liens, contact et horaires, puis mentions. Angles droits, tons de rose poudré.",
-  tags: ["soin", "rose", "escalier", "bandes décroissantes", "gradins", "contact", "horaires", "angles droits"],
-  identity: rosee, racine: racineDe("#fbf3ef"), widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal"],
+  description: "Pour une marque de soin : la marque, ses coordonnées et ses pastilles à gauche, une goutte souriante, quatre colonnes de liens, et en bas une grande scène dessinée de gradins roses plantés de pousses, avec des gouttes de rosée et leurs ondes.",
+  tags: ["soin", "rose", "scène illustrée", "gradins", "rosée", "mascotte", "contact", "angles droits"],
+  identity: rosee, racine: racineDe("#fbf3ef"), widgets: ["text", "link", "html", "bizcontact", "copyright", "bizlegal"],
   compose(k0, env, G) {
     const k = A.fixe(k0);
-    const S = k.S, INK = "#2b1512", BR = "#7a2b1e";
-    const marche = (largeur, fond, enfants, vert) => k.col(enfants, { width: largeur, backgroundColor: fond, boxSizing: "border-box", paddingTop: vert, paddingBottom: vert, paddingLeft: "48px", paddingRight: "48px", gap: "20px", alignItems: "flex-start" }, { width: "100%", paddingLeft: "32px", paddingRight: "32px" }, { width: "100%", paddingLeft: "20px", paddingRight: "20px", paddingTop: "32px", paddingBottom: "32px" });
-    const nom = G.geant(`<p>Rosée</p>`, { taille: [64, 140], tablette: { taille: [80, 110] }, mobile: { taille: [64, 84] }, lh: 0.95, suivi: "0.01em", poids: "400", police: S.head, couleur: INK })(k, env);
-    const mot = texte(k, "Soins du visage et du corps, doux et simples, pour toutes les peaux.", { taille: 17, couleur: "#5b3a33", largeur: "420px" });
-    const m1 = marche("100%", "#f4d9d0", [k.row([souffle(carre(k, BR, "14px"), 3200), caps(k, "Maison de soin", { couleur: BR, suivi: "0.26em" })], { gap: "12px", flexWrap: "nowrap" }), k.row([k.col([nom], { flexGrow: 1.6 }), k.col([mot], { flexGrow: 0.7, justifyContent: "flex-end", alignSelf: "flex-end" })], { gap: "24px 56px", justifyContent: "space-between", alignItems: "flex-end", width: "100%" })], "64px");
-    const liens = k.row([["Visage", "/boutique"], ["Corps", "/boutique"], ["Coffrets", "/boutique"], ["Livraison", "/faq"], ["Conseils", "/blog"]].map(([a, u]) => lien(k, a, u, { taille: 17, poids: "600", couleur: INK, soulign: true, survol: { color: BR, transform: { y: -3 } }, focus: BR })), { gap: "4px 32px", alignItems: "center", flexWrap: "wrap" });
-    const m2 = marche("80%", "#eac0b3", [caps(k, "Parcourir", { couleur: INK }), liens, reseaux(k, env, { couleur: INK, survol: BR, focus: BR })], "40px");
-    const m3 = marche("60%", "#dda494", [k.row([bloc(k, "Contact", [coordonnees(k, { couleur: INK, lien: INK, survol: BR, focus: INK })], { couleurTitre: INK, min: "200px" }), bloc(k, "Horaires", [horaires(k, { couleur: INK })], { couleurTitre: INK, min: "200px" })], { gap: "24px 48px", alignItems: "flex-start", flexWrap: "wrap", width: "100%" })], "36px");
-    const m4 = marche("40%", "#c98678", [mentions(k, env, { couleur: INK, liens: INK })], "24px");
-    const marches = k.col([m1, m2, m3, m4], { gap: "0px", alignItems: "flex-start", width: "100%" });
-    const bande = G.bande(k, [marches], { fond: "#fbf3ef", colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", nom: "Gradins" });
-    bande.styles.desktop.color = INK;
-    return [G.racine(k, [bande])];
+    const bandes = IB.paysage(k, env, G, { v: 4, cv: 1, fond: "#fbf3ef", encre: "#2b1512", discret: "#5b3a33", accent: "#7a2b1e", accent2: "#7a2b1e", titreCol: "#7a2b1e", filet: "#2b151240", emblemeForme: "goutte", marqueNom: "Rosée", contact: true,
+      phrase: "Soins du visage et du corps, doux et simples, pour toutes les peaux.", cols: [["Visage", [["Nettoyants", "/boutique"], ["Soins", "/boutique"]]], ["Corps", [["Huiles", "/boutique"], ["Coffrets", "/boutique"]]], ["Conseils", [["Journal", "/blog"], ["Questions", "/faq"]]], ["Aide", [["Livraison", "/faq"], ["Retours", "/faq"], ["Contact", "/contact"]]]],
+      scene: I_.gradinsRosee, mascotte: I_.gouttePoudree });
+    return [G.racine(k, bandes)];
   },
 }, FAM);
 
 module.exports = {
   key: FAM, label: "Cosmétique et parfumerie", target: 6, built: true,
-  description: "Pieds inspirés de captures, angles droits, animations fluides : index en lignes, mosaïque, frise en étapes, papier à en-tête, console, gradins.",
+  description: "Pieds inspirés de captures, angles droits, vraies illustrations vectorielles : nom monumental dessiné, appel centré avec curseurs et pictos, scènes illustrées avec mascotte.",
   models: [essenceMod, ambreMod, gestesMod, aureleMod, nerolilabMod, roseeMod],
 };

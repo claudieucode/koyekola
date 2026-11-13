@@ -58,3 +58,11 @@
 - `deuxEcarts` (index.js) : sépare tout `gap` à deux valeurs en rowGap/columnGap, refusé par le Page Builder.
 - Tests : bibliothèque 1313, bascule, bas, comportements réels, reconstruction, rendu unifié, isolation v2/legacy, éditeur, navigateur (168 modèles : 336 contrôles) : 0 échec.
 - Limites : mouvements validés par tests et non vus en direct ; liens internes d'exemple (routes plateforme) ; ligne légale automatique parfois encadrée ou décalée selon le plan du bas.
+
+## Passe « illustrations » (168 pieds ft2-266 à ft2-433, 28 familles)
+- Les 168 pieds de la passe « inspirés » ont été refaits à partir des 41 captures d'inspiration, avec une illustration propre à chaque modèle (SVG intégré au widget « HTML sécurisé » : tracteur, lotus, piste d'aéroport, casier à livres, pommes…). Total : 433 modèles, 75 familles.
+- Limites du nettoyeur de la plateforme : pas de dégradés SVG, filtres, masques, motifs, `<text>` ni opacité de remplissage → halos en cercles empilés, mots géants dessinés en tracés, SVG < 16 000 caractères.
+- Angles droits : les icônes de réseaux des pieds ≥ 266 reçoivent `borderRadius: 0px` sur leur partie « link » (index.js, `reseauxCarres`).
+- Vérifications : bibliothèque 1318/1318, bascule, bas (512 combinaisons), comportements réels, reconstruction, rendu unifié, isolation (v2 et ancien), éditeur ; test Chrome sur les 168 pieds ; audit Chrome 390/1280 : 8 défauts initiaux, 2 corrigés (ft2-343, ft2-345), restent des chevauchements mineurs de bouton/illustration à 390 px (ft2-328, 331, 334) et des libellés d'adresse du widget coupés (ft2-329).
+- Limites honnêtes : animations non vues en direct ; ressemblance structurelle maximale 0,65 (seuil du test : 0,85).
+- Retour arrière : `FOOTER_V2=0` (variable Hostinger) ou `git revert` de la fusion.

@@ -11,10 +11,18 @@ const CIBLE_V2 = { "corporate-institutions": 8, "finance-assurance": 6, "saas-te
 const VERSION_DEFAUT = 1, AJOUT_DEFAUT = "2026-11-09";
 // « gap: 20px 48px » est refusé par la grammaire du Page Builder : on le sépare en rowGap / columnGap, partout dans l'arbre
 function deuxEcarts(n) {
+  if (n && typeof n === "object" && !Array.isArray(n)) { if (n.lineHeight === 0 || n.lineHeight === "0") n.lineHeight = 0.8; if (typeof n.html === "string" && n.html.includes("&reg;")) n.html = n.html.replace(/&reg;/g, "®"); }
   if (Array.isArray(n)) { n.forEach(deuxEcarts); return n; }
   if (!n || typeof n !== "object") return n;
   if (typeof n.gap === "string" && /^\s*\S+\s+\S+\s*$/.test(n.gap)) { const [r, c] = n.gap.trim().split(/\s+/); delete n.gap; if (n.rowGap === undefined) n.rowGap = r; if (n.columnGap === undefined) n.columnGap = c; }
   for (const k of Object.keys(n)) deuxEcarts(n[k]);
+  return n;
+}
+function reseauxCarres(n) {
+  if (Array.isArray(n)) { n.forEach(reseauxCarres); return n; }
+  if (!n || typeof n !== "object") return n;
+  if (n.type === "social" && n.props) { if (n.props.shape !== "plain") n.props.shape = "square"; const cur = (n.parts || {}).link || {}; n.parts = { ...(n.parts || {}), link: { ...cur, styles: { ...(cur.styles || {}), desktop: { ...((cur.styles || {}).desktop || {}), borderRadius: "0px" } } } }; }
+  for (const k of Object.keys(n)) reseauxCarres(n[k]);
   return n;
 }
 const charger = (cle) => require(`./familles/${cle}`);
@@ -42,7 +50,7 @@ function assemble({ familles = FAMILLES_V2_CLES.map(charger) } = {}) {
     const resp = m.responsive || {};
     const rows = m.structure ? m.structure.rows.map((r) => ({ ...r, ...(resp.tablet || r.tablet ? { tablet: { ...(resp.tablet || {}), ...(r.tablet || {}) } } : {}), ...(resp.mobile || r.mobile ? { mobile: { ...(resp.mobile || {}), ...(r.mobile || {}) } } : {}) })) : null;
     nouveaux.push({ key: m.id, fullKey: m.id, family: f.key, skin: skin.key, label: m.name, tags: m.tags, desc: m.description, version: m.version ?? VERSION_DEFAUT, addedAt: m.addedAt ?? AJOUT_DEFAUT, model: m,
-      ftMode: "solo", ftVars: { ...skin.ftVars, ...Bas.varsBarre(m.id, m.bas) }, ...(m.racine ? { racine: m.racine } : {}), v2: true, build: (k, env) => { const arbre = m.compose ? m.compose(k, env || {}, G) : [wrap(k.S, rows, env || {})]; return deuxEcarts(Bas.appliquerBas(arbre, m.id, k.S, m.bas).arbre); } });
+      ftMode: "solo", ftVars: { ...skin.ftVars, ...Bas.varsBarre(m.id, m.bas) }, ...(m.racine ? { racine: m.racine } : {}), v2: true, build: (k, env) => { const arbre = m.compose ? m.compose(k, env || {}, G) : [wrap(k.S, rows, env || {})]; const fin = deuxEcarts(Bas.appliquerBas(arbre, m.id, k.S, m.bas).arbre); return +String(m.id).slice(4, 7) >= 266 ? reseauxCarres(fin) : fin; } });
   }
   const familleDe = (f) => ({ key: f.key, label: f.label, description: f.description || "", built: f.built === true, target: f.target ?? CIBLE_V2[f.key] });
   const construites = [...parCle.values()].filter((f) => f.built === true);

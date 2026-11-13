@@ -1,45 +1,51 @@
-// Famille v2 « Cave, bières et spiritueux » — 6 modèles (ft2-338 à ft2-343), pieds inspirés de captures (mosaïque de cartes sombres, bandeau d'inscription XXL, grille de liens).
+// Famille v2 « Cave, bières et spiritueux » — 6 modèles (ft2-338 à ft2-343), refaits à partir des captures 19 (mosaïque de cartes sombres), 20 (bandeau d'inscription en dégradé + cartes de liens + grand dessin en bas) et 21 (colonnes sobres + pictos + réseaux).
 // ANGLES DROITS partout. Marques fictives, AUCUNE coordonnée ni chiffre inventé (horaires, adresse, téléphone viennent des « Données de l'entreprise »).
-// Archétypes : 338 H mosaïque asymétrique · 339 F bandeau XXL + colonne étroite · 340 C damier de cases · 341 G index en lignes · 342 B nom monumental · 343 D barre unique.
-// Mouvement : transitions de 320 ms (fond, couleur, décalage), une animation visible par modèle (case qui se soulève, flèche qui glisse, ligne qui se remplit, point qui respire) ; rien sous « mouvement réduit ».
+// Chaque pied porte UNE illustration SVG dessinée (aides-illus-a06.js) : casier à bouteilles, mousse de bière, rangée de bouteilles, coteaux de vignes, alambic, frise de pommes.
+// Mouvement : transitions de 320 ms, une animation visible par modèle (cartes et tuiles qui se soulèvent, liens qui glissent, point qui respire) ; rien sous « mouvement réduit ».
 const { modeleV2, identifiantV2, identite, G: GK } = require("../kit-v2");
 const A = require("../aides-inspire-b");
-const { racineDe, lien, caps, texte, trait, souffle, horaires, coordonnees, abo, case_, sansCookies } = A;
+const I = require("../aides-illus-a06");
+const { racineDe, lien, caps, texte, trait, souffle, horaires, coordonnees, case_, sansCookies, Moteur } = A;
+const { svgW, tuileIcone, colLiens, formulaire, badges } = I;
 
 const FAM = "boissons-cave";
 const RES = [["Instagram", "https://www.instagram.com/"], ["Facebook", "https://www.facebook.com/"]];
+const soc = (k, env, liste, look = "big", centre) => Moteur.item(k, `socials:${liste}|${look}`, env, centre);
 
-// ═══ ft2-338 « Chai de nuit » — mosaïque asymétrique (H), cave à vins, bordeaux profond et champagne ═════════════════════════════════════════
+// ═══ ft2-338 « Chai de nuit » — mosaïque de cartes sombres (capture 19) : bienvenue + casier à bouteilles dessiné, tuiles d'icônes, nom en grand ═══
 const chai = identite({
   key: "c338", label: "Bordeaux de nuit et champagne", humeur: "dark",
-  fond: "#1f0b12", texte: "#f5e9d8", discret: "#d3bfb4", accent: "#e3b565", surface: "#2f121d", encre: "#1f0b12", surEncre: "#f5e9d8",
+  fond: "#150609", texte: "#f5e9d8", discret: "#d3bfb4", accent: "#e3b565", surface: "#2f121d", encre: "#1f0b12", surEncre: "#f5e9d8",
   police: "font.work-sans", titres: "font.cormorant-garamond", rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "600", bordure: "0px", ligne: "#f5e9d833",
 });
 const chaiDeNuit = modeleV2({
   id: identifiantV2(338, "chai-de-nuit"), concept: "c-338-chai-de-nuit", name: "Chai de nuit", family: FAM,
-  description: "Pour une cave à vins : mosaïque de cases bordeaux à angles droits, une grande case de bienvenue avec les rayons, trois petites (horaires, adresse, signature). Les cases se soulèvent au survol.",
-  tags: ["cave à vins", "caviste", "mosaïque", "sombre", "bordeaux", "champagne", "angles droits"],
-  identity: chai, racine: racineDe("#1f0b12"),
-  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
+  description: "Cave à vins : mosaïque de cartes bordeaux à angles droits. Grande carte de bienvenue avec un casier à bouteilles dessiné et une barre de réservation, rayons et horaires, trois tuiles d'icônes de réseaux, nom de la cave en grand.",
+  tags: ["cave à vins", "caviste", "mosaïque", "cartes", "sombre", "bordeaux", "champagne", "illustration", "angles droits"],
+  identity: chai, racine: racineDe("#150609"),
+  widgets: ["html", "text", "link", "bizhours", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, OR = "#e3b565", SURF = "#2f121d", SURV = { backgroundColor: "#421a29", transform: { y: -4 } };
-    const phrase = G.geant(`<p>Les belles bouteilles<br><span style="color:${OR}">se partagent.</span></p>`, { taille: [44, 96], tablette: { taille: [64, 84] }, mobile: { taille: [44, 60] }, lh: 1.02, suivi: "-0.015em", poids: "600", police: S.head, couleur: S.fg })(k, env);
-    const mot = texte(k, "Un conseil, une carafe, un cadeau à emballer : passez au comptoir, on vous guide sans jargon.", { taille: 17, couleur: S.mute, max: "480px", lh: 1.65 });
-    const rayons = k.row([["Vins", "/catalogue"], ["Bières", "/catalogue"], ["Spiritueux", "/catalogue"], ["Coffrets", "/catalogue"]].map(([t, u]) => lien(k, t, u, { taille: 17, poids: "700", couleur: OR, soulign: true, padH: "2px", survol: { color: "#ffffff", transform: { x: 4 } }, focus: "#ffffff" })), { ...GK.gaps("0px 26px"), alignItems: "center" });
-    const grande = case_(k, [caps(k, "Cave et dégustations", { couleur: OR }), phrase, mot, trait(k, "#e3b56555"), rayons], { fond: SURF, pad: "44px", gap: "24px", poids: 7, min: "300px", justifie: "space-between", survol: { backgroundColor: "#3a1624" } });
-    const tH = case_(k, [caps(k, "Horaires", { couleur: OR }), horaires(k, { taille: 15 })], { fond: SURF, pad: "26px", min: "200px", survol: SURV });
-    const tC = case_(k, [caps(k, "Nous trouver", { couleur: OR }), coordonnees(k, { taille: 15, lien: S.fg, survol: OR, focus: OR })], { fond: SURF, pad: "26px", min: "200px", survol: SURV });
-    const sig = k.T("<p>Le Chai Noir</p>", { fontFamily: S.head, fontSize: "fluid:30-44", fontWeight: "600", fontStyle: "italic", color: OR, lineHeight: 1.05 });
-    const tS = case_(k, [sig, G.reseauxTexte(RES, { taille: 15, poids: "700", couleur: S.fg, survol: OR, focus: OR })(k, env)], { fond: "#150609", cadre: "1px", cadreCouleur: "#e3b56566", pad: "26px", justifie: "center", survol: { transform: { y: -4 }, backgroundColor: "#2a0f19" } });
-    const duo = G.ligne(k, [tH, tC], { gap: "12px", aligne: "stretch", largeur: "100%" });
-    const petites = G.colonne(k, [duo, tS], { poids: 5, min: "280px", gap: "12px", aligne: "stretch" });
-    const mosaique = G.bande(k, [grande, petites], { fond: "#1f0b12", gap: "12px", aligne: "stretch", padV: ["56px", "44px", "28px"], padB: ["12px", "12px", "12px"], padH: ["32px", "24px", "16px"], nom: "Mosaïque" });
-    const mentions = G.bande(k, [sansCookies(k, env, G)], { fond: "#1f0b12", colonne: true, padV: ["28px", "24px", "20px"], padB: ["24px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Mentions" });
+    const S = k.S, OR = "#e3b565", SURF = "#2f121d", BG = "#150609", SURV = { backgroundColor: "#421a29", transform: { y: -4 } };
+    const titre = G.geant(`<p>Une bouteille à ouvrir ?<br>Passez au comptoir.</p>`, { taille: [30, 54], tablette: { taille: [34, 46] }, mobile: { taille: [28, 36] }, lh: 1.1, suivi: "-0.01em", poids: "600", police: S.head, couleur: S.fg })(k, env);
+    const marque = k.col([], { width: "40px", height: "40px", backgroundColor: OR, flexShrink: 0 });
+    souffle(marque, 3200);
+    const bt = lien(k, "Réserver", "/contact", { taille: 15, poids: "800", casse: "uppercase", suivi: "0.1em", couleur: "#1f0b12", h: "48px", padH: "24px", survol: { backgroundColor: "#ffffff" }, focus: "#ffffff", extra: { backgroundColor: OR, justifyContent: "center" } });
+    const barre = k.row([marque, texte(k, "Dégustation avec le caviste", { taille: 15, couleur: S.fg, extra: { flexGrow: 1 } }), bt], { gap: "14px", alignItems: "center", flexWrap: "wrap", borderStyle: "solid", borderWidth: "1px", borderColor: "#e3b56566", borderRadius: "0px", paddingTop: "10px", paddingBottom: "10px", paddingLeft: "14px", paddingRight: "10px", backgroundColor: "#1f0b12", width: "100%" });
+    const casier = k.col([svgW(k, I.casier())], { flexGrow: 1, flexBasis: "0px", minWidth: "220px", maxWidth: "340px", alignSelf: "center" });
+    const A1 = case_(k, [k.row([titre, casier], { gap: "28px", alignItems: "center", width: "100%" }), barre], { fond: SURF, pad: "36px", poids: 1, survol: { backgroundColor: "#3a1624" } });
+    const B1 = case_(k, [caps(k, "Avant de partir", { couleur: OR, taille: "14px" }), k.row([colLiens(k, "La cave", [["Vins", "/catalogue"], ["Bières", "/catalogue"], ["Spiritueux", "/catalogue"], ["Coffrets", "/catalogue"]], { titre: OR, survol: OR, min: "130px" }), colLiens(k, "Service", [["Conseils", "/faq"], ["Contact", "/contact"], ["La boutique", "/boutique"]], { titre: OR, survol: OR, min: "130px" }), colLiens(k, "Légal", [["Cookies", "/cookies"]], { titre: OR, survol: OR, min: "130px" })], { gap: "8px 24px", flexWrap: "wrap", width: "100%" })], { fond: SURF, pad: "36px", poids: 1, survol: SURV });
+    const C1 = case_(k, [k.T("<p>Où et quand ?</p>", { fontFamily: S.head, fontSize: "fluid:26-36", fontWeight: "600", color: S.fg, lineHeight: 1.15 }), caps(k, "Horaires et adresse", { couleur: S.mute }), k.row([k.col([horaires(k, { taille: 15 })], { flexGrow: 1, flexBasis: "0px", minWidth: "180px" }), k.col([coordonnees(k, { taille: 15, lien: S.fg, survol: OR, focus: OR })], { flexGrow: 1, flexBasis: "0px", minWidth: "180px" })], { gap: "16px 28px", flexWrap: "wrap", width: "100%" })], { fond: SURF, pad: "36px", poids: 1, survol: SURV });
+    const tuiles = k.row([tuileIcone(k, env, "instagram", { fond: SURF }), tuileIcone(k, env, "facebook", { fond: SURF }), tuileIcone(k, env, "youtube", { fond: SURF })], { gap: "12px", flexWrap: "nowrap", alignItems: "stretch", width: "100%" });
+    const nom = case_(k, [k.T("<p>Chai Noir</p>", { fontFamily: S.head, fontSize: "fluid:36-56", fontWeight: "600", fontStyle: "italic", color: OR, lineHeight: 1.05, textAlign: "center" })], { fond: "#1f0b12", cadre: "1px", cadreCouleur: "#e3b56566", pad: "28px", h: "130px", justifie: "center", survol: { transform: { y: -4 }, backgroundColor: "#2a0f19" } });
+    const colG = G.colonne(k, [A1, B1], { poids: 1, min: "320px", gap: "12px", aligne: "stretch" });
+    const colD = G.colonne(k, [C1, tuiles, nom], { poids: 1, min: "320px", gap: "12px", aligne: "stretch" });
+    const mosaique = G.bande(k, [colG, colD], { fond: BG, gap: "12px", aligne: "stretch", padV: ["40px", "32px", "20px"], padB: ["12px", "12px", "12px"], padH: ["32px", "24px", "16px"], nom: "Mosaïque" });
+    const mentions = G.bande(k, [sansCookies(k, env, G)], { fond: BG, colonne: true, padV: ["20px", "20px", "16px"], padB: ["24px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Mentions" });
     return [G.racine(k, [mosaique, mentions])];
   },
 }, FAM);
 
-// ═══ ft2-339 « Mousse haute » — bandeau d'inscription XXL + colonne de liens étroite (F), brasserie ═════════════════════════════════════════════
+// ═══ ft2-339 « Mousse haute » — bandeau d'inscription en dégradé jaune (capture 20) + mousse de bière dessinée qui coule + quatre cartes de liens ══════
 const mousse = identite({
   key: "c339", label: "Jaune houblon et anthracite", humeur: "dark",
   fond: "#1a1a17", texte: "#f4efe2", discret: "#c9c4b4", accent: "#f4b400", surface: "#262620", encre: "#1a1405", surEncre: "#f4efe2",
@@ -47,33 +53,30 @@ const mousse = identite({
 });
 const mousseHaute = modeleV2({
   id: identifiantV2(339, "mousse-haute"), concept: "c-339-mousse-haute", name: "Mousse haute", family: FAM,
-  description: "Pour une brasserie : un énorme bandeau jaune d'inscription à la lettre en tête, puis une bande anthracite avec horaires, adresse et une seule colonne étroite de liens qui glissent au survol.",
-  tags: ["brasserie", "bière", "lettre d'information", "bandeau", "jaune", "anthracite", "angles droits"],
+  description: "Brasserie : bandeau d'inscription en dégradé jaune houblon, mousse de bière dessinée qui déborde en bulles sur l'anthracite, quatre cartes de liens aux titres soulignés, ligne de marque avec réseaux.",
+  tags: ["brasserie", "bière", "lettre d'information", "dégradé", "mousse", "jaune", "anthracite", "illustration", "angles droits"],
   identity: mousse, racine: racineDe("#1a1a17"),
-  widgets: ["text", "link", "emailsubscribe", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["html", "text", "link", "emailsubscribe", "bizhours", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, JAUNE = "#f4b400", ENCRE = "#1a1405";
-    const phrase = G.geant(`<p>Rejoins<br>la mousse.</p>`, { taille: [60, 150], tablette: { taille: [96, 130] }, mobile: { taille: [60, 96] }, lh: 0.95, suivi: "-0.005em", poids: "400", police: S.head, couleur: ENCRE, extra: { textTransform: "uppercase" } })(k, env);
-    const intro = texte(k, "Nouvelles cuvées, soirées dégustation, fûts à emporter : un message à chaque brassin.", { taille: 18, couleur: ENCRE, max: "460px" });
-    const form = abo(k, env, G, { titre: "La lettre du brassin", intro: "", bouton: "Je m'abonne", largeur: "480px", accent: ENCRE, texte: ENCRE, consentCouleur: ENCRE, styleTitre: { color: ENCRE, fontFamily: S.font, fontWeight: "800" }, survolBouton: "#000000", survolTexte: JAUNE });
-    form.parts.button.styles.desktop = { ...form.parts.button.styles.desktop, color: JAUNE, backgroundColor: ENCRE };
-    form.parts.intro.styles.desktop = { ...form.parts.intro.styles.desktop, color: ENCRE };
-    form.parts.missing.styles.desktop = { ...form.parts.missing.styles.desktop, color: ENCRE };
-    const g = G.colonne(k, [phrase, intro], { poids: 7, min: "300px", gap: "20px" });
+    const S = k.S, JAUNE = "#f4b400", ENCRE = "#1a1405", CARTE = "#262620";
+    const phrase = G.geant(`<p>Rejoins<br>la mousse.</p>`, { taille: [52, 120], tablette: { taille: [80, 104] }, mobile: { taille: [52, 76] }, lh: 0.95, poids: "400", police: S.head, couleur: ENCRE, extra: { textTransform: "uppercase" } })(k, env);
+    const form = formulaire(k, env, G, { titre: "La lettre du brassin", intro: "Nouvelles cuvées et soirées dégustation.", bouton: "Je m'abonne", largeur: "480px", texte: ENCRE, btnFond: ENCRE, btnTexte: JAUNE, survolFond: "#000000", survolTexte: JAUNE });
+    const g = G.colonne(k, [phrase], { poids: 6, min: "280px" });
     const d = G.colonne(k, [form], { poids: 5, min: "290px", soi: "flex-end" });
-    const banniere = G.bande(k, [g, d], { fond: JAUNE, gap: "40px 64px", aligne: "flex-end", padV: ["96px", "72px", "52px"], padB: ["88px", "64px", "48px"], padH: ["48px", "32px", "20px"], nom: "Bandeau" });
-    const nom = k.T("<p>Houblon &amp; Fils</p>", { fontFamily: S.head, fontSize: "fluid:32-52", textTransform: "uppercase", color: S.fg, lineHeight: 1.05, letterSpacing: "0.01em" });
-    const infos = G.ligne(k, [G.colonne(k, [caps(k, "Horaires", { couleur: JAUNE }), horaires(k, { taille: 15 })], { poids: 1, min: "220px" }), G.colonne(k, [caps(k, "Brasserie", { couleur: JAUNE }), coordonnees(k, { taille: 15, lien: S.fg, survol: JAUNE, focus: JAUNE })], { poids: 1, min: "220px" })], { gap: "32px", aligne: "flex-start", largeur: "100%" });
-    const gauche = G.colonne(k, [nom, infos], { poids: 8, min: "300px", gap: "32px" });
-    const L = [["Blondes", "/catalogue"], ["Ambrées et brunes", "/catalogue"], ["Fûts et location", "/catalogue"], ["Visite de la brasserie", "/catalogue"], ["La boutique", "/boutique"]];
-    const colonne = G.colonne(k, [caps(k, "Dans la cave", { couleur: JAUNE }), ...L.map(([t, u]) => lien(k, t, u, { taille: 17, poids: "700", couleur: S.fg, bloc: true, survol: { color: JAUNE, transform: { x: 8 } }, focus: JAUNE, extra: { width: "100%" } }))], { poids: 3, min: "200px", gap: "0px", extra: { maxWidth: "280px" } });
-    const bas = G.bande(k, [gauche, colonne], { fond: "#1a1a17", gap: "48px 72px", aligne: "flex-start", padV: ["64px", "52px", "40px"], padB: ["16px", "16px", "12px"], padH: ["48px", "32px", "20px"], nom: "Cave" });
-    const mentions = G.bande(k, [trait(k, S.line), sansCookies(k, env, G)], { fond: "#1a1a17", colonne: true, gap: "20px", padV: ["16px", "16px", "12px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [banniere, bas, mentions])];
+    const banniere = G.bande(k, [g, d], { fond: JAUNE, degrade: { from: "#ffc928", to: "#e08a00", angle: 100, type: "linear" }, gap: "32px 64px", aligne: "flex-end", padV: ["72px", "56px", "40px"], padB: ["24px", "20px", "16px"], padH: ["48px", "32px", "20px"], nom: "Bandeau" });
+    const rang = (t, u) => lien(k, t, u, { taille: 28, police: S.head, poids: "400", casse: "uppercase", couleur: S.fg, bloc: true, h: "64px", lh: 1, survol: { color: JAUNE, paddingLeft: "16px" }, focus: JAUNE, extra: { width: "100%", letterSpacing: "0.02em", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#f4efe233", transitionDuration: 360 } });
+    const index = case_(k, [caps(k, "Dans la cave", { couleur: JAUNE, taille: "13px" }), k.col([["Blondes", "/catalogue"], ["Ambrées et brunes", "/catalogue"], ["Fûts et location", "/catalogue"], ["Visites", "/catalogue"], ["La boutique", "/boutique"]].map(([t, u]) => rang(t, u)), { gap: "0px", width: "100%" })], { fond: CARTE, pad: "32px", poids: 3, min: "280px", survol: { backgroundColor: "#30302a" } });
+    const pile = G.colonne(k, [case_(k, [caps(k, "Horaires", { couleur: JAUNE, taille: "13px" }), horaires(k, { taille: 15 })], { fond: CARTE, pad: "28px", min: "0px", survol: { backgroundColor: "#30302a", transform: { y: -4 } } }), case_(k, [caps(k, "Nous trouver", { couleur: JAUNE, taille: "13px" }), coordonnees(k, { taille: 15, lien: S.fg, survol: JAUNE, focus: JAUNE })], { fond: CARTE, pad: "28px", min: "0px", survol: { backgroundColor: "#30302a", transform: { y: -4 } } })], { poids: 2, min: "240px", gap: "12px", aligne: "stretch" });
+    const cartes = k.row([index, pile], { gap: "12px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
+    const corps = G.bande(k, [cartes], { fond: "#1a1a17", colonne: true, padV: ["16px", "16px", "12px"], padB: ["12px", "12px", "12px"], padH: ["48px", "32px", "16px"], nom: "Cartes" });
+    const marque = G.ligne(k, [k.T("<p>Houblon &amp; Fils</p>", { fontFamily: S.head, fontSize: "fluid:28-40", textTransform: "uppercase", color: S.fg, lineHeight: 1.05 }), sansCookies(k, env, G), soc(k, env, "instagram+facebook+youtube", "big")], { justifie: "space-between", aligne: "center", gap: "16px 32px", largeur: "100%" });
+    const bas = G.bande(k, [marque], { fond: "#1a1a17", colonne: true, padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Marque" });
+    return [G.racine(k, [banniere, bandeSvg(k, I.mousse()), corps, bas])];
   },
 }, FAM);
+const bandeSvg = (k, svg) => ({ type: "container", props: { full: true }, name: "Illustration", children: [svgW(k, svg)], ...A.sty({ display: "flex", flexDirection: "column", width: "100%", backgroundColor: "#1a1a17", gap: "0px" }) });
 
-// ═══ ft2-340 « Damier du comptoir » — grille de huit cases égales (C), spiritueux ═════════════════════════════════════════════════════════════
+// ═══ ft2-340 « Damier du comptoir » — colonnes sobres sur papier (capture 21) + rangée de quatre bouteilles dessinées + pictos et réseaux ═══════════
 const damier = identite({
   key: "c340", label: "Papier, encre et vert bouteille", humeur: "light",
   fond: "#efe9dc", texte: "#111111", discret: "#46463f", accent: "#0f5c4d", surface: "#e2dac6", encre: "#111111", surEncre: "#efe9dc",
@@ -81,29 +84,29 @@ const damier = identite({
 });
 const damierComptoir = modeleV2({
   id: identifiantV2(340, "damier-du-comptoir"), concept: "c-340-damier-du-comptoir", name: "Damier du comptoir", family: FAM,
-  description: "Pour une boutique de spiritueux : huit cases égales à filets noirs, quatre rayons, horaires, adresse, retrait en cave et conseils. Chaque case est un lien ou une information et se remplit de vert au survol.",
-  tags: ["spiritueux", "whisky", "rhum", "damier", "grille", "papier", "vert bouteille", "angles droits"],
+  description: "Spiritueux : quatre bouteilles dessinées au trait en vignettes sur papier, quatre colonnes de liens en capitales, rangée de pictos de services et de réseaux au centre, ligne légale.",
+  tags: ["spiritueux", "whisky", "bouteilles dessinées", "vignettes", "colonnes", "papier", "vert bouteille", "illustration", "angles droits"],
   identity: damier, racine: racineDe("#efe9dc"),
-  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["html", "text", "link", "bizhours", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S, PAPIER = "#efe9dc", ENCRE = "#111111", VERT = "#0f5c4d";
-    const caseRayon = (t, u, sous) => {
-      const n = lien(k, t, u, { taille: 44, police: S.head, poids: "400", casse: "uppercase", couleur: ENCRE, bloc: true, lh: 1, h: "56px", survol: { color: "#ffffff", transform: { x: 6 } }, focus: VERT, extra: { width: "100%", letterSpacing: "0.02em" } });
-      return case_(k, [caps(k, sous, { couleur: S.mute, suivi: "0.12em", taille: "11px" }), n], { fond: PAPIER, pad: "22px", h: "168px", justifie: "space-between", min: "160px", survol: { backgroundColor: VERT } });
-    };
-    const caseInfo = (titre, enfant) => case_(k, [caps(k, titre, { couleur: VERT }), enfant], { fond: PAPIER, pad: "22px", h: "168px", min: "160px" });
-    const l1 = k.row([caseRayon("Whiskys", "/catalogue", "Rayon"), caseRayon("Rhums", "/catalogue", "Rayon"), caseRayon("Gins et vodkas", "/catalogue", "Rayon"), caseRayon("Cognacs", "/catalogue", "Rayon")], { gap: "2px", flexWrap: "wrap", alignItems: "stretch", width: "100%" });
-    const l2 = k.row([caseInfo("Horaires", horaires(k, { taille: 13 })), caseInfo("Adresse", coordonnees(k, { taille: 13, lien: ENCRE, survol: VERT, focus: VERT })), caseRayon("Retrait en cave", "/catalogue", "Service"), caseRayon("Conseils", "/catalogue", "Dégustation")], { gap: "2px", flexWrap: "wrap", alignItems: "stretch", width: "100%" });
-    const grille = k.col([l1, l2], { gap: "2px", backgroundColor: ENCRE, paddingTop: "2px", paddingBottom: "2px", paddingLeft: "2px", paddingRight: "2px", width: "100%" });
-    const haut = G.ligne(k, [k.T("<p>Cave des Quatre Vents</p>", { fontFamily: S.head, fontSize: "fluid:28-40", textTransform: "uppercase", color: ENCRE, lineHeight: 1 }), G.reseauxTexte(RES, { taille: 14, poids: "500", couleur: ENCRE, survol: VERT, focus: VERT })(k, env)], { justifie: "space-between", aligne: "center", gap: "8px 24px", largeur: "100%" });
-    const intro = G.ligne(k, [texte(k, "Un rayon, une question, un cadeau : choisissez une case.", { taille: 14, couleur: S.mute, max: "420px" }), lien(k, "Toute la cave", "/catalogue", { taille: 14, poids: "700", couleur: ENCRE, soulign: true, survol: { color: VERT, transform: { x: 4 } }, focus: VERT })], { justifie: "space-between", gap: "8px 24px", largeur: "100%" });
-    const corps = G.bande(k, [haut, intro, grille], { fond: PAPIER, colonne: true, gap: "20px", padV: ["56px", "44px", "32px"], padB: ["20px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Damier" });
+    const nom = k.T("<p>Cave des Quatre Vents</p>", { fontFamily: S.head, fontSize: "fluid:32-52", textTransform: "uppercase", color: ENCRE, lineHeight: 1 });
+    const vignettes = svgW(k, I.bouteilles());
+    const cols = k.row([
+      colLiens(k, "Rayons", [["Whiskys", "/catalogue"], ["Rhums", "/catalogue"], ["Gins et vodkas", "/catalogue"], ["Cognacs", "/catalogue"]], { titre: ENCRE, survol: VERT, color: ENCRE, couleur: ENCRE }),
+      colLiens(k, "Services", [["Retrait en cave", "/catalogue"], ["Conseils", "/faq"], ["La boutique", "/boutique"], ["Contact", "/contact"]], { titre: ENCRE, survol: VERT, couleur: ENCRE }),
+      k.col([caps(k, "Horaires", { couleur: ENCRE, taille: "13px" }), horaires(k, { taille: 14 })], { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "180px" }),
+      k.col([caps(k, "Adresse", { couleur: ENCRE, taille: "13px" }), coordonnees(k, { taille: 14, lien: ENCRE, survol: VERT, focus: VERT })], { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "180px" }),
+    ], { gap: "28px 32px", flexWrap: "wrap", alignItems: "flex-start", width: "100%" });
+    const entete = G.ligne(k, [nom, badges(k, { trait: ENCRE, fond: PAPIER, accent: VERT, max: "300px" })], { justifie: "space-between", aligne: "center", gap: "16px 32px", largeur: "100%" });
+    const pied = k.row([soc(k, env, "instagram+facebook+youtube+x", "big")], { gap: "16px 32px", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", width: "100%" });
+    const corps = G.bande(k, [entete, vignettes, cols, pied], { fond: PAPIER, colonne: true, gap: "28px", padV: ["56px", "44px", "32px"], padB: ["16px", "16px", "12px"], padH: ["32px", "24px", "16px"], nom: "Colonnes" });
     const mentions = G.bande(k, [sansCookies(k, env, G)], { fond: PAPIER, colonne: true, padV: ["8px", "8px", "8px"], padB: ["24px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Mentions" });
     return [G.racine(k, [corps, mentions])];
   },
 }, FAM);
 
-// ═══ ft2-341 « Sommaire des vignes » — index en lignes pleine largeur (G), vins ═══════════════════════════════════════════════════════════════
+// ═══ ft2-341 « Sommaire des vignes » — mosaïque en trois colonnes (capture 19) crème et lie-de-vin, coteaux de vignes dessinés en grande carte ═══════
 const sommaire = identite({
   key: "c341", label: "Crème et lie-de-vin", humeur: "light",
   fond: "#f3ede1", texte: "#2a1015", discret: "#5c4247", accent: "#7a1f2b", surface: "#e9dfcd", encre: "#2a1015", surEncre: "#f3ede1",
@@ -111,23 +114,28 @@ const sommaire = identite({
 });
 const sommaireDesVignes = modeleV2({
   id: identifiantV2(341, "sommaire-des-vignes"), concept: "c-341-sommaire-des-vignes", name: "Sommaire des vignes", family: FAM,
-  description: "Pour un caviste : un sommaire en grandes lignes pleine largeur (rouges, blancs, bulles, liquoreux, coffrets), chaque ligne se remplit de lie-de-vin au survol, puis horaires et adresse en bas.",
-  tags: ["vin", "caviste", "sommaire", "index", "crème", "lie-de-vin", "typographie", "angles droits"],
+  description: "Caviste : mosaïque claire en trois colonnes. Grande carte avec un paysage de coteaux de vignes dessiné et un soleil couchant, sommaire des rayons et horaires, tuiles d'icônes de réseaux.",
+  tags: ["vin", "caviste", "mosaïque", "paysage", "vignes", "terrasses", "crème", "lie-de-vin", "illustration", "angles droits"],
   identity: sommaire, racine: racineDe("#f3ede1"),
-  widgets: ["text", "link", "bizhours", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["html", "text", "link", "bizhours", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, VIN = "#7a1f2b", CREME = "#f3ede1", ENCRE = "#2a1015";
-    const haut = G.ligne(k, [caps(k, "Sommaire de la cave", { couleur: VIN, suivi: "0.2em" }), texte(k, "Cave des Terrasses", { taille: 15, couleur: S.mute, poids: "700" })], { justifie: "space-between", gap: "8px 24px", largeur: "100%" });
-    const rangee = (t, u) => lien(k, t, u, { taille: 16, police: S.head, poids: "500", couleur: ENCRE, bloc: true, h: "92px", lh: 1.05, survol: { backgroundColor: VIN, color: CREME, paddingLeft: "28px" }, focus: ENCRE, extra: { width: "100%", fontSize: "fluid:32-72", fontStyle: "italic", transitionDuration: 360, borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#2a101555" } });
-    const liste = k.col([["Rouges de garde", "/catalogue"], ["Blancs et rosés", "/catalogue"], ["Bulles et champagnes", "/catalogue"], ["Liquoreux et vins doux", "/catalogue"], ["Coffrets et cadeaux", "/catalogue"]].map(([t, u]) => rangee(t, u)), { gap: "0px", width: "100%" });
-    const index = G.bande(k, [haut, liste], { fond: CREME, colonne: true, gap: "20px", padV: ["72px", "56px", "40px"], padB: ["0px", "0px", "0px"], padH: ["48px", "32px", "20px"], nom: "Sommaire" });
-    const info = G.ligne(k, [G.colonne(k, [caps(k, "Horaires", { couleur: VIN }), horaires(k, { taille: 15 })], { poids: 1, min: "220px" }), G.colonne(k, [caps(k, "Adresse", { couleur: VIN }), coordonnees(k, { taille: 15, lien: ENCRE, survol: VIN, focus: VIN })], { poids: 1, min: "220px" }), G.colonne(k, [caps(k, "Suivre la cave", { couleur: VIN }), G.reseauxTexte(RES, { taille: 15, poids: "700", couleur: ENCRE, survol: VIN, focus: VIN })(k, env)], { poids: 1, min: "200px" })], { gap: "32px 48px", aligne: "flex-start", largeur: "100%" });
-    const bas = G.bande(k, [trait(k, "#2a101555"), info, trait(k, S.line), sansCookies(k, env, G)], { fond: CREME, colonne: true, gap: "28px", padV: ["36px", "32px", "28px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "20px"], nom: "Infos" });
-    return [G.racine(k, [index, bas])];
+    const S = k.S, VIN = "#7a1f2b", CREME = "#f3ede1", ENCRE = "#2a1015", CARTE = "#e9dfcd", SURV = { backgroundColor: "#dccfb6", transform: { y: -4 } };
+    const titre = G.geant(`<p>Cave des<br><span style="color:${VIN}">Terrasses.</span></p>`, { taille: [40, 84], tablette: { taille: [54, 72] }, mobile: { taille: [40, 52] }, lh: 1.02, suivi: "-0.015em", poids: "600", police: S.head, couleur: ENCRE })(k, env);
+    const paysage = case_(k, [caps(k, "Cave et dégustations", { couleur: VIN }), titre, k.col([svgW(k, I.terrasses())], { width: "100%", marginTop: "auto" })], { fond: CARTE, pad: "36px", poids: 5, min: "300px", justifie: "space-between", survol: { backgroundColor: "#e2d6bd" }, extra: { overflow: "hidden" } });
+    const rang = (t, u) => lien(k, t, u, { taille: 16, poids: "500", police: S.head, couleur: ENCRE, bloc: true, h: "58px", survol: { backgroundColor: VIN, color: CREME, paddingLeft: "20px" }, focus: ENCRE, extra: { width: "100%", fontSize: "fluid:22-30", fontStyle: "italic", transitionDuration: 360, borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#2a101555" } });
+    const somm = case_(k, [caps(k, "Sommaire", { couleur: VIN }), k.col([["Rouges de garde", "/catalogue"], ["Blancs et rosés", "/catalogue"], ["Bulles et champagnes", "/catalogue"], ["Liquoreux", "/catalogue"], ["Coffrets", "/catalogue"]].map(([t, u]) => rang(t, u)), { gap: "0px", width: "100%" })], { fond: CARTE, pad: "28px", min: "0px", survol: SURV });
+    const infos = case_(k, [caps(k, "Horaires et adresse", { couleur: VIN }), horaires(k, { taille: 15 }), coordonnees(k, { taille: 15, lien: ENCRE, survol: VIN, focus: VIN })], { fond: CARTE, pad: "28px", min: "0px", survol: SURV });
+    const milieu = G.colonne(k, [somm, infos], { poids: 4, min: "280px", gap: "12px", aligne: "stretch" });
+    const tuiles = k.col(["instagram", "facebook", "youtube"].map((r) => tuileIcone(k, env, r, { fond: ENCRE, h: "120px" })), { gap: "12px", width: "100%" });
+    const sig = case_(k, [k.T("<p>Les Terrasses</p>", { fontFamily: S.head, fontSize: "fluid:28-40", fontStyle: "italic", color: VIN, lineHeight: 1.05, textAlign: "center" })], { fond: CARTE, pad: "20px", h: "100px", justifie: "center", survol: SURV });
+    const droite = G.colonne(k, [tuiles, sig], { poids: 2, min: "200px", gap: "12px", aligne: "stretch" });
+    const mosa = G.bande(k, [paysage, milieu, droite], { fond: CREME, gap: "12px", aligne: "stretch", padV: ["40px", "32px", "20px"], padB: ["12px", "12px", "12px"], padH: ["32px", "24px", "16px"], nom: "Mosaïque" });
+    const mentions = G.bande(k, [sansCookies(k, env, G)], { fond: CREME, colonne: true, padV: ["16px", "16px", "12px"], padB: ["24px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Mentions" });
+    return [G.racine(k, [mosa, mentions])];
   },
 }, FAM);
 
-// ═══ ft2-342 « Tourbe et fût » — nom monumental seul au centre (B), whisky ═══════════════════════════════════════════════════════════════════
+// ═══ ft2-342 « Tourbe et fût » — dégradé cuivre d'inscription + quatre cartes (capture 20) + grand alambic en cuivre sous un halo de braise ════════
 const tourbe = identite({
   key: "c342", label: "Noir de tourbe et cuivre", humeur: "dark",
   fond: "#15110d", texte: "#efe3cf", discret: "#c1b095", accent: "#c98a4b", surface: "#211a13", encre: "#15110d", surEncre: "#efe3cf",
@@ -135,28 +143,31 @@ const tourbe = identite({
 });
 const tourbeEtFut = modeleV2({
   id: identifiantV2(342, "tourbe-et-fut"), concept: "c-342-tourbe-et-fut", name: "Tourbe et fût", family: FAM,
-  description: "Pour une distillerie ou une cave à whiskies : un nom monumental centré dans un grand vide noir, un carré de cuivre qui respire, trois liens et la ligne légale. Presque rien, mais tout de suite une marque.",
-  tags: ["whisky", "distillerie", "monogramme", "nom monumental", "noir", "cuivre", "minimal", "angles droits"],
+  description: "Distillerie : bandeau d'inscription en dégradé cuivre, quatre cartes de liens aux titres soulignés, ligne de marque, puis un grand alambic de cuivre dessiné au centre d'un halo de braise.",
+  tags: ["whisky", "distillerie", "alambic", "halo", "cuivre", "dégradé", "noir", "illustration", "angles droits"],
   identity: tourbe, racine: racineDe("#15110d"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal", "divider"],
+  widgets: ["html", "text", "link", "emailsubscribe", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, CUIVRE = "#c98a4b";
-    const carre = souffle(k.col([], { width: "14px", height: "14px", backgroundColor: CUIVRE, borderRadius: "0px", flexShrink: 0 }), 3600);
-    const nom = G.geant(`<p>TOURBE</p>`, { taille: [64, 200], tablette: { taille: [110, 150] }, mobile: { taille: [60, 84] }, lh: 0.95, suivi: "0.02em", poids: "400", police: S.head, couleur: S.fg, align: "center" })(k, env, true);
-    const sous = caps(k, "Single malt &nbsp;·&nbsp; fût de chêne", { couleur: CUIVRE, suivi: "0.3em", extra: { textAlign: "center" } });
-    const filet = G.filet({ largeur: "72px", epaisseur: "2px", couleur: CUIVRE })(k, env, true);
-    const lienV = (t, u) => lien(k, t, u, { taille: 15, poids: "500", couleur: S.fg, casse: "uppercase", suivi: "0.16em", survol: { color: CUIVRE, transform: { x: 6 } }, focus: CUIVRE });
-    const colL = G.colonne(k, [caps(k, "La maison", { couleur: CUIVRE }), lienV("La cave", "/catalogue"), lienV("Visites", "/catalogue"), lienV("Contact", "/contact")], { poids: 1, min: "200px", gap: "0px", aligne: "flex-start" });
-    const colA = G.colonne(k, [caps(k, "Nous trouver", { couleur: CUIVRE }), coordonnees(k, { taille: 14, couleur: S.mute, lien: S.fg, survol: CUIVRE, focus: CUIVRE })], { poids: 1, min: "200px", gap: "12px", aligne: "flex-start" });
-    const deux = G.ligne(k, [colL, colA], { gap: "32px 96px", aligne: "flex-start", justifie: "center", largeur: "100%" });
-    deux.styles.desktop = { ...deux.styles.desktop, maxWidth: "640px", marginLeft: "auto", marginRight: "auto" };
-    const centre = G.bande(k, [k.col([carre, nom, sous, filet], { gap: "28px", alignItems: "center", width: "100%" }), deux], { fond: "#15110d", colonne: true, aligne: "stretch", gap: "96px", padV: ["168px", "120px", "88px"], padB: ["96px", "72px", "56px"], padH: ["32px", "24px", "16px"], nom: "Marque" });
-    const mentions = G.bande(k, [G.ligneLegale({ taille: 13, sansCookies: true })(k, env, true)], { fond: "#15110d", colonne: true, padV: ["0px", "0px", "0px"], padB: ["28px", "24px", "20px"], padH: ["32px", "24px", "16px"], nom: "Mentions" });
-    return [G.racine(k, [centre, mentions])];
+    const S = k.S, CUIVRE = "#c98a4b", CARTE = "#211a13";
+    const phrase = G.geant(`<p>Le distillat<br>de la maison.</p>`, { taille: [32, 64], tablette: { taille: [40, 56] }, mobile: { taille: [32, 40] }, lh: 1.05, poids: "400", police: S.head, couleur: "#15110d" })(k, env);
+    const form = formulaire(k, env, G, { titre: "", intro: "Lots limités et visites, une lettre par saison.", bouton: "S'inscrire", largeur: "520px", texte: "#15110d", btnFond: "#15110d", btnTexte: "#efe3cf", survolFond: "#000000", survolTexte: CUIVRE });
+    const ban = G.bande(k, [G.colonne(k, [phrase], { poids: 4, min: "260px" }), G.colonne(k, [form], { poids: 6, min: "290px", soi: "flex-end" })], { fond: CUIVRE, degrade: { from: "#e0a060", to: "#b8793a", angle: 90, type: "linear" }, gap: "28px 64px", aligne: "center", padV: ["56px", "44px", "36px"], padB: ["56px", "44px", "36px"], padH: ["56px", "32px", "20px"], nom: "Inscription" });
+    const reg = (enf) => k.col(enf, { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "200px", borderStyle: "solid", borderWidth: "0px", borderLeftWidth: "1px", borderColor: "#efe3cf44", paddingLeft: "24px", paddingTop: "4px", paddingBottom: "4px" });
+    const cartes = k.row([
+      reg([colLiens(k, "La distillerie", [["Visites", "/catalogue"], ["Le fût", "/catalogue"], ["Le journal", "/blog"]], { titre: CUIVRE, survol: CUIVRE, min: "0px" })]),
+      reg([colLiens(k, "Boutique", [["Les flacons", "/boutique"], ["Coffrets", "/boutique"], ["Conseils", "/faq"]], { titre: CUIVRE, survol: CUIVRE, min: "0px" })]),
+      reg([caps(k, "Horaires", { couleur: CUIVRE, taille: "13px" }), horaires(k, { taille: 14 })]),
+      reg([caps(k, "Nous trouver", { couleur: CUIVRE, taille: "13px" }), coordonnees(k, { taille: 14, lien: S.fg, survol: CUIVRE, focus: CUIVRE })]),
+    ], { gap: "24px 0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
+    const corps = G.bande(k, [cartes], { fond: "#15110d", colonne: true, padV: ["56px", "44px", "32px"], padB: ["24px", "20px", "16px"], padH: ["56px", "32px", "16px"], nom: "Cartes" });
+    const marque = G.ligne(k, [sansCookies(k, env, G), soc(k, env, "instagram+facebook+youtube", "big")], { justifie: "space-between", aligne: "center", gap: "16px 32px", largeur: "100%" });
+    const m = G.bande(k, [marque], { fond: "#15110d", colonne: true, padV: ["28px", "24px", "20px"], padB: ["0px", "0px", "0px"], padH: ["56px", "32px", "16px"], nom: "Marque" });
+    const grand = G.bande(k, [k.col([svgW(k, I.alambic())], { width: "100%", maxWidth: "820px", marginLeft: "auto", marginRight: "auto" })], { fond: "#15110d", colonne: true, padV: ["0px", "0px", "0px"], padB: ["24px", "20px", "16px"], padH: ["32px", "24px", "16px"], nom: "Alambic" });
+    return [G.racine(k, [ban, corps, m, grand])];
   },
 }, FAM);
 
-// ═══ ft2-343 « Barre de comptoir » — ligne unique compacte (D), cidrerie ═════════════════════════════════════════════════════════════════════
+// ═══ ft2-343 « Barre de comptoir » — colonnes sobres sur rouge (capture 21) + frise de pommes dessinées + pictos et réseaux ═════════════════════════
 const barre = identite({
   key: "c343", label: "Rouge coquelicot et blanc", humeur: "dark",
   fond: "#c8281c", texte: "#ffffff", discret: "#ffe9e6", accent: "#fff3c4", surface: "#a81f15", encre: "#c8281c", surEncre: "#ffffff",
@@ -164,26 +175,25 @@ const barre = identite({
 });
 const barreDeComptoir = modeleV2({
   id: identifiantV2(343, "barre-de-comptoir"), concept: "c-343-barre-de-comptoir", name: "Barre de comptoir", family: FAM,
-  description: "Pour une cidrerie ou un bar à bières : tout tient sur une barre rouge d'une ou deux lignes (nom, liens, bouton Commander) et la ligne légale. Compact, franc, efficace.",
-  tags: ["cidre", "bière", "barre", "compact", "rouge", "une ligne", "angles droits"],
+  description: "Cidrerie ou bar à bières : frise de pommes blanches dessinées sur pied rouge, quatre colonnes de liens en capitales, rangée de pictos de services et de réseaux au centre, ligne légale.",
+  tags: ["cidre", "bière", "pommes", "frise", "colonnes", "rouge", "illustration", "angles droits"],
   identity: barre, racine: racineDe("#c8281c"),
-  widgets: ["text", "link", "bizcontact", "copyright", "bizlegal"],
+  widgets: ["html", "text", "link", "bizhours", "bizcontact", "social", "copyright", "bizlegal"],
   compose(k, env, G) {
-    const S = k.S, ROUGE = "#c8281c";
-    const point = souffle(k.col([], { width: "12px", height: "12px", backgroundColor: "#ffffff", borderRadius: "0px", flexShrink: 0 }), 2600);
-    const nom = k.row([point, k.T("<p>Pomme-Rouge</p>", { fontFamily: S.head, fontSize: "24px", fontWeight: "800", color: "#ffffff", lineHeight: 1.1, letterSpacing: "-0.01em" })], { gap: "12px", alignItems: "center", flexWrap: "nowrap" });
-    const liens = k.row([["Cidres", "/catalogue"], ["Bières", "/catalogue"], ["Cadeaux", "/catalogue"], ["Contact", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "700", couleur: "#ffffff", padH: "6px", survol: { color: "#fff3c4", textDecoration: "underline", transform: { y: -2 } }, focus: "#ffffff" })), { ...GK.gaps("0px 18px"), alignItems: "center" });
-    const bt = lien(k, "Commander", "/boutique", { taille: 16, poids: "800", casse: "uppercase", suivi: "0.1em", couleur: ROUGE, h: "64px", padH: "40px", survol: { backgroundColor: "#fff3c4", color: "#7a120b" }, focus: "#111111", extra: { backgroundColor: "#ffffff", justifyContent: "center", alignSelf: "stretch", minHeight: "72px" } });
-    const gauche = k.row([nom, liens], { ...GK.gaps("12px 40px"), alignItems: "center", flexGrow: 1 });
-    const corpsBarre = k.row([k.col([gauche], { flexGrow: 1, justifyContent: "center", paddingTop: "12px", paddingBottom: "12px", paddingLeft: "40px", paddingRight: "24px" }), bt], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    const ligne1 = { type: "container", props: { full: true }, name: "Barre", children: [corpsBarre], ...A.sty({ display: "flex", flexDirection: "column", width: "100%", backgroundColor: ROUGE, gap: "0px", paddingTop: "0px" }) };
-    const ligne2 = G.bande(k, [G.reseauxTexte(RES, { taille: 14, poids: "700", couleur: "#ffffff", survol: "#fff3c4", focus: "#ffffff" })(k, env), coordonnees(k, { taille: 14, couleur: "#ffffff", lien: "#ffffff", survol: "#fff3c4", focus: "#ffffff", align: "left" }), sansCookies(k, env, G, { liens: "#ffffff", couleur: "#ffe9e6" })], { fond: ROUGE, gap: "8px 32px", aligne: "center", padV: ["8px", "8px", "8px"], padB: ["24px", "20px", "16px"], padH: ["40px", "28px", "20px"], nom: "Mentions" });
-    return [G.racine(k, [ligne1, ligne2])];
+    const S = k.S, ROUGE = "#c8281c", BL = "#ffffff", CL = "#fff3c4";
+    const frise = G.bande(k, [svgW(k, I.pommes())], { fond: ROUGE, colonne: true, padV: ["28px", "20px", "12px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "1600px", nom: "Pommes" });
+    const nom = G.geant(`<p>Pomme-Rouge</p>`, { taille: [40, 72], tablette: { taille: [52, 64] }, mobile: { taille: [44, 56] }, lh: 1, suivi: "-0.02em", poids: "800", police: S.head, couleur: BL })(k, env);
+    const gauche = G.colonne(k, [caps(k, "Cidrerie et bar à bières", { couleur: CL }), nom, soc(k, env, "instagram+facebook+youtube+tiktok", "big")], { poids: 5, min: "300px", gap: "24px" });
+    const liensH = k.row([["Cidres", "/catalogue"], ["Bières", "/catalogue"], ["Jus de pomme", "/catalogue"], ["Cadeaux", "/catalogue"], ["Commander", "/boutique"], ["Contact", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 17, poids: "700", couleur: BL, soulign: true, padH: "4px", survol: { color: CL, transform: { y: -2 } }, focus: BL })), { ...GK.gaps("4px 24px"), alignItems: "center" });
+    const boite = k.col([k.row([k.col([caps(k, "Horaires", { couleur: CL, taille: "13px" }), horaires(k, { taille: 15, couleur: BL })], { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "170px" }), k.col([caps(k, "Adresse", { couleur: CL, taille: "13px" }), coordonnees(k, { taille: 15, couleur: BL, lien: BL, survol: CL, focus: BL })], { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "170px" })], { gap: "20px 28px", flexWrap: "wrap", width: "100%" }), trait(k, "#ffffff55"), badges(k, { trait: BL, fond: ROUGE, accent: CL, max: "340px" })], { gap: "22px", borderStyle: "solid", borderWidth: "1px", borderColor: "#ffffff88", borderRadius: "0px", paddingTop: "28px", paddingBottom: "28px", paddingLeft: "28px", paddingRight: "28px", flexGrow: 6, flexBasis: "0px", minWidth: "300px" });
+    const haut = G.bande(k, [gauche, boite], { fond: ROUGE, gap: "32px 56px", aligne: "stretch", padV: ["24px", "20px", "16px"], padB: ["24px", "20px", "16px"], padH: ["48px", "32px", "16px"], nom: "Marque" });
+    const corps = G.bande(k, [liensH, sansCookies(k, env, G, { liens: "#ffffff", couleur: "#ffe9e6" })], { fond: "#a81f15", colonne: true, gap: "20px", padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: ["48px", "32px", "16px"], nom: "Liens" });
+    return [G.racine(k, [frise, haut, corps])];
   },
 }, FAM);
 
 module.exports = {
   key: FAM, label: "Cave, bières et spiritueux", target: 6, built: true,
-  description: "Pieds de caves, brasseries, distilleries et cidreries : mosaïque, bandeau XXL, damier, sommaire, nom monumental, barre unique.",
+  description: "Pieds de caves, brasseries, distilleries et cidreries : mosaïque de cartes, bandeau en dégradé, colonnes sobres, avec des illustrations dessinées (casier, mousse, bouteilles, vignes, alambic, pommes).",
   models: [chaiDeNuit, mousseHaute, damierComptoir, sommaireDesVignes, tourbeEtFut, barreDeComptoir],
 };

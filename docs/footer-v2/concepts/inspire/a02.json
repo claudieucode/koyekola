@@ -7,7 +7,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "plateforme de données",
       "directionArtistique": {
-        "texte": "Pour une plateforme de données : le pied est une fenêtre de terminal noire à barre de titre (trois carrés, le dernier vert citron qui respire), commentaires # produit et # ressources, liens-commandes qui se surlignent et s'indentent, lettre d'information intégrée et ligne d'état. Inspiré de la capture 07 (logo, colonnes de liens, lettre). Archétype : K fenêtre / console."
+        "texte": "Inspiré de la capture 07 : fond noir encre, à droite un grand panneau d'arcs concentriques vert citron qui s'éteignent dans un halo lumineux ; à gauche la marque dessinée (globe filaire et « kerneo » en mono), deux colonnes en commentaires #, lettre d'information, filet, mentions et réseaux. Illustration : panneau d'arcs et halo + globe filaire."
       },
       "typographies": {
         "titre": "Geist Mono",
@@ -32,7 +32,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "IA appliquée",
       "directionArtistique": {
-        "texte": "Pour un service d'IA appliquée : pied de poche sur une seule rangée sous un filet cobalt (marque dans une cellule blanche, six liens, mentions dessous, bouton Essayer). Inspiré de la barre basse de la capture 07. Archétype : D ligne unique."
+        "texte": "Inspiré de la capture 07 (logo monumental et dégradé lumineux) : bleu nuit à halo cobalt, une rangée (logo en étoile, six liens, bouton Essayer), puis le nom VECTRA dessiné en immenses lettres tracées à contour décalé sur toute la largeur, puis mentions. Illustration : nom monumental dessiné."
       },
       "typographies": {
         "titre": "DM Mono",
@@ -56,7 +56,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "conseil en données",
       "directionArtistique": {
-        "texte": "Pour un cabinet de conseil en données : bandeau d'appel à l'action démesuré en serif (« Parlons de vos données. ») avec bouton pêche, puis une seule colonne étroite de sept liens à filets fins à droite. Inspiré du bandeau de la capture 08. Archétype : F appel XXL + colonne étroite."
+        "texte": "Inspiré de la capture 08 : bandeau aubergine avec phrase XXL en serif à gauche et champ e-mail à contour à droite, bande ondulée pêche, mauve et aubergine, puis bloc sombre à marque « Mnémo » en serif, deux colonnes et réseaux. Illustration : bandes ondulées pleine largeur."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -81,7 +81,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "IA explicable",
       "directionArtistique": {
-        "texte": "Pour une entreprise d'IA explicable : deux demi-pages bord à bord, ambre à gauche (message « Chaque réponse a sa preuve. » et lettre) et noir à droite (quatre grandes lignes d'action à filets). Inspiré du bandeau et du formulaire à contour de la capture 08. Archétype : E deux demi-pages."
+        "texte": "Inspiré de la capture 08 en deux demi-pages : à gauche l'ambre porte « Chaque réponse a sa preuve. », un arbre de preuve dessiné (chemin noir épais du verdict à la source) et la lettre ; à droite le noir porte la marque TENSORA en lettres tracées et trois colonnes. Illustration : arbre de preuve + marque tracée."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -105,7 +105,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "lexique de la donnée",
       "directionArtistique": {
-        "texte": "Pour un éditeur de contenus sur la donnée : titre à gauche et sommaire de glossaire en cinq grandes lignes (lettre, terme en italique, définition) qui noircissent et s'indentent au survol. Inspiré des index de liens de la capture 09. Archétype : G index en lignes pleine largeur."
+        "texte": "Inspiré de la capture 09 : titre centré, index A à Z cliquable, cinq colonnes de termes, barre de logo (étoile de rayons) avec mentions. Illustration : dictionnaire dessiné (pile de pages à onglets A D M R V et grand A vermillon) près du titre."
       },
       "typographies": {
         "titre": "Newsreader",
@@ -129,7 +129,7 @@
       "famille": "Données et intelligence artificielle",
       "secteur": "ingénierie de la donnée",
       "directionArtistique": {
-        "texte": "Pour une société d'ingénierie de la donnée : frise horizontale en cinq étapes à points carrés reliés par un filet menthe, deux liens par étape (cinq colonnes comme dans la capture 09), puis marque et mentions. Archétype : I frise."
+        "texte": "Inspiré de la capture 09 en sombre : grande frise dessinée pleine largeur (points épars qui s'alignent dans un entonnoir puis deviennent des carrés), titre et logo à gauche, cinq étapes en lignes à filets (collecter à déployer) à droite. Illustration : frise du brut au déployé."
       },
       "typographies": {
         "titre": "Sora",
@@ -154,7 +154,7 @@
       "famille": "Applications mobiles",
       "secteur": "application grand public",
       "directionArtistique": {
-        "texte": "Pour une application grand public : haute colonne bleue à droite (marque, promesse, deux boutons de boutique, réseaux), zone claire à gauche avec lettre et trois rangées de liens. Inspiré de la colonne logo + description de la capture 07. Archétype : A colonne latérale."
+        "texte": "Inspiré de la capture 07 : fond bleu nuit à dégradé électrique, marque Pomelo, promesse et boutons de boutique, deux colonnes de liens et lettre d'information, et à droite un grand téléphone dessiné (liste cochée) dans un halo avec éclats carrés. Illustration : téléphone dessiné et halo."
       },
       "typographies": {
         "titre": "Plus Jakarta Sans",
@@ -178,7 +178,7 @@
       "famille": "Applications mobiles",
       "secteur": "application de services",
       "directionArtistique": {
-        "texte": "Pour une application de services : mosaïque asymétrique, trois petites cases à gauche (aide, nouveautés, lettre) et une grande case orange à droite (« Dans votre poche. » et boutons de boutique). Inspiré du bloc de téléchargement de la capture 07. Archétype : H mosaïque."
+        "texte": "Inspiré de la capture 07 : fond charbon à dégradé orange, nom Zéphyr et « Dans votre poche. » à gauche, quatre vignettes d'icônes dessinées (repère, bulle, carte, cloche) à ombres dures en grille 2 × 2 à droite, puis bande de colonnes de liens et lettre sous un filet orange. Illustration : vignettes d'icônes."
       },
       "typographies": {
         "titre": "Syne",
@@ -202,7 +202,7 @@
       "famille": "Applications mobiles",
       "secteur": "application de sommeil",
       "directionArtistique": {
-        "texte": "Pour une application de méditation ou de sommeil : le nom en immense serif au centre d'un grand vide lilas, deux liens de boutique et une ligne de mentions. Inspiré du logo isolé de la capture 08. Archétype : B nom monumental."
+        "texte": "Inspiré de la capture 08 : grande scène nocturne dessinée en tête (pleine lune à halo, étoiles, trois collines lilas), puis bloc violet sombre centré avec appel en serif, champ e-mail à contour, ligne de liens et nom « lune. » monumental. Illustration : scène nocturne."
       },
       "typographies": {
         "titre": "DM Serif Display",
@@ -225,7 +225,7 @@
       "famille": "Applications mobiles",
       "secteur": "application multiplateforme",
       "directionArtistique": {
-        "texte": "Pour une application multiplateforme : damier de six cases charbon et cyan, chacune un lien ou une information (marque, iPhone et iPad, Android, version web, lettre, aide). Inspiré de la grille de liens de la capture 09. Archétype : C damier."
+        "texte": "Inspiré de la capture 08 : grande frise d'écrans dessinés (portable, tablette, téléphone, montre) sur trame en damier, puis deux tuiles : appel cyan « Un compte, tous vos écrans. » avec lettre, et tuile charbon de liens. Illustration : écrans dessinés sur damier."
       },
       "typographies": {
         "titre": "Barlow Condensed",
@@ -248,7 +248,7 @@
       "famille": "Applications mobiles",
       "secteur": "application de lecture",
       "directionArtistique": {
-        "texte": "Pour une application de lecture : papier à en-tête ivoire centré (filet, nom en Cormorant, ligne de boutiques, rubriques centrées), puis bande de lettre et mentions. Inspiré du titre centré et du pied centré de la capture 09. Archétype : J papier à en-tête."
+        "texte": "Inspiré de la capture 09 : grand médaillon gravé centré (livre ouvert dans une couronne de rayons or et double anneau bordeaux), nom en Cormorant, lettre centrée, puis trois colonnes centrées à filets. Illustration : médaillon gravé."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -272,7 +272,7 @@
       "famille": "Applications mobiles",
       "secteur": "application de transport",
       "directionArtistique": {
-        "texte": "Pour une application de transport : quatre marches alignées à gauche de largeurs décroissantes (100, 78, 56, 34 %) en rouge brique, corail et rose pâle : marque, rubriques, boutiques, mentions. Inspiré des étages de la capture 08. Archétype : L escalier."
+        "texte": "Inspiré de la capture 09 : grande ligne de bus en escalier dessinée (tracé brique, corail, rose, arrêts carrés, autobus), puis à gauche logo, « Un pas de plus. » et boutiques, à droite quatre rubriques en lignes à filets. Illustration : ligne de bus."
       },
       "typographies": {
         "titre": "Rubik",

@@ -1,129 +1,113 @@
-// Famille v2 « Studios créatifs » — 6 modèles (ft2-302 à ft2-307), « inspirés de captures » : ANGLES DROITS partout (aucun border-radius non nul).
-// Studio de design graphique, studio photo, motion design et jeu, lettrage, production, agence de marque. AUCUNE image inventée, aucun chiffre ni coordonnée inventés : adresse, téléphone et horaires
-// viennent des Données de l'entreprise ; les intitulés de rubriques et adresses de réseaux sont des EXEMPLES à renommer dans l'éditeur.
-// Inspirations : (10) gigantesque phrase d'appel centrée puis logo à gauche et colonnes de liens à droite ; (11) carte d'appel sombre puis colonnes adresse / liens / réseaux ; (12) demi-page d'information, bandeau de lettre, liens rapides en deux colonnes.
-// MOUVEMENT (tout disparaît sous « prefers-reduced-motion: reduce ») : transitions de 360 ms ; UNE animation visible par modèle (carré qui respire, curseur de console, bouton qui glisse, case qui s'éclaire). Pas d'animation d'entrée.
+// Famille v2 « Studios créatifs » — 6 modèles (ft2-302 à ft2-307), REFAITS à partir des captures 10 / 11 / 12 : ANGLES DROITS partout, vraies illustrations SVG (aides-illus-a03.js).
+// Capture 10 (302 à 305) : phrase d'appel monumentale centrée + deux boutons, marque dessinée à gauche, colonnes de liens à droite, grande scène illustrée en bas de pied.
+// Capture 11 (306, 307) : carte d'appel sombre illustrée, fondu du clair vers le sombre, pied sombre en colonnes.
+// Capture 12 (notamment 306 en pied) : voir architecture-design. AUCUN chiffre ni coordonnée inventés ; rubriques et réseaux = EXEMPLES à renommer dans l'éditeur.
+// MOUVEMENT (coupé sous « prefers-reduced-motion: reduce ») : transitions de 360 ms ; UNE animation visible par modèle (carré / curseur qui respire) ; pas d'animation d'entrée.
 const { modeleV2, identifiantV2, identite } = require("../kit-v2");
 const A = require("../aides-inspire-studios");
-const { DOUX, racineDe, lien, caps, trait, souffle, carre, horaires, coordonnees, lettre, nomDuSite, GK, compact } = A;
+const I = require("../aides-illus-a03");
+const { DOUX, racineDe, lien, caps, trait, souffle, carre, horaires, coordonnees, lettre, nomDuSite } = A;
+const { dessin, piece, bouton, colLiens, pied11 } = I;
 const FAM = "studios-creatifs";
 const MARGE = ["56px", "32px", "20px"];
+const PAGES = [["Accueil", "/"], ["Réalisations", "/catalogue"], ["Journal", "/blog"], ["Questions", "/faq"], ["Espace client", "/connexion"]];
+const texte = (k, t, o = {}) => k.T(`<p>${t}</p>`, { fontSize: `${o.taille || 16}px`, lineHeight: 1.65, color: o.couleur, fontFamily: o.police || k.S.font, maxWidth: o.max || "520px", textAlign: o.align, fontWeight: o.poids });
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-302 « Appel de plateau » — studio de design graphique — archétype F : bandeau d'appel XXL en haut + liens en UNE colonne étroite à droite
-// Idée (capture 10) : une phrase gigantesque d'appel à gauche sur crème, un bouton orange brûlé, et à droite, étroite, la seule colonne de liens du pied ; en bas une bande encre avec les coordonnées. Pas de colonnes numérotées.
-// Polices : Syne (titres) et IBM Plex Mono. Mobile : la colonne de liens passe sous l'appel.
+// ═══ ft2-302 « Appel de plateau » — studio de design graphique — capture 10 : phrase géante centrée, marque à gauche, une colonne de liens, skyline d'affiches au soleil couchant ═══
 const plateau = identite({
   key: "i302", label: "Crème, encre et orange brûlé", humeur: "light",
   fond: "#f3ede2", texte: "#14110f", discret: "#55504a", accent: "#b8400a", surface: "#e8dfcf", encre: "#14110f",
   police: "font.ibm-plex-mono", titres: "font.syne",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#14110f33",
 });
-const CREME = "#f3ede2", ENCRE = "#14110f", ORANGE = "#b8400a";
+const ENCRE = "#14110f", ORANGE = "#b8400a", PECHE = "#f6c8a0", RUST = "#8a2f05";
 const appelPlateau = modeleV2({
   id: identifiantV2(302, "appel-de-plateau"), concept: "c-302-appel-de-plateau",
   name: "Appel de plateau", family: FAM,
-  description: "Pour un studio de design graphique : un bandeau orange brûlé XXL avec une phrase d'appel gigantesque et un bouton blanc, puis, sur crème, les coordonnées et une seule colonne étroite de liens à droite.",
-  tags: ["studio", "design graphique", "appel à l'action", "phrase géante", "crème", "orange", "angles droits"],
-  identity: plateau,
-  racine: racineDe(ENCRE),
-  widgets: ["text", "link", "sitetitle", "bizcontact", "divider", "copyright", "bizlegal"],
+  description: "Pour un studio de design graphique : une phrase d'appel gigantesque centrée sur un dégradé crème vers pêche, deux boutons, une marque dessinée (pile d'affiches), coordonnées et liens, puis une skyline d'affiches au soleil couchant, ponton et promeneurs.",
+  tags: ["studio", "design graphique", "appel à l'action", "phrase géante", "illustration", "soleil couchant", "orange", "angles droits"],
+  identity: plateau, racine: racineDe(PECHE),
+  widgets: ["html", "text", "link", "sitetitle", "bizcontact", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const pt = souffle(carre(k, "#ffffff", "12px"), 3400);
-    const phrase = G.geant("<p>On fait quoi<br>ensemble ?</p>", { taille: [36, 118], lh: 0.92, suivi: "-0.03em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env);
-    const bouton = lien(k, "Ouvrir un dossier  →", "/contact", { taille: 18, poids: "700", couleur: ORANGE, h: "64px", padH: "34px", survol: { backgroundColor: ENCRE, color: "#ffffff", transform: { x: 10 } }, focus: "#ffffff", extra: { backgroundColor: "#ffffff", borderStyle: "solid", borderWidth: "2px", borderColor: "#ffffff" } });
-    const appel = G.bande(k, [k.row([pt, caps(k, "Studio de design graphique", { couleur: "#ffffff", suivi: "0.2em" })], { gap: "12px", alignItems: "center", width: "100%" }), phrase, bouton], { fond: ORANGE, colonne: true, gap: "26px", aligne: "flex-start", padV: ["96px", "64px", "44px"], padB: ["72px", "52px", "40px"], padH: MARGE, nom: "Appel" });
-    const nom = nomDuSite(k, env, 30, ENCRE, { fontWeight: "800" });
-    const mot = k.T("<p>Une marque, une affiche, un livre, un site : racontez-nous l'idée, même brouillonne. Nous répondons avec une première piste.</p>", { fontSize: "16px", lineHeight: 1.65, color: "#3a352f", fontFamily: S.font, maxWidth: "520px" });
-    const liens = [["Accueil", "/"], ["Réalisations", "/catalogue"], ["Journal", "/blog"], ["Questions", "/faq"], ["Espace client", "/connexion"]].map(([t, u]) => lien(k, t, u, { taille: 16, poids: "600", couleur: ENCRE, bloc: true, h: "52px", survol: { color: ORANGE, transform: { x: 8 } }, focus: ORANGE, extra: { width: "100%", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#14110f55" } }));
-    const gauche = G.colonne(k, [nom, mot, caps(k, "Nous écrire", { couleur: ORANGE, suivi: "0.2em", extra: { marginTop: "14px" } }), coordonnees(k, { taille: 15, couleur: ENCRE, lien: ORANGE, survol: ENCRE, focus: ORANGE })], { poids: 4, min: "300px", gap: "12px" });
-    const droite = G.colonne(k, [k.col(liens, { gap: "0px", width: "100%", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "2px", borderColor: ENCRE })], { poids: 0, base: "260px", min: "240px", extra: { flexShrink: 0 } });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#3a352f", liens: ENCRE })(k, env);
-    const milieu = G.bande(k, [k.row([gauche, droite], { rowGap: "40px", columnGap: "72px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" }), trait(k, ENCRE, "2px"), mentions], { fond: CREME, colonne: true, gap: "36px", padV: ["56px", "44px", "36px"], padB: ["26px", "22px", "18px"], padH: MARGE, nom: "Liens" });
-    return [G.racine(k, [appel, milieu])];
+    const etiquette = k.row([souffle(carre(k, ORANGE, "12px"), 3400), caps(k, "Studio de design graphique", { couleur: RUST, suivi: "0.2em" })], { gap: "12px", alignItems: "center", justifyContent: "center" });
+    const phrase = G.geant("<p>On fait quoi<br>ensemble ?</p>", { taille: [40, 120], lh: 0.95, suivi: "-0.03em", poids: "800", police: S.head, couleur: ENCRE })(k, env, true);
+    const sous = texte(k, "Une marque, une affiche, un livre, un site : racontez-nous l'idée, même brouillonne.", { taille: 18, couleur: "#3a352f", align: "center", max: "560px" });
+    const boutons = k.row([bouton(k, "Ouvrir un dossier  →", "/contact", { couleur: "#ffffff", fond: ORANGE, survolFond: ENCRE, survolTexte: "#ffffff", focus: ENCRE }), bouton(k, "Voir les réalisations", "/catalogue", { couleur: ENCRE, bord: ENCRE, survolFond: ENCRE, survolTexte: "#ffffff", focus: ORANGE })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" });
+    const haut = G.bande(k, [etiquette, phrase, sous, boutons], { fond: "#f3ede2", degrade: { from: "#f3ede2", to: PECHE, angle: 180 }, colonne: true, gap: "26px", aligne: "center", padV: ["96px", "72px", "52px"], padB: ["72px", "56px", "40px"], padH: MARGE, nom: "Appel" });
+    const marque = k.col([piece(k, I.marque302(), { width: "104px" }), nomDuSite(k, env, 30, ENCRE, { fontWeight: "800" }), texte(k, "Le studio qui dessine ce qui se voit.", { taille: 15, couleur: "#3a352f", max: "300px" }), G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Behance", "https://www.behance.net/"]], { taille: 15, couleur: ENCRE, survol: ORANGE, focus: ORANGE })(k, env)], { gap: "12px", alignItems: "flex-start", flexGrow: 3, flexBasis: "0px", minWidth: "260px" });
+    const contact = k.col([caps(k, "Nous écrire", { couleur: RUST, suivi: "0.2em" }), coordonnees(k, { taille: 15, couleur: ENCRE, lien: RUST, survol: ENCRE, focus: ORANGE })], { gap: "10px", flexGrow: 2, flexBasis: "0px", minWidth: "220px", alignItems: "flex-start" });
+    const liens = colLiens(k, "Le studio", PAGES, { titre: RUST, texte: ENCRE, survol: ORANGE, focus: ORANGE, min: "180px" });
+    const milieu = G.bande(k, [k.row([marque, liens, contact], { rowGap: "36px", columnGap: "48px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" }), trait(k, "#14110f55", "1px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#3a352f", liens: ENCRE })(k, env)], { fond: PECHE, colonne: true, gap: "30px", padV: ["24px", "20px", "12px"], padB: ["26px", "22px", "18px"], padH: MARGE, nom: "Liens" });
+    const scene = G.bande(k, dessin(k, I.sceneAffiches(1440, 380), I.sceneAffiches(480, 320)), { fond: PECHE, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", aligne: "stretch", gap: "0px", nom: "Skyline d'affiches" });
+    return [G.racine(k, [haut, milieu, scene])];
   },
 }, FAM);
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-303 « Tirages en damier » — studio photo et marque — archétype C : GRILLE DE CASES ÉGALES (damier de 8 cases à angles droits), chaque case est un lien ou une information
-// Idée (capture 11, colonnes → cases) : huit cases carrées sur noir, alternant deux gris, lime acide au survol ; nom du studio, portfolio, journal, projet, coordonnées, Instagram, questions, espace client.
-// Polices : Space Grotesk et Space Mono. Mobile : deux cases par rangée.
+// ═══ ft2-303 « Tirages en damier » — studio photo — capture 10 : halo au sommet, objectif dessiné, phrase centrée, colonnes à droite, planche de vignettes dessinées en bas ═══
 const tirages = identite({
   key: "i303", label: "Noir graphite et lime acide", humeur: "dark",
   fond: "#0e0e10", texte: "#f4f4ef", discret: "#b4b4ae", accent: "#d4ff3a", surface: "#17171b", surEncre: "#f4f4ef", encre: "#0e0e10",
   police: "font.space-mono", titres: "font.space-grotesk",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#f4f4ef26",
 });
-const NOIR = "#0e0e10", GRIS1 = "#17171b", GRIS2 = "#202026", LIME = "#d4ff3a";
+const NOIR = "#0e0e10", LIME = "#d4ff3a";
 const tiragesDamier = modeleV2({
   id: identifiantV2(303, "tirages-en-damier"), concept: "c-303-tirages-en-damier",
   name: "Tirages en damier", family: FAM,
-  description: "Pour un studio photo ou de marque : un damier de huit cases carrées sur noir (nom, portfolio, journal, projet, coordonnées, Instagram, questions, espace client) qui virent au lime acide au survol.",
-  tags: ["studio photo", "damier", "cases", "noir", "lime", "grille", "angles droits"],
-  identity: tirages,
-  racine: racineDe(NOIR),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  description: "Pour un studio photo : un halo lime sur noir graphite, un objectif dessiné (diaphragme à six lames), une phrase d'appel centrée, trois colonnes de liens et de coordonnées, puis une planche de quatre vignettes dessinées en pellicule.",
+  tags: ["studio photo", "objectif", "pellicule", "vignettes", "halo", "noir", "lime", "angles droits"],
+  identity: tirages, racine: racineDe(NOIR),
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const base = { flexGrow: 1, flexBasis: "25%", minWidth: "150px", minHeight: "190px", borderStyle: "solid", borderWidth: "1px", borderColor: "#f4f4ef1f", borderRadius: "0px", paddingTop: "22px", paddingBottom: "22px", paddingLeft: "22px", paddingRight: "22px", boxSizing: "border-box" };
-    const caseLien = (t, u, fond, sous) => lien(k, t, u, { taille: 24, poids: "600", police: S.head, couleur: "#f4f4ef", bloc: true, h: "190px", lh: 1.1, survol: { backgroundColor: LIME, color: NOIR, transform: { y: -4 } }, focus: LIME, extra: { ...base, backgroundColor: fond, alignItems: "flex-end", justifyContent: "space-between", paddingLeft: "22px", paddingRight: "22px" } });
-    const caseFixe = (enfants, fond) => k.col(enfants, { ...base, backgroundColor: fond, justifyContent: "space-between", gap: "12px" });
-    const pt = souffle(carre(k, LIME, "14px"), 3000);
-    const nom = nomDuSite(k, env, 28, "#f4f4ef", { fontWeight: "700" });
-    const c1 = caseFixe([k.row([pt, caps(k, "Studio", { couleur: LIME, suivi: "0.2em" })], { gap: "10px", alignItems: "center" }), nom], GRIS2);
-    const c5 = caseFixe([caps(k, "Contact", { couleur: LIME, suivi: "0.2em" }), coordonnees(k, { taille: 14, couleur: "#f4f4ef", lien: "#ffffff", survol: LIME, focus: LIME })], GRIS2);
-    const cases = [c1, caseLien("Portfolio ↗", "/catalogue", GRIS1), caseLien("Journal ↗", "/blog", GRIS2), caseLien("Parlons projet ↗", "/contact", GRIS1),
-      c5, caseLien("Instagram ↗", "https://www.instagram.com/", GRIS1), caseLien("Questions ↗", "/faq", GRIS2), caseLien("Espace client ↗", "/connexion", GRIS1)];
-    const damier = k.row(cases, { gap: "0px", alignItems: "stretch", width: "100%", flexWrap: "wrap" });
-    const haut = G.bande(k, [damier], { fond: NOIR, colonne: true, padV: ["56px", "40px", "20px"], padB: ["0px", "0px", "0px"], padH: MARGE, nom: "Damier" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b4b4ae", liens: "#f4f4ef" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: NOIR, colonne: true, padV: ["28px", "24px", "20px"], padB: ["28px", "24px", "20px"], padH: MARGE, nom: "Mentions" });
-    return [G.racine(k, [haut, bas])];
+    const mono = piece(k, I.marque303(), { width: "128px", alignSelf: "center" });
+    const phrase = G.geant("<p>Le prochain tirage,<br>c'est le vôtre ?</p>", { taille: [38, 104], lh: 0.98, suivi: "-0.03em", poids: "600", police: S.head, couleur: "#f4f4ef" })(k, env, true);
+    const sous = texte(k, "Portraits, produits, éditoriaux : un rendez-vous, une première planche contact.", { taille: 18, couleur: "#d4d4cd", align: "center" });
+    const boutons = k.row([bouton(k, "Parlons projet  ↗", "/contact", { couleur: NOIR, fond: LIME, survolFond: "#ffffff", survolTexte: NOIR, focus: "#ffffff" }), bouton(k, "Voir le portfolio", "/catalogue", { couleur: "#f4f4ef", bord: "#f4f4ef88", survolFond: "#f4f4ef", survolTexte: NOIR, focus: LIME })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" });
+    const haut = G.bande(k, [mono, phrase, sous, boutons], { fond: NOIR, degrade: { from: "#33460a", to: NOIR, angle: 180 }, colonne: true, gap: "26px", aligne: "center", padV: ["88px", "68px", "48px"], padB: ["64px", "52px", "40px"], padH: MARGE, nom: "Appel" });
+    const ligneLiens = k.row(PAGES.map(([t, u]) => lien(k, t, u, { taille: 15, poids: "500", couleur: "#f4f4ef", survol: { color: LIME, transform: { y: -3 } }, focus: LIME })), { rowGap: "0px", columnGap: "26px", alignItems: "center", flexWrap: "wrap" });
+    const entete = k.row([nomDuSite(k, env, 28, "#f4f4ef", { fontWeight: "700" }), ligneLiens], { rowGap: "12px", columnGap: "40px", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap" });
+    const contact = k.row([coordonnees(k, { taille: 14, couleur: "#f4f4ef", lien: "#ffffff", survol: LIME, focus: LIME, layout: "inline" }), G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["Vimeo", "https://vimeo.com/"]], { taille: 15, couleur: "#f4f4ef", survol: LIME, focus: LIME })(k, env)], { rowGap: "12px", columnGap: "40px", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap" });
+    const scene = G.bande(k, dessin(k, I.sceneVignettes(1440, 250, 4), I.sceneVignettes(480, 250, 2)), { fond: NOIR, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", aligne: "stretch", gap: "0px", nom: "Planche" });
+    const milieu = G.bande(k, [entete, contact, trait(k, "#f4f4ef33", "1px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#b4b4ae", liens: "#f4f4ef" })(k, env)], { fond: NOIR, colonne: true, gap: "22px", padV: ["40px", "32px", "28px"], padB: ["32px", "28px", "24px"], padH: MARGE, nom: "Colonnes" });
+    return [G.racine(k, [haut, scene, milieu])];
   },
 }, FAM);
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-304 « Console de montage » — studio de motion design et de jeu — archétype K : FENÊTRE / CONSOLE (le pied ressemble à un bloc d'interface)
-// Idée : une fenêtre de terminal posée sur un aplat violet : barre de titre à trois carrés, nom du studio en vert menthe, commandes cliquables (« ouvrir portfolio »…), sortie « contact » et curseur qui respire.
-// Polices : JetBrains Mono (tout). Mobile : la fenêtre prend toute la largeur, les colonnes s'empilent.
+// ═══ ft2-304 « Console de montage » — studio de motion design et de jeu — capture 10 : phrase centrée, marque pixel, liste de commandes, paysage de synthèse en bas ═══
 const console_ = identite({
   key: "i304", label: "Console graphite et violet", humeur: "dark",
-  fond: "#0d1117", texte: "#e6edf3", discret: "#9aa7b5", accent: "#5eead4", surface: "#161d29", surEncre: "#e6edf3", encre: "#0d1117",
+  fond: "#1d0a55", texte: "#e6edf3", discret: "#c5b8f0", accent: "#5eead4", surface: "#2a1470", surEncre: "#e6edf3", encre: "#1d0a55",
   police: "font.jetbrains-mono", titres: "font.jetbrains-mono",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#e6edf333",
 });
-const VIOLET = "#4b2fd0", FEN = "#0d1117", BARRE = "#1b2432", MENTHE = "#5eead4";
+const NUIT_V = "#1d0a55", MENTHE = "#5eead4";
 const consoleMontage = modeleV2({
   id: identifiantV2(304, "console-de-montage"), concept: "c-304-console-de-montage",
   name: "Console de montage", family: FAM,
-  description: "Pour un studio de motion design ou de jeu : une fenêtre de terminal sur aplat violet, avec barre de titre, commandes cliquables vers les pages, sortie des coordonnées et curseur qui respire.",
-  tags: ["motion design", "jeu", "console", "terminal", "violet", "menthe", "monospace", "angles droits"],
-  identity: console_,
-  racine: racineDe(VIOLET),
-  widgets: ["sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
+  description: "Pour un studio de motion design ou de jeu : un fantôme en pixels, une phrase d'appel centrée en monospace, des commandes cliquables et une sortie de coordonnées au curseur qui respire, puis un paysage de synthèse (soleil en tranches, montagnes, grille en perspective).",
+  tags: ["motion design", "jeu", "console", "pixel", "synthwave", "violet", "menthe", "monospace", "angles droits"],
+  identity: console_, racine: racineDe(NUIT_V),
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const barre = k.row([carre(k, "#ff6b6b", "12px"), carre(k, "#ffd166", "12px"), carre(k, MENTHE, "12px"), k.T("<p>studio — console de montage</p>", { fontSize: "13px", color: "#9aa7b5", fontFamily: S.font, marginLeft: "10px" })], { gap: "8px", alignItems: "center", backgroundColor: BARRE, paddingTop: "12px", paddingBottom: "12px", paddingLeft: "18px", paddingRight: "18px", width: "100%" });
-    const nom = nomDuSite(k, env, 30, MENTHE, { fontWeight: "700", fontFamily: S.font });
-    const cmd = (t, u) => lien(k, `$ ouvrir ${t}`, u, { taille: 17, poids: "500", couleur: "#e6edf3", bloc: true, h: "46px", survol: { color: MENTHE, backgroundColor: "#1b2432", transform: { x: 8 } }, focus: MENTHE, extra: { flexGrow: 1, flexBasis: "40%", minWidth: "220px", paddingLeft: "10px", paddingRight: "10px" } });
-    const commandes = k.row([cmd("portfolio", "/catalogue"), cmd("journal", "/blog"), cmd("questions", "/faq"), cmd("espace-client", "/connexion"), cmd("contact", "/contact")], { rowGap: "0px", columnGap: "24px", width: "100%", flexWrap: "wrap" });
+    const mono = piece(k, I.marque304(), { width: "104px", alignSelf: "center" });
+    const phrase = G.geant("<p>Prêts pour la<br>prochaine scène ?</p>", { taille: [34, 96], lh: 1, suivi: "-0.04em", poids: "700", police: S.font, couleur: "#ffffff" })(k, env, true);
+    const boutons = k.row([bouton(k, "$ ouvrir portfolio", "/catalogue", { couleur: NUIT_V, fond: MENTHE, survolFond: "#ffffff", survolTexte: NUIT_V, focus: "#ffffff" }), bouton(k, "$ nous écrire", "/contact", { couleur: "#ffffff", bord: "#ffffff99", survolFond: "#ffffff", survolTexte: NUIT_V, focus: MENTHE })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" });
+    const haut = G.bande(k, [mono, caps(k, "# studio de motion design et de jeu", { couleur: MENTHE, suivi: "0.12em", extra: { textAlign: "center" } }), phrase, boutons], { fond: NUIT_V, degrade: { from: "#12062f", to: NUIT_V, angle: 180 }, colonne: true, gap: "24px", aligne: "center", padV: ["88px", "68px", "48px"], padB: ["56px", "44px", "36px"], padH: MARGE, nom: "Appel" });
+    const cmd = (t, u) => lien(k, `$ ouvrir ${t}`, u, { taille: 16, poids: "500", couleur: "#e6edf3", bloc: true, h: "46px", survol: { color: MENTHE, backgroundColor: "#2a1470", transform: { x: 8 } }, focus: MENTHE, extra: { flexGrow: 1, flexBasis: "40%", minWidth: "190px", paddingLeft: "10px", paddingRight: "10px" } });
+    const barre = k.row([carre(k, "#ff6b6b", "12px"), carre(k, "#ffd166", "12px"), carre(k, MENTHE, "12px"), k.T("<p>studio — console de montage</p>", { fontSize: "13px", color: "#c5b8f0", fontFamily: S.font, marginLeft: "10px" })], { gap: "8px", alignItems: "center", backgroundColor: "#2a1470", paddingTop: "12px", paddingBottom: "12px", paddingLeft: "18px", paddingRight: "18px", width: "100%" });
     const curseur = souffle(k.col([], { width: "12px", height: "22px", backgroundColor: MENTHE, borderRadius: "0px" }), 1600);
-    const invite = k.row([k.T("<p>$</p>", { fontSize: "17px", color: MENTHE, fontFamily: S.font }), curseur], { gap: "10px", alignItems: "center", marginTop: "6px" });
-    const sortie = k.col([k.T("<p>&gt; contact --afficher</p>", { fontSize: "13px", color: MENTHE, fontFamily: S.font }), coordonnees(k, { taille: 15, couleur: "#e6edf3", lien: "#ffffff", survol: MENTHE, focus: MENTHE })], { gap: "10px", width: "100%", paddingTop: "18px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "1px", borderColor: "#e6edf333", borderRadius: "0px" });
-    const corps = k.col([k.T("<p># bienvenue au studio</p>", { fontSize: "13px", color: "#9aa7b5", fontFamily: S.font }), nom, commandes, sortie, invite], { gap: "12px", alignItems: "flex-start", width: "100%", paddingTop: "28px", paddingBottom: "32px", paddingLeft: "28px", paddingRight: "28px" }, { paddingLeft: "20px", paddingRight: "20px" }, { paddingLeft: "16px", paddingRight: "16px" });
-    const fenetre = k.col([barre, corps], { backgroundColor: FEN, gap: "0px", width: "100%", maxWidth: "1040px", marginLeft: "auto", marginRight: "auto", borderStyle: "solid", borderWidth: "2px", borderColor: "#0d1117", borderRadius: "0px", transitionDuration: DOUX });
-    const haut = G.bande(k, [fenetre], { fond: VIOLET, colonne: true, padV: ["72px", "52px", "32px"], padB: ["40px", "32px", "24px"], padH: MARGE, nom: "Fenêtre" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#ffffff", liens: "#ffffff" })(k, env);
-    const bas = G.bande(k, [mentions], { fond: VIOLET, colonne: true, padV: ["16px", "14px", "12px"], padB: ["24px", "20px", "16px"], padH: MARGE, nom: "Mentions" });
-    return [G.racine(k, [haut, bas])];
+    const corps = k.col([nomDuSite(k, env, 26, MENTHE, { fontWeight: "700", fontFamily: S.font }), k.row([cmd("journal", "/blog"), cmd("questions", "/faq"), cmd("espace-client", "/connexion"), cmd("accueil", "/")], { rowGap: "0px", columnGap: "20px", width: "100%", flexWrap: "wrap" }), k.row([k.T("<p>&gt; contact --afficher</p>", { fontSize: "13px", color: MENTHE, fontFamily: S.font }), curseur], { gap: "10px", alignItems: "center", marginTop: "10px" }), coordonnees(k, { taille: 15, couleur: "#e6edf3", lien: "#ffffff", survol: MENTHE, focus: MENTHE })], { gap: "12px", alignItems: "flex-start", width: "100%", paddingTop: "26px", paddingBottom: "30px", paddingLeft: "28px", paddingRight: "28px" }, { paddingLeft: "20px", paddingRight: "20px" }, { paddingLeft: "16px", paddingRight: "16px" });
+    const fenetre = k.col([barre, corps], { backgroundColor: "#12062f", gap: "0px", width: "100%", maxWidth: "1040px", marginLeft: "auto", marginRight: "auto", borderStyle: "solid", borderWidth: "2px", borderColor: MENTHE, borderRadius: "0px", transitionDuration: DOUX });
+    const milieu = G.bande(k, [fenetre, G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d9d0f5", liens: "#ffffff" })(k, env)], { fond: NUIT_V, colonne: true, gap: "26px", padV: ["16px", "16px", "8px"], padB: ["32px", "28px", "24px"], padH: MARGE, nom: "Fenêtre" });
+    const scene = G.bande(k, dessin(k, I.sceneSynth(1440, 380), I.sceneSynth(480, 320)), { fond: NUIT_V, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", aligne: "stretch", gap: "0px", nom: "Paysage" });
+    return [G.racine(k, [haut, milieu, scene])];
   },
 }, FAM);
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-305 « Signature du studio » — studio de lettrage — archétype B : NOM MONUMENTAL seul au centre, très peu de liens, grand vide
-// Idée : sur jaune moutarde, le nom du site en immense serif centré, un petit carré qui respire au-dessus, trois liens et une adresse e-mail en dessous : rien d'autre. Le vide fait la signature.
-// Polices : Instrument Serif (nom) et Manrope. Mobile : le nom reste monumental mais se réduit (taille fluide).
+// ═══ ft2-305 « Signature du studio » — studio de lettrage — capture 10 : phrase géante, grand monogramme dessiné à gauche, lettre et liens à droite, bandes ondulées en bas ═══
 const signature = identite({
   key: "i305", label: "Moutarde et encre", humeur: "light",
   fond: "#f2c230", texte: "#141414", discret: "#3a2f00", accent: "#141414", surface: "#e5b41a", encre: "#141414",
@@ -134,69 +118,59 @@ const MOUTARDE = "#f2c230", NOIR2 = "#141414";
 const signatureStudio = modeleV2({
   id: identifiantV2(305, "signature-du-studio"), concept: "c-305-signature-du-studio",
   name: "Signature du studio", family: FAM,
-  description: "Pour un studio de lettrage : le nom du site en immense serif centré sur jaune moutarde, un carré qui respire, trois liens et une adresse e-mail. Très peu d'éléments, beaucoup de vide.",
-  tags: ["lettrage", "nom monumental", "moutarde", "serif", "minimal", "centré", "angles droits"],
-  identity: signature,
-  racine: racineDe(MOUTARDE),
-  widgets: ["sitetitle", "link", "copyright", "bizlegal"],
+  description: "Pour un studio de lettrage : une phrase géante en serif sur jaune moutarde, un grand monogramme S dessiné à gauche, la lettre d'information et les liens à droite, puis cinq bandes ondulées qui montent du bas, un soleil pâle en fond.",
+  tags: ["lettrage", "monogramme", "moutarde", "serif", "vagues", "ondulations", "lettre d'information", "angles droits"],
+  identity: signature, racine: racineDe(MOUTARDE),
+  widgets: ["html", "sitetitle", "text", "link", "emailsubscribe", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const pt = souffle(carre(k, NOIR2, "16px"), 3600);
-    const nom = nomDuSite(k, env, 160, NOIR2, { fontWeight: "400", letterSpacing: "-0.03em", lineHeight: 0.95, fontSize: "fluid:56-190", textAlign: "center", overflowWrap: "anywhere" });
-    nom.parts.link.styles.desktop.textAlign = "center";
-    const liens = k.row([["Réalisations", "/catalogue"], ["Journal", "/blog"], ["Nous écrire", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 18, poids: "700", couleur: NOIR2, soulign: true, survol: { color: "#6b4f00", transform: { y: -3 } }, focus: NOIR2, extra: { textUnderlineOffset: "6px", marginLeft: "14px", marginRight: "14px" } })), { gap: "0px", justifyContent: "center", alignItems: "center" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#2b2000", liens: NOIR2 })(k, env, true);
-    const centre = k.col([pt, nom, liens, k.col([], { height: "56px" }), mentions], { alignItems: "center", gap: "26px", width: "100%", textAlign: "center" });
-    const haut = G.bande(k, [centre], { fond: MOUTARDE, colonne: true, aligne: "center", padV: ["160px", "110px", "72px"], padB: ["40px", "32px", "28px"], padH: MARGE, nom: "Signature" });
-    return [G.racine(k, [haut])];
+    const phrase = G.geant("<p>On dessine<br>vos lettres.</p>", { taille: [48, 150], lh: 0.92, suivi: "-0.03em", poids: "400", police: S.head, couleur: NOIR2 })(k, env, true);
+    const boutons = k.row([bouton(k, "Commander un lettrage  →", "/contact", { couleur: MOUTARDE, fond: NOIR2, survolFond: "#ffffff", survolTexte: NOIR2, focus: "#ffffff" }), bouton(k, "Voir les planches", "/catalogue", { couleur: NOIR2, bord: NOIR2, survolFond: NOIR2, survolTexte: MOUTARDE, focus: NOIR2 })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" });
+    const haut = G.bande(k, [souffle(carre(k, NOIR2, "16px"), 3600), phrase, boutons], { fond: MOUTARDE, colonne: true, gap: "28px", aligne: "center", padV: ["96px", "72px", "52px"], padB: ["64px", "48px", "36px"], padH: MARGE, nom: "Appel" });
+    const gauche = k.col([piece(k, I.marque305(), { width: "190px" }), nomDuSite(k, env, 30, NOIR2, { fontWeight: "400", fontSize: "fluid:28-40" })], { gap: "14px", alignItems: "flex-start", flexGrow: 2, flexBasis: "0px", minWidth: "220px" });
+    const abo = lettre(k, env, { titre: "Lettre du studio", intro: "Un lettrage du mois, les coulisses, de temps en temps.", bouton: "S'abonner", largeur: "100%", accent: NOIR2, texte: NOIR2, surBouton: MOUTARDE, fond: MOUTARDE, survolBouton: "#ffffff", survolTexte: NOIR2, soulignement: "2px", couleurTitre: NOIR2, focus: NOIR2 });
+    const liens = k.row([["Réalisations", "/catalogue"], ["Journal", "/blog"], ["Questions", "/faq"], ["Contact", "/contact"]].map(([t, u]) => lien(k, t, u, { taille: 17, poids: "700", couleur: NOIR2, soulign: true, survol: { color: "#6b4f00", transform: { y: -3 } }, focus: NOIR2, extra: { textUnderlineOffset: "6px", marginRight: "22px" } })), { gap: "0px", flexWrap: "wrap", alignItems: "center" });
+    const droite = k.col([abo, liens], { gap: "18px", flexGrow: 3, flexBasis: "0px", minWidth: "300px", alignItems: "stretch" });
+    const milieu = G.bande(k, [k.row([gauche, droite], { rowGap: "32px", columnGap: "56px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" }), trait(k, NOIR2, "2px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#2b2000", liens: NOIR2 })(k, env)], { fond: MOUTARDE, colonne: true, gap: "30px", padV: ["16px", "16px", "8px"], padB: ["40px", "32px", "24px"], padH: MARGE, nom: "Monogramme" });
+    const scene = G.bande(k, dessin(k, I.sceneVagues(1440, 300), I.sceneVagues(480, 240)), { fond: MOUTARDE, colonne: true, padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], max: "100%", aligne: "stretch", gap: "0px", nom: "Vagues" });
+    return [G.racine(k, [haut, milieu, scene])];
   },
 }, FAM);
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-306 « Plateau et régie » — studio de production — archétype E : DEUX DEMI-PAGES bord à bord de couleurs opposées (gauche = venir, droite = agir)
-// Idée (capture 12) : à gauche, crème, « Venez au studio » avec adresse, téléphone et horaires ; à droite, brique, la lettre d'information puis les liens rapides sur deux colonnes et les réseaux. Une barre brique foncé ferme.
-// Polices : Fraunces (titres) et Mulish. Mobile : les deux panneaux s'empilent.
+// ═══ ft2-306 « Plateau et régie » — studio de production — capture 11 : carte d'appel sombre (faisceaux de projecteurs), fondu, pied sombre en colonnes ═══
 const regie = identite({
-  key: "i306", label: "Crème et brique", humeur: "light",
-  fond: "#efe4d0", texte: "#2a1710", discret: "#5c4034", accent: "#9c2f22", surface: "#e3d4b8", encre: "#2a1710",
+  key: "i306", label: "Noir brique et crème", humeur: "dark",
+  fond: "#1a0e0b", texte: "#f8ece6", discret: "#e3d4c8", accent: "#e8a07f", surface: "#2a1710", encre: "#1a0e0b",
   police: "font.mulish", titres: "font.fraunces",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "500", bordure: "1px", ligne: "#2a171033",
 });
-const CRM = "#efe4d0", BRIQUE = "#9c2f22", BRIQUE_F = "#5c1b13", ENC3 = "#2a1710";
-const panneau = (k, enfants, fond) => k.col(enfants, { flexGrow: 1, flexBasis: "0px", minWidth: "320px", gap: "18px", alignItems: "flex-start", paddingTop: "72px", paddingBottom: "72px", paddingLeft: "64px", paddingRight: "64px", backgroundColor: fond, borderRadius: "0px" }, { paddingTop: "52px", paddingBottom: "52px", paddingLeft: "36px", paddingRight: "36px" }, { paddingTop: "40px", paddingBottom: "40px", paddingLeft: "20px", paddingRight: "20px", minWidth: "0px", flexBasis: "100%" });
+const CRM = "#efe4d0", BRIQUE = "#9c2f22", SOMBRE6 = "#1a0e0b";
 const plateauRegie = modeleV2({
   id: identifiantV2(306, "plateau-et-regie"), concept: "c-306-plateau-et-regie",
   name: "Plateau et régie", family: FAM,
-  description: "Pour un studio de production : deux demi-pages bord à bord, crème (venir au studio, adresse, horaires) et brique (lettre d'information, liens rapides sur deux colonnes, réseaux), puis une barre crème à filet brique foncé pour les mentions.",
-  tags: ["production", "deux panneaux", "brique", "crème", "lettre d'information", "horaires", "angles droits"],
-  identity: regie,
-  racine: racineDe(CRM),
-  widgets: ["text", "link", "bizcontact", "bizhours", "emailsubscribe", "copyright", "bizlegal"],
+  description: "Pour un studio de production : une carte d'appel sombre éclairée par quatre faisceaux de projecteurs sur un plateau, un fondu crème vers noir brique, puis un pied en colonnes (clap dessiné, adresse, horaires, pages, réseaux).",
+  tags: ["production", "projecteurs", "carte d'appel", "fondu", "brique", "crème", "horaires", "angles droits"],
+  identity: regie, racine: racineDe(SOMBRE6),
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "bizhours", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const titreG = k.T("<p>Venez au studio</p>", { fontSize: "fluid:36-60", lineHeight: 1.05, fontFamily: S.head, fontWeight: "600", color: ENC3, letterSpacing: "-0.01em" });
-    const intro = k.T("<p>Passez voir les plateaux, les tirages et les maquettes en cours, ou écrivez-nous pour fixer un rendez-vous.</p>", { fontSize: "16px", lineHeight: 1.65, color: "#4a3328", fontFamily: S.font, maxWidth: "480px" });
-    const pt = souffle(carre(k, BRIQUE, "12px"), 3400);
-    const g = panneau(k, [k.row([pt, caps(k, "Visite et horaires", { couleur: BRIQUE })], { gap: "10px", alignItems: "center" }), titreG, intro, coordonnees(k, { taille: 17, couleur: ENC3, lien: BRIQUE, survol: ENC3, focus: BRIQUE }), caps(k, "Horaires", { couleur: BRIQUE }), horaires(k, { taille: 16, couleur: ENC3 })], CRM);
-    const abo = lettre(k, env, { titre: "Lettre du studio", intro: "Un message de temps en temps : projets terminés, coulisses, invitations.", bouton: "S'abonner", largeur: "440px", accent: CRM, texte: "#f8ece6", surBouton: ENC3, fond: BRIQUE, survolBouton: "#ffffff", survolTexte: BRIQUE, soulignement: "2px", couleurTitre: "#f8ece6", focus: "#ffffff" });
-    const rapides = ["Réalisations|/catalogue", "Journal|/blog", "Questions|/faq", "Espace client|/connexion", "Contact|/contact", "Accueil|/"].map((s) => { const [t, u] = s.split("|"); return lien(k, t, u, { taille: 16, poids: "700", couleur: "#ffffff", bloc: true, h: "48px", survol: { color: CRM, transform: { x: 8 } }, focus: "#ffffff", extra: { flexGrow: 1, flexBasis: "40%", minWidth: "140px", borderStyle: "solid", borderWidth: "0px", borderBottomWidth: "1px", borderColor: "#f8ece666" } }); });
-    const liens = k.row(rapides, { columnGap: "28px", rowGap: "0px", width: "100%", maxWidth: "460px" });
-    const d = panneau(k, [caps(k, "Rester en contact", { couleur: "#f8ece6" }), abo, caps(k, "Liens rapides", { couleur: "#f8ece6", extra: { marginTop: "18px" } }), liens, G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 15, couleur: "#ffffff", survol: CRM, focus: "#ffffff" })(k, env)], BRIQUE);
-    const moitie = k.row([g, d], { gap: "0px", alignItems: "stretch", flexWrap: "wrap", width: "100%" });
-    const haut = G.bande(k, [moitie], { fond: CRM, colonne: true, max: "100%", padV: ["0px", "0px", "0px"], padB: ["0px", "0px", "0px"], padH: ["0px", "0px", "0px"], aligne: "stretch", nom: "Deux panneaux" });
-    const mentions = G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#4a3328", liens: ENC3 })(k, env);
-    const bas = G.bande(k, [mentions], { fond: CRM, filetHaut: { epaisseur: "4px", couleur: BRIQUE_F }, colonne: true, padV: ["24px", "20px", "18px"], padB: ["24px", "20px", "18px"], padH: MARGE, nom: "Mentions" });
-    return [G.racine(k, [haut, bas])];
+    const art = piece(k, I.artFaisceaux(1200, 250));
+    const contenu = [k.row([souffle(carre(k, "#f3ede2", "12px"), 3400), caps(k, "Plateau ouvert", { couleur: "#f3ede2", suivi: "0.22em" })], { gap: "12px", alignItems: "center" }),
+      G.geant("<p>Prêts à tourner ?</p>", { taille: [40, 96], lh: 1, suivi: "-0.02em", poids: "600", police: S.head, couleur: "#f8ece6" })(k, env, true),
+      k.row([bouton(k, "Réserver le plateau  →", "/contact", { couleur: BRIQUE, fond: "#f3ede2", survolFond: "#ffffff", survolTexte: BRIQUE, focus: "#ffffff" }), bouton(k, "Voir les tournages", "/catalogue", { couleur: "#f8ece6", bord: "#f8ece699", survolFond: "#f8ece6", survolTexte: "#1d0f0d", focus: "#ffffff" })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" })];
+    const marque = k.col([piece(k, I.marque306(), { width: "110px" }), nomDuSite(k, env, 26, "#f8ece6", { fontWeight: "600" }), texte(k, "Plateaux, régie et post-production.", { taille: 15, couleur: "#e3d4c8", max: "260px" })], { gap: "12px", alignItems: "flex-start", flexGrow: 2, flexBasis: "0px", minWidth: "220px" });
+    const adresse = k.col([caps(k, "Adresse", { couleur: "#e8a07f", suivi: "0.16em" }), coordonnees(k, { taille: 15, couleur: "#f8ece6", lien: "#ffffff", survol: "#e8a07f", focus: "#ffffff" })], { gap: "10px", flexGrow: 2, flexBasis: "0px", minWidth: "220px", alignItems: "flex-start" });
+    const heures = k.col([caps(k, "Horaires", { couleur: "#e8a07f", suivi: "0.16em" }), horaires(k, { taille: 15, couleur: "#f8ece6" })], { gap: "10px", flexGrow: 2, flexBasis: "0px", minWidth: "220px", alignItems: "flex-start" });
+    const pages = colLiens(k, "Pages", PAGES, { titre: "#e8a07f", texte: "#f8ece6", survol: "#e8a07f", focus: "#ffffff" });
+    const reseaux = k.col([caps(k, "Réseaux", { couleur: "#e8a07f", suivi: "0.16em" }), G.reseauxTexte([["Instagram", "https://www.instagram.com/"], ["YouTube", "https://www.youtube.com/"]], { taille: 15, couleur: "#f8ece6", survol: "#e8a07f", focus: "#ffffff" })(k, env)], { gap: "10px", flexGrow: 1, flexBasis: "0px", minWidth: "160px", alignItems: "flex-start" });
+    return [G.racine(k, pied11(k, env, G, { pos: "haut", art, carteFond: "#1d0f0d", clair: CRM, sombre: SOMBRE6, contenu, pied: [k.row([marque, adresse, heures, pages, reseaux], { rowGap: "32px", columnGap: "36px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" }), trait(k, "#f8ece633", "1px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#e3d4c8", liens: "#ffffff" })(k, env)] }))];
   },
 }, FAM);
 
-// ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════════
-// ft2-307 « Du brief à la livraison » — agence de marque — archétype I : FRISE HORIZONTALE EN ÉTAPES à points carrés
-// Idée : sur menthe pâle, une frise de cinq étapes (brief, esquisses, épreuves, production, livraison) : un point carré sur un filet, et sous chaque point un lien vers la page utile. Le premier point respire. Une bande vert forêt porte les coordonnées.
-// Polices : Epilogue (titres) et Lexend. Mobile : les étapes s'empilent verticalement.
+// ═══ ft2-307 « Du brief à la livraison » — agence de marque — capture 11 : carte verte avec frise de motifs de marque en bas, fondu menthe vers vert forêt, pied en colonnes ═══
 const frise = identite({
-  key: "i307", label: "Menthe pâle et vert forêt", humeur: "light",
-  fond: "#d9f2e6", texte: "#0c3b2e", discret: "#2d5a4b", accent: "#b23a08", surface: "#c6e8d6", encre: "#0c3b2e",
+  key: "i307", label: "Vert forêt profond et menthe", humeur: "dark",
+  fond: "#07241b", texte: "#ffffff", discret: "#d9f2e6", accent: "#ffb08a", surface: "#0c3b2e", encre: "#07241b",
   police: "font.lexend", titres: "font.epilogue",
   rayon: "0px", rayonBouton: "0px", ombre: "none", poids: "400", bordure: "1px", ligne: "#0c3b2e44",
 });
@@ -204,26 +178,25 @@ const MENTHE_P = "#d9f2e6", FORET = "#0c3b2e", ROUILLE = "#b23a08";
 const friseLivraison = modeleV2({
   id: identifiantV2(307, "du-brief-a-la-livraison"), concept: "c-307-du-brief-a-la-livraison",
   name: "Du brief à la livraison", family: FAM,
-  description: "Pour une agence de marque : une frise de cinq étapes à points carrés sur menthe pâle (brief, esquisses, épreuves, production, livraison), chaque étape menant à une page utile, les coordonnées et la ligne légale, le tout sur menthe pâle.",
-  tags: ["agence de marque", "frise", "étapes", "menthe", "vert forêt", "processus", "angles droits"],
-  identity: frise,
-  racine: racineDe(MENTHE_P),
-  widgets: ["text", "link", "divider", "bizcontact", "copyright", "bizlegal"],
+  description: "Pour une agence de marque : une carte vert forêt qui se termine par une frise de motifs de marque (carrés, quarts de cercle, triangles), un fondu menthe vers vert forêt, puis un pied en colonnes avec cube dessiné, parcours en étapes et coordonnées.",
+  tags: ["agence de marque", "motifs", "frise", "carte d'appel", "menthe", "vert forêt", "angles droits"],
+  identity: frise, racine: racineDe("#07241b"),
+  widgets: ["html", "sitetitle", "text", "link", "bizcontact", "divider", "copyright", "bizlegal"],
   compose(k, env, G) {
     const S = k.S;
-    const titre = k.T("<p>Du brief à la livraison, le chemin est visible.</p>", { fontSize: "fluid:28-52", lineHeight: 1.08, fontFamily: S.head, fontWeight: "800", color: FORET, letterSpacing: "-0.02em", maxWidth: "720px" });
-    const bouton = lien(k, "Lancer un brief  →", "/contact", { taille: 17, poids: "700", couleur: "#ffffff", h: "58px", padH: "28px", survol: { backgroundColor: FORET, color: "#ffffff", transform: { x: 8 } }, focus: FORET, extra: { backgroundColor: ROUILLE, borderStyle: "solid", borderWidth: "2px", borderColor: ROUILLE } });
-    const etape = (nom, texte, url) => k.col([caps(k, nom, { couleur: ROUILLE, suivi: "0.18em" }), lien(k, texte, url, { taille: 19, poids: "700", police: S.head, couleur: FORET, bloc: true, h: "48px", lh: 1.2, survol: { color: ROUILLE, transform: { x: 6 } }, focus: ROUILLE })], { flexGrow: 1, flexBasis: "0px", minWidth: "180px", gap: "4px", alignItems: "flex-start" });
-    const rail = k.row([souffle(carre(k, ROUILLE, "18px"), 3000), trait(k, FORET, "2px"), carre(k, FORET, "18px"), trait(k, FORET, "2px"), carre(k, FORET, "18px"), trait(k, FORET, "2px"), carre(k, FORET, "18px"), trait(k, FORET, "2px"), carre(k, FORET, "18px")], { gap: "0px", alignItems: "center", width: "100%", flexWrap: "nowrap" }, undefined, { display: "none" });
-    const etapes = k.row([etape("Brief", "Poser un brief", "/contact"), etape("Esquisses", "Lire le journal", "/blog"), etape("Épreuves", "Questions fréquentes", "/faq"), etape("Production", "Voir les réalisations", "/catalogue"), etape("Livraison", "Espace client", "/connexion")], { rowGap: "0px", columnGap: "28px", alignItems: "flex-start", width: "100%", flexWrap: "wrap" }, undefined, { rowGap: "12px" });
-    const coord = coordonnees(k, { taille: 15, couleur: FORET, lien: ROUILLE, survol: FORET, focus: ROUILLE });
-    const tete = G.bande(k, [rail, etapes, trait(k, FORET, "1px"), k.row([G.colonne(k, [caps(k, "Notre façon de travailler", { couleur: ROUILLE, suivi: "0.22em" }), titre], { poids: 3, min: "300px", gap: "12px" }), G.colonne(k, [bouton, coord], { poids: 1, min: "260px", gap: "18px", soi: "flex-end" })], { rowGap: "28px", columnGap: "48px", alignItems: "flex-end", width: "100%", flexWrap: "wrap" }), trait(k, FORET, "1px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: FORET, liens: FORET })(k, env)], { fond: MENTHE_P, colonne: true, gap: "26px", padV: ["88px", "60px", "44px"], padB: ["64px", "48px", "36px"], padH: MARGE, nom: "Frise" });
-    return [G.racine(k, [tete])];
+    const art = piece(k, I.artMotifs(1200, 200));
+    const contenu = [k.row([souffle(carre(k, "#d9f2e6", "12px"), 3000), caps(k, "Agence de marque", { couleur: "#d9f2e6", suivi: "0.22em" })], { gap: "12px", alignItems: "center" }),
+      G.geant("<p>Du brief à la livraison,<br>le chemin est visible.</p>", { taille: [32, 80], lh: 1.02, suivi: "-0.02em", poids: "800", police: S.head, couleur: "#ffffff" })(k, env, true),
+      k.row([bouton(k, "Lancer un brief  →", "/contact", { couleur: "#ffffff", fond: ROUILLE, survolFond: "#d9f2e6", survolTexte: FORET, focus: "#ffffff" }), bouton(k, "Voir les marques", "/catalogue", { couleur: "#ffffff", bord: "#ffffffaa", survolFond: "#ffffff", survolTexte: FORET, focus: "#d9f2e6" })], { gap: "14px", justifyContent: "center", flexWrap: "wrap" })];
+    const etape = (n, t, u) => k.col([caps(k, `Étape ${n}`, { couleur: "#ffb08a", suivi: "0.18em" }), lien(k, t, u, { taille: 18, poids: "700", police: S.head, couleur: "#ffffff", bloc: true, h: "52px", survol: { color: "#ffb08a", transform: { x: 6 } }, focus: "#ffffff" })], { gap: "2px", flexGrow: 1, flexBasis: "0px", minWidth: "170px", alignItems: "flex-start", paddingTop: "14px", borderStyle: "solid", borderWidth: "0px", borderTopWidth: "3px", borderColor: "#d9f2e6", borderRadius: "0px" });
+    const cellules = k.row([etape("1", "Poser un brief", "/contact"), etape("2", "Lire le journal", "/blog"), etape("3", "Questions", "/faq"), etape("4", "Réalisations", "/catalogue"), etape("5", "Espace client", "/connexion")], { rowGap: "18px", columnGap: "20px", width: "100%", alignItems: "flex-start", flexWrap: "wrap" });
+    const bas = k.row([k.row([piece(k, I.marque307(), { width: "84px" }), nomDuSite(k, env, 24, "#ffffff", { fontWeight: "800" })], { gap: "16px", alignItems: "center" }), coordonnees(k, { taille: 15, couleur: "#ffffff", lien: "#ffffff", survol: "#ffb08a", focus: "#ffffff", layout: "inline" })], { rowGap: "18px", columnGap: "40px", alignItems: "center", justifyContent: "space-between", width: "100%", flexWrap: "wrap" });
+    return [G.racine(k, pied11(k, env, G, { pos: "bas", art, carteFond: FORET, clair: MENTHE_P, sombre: "#07241b", contenu, pied: [cellules, bas, trait(k, "#ffffff33", "1px"), G.ligneLegale({ taille: 13, sansCookies: true, couleur: "#d9f2e6", liens: "#ffffff" })(k, env)] }))];
   },
 }, FAM);
 
 module.exports = {
   key: FAM, label: "Studios créatifs", target: 6, built: true,
-  description: "Pieds de studios créatifs, angles droits : appel géant, damier de cases, console de montage, nom monumental, demi-pages crème et brique, frise de production.",
+  description: "Pieds de studios créatifs, angles droits, illustrés : skyline d'affiches, planche de vignettes, paysage de synthèse, vagues et monogramme, carte d'appel à faisceaux, carte à motifs de marque.",
   models: [appelPlateau, tiragesDamier, consoleMontage, signatureStudio, plateauRegie, friseLivraison],
 };

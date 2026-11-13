@@ -7,7 +7,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "vendeur d'engins de chantier",
       "directionArtistique": {
-        "texte": "Sur noir de fonte, le nom du site en capitales condensées sur toute la largeur sous une barre jaune épaisse ; au-dessus, une seule ligne de cinq liens et un carré jaune qui respire. Inspiré de la capture au logo et au nom géants sur noir. Archétype : B nom monumental."
+        "texte": "Inspiré de la capture au logo monumental : sur noir de fonte, quatre colonnes de liens et une lettre d'information en haut ; en bas, un grand emblème jaune dessiné (hexagone avec bras de pelle découpé) à côté du nom du site en capitales condensées géantes. Archétype : B emblème + nom monumental."
       },
       "typographies": {
         "titre": "Saira Extra Condensed",
@@ -33,7 +33,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "concessionnaire de machines",
       "directionArtistique": {
-        "texte": "Un damier de huit cases carrées bord à bord sur béton clair : cinq gammes en cobalt, blanc et noir, une case lettre d'information, une case horaires, une case nom ; les coordonnées en bande basse. Case qui se soulève au survol. Archétype : C damier."
+        "texte": "Capture au logo monumental en clair : sur béton, une grande chargeuse dessinée (cobalt, noir, blanc) à gauche et le nom en capitales XXL avec les horaires ; bande cobalt de trois colonnes de liens et la lettre d'information. Archétype : C illustration + bande de colonnes."
       },
       "typographies": {
         "titre": "Chakra Petch",
@@ -59,7 +59,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "gestionnaire de parc d'engins connectés",
       "directionArtistique": {
-        "texte": "Le pied comme une fenêtre de terminal bleu nuit : barre de titre à trois carrés dont un cyan qui respire, commandes (« $ ls gammes », « $ cat horaires », « $ subscribe »), gammes en liens, horaires, coordonnées, lettre d'information et barre d'état pour les mentions. Archétype : K console."
+        "texte": "Capture au logo monumental, version terminal : un grand radar de flotte dessiné (cercles cyan, itinéraires, repères carrés, secteur balayé) avec le nom géant, puis le pied en fenêtre de console aux commandes cyan. Archétype : K radar + console."
       },
       "typographies": {
         "titre": "Overpass Mono",
@@ -85,7 +85,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "atelier de pièces et de maintenance",
       "directionArtistique": {
-        "texte": "Une haute barre orange sécurité à droite (nom, devis noir, horaires, coordonnées) et, à gauche, un grand titre condensé avec trois listes en rangées à filet qui glissent au survol. Archétype : A colonne latérale."
+        "texte": "Capture au logo monumental, version atelier : panneau orange sécurité avec deux grands engrenages noirs dessinés ets et le nom ; panneau noir de listes à filet, bouton devis, horaires et coordonnées. Archétype : A deux panneaux."
       },
       "typographies": {
         "titre": "Rajdhani",
@@ -111,7 +111,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "loueur de matériel",
       "directionArtistique": {
-        "texte": "Quatre marches rouille alignées à gauche et de plus en plus étroites : le nom, les gammes en une ligne, les horaires et les coordonnées, l'appel « Demander une offre » ; mentions sur fond crème. Archétype : L escalier."
+        "texte": "Capture au flacon sur roche (en-tête scindé) : sur brun sombre, titre en italique et bouton orange, mini-pelle dessinée posée sur une dalle de roche dans un halo braise, et colonne latérale (nom, liens, pastilles de réseaux). Archétype : E trois panneaux."
       },
       "typographies": {
         "titre": "Archivo Black",
@@ -137,7 +137,7 @@
       "famille": "Engins et matériel professionnel",
       "secteur": "constructeur d'engins",
       "directionArtistique": {
-        "texte": "Sur vert forêt, six lignes pleine largeur : énorme libellé de gamme en capitales étroites, filet dessous ; au survol la ligne se remplit de jaune sable et glisse. Nom et repère au-dessus, coordonnées et réseaux dessous. Archétype : G index."
+        "texte": "Capture au flacon sur roche, inversée : un bouteur dessiné sur dalle verte dans un halo sable à gauche, un index de six gammes en grands libellés à droite ; en dessous coordonnées et pastilles de réseaux. Archétype : G image + index."
       },
       "typographies": {
         "titre": "Alumni Sans",
@@ -163,7 +163,7 @@
       "famille": "Fintech et paiement",
       "secteur": "solution d'encaissement en ligne",
       "directionArtistique": {
-        "texte": "Un bandeau violet électrique avec une phrase gigantesque et un bouton blanc, puis sur lavande le nom, une phrase et les réseaux à gauche et une seule colonne étroite de huit liens à rangées à filet à droite. Inspiré de la capture à grand appel avant les colonnes. Archétype : F bandeau XXL."
+        "texte": "Capture au flacon sur roche, version paiement : héros violet en dégradé avec phrase gigantesque, deux boutons et un éventail de cartes dessinées dans un halo lilas ; dessous, nom, pastilles et une colonne de rangées à filet. Archétype : F héros illustré."
       },
       "typographies": {
         "titre": "Epilogue",
@@ -189,7 +189,7 @@
       "famille": "Fintech et paiement",
       "secteur": "néobanque pour indépendants",
       "directionArtistique": {
-        "texte": "Tout sur deux lignes sur un aplat vert citron : le nom, cinq liens en capitales mono qui se remplissent de noir au survol, un bouton noir « Ouvrir un compte » et les mentions. Compact, sans colonnes. Archétype : D ligne unique."
+        "texte": "Capture au flacon sur roche, inversée : un grand terminal de paiement noir dessiné à gauche sur vert citron, à droite phrase, bouton noir, cinq liens en capitales mono, nom et pastilles de réseaux. Archétype : D objet + barre."
       },
       "typographies": {
         "titre": "Martian Mono",
@@ -215,7 +215,7 @@
       "famille": "Fintech et paiement",
       "secteur": "plateforme de paiement pour associations",
       "directionArtistique": {
-        "texte": "Deux demi-pages : à gauche un panneau vert sapin avec une phrase en serif italique et un bouton menthe, à droite un panneau menthe pâle avec deux listes de liens et les réseaux. Inspiré de la capture à phrase italique et colonnes de droite. Archétype : E deux demi-pages."
+        "texte": "Capture au nom fantôme : à gauche phrase en italique sur sapin, à droite un paysage dessiné (deux rives, fleuve, pont, soleil en halo) ; liens et pastilles, puis le nom du site géant ton sur ton. Archétype : E deux demi-pages + nom fantôme."
       },
       "typographies": {
         "titre": "IBM Plex Serif",
@@ -241,7 +241,7 @@
       "famille": "Fintech et paiement",
       "secteur": "banque en ligne pour PME",
       "directionArtistique": {
-        "texte": "Une grande case marine avec phrase, bouton et nom monumental rogné ton sur ton, et trois petites cases à droite (jaune, blanche, corail) qui se soulèvent au survol. Inspiré de la capture à marque géante rognée. Archétype : H mosaïque asymétrique."
+        "texte": "Capture au nom fantôme : grande case marine avec phrase, bouton jaune et nom géant ; colonne de deux cases, blocs isométriques dessinés dans un halo jaune et case corail de liens et pastilles. Archétype : H mosaïque illustrée."
       },
       "typographies": {
         "titre": "Unbounded",
@@ -267,7 +267,7 @@
       "famille": "Fintech et paiement",
       "secteur": "service de virements",
       "directionArtistique": {
-        "texte": "Sur papier clair, une frise de quatre marches (initier, valider, régler, rapprocher) à carrés orange numérotés dont le premier respire, puis une ligne de liens et les mentions. Archétype : I frise."
+        "texte": "Capture au nom fantôme en panorama : phrase et bouton, grand schéma dessiné pleine largeur (deux banques et un chemin de carrés orange qui grossissent), ligne de liens et pastilles, nom géant ton sur ton. Archétype : I panorama."
       },
       "typographies": {
         "titre": "Michroma",
@@ -293,7 +293,7 @@
       "famille": "Fintech et paiement",
       "secteur": "établissement de paiement institutionnel",
       "directionArtistique": {
-        "texte": "Une feuille crème à double bordure : nom en capitales serif espacées, coordonnées centrées comme un courrier, ligne de liens centrée et coupon à bordure pointillée pour la lettre d'information. Archétype : J papier à en-tête."
+        "texte": "Capture au nom fantôme, version symétrique : grande rosace guillochée bordeaux au centre, phrase en serif italique, coupon de lettre d'information, liens et pastilles centrés, nom géant en serif ton sur ton. Archétype : J feuille centrée."
       },
       "typographies": {
         "titre": "Libre Baskerville",

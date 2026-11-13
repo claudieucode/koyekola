@@ -7,7 +7,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "cave à vins",
       "directionArtistique": {
-        "texte": "Mosaïque asymétrique bordeaux inspirée d'une capture à cartes sombres : une grande case de bienvenue avec rayons et trois cases (horaires, adresse, signature) à angles droits ; les cases se soulèvent au survol. Archétype : H mosaïque."
+        "texte": "Mosaïque de cartes bordeaux (capture 19) : grande carte de bienvenue avec un casier à bouteilles dessiné (culs de bouteilles, capsules champagne, halo doré) et une barre de réservation, carte des rayons et horaires, trois tuiles d'icônes de réseaux, nom de la cave en grand. Archétype : H mosaïque."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -32,7 +32,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "brasserie",
       "directionArtistique": {
-        "texte": "Bandeau jaune d'inscription XXL en tête (inspiré du bandeau newsletter de la capture), puis bande anthracite avec horaires, adresse et une seule colonne étroite de liens qui glissent. Archétype : F bandeau XXL."
+        "texte": "Bandeau d'inscription en dégradé jaune houblon (capture 20), puis mousse de bière dessinée qui déborde en grosses bulles sur l'anthracite, index de rayons en grandes lignes et cartes d'horaires et d'adresse, ligne de marque avec réseaux."
       },
       "typographies": {
         "titre": "Anton",
@@ -56,7 +56,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "boutique de spiritueux",
       "directionArtistique": {
-        "texte": "Grille de huit cases égales à filets noirs sur papier : quatre rayons, horaires, adresse, retrait, conseils. Chaque case se remplit de vert bouteille au survol. Archétype : C damier."
+        "texte": "Capture sobre 21 : rangée de quatre bouteilles dessinées au trait (whisky, rhum, gin, cognac) en vignettes sur papier, quatre colonnes de liens en capitales, rangée de pictos de services dessinés et réseaux."
       },
       "typographies": {
         "titre": "League Gothic",
@@ -81,7 +81,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "caviste",
       "directionArtistique": {
-        "texte": "Index en grandes lignes pleine largeur sur crème, libellés en italique serif, ligne qui se remplit de lie-de-vin au survol, puis horaires, adresse et réseaux. Archétype : G index."
+        "texte": "Mosaïque claire en trois colonnes (capture 19) : grande carte avec un paysage de coteaux de vignes en terrasses et un soleil couchant dessinés, sommaire des rayons, horaires, tuiles d'icônes de réseaux sur lie-de-vin."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -106,7 +106,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "distillerie de whisky",
       "directionArtistique": {
-        "texte": "Nom monumental centré dans un grand vide noir, carré de cuivre qui respire, deux petites colonnes de liens et d'adresse. Archétype : B nom monumental."
+        "texte": "Bandeau d'inscription en dégradé cuivre (capture 20), quatre colonnes à filets verticaux, ligne de marque avec réseaux, puis grand alambic de cuivre dessiné sous un halo de braise comme le monogramme 3D de la capture."
       },
       "typographies": {
         "titre": "Abril Fatface",
@@ -131,7 +131,7 @@
       "famille": "Cave, bières et spiritueux",
       "secteur": "cidrerie",
       "directionArtistique": {
-        "texte": "Barre rouge compacte sur une ou deux lignes : nom avec point qui respire, liens, bloc blanc Commander pleine hauteur, puis adresse et mentions. Archétype : D barre unique."
+        "texte": "Capture sobre 21 sur rouge coquelicot : frise de pommes blanches dessinées, nom en grand avec réseaux, boîte filetée d'horaires, d'adresse et de pictos de services, liens soulignés en ligne."
       },
       "typographies": {
         "titre": "Syne",
@@ -155,7 +155,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "café-torréfacteur",
       "directionArtistique": {
-        "texte": "Colonne espresso pleine hauteur à droite (nom, horaires, adresse) et zone crème avec trois colonnes de liens, lettre et réseaux. Liens qui avancent au survol. Archétype : A colonne latérale."
+        "texte": "Mosaïque de cartes espresso sur crème (capture 19) : carte d'accueil avec barre de réservation, liens, tasse d'espresso fumante dessinée avec grains de café, tuiles d'icônes de réseaux, carte terre cuite pour la lettre."
       },
       "typographies": {
         "titre": "Young Serif",
@@ -179,7 +179,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "boulangerie",
       "directionArtistique": {
-        "texte": "Deux demi-pages bord à bord : crème avec phrase et horaires, bleu profond avec énorme bouton Passer commande, contact et lettre. Archétype : E deux demi-pages."
+        "texte": "Quatre cartes de liens bleu four à côté d'une corbeille de pains dessinée (baguettes, boule, croissant) sur crème, puis grand bandeau d'inscription en dégradé doré (capture 20) et ligne de marque avec réseaux."
       },
       "typographies": {
         "titre": "Gloock",
@@ -204,7 +204,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "salon de thé",
       "directionArtistique": {
-        "texte": "Papier à lettres : filets doubles, nom en italique centré, losange qui respire, cartouche adresse et horaires, liens en ligne centrée. Archétype : J papier à en-tête."
+        "texte": "Capture sobre 21 sur papier blanc : médaillon de théière dans une couronne de lauriers dessiné à gauche, quatre colonnes de liens en capitales, pictos de services et réseaux, filet épais."
       },
       "typographies": {
         "titre": "Libre Caslon Text",
@@ -227,7 +227,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "boulangerie",
       "directionArtistique": {
-        "texte": "Fenêtre de console noire sur fond beurre : commandes horaires, adresse, liens et lettre, curseur carré qui bat. Archétype : K fenêtre / console."
+        "texte": "Mosaïque de quatre fenêtres de console noires sur fond beurre (capture 19) : croissant en pixel art dessiné, commandes, horaires, lettre et tuiles d'icônes de réseaux."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -252,7 +252,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "boulangerie artisanale",
       "directionArtistique": {
-        "texte": "Frise horizontale à points carrés en cinq étapes cliquables sur rose farine, dernier point qui respire, puis horaires et lettre. Archétype : I frise."
+        "texte": "Bandeau d'inscription en dégradé brique (capture 20) avec un moulin à vent dessiné sur sa colline, cinq cartes d'étapes numérotées du moulin au comptoir, horaires et réseaux."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -277,7 +277,7 @@
       "famille": "Cafés et boulangeries",
       "secteur": "café-boulangerie",
       "directionArtistique": {
-        "texte": "Quatre bandes vertes de largeur décroissante alignées à gauche (nom, liens, horaires et adresse, lettre) comme un escalier. Archétype : L escalier."
+        "texte": "Capture sobre 21 sur verts étagés : nom en grand, quatre cartes de liens en capitales à côté d'un grand épi d'orge dessiné dans un soleil de cercles, pictos de services et réseaux, lettre en pied."
       },
       "typographies": {
         "titre": "Bodoni Moda",

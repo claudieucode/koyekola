@@ -101,7 +101,7 @@ function bande(k, enfants, o = {}) {
   const inner = { type: "container", children: enfants, ...sty(compact({ display: "flex", flexDirection: o.colonne ? "column" : "row", alignItems: o.aligne || (o.colonne ? "stretch" : "flex-end"), justifyContent: "space-between", flexWrap: "wrap", ...gaps(o.gap || "32px"), maxWidth: o.max || "1280px", width: "100%", marginLeft: "auto", marginRight: "auto" }), undefined, o.innerMobile) };
   const dec = o.degrade ? { gradient: o.degrade } : {};
   const b = { type: "container", ...(o.nom ? { name: o.nom } : {}), props: { full: true }, children: [inner],
-    ...sty(compact({ backgroundColor: o.fond || S.bg, color: S.fg, paddingTop: pv, paddingBottom: bv, paddingLeft: hv, paddingRight: hv, display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0px", borderStyle: "solid", borderWidth: "0px",
+    ...sty(compact({ backgroundColor: o.fond || S.bg, color: o.couleur || S.fg, paddingTop: pv, paddingBottom: bv, paddingLeft: hv, paddingRight: hv, display: "flex", flexDirection: "column", alignItems: "stretch", gap: "0px", borderStyle: "solid", borderWidth: "0px",
       ...(o.filetHaut ? { borderTopWidth: o.filetHaut.epaisseur || "1px", borderColor: o.filetHaut.couleur || S.line } : {}), ...dec }),
       { paddingTop: pt, paddingBottom: bt, paddingLeft: ht, paddingRight: ht }, { paddingTop: pm, paddingBottom: bm, paddingLeft: hm, paddingRight: hm }) };
   return b;

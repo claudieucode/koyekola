@@ -7,7 +7,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "marque de prêt-à-porter",
       "directionArtistique": {
-        "texte": "Inspiré d'une capture au nom de marque géant en bas de page : phrase d'accueil et deux colonnes de liens sobres sur fond gris papier, puis le nom « orme&co » en lettres monumentales sur toute la largeur, un carré orange qui respire. Archétype : B nom monumental."
+        "texte": "Inspiré de la capture au nom géant en bas de page (« static ») : phrase d'accueil et deux colonnes sur gris papier, puis le nom « orme » DESSINÉ à la main en lettres noires monumentales sur toute la largeur, un cintre orange accroché au m et un carré orange comme point. Illustration : lettres dessinées + cintre."
       },
       "typographies": {
         "titre": "Archivo Black",
@@ -31,7 +31,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "boutique de mode",
       "directionArtistique": {
-        "texte": "Deux demi-pages bord à bord : terre cuite avec la grande phrase « Habillez la saison » et un bouton qui respire, crème avec liens des rayons, aide et lettre d'information. Archétype : E deux demi-pages."
+        "texte": "Inspiré de la capture au nom géant (« static ») : sur terre cuite, grande phrase, rayons, aide et lettre d'information, puis le nom « saison » dessiné en crème sur toute la largeur ; un soleil à rayons et son halo lumineux posés sur le i. Illustration : lettres dessinées + soleil et halo en dégradé."
       },
       "typographies": {
         "titre": "Instrument Serif",
@@ -55,7 +55,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "maison de maille",
       "directionArtistique": {
-        "texte": "Haute barre noire à gauche (nom en Bodoni, phrase, réseaux, mentions) et zone ivoire à droite avec quatre colonnes de liens qui s'indentent ; l'idée de marque à gauche, colonnes à droite vient d'une capture. Archétype : A colonne latérale."
+        "texte": "Inspiré de la capture « WorkScale » : appel centré avec deux boutons, étiquettes de curseurs flottantes sur guides pointillés, rangée de cinq vêtements dessinés à la place des logos de partenaires, puis marque et quatre colonnes avec pastilles de réseaux. Noir, ivoire, ocre."
       },
       "typographies": {
         "titre": "Bodoni Moda",
@@ -79,7 +79,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "mode urbaine",
       "directionArtistique": {
-        "texte": "Damier de huit cases carrées cobalt dont une jaune avec le nom ; chaque case est un lien (rayons, services) qui se remplit de jaune au survol. Archétype : C grille de cases."
+        "texte": "Inspiré de la capture « WorkScale » : appel à gauche et curseurs colorés à droite sur cobalt, rangée de cinq objets de la rue dessinés (basket, casquette, veste, sac, bouteille), puis pied bleu nuit en deux étages avec pastilles. Cobalt, jaune, blanc."
       },
       "typographies": {
         "titre": "Unbounded",
@@ -103,7 +103,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "boutique de mode",
       "directionArtistique": {
-        "texte": "Barre compacte vert sapin : nom, six liens et bouton or sur une ligne, puis réseaux et mentions sur une seconde ligne fine. Archétype : D ligne unique."
+        "texte": "Inspiré de la capture « BOTSnDOTS » : marque, coordonnées et pastilles de réseaux à gauche, mouette-mascotte qui salue, quatre colonnes aux titres or, et en bas une grande scène dessinée : mer au couchant, halo du soleil, phare, voilier et sillage. Vert sapin, sable, or."
       },
       "typographies": {
         "titre": "Syne",
@@ -127,7 +127,7 @@
       "famille": "Mode et prêt-à-porter",
       "secteur": "boutique de mode",
       "directionArtistique": {
-        "texte": "Inspiré d'un grand appel centré en tête de page : bandeau rose poudré avec phrase géante en Gloock et très gros bouton bleu nuit qui respire, puis bande bleu nuit avec phrase de marque et une seule colonne étroite de liens à filets à droite. Archétype : F bandeau XXL."
+        "texte": "Inspiré de la capture « BOTSnDOTS » : marque, pastilles et mannequin-mascotte qui salue en tête, quatre colonnes à plat, puis grande scène dessinée : fanions, collines rose et bleu nuit, six mannequins en robes. Rose poudré, bleu nuit."
       },
       "typographies": {
         "titre": "Gloock",
@@ -151,7 +151,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "maison de parfum",
       "directionArtistique": {
-        "texte": "Sommaire en six grandes lignes pleine largeur (Cormorant 40 px, flèche, filet) qui s'indentent et se remplissent de vin au survol, sans cartes. Archétype : G index."
+        "texte": "Inspiré de la capture au nom géant (« static ») : le nom « essence » dessiné en lettres ivoire monumentales sur vin profond, une goutte dorée comme accent, puis flacons de parfum dessinés dans un halo doré et index de liens. Illustration : lettres dessinées + flacons."
       },
       "typographies": {
         "titre": "Cormorant Garamond",
@@ -175,7 +175,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "cosmétique naturelle",
       "directionArtistique": {
-        "texte": "Inspiré d'une capture (marque, coordonnées et réseaux à gauche, colonnes à droite) : une grande case vert sapin avec nom et lettre, et trois cases sable, sauge et pêche (contact, horaires, liens et réseaux). Archétype : H mosaïque asymétrique."
+        "texte": "Inspiré de la capture « WorkScale » : un grand appel centré sur crème, étiquettes de curseurs d'ingrédients, rangée de cinq plantes et gouttes dessinées, puis carte cadrée (marque, coordonnées, pastilles) et colonnes de liens. Crème, vert sapin, ambre."
       },
       "typographies": {
         "titre": "Fraunces",
@@ -199,7 +199,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "soin et beauté",
       "directionArtistique": {
-        "texte": "Frise horizontale en quatre étapes (choisir, essayer, offrir, prendre soin) reliées par un filet doré à points carrés ; chaque étape est un lien avec sa phrase. Archétype : I frise en étapes."
+        "texte": "Inspiré de la capture « BOTSnDOTS » : grande scène dessinée EN TÊTE (îles flottantes de nuit, cascades, tours et arbres d'or, lune et halo), puis goutte-mascotte, marque, phrase et quatre colonnes aux titres or. Bleu nuit, ivoire, or."
       },
       "typographies": {
         "titre": "Playfair Display",
@@ -223,7 +223,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "parfumeur indépendant",
       "directionArtistique": {
-        "texte": "Papier à en-tête : filets doubles, nom en petites capitales Cormorant, coordonnées centrées, liens en capitales sur une ligne, mentions centrées. Archétype : J papier à en-tête."
+        "texte": "Inspiré de la capture au nom géant (« static ») : alambic gravé dans un médaillon à double filet, nom « aurèle » dessiné en lettres d'encre sur toute la largeur avec son accent doré, puis coordonnées, liens et mentions centrés sur papier à en-tête. Illustration : alambic + lettres dessinées."
       },
       "typographies": {
         "titre": "Cormorant SC",
@@ -247,7 +247,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "laboratoire de cosmétique",
       "directionArtistique": {
-        "texte": "Le pied est une fenêtre à bord menthe : barre de titre à trois carrés, lignes de commande pour les liens avec curseur qui respire, formulaire d'abonnement à droite. Texte monospace. Archétype : K fenêtre / console."
+        "texte": "Inspiré de la capture « WorkScale » : rangée de cinq pictogrammes de laboratoire (molécule, fiole, atome, flacon, courbe) en tête, appel centré, étiquettes de curseurs flottantes, puis quatre cartes cadrées de liens numérotés. Nuit, menthe, monospace."
       },
       "typographies": {
         "titre": "Space Grotesk",
@@ -271,7 +271,7 @@
       "famille": "Cosmétique et parfumerie",
       "secteur": "marque de soin",
       "directionArtistique": {
-        "texte": "Pied en escalier : quatre bandes alignées à gauche de 100, 80, 60 et 40 % de largeur, de rose clair à rose profond (nom, liens, contact et horaires, mentions). Archétype : L escalier."
+        "texte": "Inspiré de la capture « BOTSnDOTS » : tout centré (goutte souriante, marque, phrase, colonnes, coordonnées, pastilles) puis grande scène dessinée de gradins roses plantés de pousses, gouttes de rosée et ondes. Rose poudré, brique."
       },
       "typographies": {
         "titre": "Italiana",
