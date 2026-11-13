@@ -452,8 +452,20 @@ function anomaliesOf(ctx, test, { v, exposures, alloc, commerce, goal }) {
   return out;
 }
 
+// Tests EN COURS dont le résultat est concluant (verdict « winner » : assez de données, écart significatif, mesure saine, au moins MIN_DAYS jours).
+// Calcul à la demande à partir des vraies données ; rien n'est décidé automatiquement : la personne déclare elle-même le gagnant.
+function concludedTests(ctx, { now = Date.now() } = {}) {
+  checkCtx(ctx);
+  const out = [];
+  for (const t of listTests(ctx).filter((x) => x.status === "running" && !x.archived)) {
+    let r = null;
+    try { r = results(ctx, t, { now }); } catch { r = null; }
+    if (r && r.verdict && r.verdict.kind === "winner") out.push({ id: t.id, name: t.name, pageId: t.page_id, pageName: t.page_name, winner: r.verdict.winner, uplift: r.verdict.uplift, confidence: r.verdict.confidence });
+  }
+  return out;
+}
 module.exports = {
-  GOALS, STATUS, TRANSITIONS, MIN_VIEWS, MIN_CONVERSIONS, MIN_DAYS, getTest, requireTest, listTests, searchTests, createTest, updateTest, startTest, stopTest, decideTest, deleteTest,
+  GOALS, concludedTests, STATUS, TRANSITIONS, MIN_VIEWS, MIN_CONVERSIONS, MIN_DAYS, getTest, requireTest, listTests, searchTests, createTest, updateTest, startTest, stopTest, decideTest, deleteTest,
   archiveTest, restoreTest, validateStart, guardPageRemoval,
   runningTestFor, variantFor, assignment, recordView, recordConversion, results, commerceOf, compare, normalCdf,
 };

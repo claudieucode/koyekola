@@ -858,3 +858,27 @@
     window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onScroll); update();
   });
 })();
+
+// Bouton clair / sombre du visiteur (Réglages du site → Mode sombre « avec bouton ») : le choix reste sur son appareil
+(function () {
+  "use strict";
+  var body = document.body;
+  if (!body || !body.hasAttribute("data-kw-dark-toggle") || body.hasAttribute("data-kw-builder")) return;
+  var root = document.documentElement, KEY = "kw-theme";
+  function stored() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+  function systemDark() { return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); }
+  function current() { var v = root.getAttribute("data-kw-dark"); return v === "1" ? "dark" : v === "0" ? "light" : systemDark() ? "dark" : "light"; }
+  var saved = stored();
+  if (saved === "dark") root.setAttribute("data-kw-dark", "1"); else if (saved === "light") root.setAttribute("data-kw-dark", "0");
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "kw-dark-toggle";
+  b.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:9000;width:44px;height:44px;border-radius:50%;border:1px solid rgba(128,128,128,.45);background:var(--kw-surface,#fff);color:var(--kw-text,#111);font-size:20px;line-height:1;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25)";
+  function paint() { var d = current() === "dark"; b.textContent = d ? "☀" : "☾"; b.setAttribute("aria-pressed", String(d)); b.setAttribute("aria-label", d ? "Passer en mode clair" : "Passer en mode sombre"); b.title = b.getAttribute("aria-label"); }
+  b.addEventListener("click", function () {
+    var next = current() === "dark" ? "light" : "dark";
+    root.setAttribute("data-kw-dark", next === "dark" ? "1" : "0");
+    try { localStorage.setItem(KEY, next); } catch (e) { /* stockage bloqué : le choix vaut pour cette page */ }
+    paint();
+  });
+  paint(); body.appendChild(b);
+})();

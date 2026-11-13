@@ -28,7 +28,7 @@ module.exports = () => {
     const q = String(req.query.q || "").slice(0, 100);
     const sort = ["recent", "name", "status", "views"].includes(req.query.tri) ? req.query.tri : "recent";
     const list = abtests.searchTests(req.mk.ctx, { status, q, sort, page: Number(req.query.page) || 1 });
-    res.render("marketing/page-tests", { title: "Tests A/B des pages", active: "pagetests", list, tests: list.rows, filters: { status, q, sort }, STATUS_FILTERS, STATUS: abtests.STATUS, GOALS: abtests.GOALS, canWrite: req.mk.can("forms.write") });
+    res.render("marketing/page-tests", { title: "Tests A/B des pages", active: "pagetests", concluded: abtests.concludedTests(req.mk.ctx), list, tests: list.rows, filters: { status, q, sort }, STATUS_FILTERS, STATUS: abtests.STATUS, GOALS: abtests.GOALS, canWrite: req.mk.can("forms.write") });
   });
 
   const loadPage = (req, res) => {

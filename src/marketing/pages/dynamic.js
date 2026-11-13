@@ -87,6 +87,16 @@ registerDynamicSource("product.regular_price", { label: "Prix normal (avant prom
 registerDynamicSource("product.sku", { label: "Référence (SKU)", resolve: PR("sku") });
 registerDynamicSource("product.availability", { label: "Disponibilité du produit", resolve: PR("availability") });
 registerDynamicSource("product.cart_url", { label: "Adresse du panier", kind: "url", resolve: PR("cartUrl") });
+// Avis client (source de boucle « reviews ») : scope.review = { author, rating, stars, title, text, date, product, productUrl }
+const RV = (k) => (s) => (s.review && s.review[k] != null && s.review[k] !== "" ? String(s.review[k]) : null);
+registerDynamicSource("review.author", { label: "Avis : nom de l'auteur", resolve: RV("author") });
+registerDynamicSource("review.rating", { label: "Avis : note (1 à 5)", resolve: RV("rating") });
+registerDynamicSource("review.stars", { label: "Avis : étoiles (★★★★☆)", resolve: RV("stars") });
+registerDynamicSource("review.title", { label: "Avis : titre", resolve: RV("title") });
+registerDynamicSource("review.text", { label: "Avis : texte", resolve: RV("text") });
+registerDynamicSource("review.date", { label: "Avis : date", resolve: (s) => (s.review && s.review.date ? longDate(s.review.date) : null) });
+registerDynamicSource("review.product", { label: "Avis : produit concerné", resolve: RV("product") });
+registerDynamicSource("review.product_url", { label: "Avis : adresse du produit", kind: "url", resolve: RV("productUrl") });
 // Visiteur, page, site, date
 registerDynamicSource("user.first_name", { label: "Prénom du visiteur", resolve: (s) => (s.visitor && s.visitor.firstName) || null });
 registerDynamicSource("user.logged_in", { label: "Visiteur connecté (oui / non)", resolve: (s) => (s.visitor && s.visitor.loggedIn ? "oui" : "non") });

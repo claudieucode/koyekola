@@ -255,6 +255,18 @@ describe("verdict : jamais de gagnant hâtif", () => {
     db.prepare("UPDATE mk_page_tests SET confidence = 95 WHERE id = ?").run(t.id);
     assert.equal(ab.results(A, ab.getTest(A, t.id)).verdict.kind, "winner");
   });
+  test("alerte « test concluant » : seulement un test EN COURS au verdict gagnant ; données insuffisantes, pause ou test récent : aucune alerte", () => {
+    const { t } = newTest();
+    startable(t);
+    assert.deepEqual(ab.concludedTests(A), [], "aucune donnée : pas d'alerte");
+    fill(t, "a", 1000, 100, "a"); fill(t, "b", 1000, 140, "b");
+    assert.deepEqual(ab.concludedTests(A), [], "moins de 7 jours : seulement « significatif »");
+    db.prepare("UPDATE mk_page_tests SET started_at = datetime('now', '-8 days') WHERE id = ?").run(t.id);
+    const c = ab.concludedTests(A);
+    assert.equal(c.length, 1); assert.equal(c[0].id, t.id); assert.equal(c[0].winner, "b"); assert.equal(c[0].uplift, 40);
+    db.prepare("UPDATE mk_page_tests SET status = 'stopped' WHERE id = ?").run(t.id);
+    assert.deepEqual(ab.concludedTests(A), [], "test en pause : pas d'alerte");
+  });
   test("une anomalie de répartition empêche de déclarer un gagnant", () => {
     const { t } = newTest({ trafficB: 50 });
     startable(t);

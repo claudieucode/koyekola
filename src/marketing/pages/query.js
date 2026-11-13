@@ -240,6 +240,25 @@ registerQuerySource("products", {
   },
 });
 
+// ---------- Source : avis clients vérifiés (témoignages) ----------
+// Uniquement les avis PUBLIÉS et issus d'une vraie commande (mk_shop_reviews.order_id obligatoire) : rien n'est inventé ni saisi à la main. Même cloisonnement que les produits : un site ne voit que ses avis.
+registerQuerySource("reviews", {
+  label: "Avis clients", scopeKey: "review", orderby: ["date", "rating", "random", "id"], filters: ["search"],
+  run(ctx, q, env) {
+    const pg = env.scope.page || null;
+    const siteId = pg && Number.isInteger(pg.site_id) && pg.site_id > 0 ? pg.site_id : null;
+    if (!require("../siteModules").isEnabled(ctx.db, ctx.organizationId, siteId, "commerce")) return { items: [], total: 0 };
+    const where = ["r.organization_id = ?", siteId == null ? "r.site_id IS NULL" : "r.site_id = ?", "r.status = 'published'", "p.deleted_at IS NULL", "p.status = 'published'"];
+    const args = [ctx.organizationId, ...(siteId == null ? [] : [siteId])];
+    if (q.search) { const sw = searchWhere(q.search, ["r.title", "r.body", "p.name"], []); if (sw.sql) { where.push(sw.sql); args.push(...sw.args); } }
+    const order = { date: "r.created_at", rating: "r.rating", random: "RANDOM()", id: "r.id" }[q.orderby];
+    const from = "FROM mk_shop_reviews r JOIN mk_shop_products p ON p.id = r.product_id";
+    const total = ctx.db.prepare(`SELECT COUNT(*) n ${from} WHERE ${where.join(" AND ")}`).get(...args).n;
+    const rows = ctx.db.prepare(`SELECT r.id, r.author_name, r.rating, r.title, r.body, r.created_at, p.name AS product_name, p.slug AS product_slug ${from} WHERE ${where.join(" AND ")} ORDER BY ${order} ${q.order === "asc" ? "ASC" : "DESC"}, r.id DESC LIMIT ? OFFSET ?`).all(...args, q.count, q.offset);
+    return { total, items: rows.map((r) => ({ id: r.id, author: r.author_name, rating: r.rating, stars: "★".repeat(r.rating) + "☆".repeat(5 - r.rating), title: r.title || "", text: r.body || "", date: ms(r.created_at), product: r.product_name, productUrl: `/boutique/${encodeURIComponent(r.product_slug || "")}` })) };
+  },
+});
+
 // ---------- Source : pages du site ----------
 registerQuerySource("pages", {
   label: "Pages du site", scopeKey: "page_item", orderby: ["date", "modified", "title", "id"], filters: ["include", "exclude", "search", "excludeCurrent"],

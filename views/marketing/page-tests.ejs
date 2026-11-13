@@ -6,6 +6,13 @@
 %>
     <div class="mk-head">
       <div class="mk-head-main"><h1>Tests A/B des pages</h1><p class="mk-head-sub">Comparez deux versions d'une page (titre, bouton, sections, mise en page, formulaire) : une partie des visiteurs voit la version B. Un gagnant n'est désigné qu'avec assez de données et une différence statistiquement fiable. Pour créer un test, ouvrez une page puis « Test A/B », ou une étape de tunnel puis « Tester en A/B ».</p></div></div>
+    <% if (typeof concluded !== "undefined" && concluded.length) { %>
+      <div class="mk-flash mk-flash-ok" role="status" data-ab-concluded>
+        <strong><%= concluded.length === 1 ? "Un test est concluant" : concluded.length + " tests sont concluants" %></strong> — assez de visiteurs, écart significatif (confiance <%= concluded[0].confidence %> %) :
+        <% concluded.forEach((c, i) => { %><%= i ? " ; " : "" %><a href="/marketing/pages/<%= c.pageId %>/test-ab?test=<%= c.id %>"><%= c.name %></a> (la version <%= c.winner.toUpperCase() %> gagne<%= c.uplift != null ? " de " + String(c.uplift).replace(".", ",") + " %" : "" %>)<% }) %>.
+        Ouvrez le test pour déclarer le gagnant : rien n'est décidé sans vous.
+      </div>
+    <% } %>
     <% if (!list.counts.all && !list.counts.archived) { %>
       <div class="mk-empty"><%- illu("activity", { className: "kx-empty-ill" }) %><h2>Aucune expérience A/B</h2><p>Créez votre première expérience pour comparer deux variantes d'une page.</p>
         <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/pages">+ Nouvelle expérience (choisir une page)</a></div></div>

@@ -202,8 +202,8 @@ for (const [dev, name] of [["tablet", "tablette"], ["mobile", "mobile"]]) {
 }
 
 // Mode sombre du site
-add("settings.dark.mode", "mode-sombre", "select", "Mode sombre", { scope: ["site"], options: [["off", "Désactivé"], ["auto", "Selon la préférence du visiteur"]], help: "Activé : les couleurs ci-dessous remplacent celles du site chez les visiteurs dont l'appareil est en thème sombre." });
-for (const [k, label] of [["background", "Fond"], ["surface", "Surface (cartes)"], ["text", "Texte"], ["muted", "Texte discret"], ["primary", "Couleur principale"]]) add(`settings.dark.${k}`, "mode-sombre", "color", label, { scope: ["site"], allowEmpty: true, showIf: { "settings.dark.mode": "auto" } });
+add("settings.dark.mode", "mode-sombre", "select", "Mode sombre", { scope: ["site"], options: [["off", "Désactivé"], ["auto", "Selon la préférence du visiteur"], ["toggle", "Selon la préférence du visiteur + bouton clair / sombre"]], help: "Activé : les couleurs ci-dessous remplacent celles du site chez les visiteurs dont l'appareil est en thème sombre. Avec le bouton, le visiteur choisit lui-même (son choix est mémorisé sur son appareil)." });
+for (const [k, label] of [["background", "Fond"], ["surface", "Surface (cartes)"], ["text", "Texte"], ["muted", "Texte discret"], ["primary", "Couleur principale"]]) add(`settings.dark.${k}`, "mode-sombre", "color", label, { scope: ["site"], allowEmpty: true });
 
 // Palette nommée du site (jetons « customColors » : utilisables dans les styles des éléments)
 add("tokens.customColors", "palette", "palette", "Couleurs de la palette", { scope: ["site"], max: tokensLib.MAX_CUSTOM_COLORS, help: "Donnez un nom à une couleur pour la réutiliser. Les couleurs nommées sont proposées dans les sélecteurs de couleur de cet écran." });

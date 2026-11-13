@@ -156,7 +156,7 @@ function normalizeSettings(input = {}, { strict = false } = {}) {
   }
   const dk = src.dark || {};
   const darkHex = (v, label) => { const x = v === undefined || v === null ? "" : String(v).trim().toLowerCase(); if (!x) return ""; if (/^#[0-9a-f]{6}$/.test(x)) return x; if (strict) throw bad(`${label} : code hexadécimal attendu (ex. #101820).`); return ""; };
-  const dark = { mode: oneOf(dk.mode, ["off", "auto"], "Mode sombre", strict, "off"), background: darkHex(dk.background, "Mode sombre : fond"), surface: darkHex(dk.surface, "Mode sombre : surface"), text: darkHex(dk.text, "Mode sombre : texte"), muted: darkHex(dk.muted, "Mode sombre : texte discret"), primary: darkHex(dk.primary, "Mode sombre : couleur principale") };
+  const dark = { mode: oneOf(dk.mode, ["off", "auto", "toggle"], "Mode sombre", strict, "off"), background: darkHex(dk.background, "Mode sombre : fond"), surface: darkHex(dk.surface, "Mode sombre : surface"), text: darkHex(dk.text, "Mode sombre : texte"), muted: darkHex(dk.muted, "Mode sombre : texte discret"), primary: darkHex(dk.primary, "Mode sombre : couleur principale") };
   let customCss = "";
   const rawCss = src.customCss === undefined || src.customCss === null ? "" : String(src.customCss).replace(/\r\n?/g, "\n");
   if (rawCss.trim()) {
@@ -246,7 +246,7 @@ function layoutCss(settings) {
   }
   // Mode sombre : couleurs du site remplacées quand la personne préfère un thème sombre (ou quand l'aperçu le force)
   const D2 = s.dark;
-  if (D2 && D2.mode === "auto") {
+  if (D2 && (D2.mode === "auto" || D2.mode === "toggle")) {
     const v = [];
     if (D2.background) v.push(`--kw-background:${D2.background}!important`, `--lp-bg:${D2.background}!important`);
     if (D2.surface) v.push(`--kw-surface:${D2.surface}!important`);
@@ -254,8 +254,9 @@ function layoutCss(settings) {
     if (D2.muted) v.push(`--kw-muted:${D2.muted}!important`);
     if (D2.primary) v.push(`--kw-primary:${D2.primary}!important`, `--kw-on-primary:${require("./tokens").onColor(D2.primary)}!important`);
     if (v.length) {
-      out.push(`@media (prefers-color-scheme:dark){.lp-site{${v.join(";")};color-scheme:dark}}`);
-      out.push(`html[data-kw-force-dark] .lp-site{${v.join(";")};color-scheme:dark}`);
+      // « toggle » : le visiteur peut choisir (html[data-kw-dark="1"] sombre, "0" clair, posé par le bouton) ; sinon il suit son système
+      out.push(`@media (prefers-color-scheme:dark){html:not([data-kw-dark="0"]) .lp-site{${v.join(";")};color-scheme:dark}}`);
+      out.push(`html[data-kw-force-dark] .lp-site,html[data-kw-dark="1"] .lp-site{${v.join(";")};color-scheme:dark}`);
     }
   }
   if (s.extras.smoothScroll) out.push(`@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}`);
@@ -289,7 +290,7 @@ function lightboxVars(settings) {
 }
 function lightboxAttrs(settings) {
   const l = settings.lightbox;
-  return ` data-kw-lb="${l.enabled ? "on" : "off"}" data-kw-lb-arrows="${l.arrows ? 1 : 0}" data-kw-lb-overlay-close="${l.closeOnOverlay ? 1 : 0}" data-kw-lb-captions="${l.captions ? 1 : 0}" data-kw-lb-anim="${l.animation}"`;
+  return `${settings.dark && settings.dark.mode === "toggle" ? ' data-kw-dark-toggle="1"' : ""} data-kw-lb="${l.enabled ? "on" : "off"}" data-kw-lb-arrows="${l.arrows ? 1 : 0}" data-kw-lb-overlay-close="${l.closeOnOverlay ? 1 : 0}" data-kw-lb-captions="${l.captions ? 1 : 0}" data-kw-lb-anim="${l.animation}"`;
 }
 
 // Code personnalisé du site : la signature (HMAC, clé ENCRYPTION_KEY, voir utils/customHtml) couvre les trois zones ; sans clé ou signature valide, rien n'est restitué
