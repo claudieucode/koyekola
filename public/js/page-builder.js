@@ -8001,7 +8001,7 @@ function selectField(label, value, options, onChange, opts) {
   // Document d'en-tête : modèle « En-tête » du Theme Builder (identité du modèle) ou composant affecté comme en-tête du site (ancien réglage)
   // Document de pied de page : modèle « Pied de page » du Theme Builder (identité du modèle) ou composant du site affecté comme pied
   // Modèles du Theme Builder autres que l'en-tête et le pied : un onglet de réglages (grille de résultats, style, éléments) comme pour le pied de page
-  var TPL_TABS = { archive: "Archive", search_results: "Recherche", not_found: "Page 404", single_post: "Article", single_page: "Page", single_product: "Produit", product_archive: "Boutique" };
+  var TPL_TABS = { archive: "Archive", search_results: "Recherche", not_found: "Page 404", single_post: "Article", single_page: "Page", single_product: "Produit", product_archive: "Boutique", cart: "Panier", checkout: "Commande", order_received: "Confirmation", my_account: "Compte" };
   function partType() { var c = IS_COMPONENT && PAGE.component; var t = (PAGE.identity && PAGE.identity.template) || (c && c.identity && c.identity.template); return (t && t.type) || (c && c.role) || ""; }
   function isTplDoc() { return Object.prototype.hasOwnProperty.call(TPL_TABS, partType()); }
   function isFooterDoc() { var c = IS_COMPONENT && PAGE.component; if (!c) return false; var t = (PAGE.identity && PAGE.identity.template) || (c.identity && c.identity.template); return c.role === "footer" || Boolean(t && t.type === "footer"); }

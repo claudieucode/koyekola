@@ -257,3 +257,23 @@ module.exports = [
     },
   },
 ];
+
+// ── Pages de la boutique (panier, validation de commande, confirmation, compte) ──
+// Ces éléments affichent la VRAIE page correspondante (mêmes formulaires, mêmes routes, mêmes contrôles côté serveur) à l'intérieur d'un modèle du Theme Builder.
+// Les données viennent de la route qui rend la page (scope.shopPage) ; hors de cette page (aperçu, éditeur) un cadre explicatif est affiché, jamais de fausses données.
+const pageWidget = (type, kind, label, description, keywords) => ({
+  type, label, group: "commerce", icon: "cart", version: 1, style: "box", status: "operational", dependencies: DEP, description, keywords,
+  schema: [{ key: "note", kind: "text", label: "Texte affiché dans l'éditeur (jamais au public)", max: 120, default: label }],
+  data(ctx, p, env) {
+    if (env.page && env.page.demoShop === true) return { page: null, demo: true };
+    const page = env.scope && env.scope.shopPage;
+    if (page && [].concat(kind).includes(page.kind)) return { page };
+    return { page: null };
+  },
+});
+module.exports.push(
+  pageWidget("shopcartpage", "panier", "Contenu du panier", "Lignes du panier, quantités, code promotionnel, totaux et bouton « Passer la commande » : la vraie page Panier", "panier lignes quantité coupon totaux cart items"),
+  pageWidget("shopcheckoutpage", "commande", "Formulaire de commande", "Coordonnées, adresses, livraison, paiement et validation : la vraie page de commande", "commande checkout paiement livraison adresse formulaire"),
+  pageWidget("shoporderpage", "confirmation", "Confirmation de commande", "Récapitulatif de la commande, statut, téléchargements, factures : la vraie page de confirmation", "confirmation merci commande reçue facture téléchargement order received"),
+  pageWidget("shopaccountpage", ["compte", "compte-connexion"], "Espace client", "Connexion ou espace du client (commandes, données personnelles) : la vraie page Compte", "compte client connexion mes commandes account login"),
+);

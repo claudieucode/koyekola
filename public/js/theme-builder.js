@@ -42,6 +42,7 @@
     single_page: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M6 16l4-4 3 3 2-2 3 3"/><circle cx="9" cy="9" r="1"/>'), single_post: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M6.5 9h4v4h-4zM13 9h5M13 12h5M6.5 16h11"/>'),
     archive: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M8 9h.01M12 9h.01M16 9h.01M8 12h.01M12 12h.01M16 12h.01M8 15h.01M12 15h.01M16 15h.01"/>'), search_results: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><circle cx="11" cy="11.5" r="2.5"/><path d="M13 13.5l2.5 2.5M6.5 8h11"/>'),
     single_product: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M7 9h2l1.2 5h5L16.5 10H9.3"/><circle cx="11" cy="16.5" r=".6"/><circle cx="15" cy="16.5" r=".6"/>'), product_archive: IC('<rect x="4" y="4.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4.5" width="6.5" height="6.5" rx="1"/><rect x="4" y="13" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13" width="6.5" height="6.5" rx="1"/>'),
+    cart: IC('<path d="M4 6h2l2 9h9l2-6H8"/><circle cx="10" cy="19" r="1"/><circle cx="17" cy="19" r="1"/>'), checkout: IC('<rect x="3.5" y="6" width="17" height="12" rx="1"/><path d="M3.5 10h17M7 14h4"/>'), order_received: IC('<circle cx="12" cy="12" r="8"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/>'), my_account: IC('<circle cx="12" cy="9" r="3.5"/><path d="M5 19c1.5-3.5 4-5 7-5s5.500 1.500 7 5"/>'),
     not_found: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M7 14.5v-4l-2 3h3M10.5 10.5h2.5v4h-2.5zM15.5 14.5v-4l-2 3h3"/>'), sidebar: IC('<rect x="3.5" y="5" width="17" height="14" rx="1"/><path d="M15 5v14"/>'), custom: IC('<path d="M12 4v16M4 12h16"/>'),
     info: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>',
   };
@@ -57,6 +58,10 @@
     single_product: R("img", 14, 14, 70, 56) + T(96, 24, "Titre du produit") + R("bar", 96, 30, 20, 4) + R("line", 96, 40, 90, 2) + R("line", 96, 46, 90, 2) + R("btn", 96, 54, 40, 8) + T(100, 86, "Produits suggérés", "middle") + [0, 1, 2].map((i) => R("img", 36 + i * 46, 92, 40, 22)).join(""),
     product_archive: T(12, 16, "Produits") + R("line", 12, 26, 28, 2) + R("line", 12, 32, 28, 2) + R("line", 12, 38, 28, 2) + grid(3, 2, 50, 22, 140, 94),
     not_found: T(100, 28, "Page introuvable", "middle") + `<text class="tb-w-txt" x="100" y="86" text-anchor="middle" style="font-size:38px;font-weight:700">404</text>`,
+    cart: T(12, 16, "Panier") + R("line", 12, 28, 120, 2) + R("line", 12, 38, 120, 2) + R("line", 12, 48, 120, 2) + R("box", 146, 24, 44, 60),
+    checkout: T(12, 16, "Commande") + R("box", 12, 24, 110, 84) + R("box", 132, 24, 56, 84),
+    order_received: T(100, 40, "Merci !", "middle") + R("line", 40, 60, 120, 2) + R("line", 40, 70, 120, 2) + R("line", 40, 80, 80, 2),
+    my_account: T(12, 16, "Mon compte") + R("box", 12, 24, 40, 84) + R("line", 62, 30, 120, 2) + R("line", 62, 40, 120, 2) + R("line", 62, 50, 90, 2),
     sidebar: R("box", 140, 10, 52, 100) + R("line", 146, 20, 40, 2) + R("line", 146, 28, 40, 2) + R("line", 146, 36, 30, 2) + R("line", 8, 14, 120, 2) + R("line", 8, 22, 120, 2) + R("line", 8, 30, 90, 2),
     custom: R("box", 40, 20, 120, 80) + T(100, 64, "Votre modèle", "middle"),
   };
@@ -67,6 +72,7 @@
     single_page: "Modèle des pages individuelles : titre, image mise en avant et contenu.", single_post: "Modèle des articles individuels : titre, auteur, image et texte.",
     archive: "Modèle des listes de contenus : blog, catégories, étiquettes, auteurs.", search_results: "Modèle de la page de résultats de recherche.",
     single_product: "Modèle de la fiche produit : visuel, titre, prix et bouton d'achat.", product_archive: "Modèle des listes de produits : boutique et catégories.", not_found: "Modèle affiché quand une page est introuvable.",
+    cart: "Modèle de la page Panier : lignes, code promo et totaux réels de la boutique.", checkout: "Modèle de la validation de commande : adresse, livraison, paiement.", order_received: "Modèle de la confirmation après commande : récapitulatif, téléchargements, factures.", my_account: "Modèle de l'espace du client : connexion, commandes, données personnelles.",
     sidebar: "Barre latérale réutilisable : affichée sous le contenu de la page, avant le pied de page, selon vos conditions.", custom: "Modèles libres : tous ceux dont les conditions correspondent s'affichent sous le contenu de la page, avant le pied de page.",
   };
   const dates = (s) => (s ? String(s).slice(0, 16).replace("T", " ") : "—");
@@ -436,7 +442,7 @@
     return r;
   }
   const allowedKinds = (type) => { const d = data.types.find((t) => t.key === type); const all = opts.kinds.map((k) => k.key).filter((k) => k !== "custom"); if (!d) return all; const glob = ["global", "custom"].includes(d.group); if (glob) return all; return all.filter((k) => opts.kinds.find((x) => x.key === k).views.some((v) => VIEWS[type].includes(v))); };
-  const VIEWS = { single_page: ["front", "page"], single_post: ["post"], archive: ["archive"], search_results: ["search"], not_found: ["not_found"], single_product: ["product"], product_archive: ["product_archive"] };
+  const VIEWS = { single_page: ["front", "page"], single_post: ["post"], archive: ["archive"], search_results: ["search"], not_found: ["not_found"], single_product: ["product"], product_archive: ["product_archive"], cart: ["cart"], checkout: ["checkout"], order_received: ["order_received"], my_account: ["account"] };
   async function conditions(t) {
     editing = t; if (!opts) opts = await api("/options");
     const fill = (id, list) => { const box = $(id); box.textContent = ""; for (const c of list) box.append(row(allowedKinds(t.type), c)); };

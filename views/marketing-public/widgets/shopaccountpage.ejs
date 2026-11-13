@@ -1,0 +1,10 @@
+<%# Page « compte » de la boutique dans un modèle du Theme Builder (widgets/shop.js) : rend la VRAIE page à partir des données de la route (Object.assign({}, d.page.locals, { embedded: true })). %>
+<% if (d && d.page) { %>
+<section class="<%= cls %> kw-shopfull sh-embed"<%- attrs %>>
+  <%- include("../../boutique/_" + d.page.kind + "-body", Object.assign({}, d.page.locals, { embedded: true })) %>
+</section>
+<% } else if (d && d.demo) { %>
+<section class="<%= cls %> kw-shopfull"<%- attrs %>><p class="kw-ss-msg">Aperçu : la connexion ou l'espace client réel s'affiche ici (commandes, données personnelles).</p></section>
+<% } else if (isBuilder) { %>
+<section class="<%= cls %>"<%- attrs %>><p class="kw-ss-msg"><%= p.note %> — la vraie page s'affiche ici sur le site publié.</p></section>
+<% } %>
