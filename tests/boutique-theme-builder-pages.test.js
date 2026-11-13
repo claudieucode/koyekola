@@ -8,12 +8,12 @@ const Types = require("../src/themeBuilder/types");
 const TYPES = ["cart", "checkout", "order_received", "my_account"];
 
 describe("catalogues (sans serveur)", () => {
-  test("4 types déclarés dans le groupe Boutique, 30 modèles chacun, 6 compositions × 5 identités, documents valides contenant le bon élément", () => {
+  test("4 types déclarés dans le groupe Boutique, 100 modèles chacun, 20 compositions × 5 identités, documents valides contenant le bon élément", () => {
     const WIDGET = { cart: "shopcartpage", checkout: "shopcheckoutpage", order_received: "shoporderpage", my_account: "shopaccountpage" };
     for (const t of TYPES) {
       assert.ok(Types.has(t)); assert.equal(Types.TYPES[t].group, "shop");
-      const entries = Catalog.entries(t); assert.equal(entries.length, 30, t);
-      assert.equal(new Set(entries.map((e) => e.layoutKey)).size, 6); assert.equal(new Set(entries.map((e) => e.skinKey)).size, 5);
+      const entries = Catalog.entries(t); assert.equal(entries.length, 100, t);
+      assert.equal(new Set(entries.map((e) => e.layoutKey)).size, 20); assert.equal(new Set(entries.map((e) => e.skinKey)).size, 5);
       for (const e of entries) {
         const doc = Catalog.build(t, e.key, {}); assert.ok(doc && doc.sections && doc.sections.length, e.key);
         const walk = (n, f) => { f(n); (n.children || []).forEach((c) => walk(c, f)); }; let found = 0, h1 = 0;
@@ -23,7 +23,7 @@ describe("catalogues (sans serveur)", () => {
     }
   });
   test("deux modèles de même type diffèrent par leur structure (pas seulement par la couleur)", () => {
-    for (const t of TYPES) { const sig = (key) => JSON.stringify(Catalog.build(t, key, {}).sections[0], (k, v) => (k === "id" ? undefined : v)); const clair = Catalog.entries(t).filter((e) => e.skinKey === "clair"); assert.equal(new Set(clair.map((e) => sig(e.key))).size, 6, t); }
+    for (const t of TYPES) { const sig = (key) => JSON.stringify(Catalog.build(t, key, {}).sections[0], (k, v) => (k === "id" ? undefined : v)); const clair = Catalog.entries(t).filter((e) => e.skinKey === "clair"); assert.equal(new Set(clair.map((e) => sig(e.key))).size, 20, t); }
   });
 });
 
@@ -59,7 +59,7 @@ describe("rendu public avec un modèle publié", () => {
   test("panier : page par défaut sans modèle ; avec un modèle publié, le titre du modèle et la VRAIE table du panier (quantités, coupon, totaux)", async () => {
     const cli = new Client(srv.base); await cli.post("/boutique/panier/ajouter", { product_id: String(pid), quantity: "2" }, hh);
     const plain = await cli.get("/boutique/panier", hh); assert.equal(plain.status, 200); assert.match(plain.text, /class="sh-title">Panier/); assert.match(plain.text, /sh-cart/);
-    await useAndPublish("cart", "simple");
+    await useAndPublish("cart", "gauche-seule");
     const r = await cli.get("/boutique/panier", hh);
     assert.equal(r.status, 200); assert.match(r.text, /Votre panier/, "titre du modèle"); assert.match(r.text, /sh-cart/, "vraie table"); assert.match(r.text, /name="quantity" value="2"/); assert.match(r.text, /panier\/coupon/); assert.match(r.text, /Passer la commande/);
     assert.doesNotMatch(r.text, /class="sh-title">Panier/, "plus le titre par défaut"); assert.equal((r.text.match(/<h1[ >]/g) || []).length, 1, "un seul h1");
@@ -69,7 +69,7 @@ describe("rendu public avec un modèle publié", () => {
     assert.match((await cli.get("/boutique/panier", hh)).text, /name="quantity" value="3"/);
   });
   test("validation de commande : formulaire réel dans le modèle, commande passée jusqu'au bout, puis confirmation habillée avec facture", async () => {
-    await useAndPublish("checkout", "etroit"); await useAndPublish("order_received", "reassurance");
+    await useAndPublish("checkout", "centre-seule"); await useAndPublish("order_received", "gauche-consignes");
     const cli = new Client(srv.base); await cli.post("/boutique/panier/ajouter", { product_id: String(pid), quantity: "1" }, hh);
     const page = await cli.get("/boutique/commande?pays=FR", hh);
     assert.match(page.text, /Finaliser votre commande/); assert.match(page.text, /name="idempotency_key"/);
@@ -83,7 +83,7 @@ describe("rendu public avec un modèle publié", () => {
     assert.ok([400, 409, 422, 303].includes(bad.status));
   });
   test("compte : connexion et espace client dans le modèle", async () => {
-    await useAndPublish("my_account", "bandeau");
+    await useAndPublish("my_account", "bandeau-seule");
     const anon = await new Client(srv.base).get("/boutique/compte", hh);
     assert.equal(anon.status, 200); assert.match(anon.text, /Mon compte/); assert.match(anon.text, /compte\/connexion/);
     const cli = new Client(srv.base); assert.equal((await cli.post("/boutique/compte/inscription", { email: "tb2@example.test", password: "motdepasse-solide", name: "TB" }, hh)).status, 303);
