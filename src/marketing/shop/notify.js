@@ -36,7 +36,8 @@ function body(event, order, items, extra) {
 }
 
 // → { queued: boolean }
-function notify(s, order, event, { to, extra } = {}) {
+function notify(s, order, event, { to, extra: extraIn } = {}) {
+  let extra = extraIn;
   const recipient = to || order.email;
   const log = (status, error) => { try { s.db.prepare("INSERT OR IGNORE INTO mk_shop_notifications (organization_id, site_id, order_id, event, recipient, status, error) VALUES (?,?,?,?,?,?,?)").run(s.organizationId, s.siteId ?? null, order.id, event, recipient, status, error || null); } catch { /* le journal ne bloque jamais */ } };
   try {
@@ -44,6 +45,17 @@ function notify(s, order, event, { to, extra } = {}) {
     const dup = s.db.prepare("SELECT 1 FROM mk_shop_notifications WHERE order_id = ? AND event = ? AND recipient = ? AND status = 'queued'").get(order.id, event, recipient);
     if (dup) return { queued: false, duplicate: true };
     const items = s.db.prepare("SELECT * FROM mk_shop_order_items WHERE order_id = ?").all(order.id);
+    if (event === "order_paid") {
+      // Produits numériques : le message contient le lien (secret) de la page de commande, d'où l'acheteur télécharge ses fichiers
+      try {
+        const has = s.db.prepare("SELECT 1 FROM mk_shop_downloads WHERE order_id = ? LIMIT 1").get(order.id);
+        if (has) {
+          const info = Number.isInteger(s.siteId) ? require("../../services/urls").siteInfo(s.siteId) : null;
+          const origin = (info && info.base) || (process.env.SITE_URL ? String(process.env.SITE_URL).replace(/\/+$/, "") : "");
+          if (origin) extra = [extra, `Vos téléchargements : ${origin}/boutique/commande/confirmation/${encodeURIComponent(order.number)}?k=${require("./view").orderToken(order)}`].filter(Boolean).join("\n");
+        }
+      } catch { /* le message part sans lien plutôt que de ne pas partir */ }
+    }
     const r = queueMail(s.db, { kind: "shop_order", to: recipient, subject: SUBJECTS[event](order), text: body(event, order, items, extra) });
     if (!r.queued) { log("failed", r.reason || "refusée par la file"); return { queued: false }; }
     log(process.env.SMTP_HOST ? "queued" : "not_configured", process.env.SMTP_HOST ? null : "SMTP non configuré : le message restera « ignoré » dans la file");

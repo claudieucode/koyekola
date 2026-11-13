@@ -1,5 +1,5 @@
 // Rapports de la boutique d'UN site (lecture seule) : chiffres de la période, ventes par jour, meilleurs produits, statuts, moyens de paiement, coupons, stock bas, et exports CSV.
-// Règle de comptage : une vente = une commande PAYÉE (payment_status = 'paid') et non annulée, datée de son paiement. Les remboursements réussis sont soustraits à leur date.
+// Règle de comptage : une vente = une commande ayant été PAYÉE (date de paiement renseignée) et non annulée, datée de son paiement (une commande remboursée reste une vente, le remboursement est soustrait à part). Les remboursements réussis sont soustraits à leur date.
 // Tout est en centimes entiers ; la portée (organisation + site) vient du serveur, jamais du navigateur.
 const siteCond = (s, a = "") => (s.siteId == null ? `${a}site_id IS NULL` : `${a}site_id = ?`);
 const siteArgs = (s) => (s.siteId == null ? [] : [s.siteId]);
@@ -17,14 +17,14 @@ function period(q = {}, now = new Date()) {
   return { from, to, startSql: `${from} 00:00:00`, endSql: `${end} 00:00:00` };
 }
 
-const PAID = "payment_status = 'paid' AND status <> 'cancelled' AND paid_at >= ? AND paid_at < ?";
+const PAID = "paid_at IS NOT NULL AND status <> 'cancelled' AND paid_at >= ? AND paid_at < ?";
 
 function summary(s, p) {
   const base = [s.organizationId, ...siteArgs(s)];
   const o = s.db.prepare(`SELECT COUNT(*) n, COALESCE(SUM(total_cents),0) gross, COALESCE(SUM(tax_cents),0) tax, COALESCE(SUM(shipping_cents),0) shipping, COALESCE(SUM(discount_cents),0) discount
     FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND ${PAID}`).get(...base, p.startSql, p.endSql);
   const r = s.db.prepare(`SELECT COALESCE(SUM(amount_cents),0) n FROM mk_shop_refunds WHERE organization_id = ? AND ${siteCond(s)} AND status = 'succeeded' AND created_at >= ? AND created_at < ?`).get(...base, p.startSql, p.endSql).n;
-  const units = s.db.prepare(`SELECT COALESCE(SUM(i.quantity),0) n FROM mk_shop_order_items i JOIN mk_shop_orders o ON o.id = i.order_id WHERE o.organization_id = ? AND ${siteCond(s, "o.")} AND o.payment_status = 'paid' AND o.status <> 'cancelled' AND o.paid_at >= ? AND o.paid_at < ?`).get(...base, p.startSql, p.endSql).n;
+  const units = s.db.prepare(`SELECT COALESCE(SUM(i.quantity),0) n FROM mk_shop_order_items i JOIN mk_shop_orders o ON o.id = i.order_id WHERE o.organization_id = ? AND ${siteCond(s, "o.")} AND o.paid_at IS NOT NULL AND o.status <> 'cancelled' AND o.paid_at >= ? AND o.paid_at < ?`).get(...base, p.startSql, p.endSql).n;
   const customers = s.db.prepare(`SELECT COUNT(*) n FROM mk_shop_customers WHERE organization_id = ? AND ${siteCond(s)} AND created_at >= ? AND created_at < ?`).get(...base, p.startSql, p.endSql).n;
   const pending = s.db.prepare(`SELECT COUNT(*) n FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND status IN ('pending','paid','processing')`).get(...base).n;
   return { orders: o.n, grossCents: o.gross, refundedCents: r, netCents: o.gross - r, taxCents: o.tax, shippingCents: o.shipping, discountCents: o.discount, unitsSold: units, averageCents: o.n ? Math.round(o.gross / o.n) : 0, newCustomers: customers, toProcess: pending };
@@ -41,7 +41,7 @@ function byDay(s, p) {
 function topProducts(s, p, limit = 10) {
   return s.db.prepare(`SELECT COALESCE(i.product_id, 0) product_id, i.name, SUM(i.quantity) qty, SUM(i.line_subtotal_cents - i.discount_cents) cents
     FROM mk_shop_order_items i JOIN mk_shop_orders o ON o.id = i.order_id
-    WHERE o.organization_id = ? AND ${siteCond(s, "o.")} AND o.payment_status = 'paid' AND o.status <> 'cancelled' AND o.paid_at >= ? AND o.paid_at < ?
+    WHERE o.organization_id = ? AND ${siteCond(s, "o.")} AND o.paid_at IS NOT NULL AND o.status <> 'cancelled' AND o.paid_at >= ? AND o.paid_at < ?
     GROUP BY COALESCE(i.product_id, 0), i.name ORDER BY cents DESC, qty DESC LIMIT ?`).all(s.organizationId, ...siteArgs(s), p.startSql, p.endSql, limit);
 }
 const byStatus = (s, p) => s.db.prepare(`SELECT status, COUNT(*) n, COALESCE(SUM(total_cents),0) cents FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND created_at >= ? AND created_at < ? GROUP BY status ORDER BY n DESC`).all(s.organizationId, ...siteArgs(s), p.startSql, p.endSql);

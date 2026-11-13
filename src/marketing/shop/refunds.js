@@ -113,8 +113,10 @@ async function create(s, orderId, { amountCents = null, items = [], restock = fa
       s.db.prepare("UPDATE mk_shop_orders SET status = 'refunded', payment_status = 'refunded', updated_at = datetime('now') WHERE id = ?").run(order.id);
       s.db.prepare("UPDATE mk_shop_payments SET status = 'refunded', updated_at = datetime('now') WHERE order_id = ? AND status = 'succeeded'").run(order.id);
       giftLists.onRefunded(s, order.id);
+      require("./downloads").revokeForOrder(s.db, order.id); // remboursement total : plus de téléchargement
     }
     orders.addEvent(s.db, order.id, { kind: fullNow ? "status" : "refund_partial", from: fullNow ? order.status : null, to: fullNow ? "refunded" : null, actor, note: `Remboursement de ${(reserved.amount / 100).toFixed(2)} ${order.currency.toUpperCase()}${reserved.provider === "stripe" ? " effectué par Stripe" : " enregistré (à rendre au client hors plateforme)"}${restock ? ", articles remis en stock" : ""}${reason ? " — " + clean(reason, 200) : ""}.` });
+    require("./invoices").sync(s, order.id); // avoir numéroté pour ce remboursement (ne lève jamais)
     return { refund: s.db.prepare("SELECT * FROM mk_shop_refunds WHERE id = ?").get(reserved.id), order: orders.getOrder(s, order.id), full: fullNow };
   });
 }

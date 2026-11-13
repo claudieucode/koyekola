@@ -19,5 +19,7 @@
 </dl>
 <% if (order.delivery_date) { %><p>Créneau de livraison : <strong><%= slotText %></strong></p><% } %>
 <% if (order.tracking_number) { %><p>Suivi du colis : <strong><%= order.tracking_number %></strong></p><% } %>
+<% if (typeof files !== "undefined" && files.length) { %><h2>Vos téléchargements</h2><ul><% files.forEach((f) => { %><li><% if (f.state === "ok") { %><a href="<%= shop.base %>/telechargement/<%= f.token %>"><%= f.label %></a> <small>(<%= f.max_downloads == null ? "téléchargements illimités" : (f.max_downloads - f.download_count) + " téléchargement(s) restant(s)" %><%= f.expires_at ? ", jusqu'au " + String(f.expires_at).slice(0, 10) : "" %>)</small><% } else { %><%= f.label %> — <em><%= f.state === "expired" ? "lien expiré" : f.state === "exhausted" ? "limite de téléchargements atteinte" : "indisponible" %></em><% } %></li><% }) %></ul><% } %>
+<% if (typeof docs !== "undefined" && docs.length) { %><h2>Factures</h2><ul><% docs.forEach((d) => { %><li><a href="<%= shop.base %>/commande/<%= encodeURIComponent(order.number) %>/facture/<%= d.id %>?k=<%= key %>" target="_blank" rel="noopener"><%= d.kind === "invoice" ? "Facture" : "Avoir" %> <%= d.number %></a></li><% }) %></ul><% } %>
 <p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
 <%- include("_bottom") %>

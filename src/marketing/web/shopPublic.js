@@ -34,6 +34,8 @@ const AGE_COOKIE = "kola_age";
 const CMP_COOKIE = "kola_cmp";
 const BASE = "/boutique";
 // Origine des liens envoyés par e-mail : l'adresse enregistrée du site (jamais l'en-tête Host brut)
+const invoices = require("../shop/invoices");
+const downloads = require("../shop/downloads");
 const shopOrigin = (req) => (req.kwSite && req.kwSite.base) || (process.env.SITE_URL ? String(process.env.SITE_URL).replace(/\/+$/, "") : `${req.protocol}://${req.get("host")}`);
 
 module.exports = ({ db }) => {
@@ -479,7 +481,34 @@ module.exports = ({ db }) => {
   router.get(`${BASE}/commande/confirmation/:number`, (req, res) => {
     const order = loadOrderFor(req, res);
     if (!order) return;
-    render(req, res, "confirmation", { title: `Commande ${order.number}`, slotText: deliverySlots.describe(order), order: orders.orderDetail(req.shop.s, order), reviewable: req.shop.settings.reviews_enabled ? new Set(db.prepare("SELECT product_id FROM mk_shop_order_items WHERE order_id = ? AND product_id IS NOT NULL").all(order.id).map((r) => r.product_id)) : new Set(), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
+    render(req, res, "confirmation", { title: `Commande ${order.number}`, slotText: deliverySlots.describe(order), order: orders.orderDetail(req.shop.s, order), docs: invoices.forOrder(req.shop.s, order.id), files: downloads.forOrder(req.shop.s, order.id), reviewable: req.shop.settings.reviews_enabled ? new Set(db.prepare("SELECT product_id FROM mk_shop_order_items WHERE order_id = ? AND product_id IS NOT NULL").all(order.id).map((r) => r.product_id)) : new Set(), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
+  });
+  // Téléchargement d'un produit numérique : lien signé personnel ; refusé si commande non payée / remboursée, lien expiré ou épuisé. Compté de façon atomique.
+  const dlLimiter = createRateLimiter(30, 10 * 60 * 1000);
+  router.get(`${BASE}/telechargement/:token`, (req, res, next) => {
+    try {
+      const key = `${req.ip}|${req.shop.s.siteId}`;
+      if (dlLimiter.isLimited(key)) return res.status(429).render("error", { message: "Trop de téléchargements en peu de temps. Réessayez dans quelques minutes." });
+      dlLimiter.hit(key);
+      const { s } = req.shop;
+      const r = downloads.resolve(s, req.params.token);
+      if (!r.ok) {
+        const msg = { invalid: "Lien de téléchargement invalide.", revoked: "Ce téléchargement n'est plus disponible (commande remboursée ou annulée).", expired: "Ce lien de téléchargement a expiré.", exhausted: "Le nombre de téléchargements autorisés est atteint.", missing: "Le fichier est momentanément indisponible. Contactez la boutique." }[r.reason] || "Téléchargement impossible.";
+        return res.status(r.reason === "invalid" ? 404 : 410).render("error", { message: msg });
+      }
+      if (!downloads.consume(s, r.row.id)) return res.status(410).render("error", { message: "Le nombre de téléchargements autorisés est atteint." });
+      res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex" });
+      res.download(r.path, r.row.original_name, { headers: { "Content-Type": r.row.mime } }, (err) => { if (err && !res.headersSent) next(err); });
+    } catch (error) { next(error); }
+  });
+  // Facture / avoir d'une commande : même droit d'accès que la page de commande (lien secret ou client connecté)
+  router.get(`${BASE}/commande/:number/facture/:iid(\\d+)`, (req, res) => {
+    const order = loadOrderFor(req, res);
+    if (!order) return;
+    const inv = invoices.get(req.shop.s, order.id, req.params.iid);
+    if (!inv) return res.status(404).render("error", { message: "Document introuvable." });
+    res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+    res.render("marketing/boutique/facture", { inv, money: (c) => view.money(c, inv.currency) });
   });
   // Nouvelle tentative de paiement d'une commande en attente (carte)
   router.post(`${BASE}/commande/:number/payer`, limited(checkoutLimiter, "tentatives de paiement"), async (req, res, next) => {

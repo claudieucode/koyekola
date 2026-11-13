@@ -204,6 +204,8 @@ function markPaid(s, orderId, { provider, providerRef, amountCents, currency, ac
     }
     giftLists.onPaid(s, order.id); // liste de cadeaux : « offert » n'augmente qu'ici, à la commande payée
     addEvent(s.db, order.id, { kind: "paid", from: order.status, to: "paid", actor: actor || `provider:${provider}`, note: late ? "Confirmation tardive après annulation : commande rétablie, stock à vérifier." : null });
+    require("./invoices").sync(s, order.id); // facture numérotée à l'encaissement (ne lève jamais)
+    require("./downloads").grant(s, order.id); // droits de téléchargement des produits numériques (ne lève jamais)
     return { status: "paid", order: getOrder(s, order.id), late };
   });
 }
@@ -318,6 +320,7 @@ function createSubscriptionOrder(s, d) {
       else addEvent(s.db, orderId, { kind: "stock_short", actor: "system", note: "Stock insuffisant pour ce réassort déjà payé : à traiter à la main (expédier plus tard ou rembourser)." });
     }
   }
+  require("./invoices").sync(s, orderId);
   return getOrder(s, orderId);
 }
 
