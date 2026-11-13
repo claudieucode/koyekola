@@ -166,7 +166,7 @@ function createMarketingRouters({ db }) {
   publicRoutes.use(require("./privacyExportPublic")({ db })); // confirmation et téléchargement d'un export de données personnelles (lien à jeton)
   // API /api/v1 : authentification par clé, jamais par cookie — montée séparément (voir server.js)
   const { createApiRouter } = require("../api/router");
-  return { admin, publicRoutes, webhooks: require("./webhooks")({ db }), api: createApiRouter({ db }) };
+  return { admin, publicRoutes, webhooks: require("./webhooks")({ db }), shopWebhooks: require("./shopWebhooks")({ db }), api: createApiRouter({ db }) };
 }
 
 module.exports = { createMarketingRouters };

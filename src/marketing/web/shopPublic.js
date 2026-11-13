@@ -516,32 +516,6 @@ module.exports = ({ db }) => {
       res.download(r.path, r.row.original_name, { headers: { "Content-Type": r.row.mime } }, (err) => { if (err && !res.headersSent) next(err); });
     } catch (error) { next(error); }
   });
-  // Webhooks des passerelles (PayPal, Flutterwave) et de Stripe avec les clés PROPRES au site : sur l'adresse du site (/boutique/webhooks/<passerelle>).
-  // Corps lu ici ; un message n'est jamais cru tel quel (signature ou hash du site, puis relecture auprès du fournisseur).
-  const hookLimiter = createRateLimiter(120, 60 * 1000);
-  router.post(`${BASE}/webhooks/:provider(paypal|flutterwave)`, express.json({ limit: "256kb" }), async (req, res) => {
-    try {
-      const key = `hook|${req.ip}|${req.shop.s.siteId}`;
-      if (hookLimiter.isLimited(key)) return res.status(429).json({ ok: false });
-      hookLimiter.hit(key);
-      const r = await payments.handleProviderWebhook(req.shop.s, req.params.provider, req.body || {}, req.headers);
-      if (r.handled && r.becamePaid) notify.notify(req.shop.s, r.order, "order_paid");
-      res.json({ ok: true });
-    } catch (error) { console.error(`[KOLAKISA] Boutique : webhook ${req.params.provider} : ${error.message}`); res.status(500).json({ ok: false }); }
-  });
-  router.post(`${BASE}/webhooks/stripe`, express.raw({ type: "*/*", limit: "1mb" }), (req, res) => {
-    try {
-      const { s } = req.shop; const gw = require("../shop/gateways");
-      const secret = gw.getCreds(s, "stripe") && gw.getCreds(s, "stripe").webhook_secret;
-      if (!secret) return res.status(404).json({ ok: false }); // sans secret propre au site : le webhook global du serveur s'applique
-      if (!require("../../services/payments").verifyWebhookSignature(req.body, req.get("stripe-signature"), secret)) return res.status(400).json({ ok: false });
-      const event = JSON.parse(req.body.toString("utf8"));
-      const out = payments.handleStripeEvent(db, event);
-      if (out.handled && out.result && out.scope && out.orderId && out.scope.siteId === s.siteId && out.result.status === "paid") notify.notify(out.scope, orders.getOrder(out.scope, out.orderId), "order_paid");
-      res.json({ received: true });
-    } catch (error) { console.error(`[KOLAKISA] Boutique : webhook Stripe du site : ${error.message}`); res.status(500).json({ ok: false }); }
-  });
-
   // Facture / avoir d'une commande : même droit d'accès que la page de commande (lien secret ou client connecté)
   router.get(`${BASE}/commande/:number/facture/:iid(\\d+)`, (req, res) => {
     const order = loadOrderFor(req, res);
