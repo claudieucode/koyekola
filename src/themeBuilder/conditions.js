@@ -20,9 +20,9 @@ const KINDS = Object.freeze({
   product_archive: { label: "Archives de produits", views: ["product_archive", "search"] },
   custom: { label: "Condition personnalisée", views: Types.VIEWS },
   // Chantier B (pied de page) : vues de la boutique, fiche formation, visiteur connecté / rôle
-  shop: { label: "Toute la boutique", views: ["product_archive", "product", "shop_page", "account"] },
+  shop: { label: "Toute la boutique", views: ["product_archive", "product", "shop_page", "cart", "checkout", "order_received", "account"] },
   account: { label: "Compte client (boutique)", views: ["account"] },
-  shop_page: { label: "Panier, commande et autres pages de la boutique", views: ["shop_page"] },
+  shop_page: { label: "Panier, commande et autres pages de la boutique", views: ["shop_page", "cart", "checkout", "order_received"] },
   course: { label: "Fiche formation", views: ["course"] },
   visitor: { label: "Visiteur connecté / rôle", views: Types.VIEWS },
 });

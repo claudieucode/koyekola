@@ -45,9 +45,9 @@ function matches(c, ctx) {
     case "singular": return SINGLE.has(v);
     case "not_found": return v === "not_found";
     case "search": return v === "search" || a.kind === "search";
-    case "shop": return v === "product_archive" || v === "product" || v === "shop_page" || v === "account";
+    case "shop": return v === "product_archive" || v === "product" || v === "shop_page" || v === "cart" || v === "checkout" || v === "order_received" || v === "account";
     case "account": return v === "account";
-    case "shop_page": return v === "shop_page";
+    case "shop_page": return v === "shop_page" || v === "cart" || v === "checkout" || v === "order_received";
     case "visitor": {
       const vis = ctx.visitor; if (!vis) return false; // visiteur inconnu : jamais supposé
       if ((c.state === "in") !== Boolean(vis.loggedIn)) return false;

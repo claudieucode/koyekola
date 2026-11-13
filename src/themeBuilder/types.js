@@ -1,6 +1,6 @@
 // Registre FERMÉ des types de modèles du Theme Builder (programme 23.1). `views` : vues du contexte de résolution auxquelles le type s'applique ; `global` : s'applique à toute vue (en-tête, pied,
 // barre latérale) ; `module` : module de site requis (siteModules) ; `legacy` : famille de l'ancien système importée dans ce type.
-const VIEWS = Object.freeze(["front", "page", "post", "archive", "search", "not_found", "product", "product_archive", "account", "shop_page", "course"]);
+const VIEWS = Object.freeze(["front", "page", "post", "archive", "search", "not_found", "product", "product_archive", "account", "shop_page", "cart", "checkout", "order_received", "course"]);
 const TYPES = Object.freeze({
   header: { label: "En-tête", group: "global", global: true, legacy: null },
   footer: { label: "Pied de page", group: "global", global: true, legacy: null },
@@ -12,6 +12,10 @@ const TYPES = Object.freeze({
   not_found: { label: "Page 404", group: "content", views: ["not_found"], legacy: "not_found" },
   single_product: { label: "Produit individuel", group: "shop", views: ["product"], module: "commerce", legacy: "product" },
   product_archive: { label: "Archives produits", group: "shop", views: ["product_archive"], module: "commerce", legacy: "product_archive" },
+  cart: { label: "Panier", group: "shop", views: ["cart"], module: "commerce", legacy: null },
+  checkout: { label: "Validation de commande", group: "shop", views: ["checkout"], module: "commerce", legacy: null },
+  order_received: { label: "Commande reçue", group: "shop", views: ["order_received"], module: "commerce", legacy: null },
+  my_account: { label: "Compte client", group: "shop", views: ["account"], module: "commerce", legacy: null },
   custom: { label: "Modèle personnalisé", group: "custom", global: true, legacy: null },
 });
 const GROUPS = Object.freeze({ global: "Structure globale", content: "Pages et contenus", shop: "Boutique", custom: "Modèles personnalisés" });

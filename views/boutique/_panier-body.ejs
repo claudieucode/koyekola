@@ -1,0 +1,50 @@
+<% if (typeof embedded === "undefined" || !embedded) { %><h1 class="sh-title">Panier</h1><% } %>
+<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
+<% if (!priced || (!priced.lines.length && !priced.issues.length)) { %>
+  <p class="sh-empty">Votre panier est vide.</p>
+  <p><a class="sh-btn" href="<%= shop.base %>">Continuer mes achats</a></p>
+<% } else { %>
+  <% priced.issues.forEach((i) => { %><p class="sh-error" role="alert"><%= i.message %>
+    <form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= i.itemId %>/supprimer"><input type="hidden" name="version" value="<%= priced.version %>"><button class="sh-link" type="submit">Retirer du panier</button></form></p><% }) %>
+  <div class="sh-table-wrap">
+  <table class="sh-table sh-cart">
+    <caption class="sh-sr">Articles du panier</caption>
+    <thead><tr><th scope="col">Article</th><th scope="col">Prix unitaire</th><th scope="col">Quantité</th><th scope="col">Sous-total</th><th scope="col"><span class="sh-sr">Retirer</span></th></tr></thead>
+    <tbody>
+    <% priced.lines.forEach((l) => { %>
+      <tr>
+        <th scope="row"><a href="<%= shop.base %>/produit/<%= encodeURIComponent(l.slug) %>"><%= l.name %></a><% if (l.variantLabel) { %><br><small><%= l.variantLabel %></small><% } %><% if (typeof gifts !== "undefined" && gifts[l.itemId]) { %><br><small class="sh-custom">Cadeau pour la liste « <%= gifts[l.itemId] %> »</small><% } %><% if (l.customText) { %><br><small class="sh-custom"><%= l.customLabel %> : « <%= l.customText %> »</small><% } %></th>
+        <td data-label="Prix unitaire"><% if (l.onSale) { %><s class="sh-old"><%= money(l.regularCents) %></s> <% } %><%= money(l.unitCents) %></td>
+        <td data-label="Quantité">
+          <form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>">
+            <input type="hidden" name="version" value="<%= priced.version %>">
+            <label class="sh-sr" for="q<%= l.itemId %>">Quantité de <%= l.name %></label>
+            <input id="q<%= l.itemId %>" type="number" name="quantity" value="<%= l.quantity %>" min="0" max="99" inputmode="numeric">
+            <button class="sh-btn" type="submit">Mettre à jour</button>
+          </form>
+        </td>
+        <td data-label="Sous-total"><%= money(l.unitCents * l.quantity) %></td>
+        <td data-label="Retirer"><form class="sh-inline" method="post" action="<%= shop.base %>/panier/ligne/<%= l.itemId %>/supprimer"><input type="hidden" name="version" value="<%= priced.version %>"><button class="sh-link" type="submit" aria-label="Retirer <%= l.name %>">Retirer</button></form></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+  </div>
+  <form class="sh-form sh-coupon" method="post" action="<%= shop.base %>/panier/coupon">
+    <label>Code promotionnel<input type="text" name="code" maxlength="40" value="<%= priced.coupon ? priced.coupon.code : "" %>" autocomplete="off"></label>
+    <button class="sh-btn" type="submit">Appliquer</button>
+    <% if (priced.coupon) { %><button class="sh-link" type="submit" name="retirer" value="1">Retirer le code</button><% } %>
+  </form>
+  <% if (priced.couponError) { %><p class="sh-error" role="alert"><%= priced.couponError %></p><% } %>
+  <dl class="sh-totals">
+    <div><dt>Sous-total</dt><dd><%= money(priced.totals.subtotal) %></dd></div>
+    <% if (priced.totals.discount) { %><div><dt>Réduction<%= priced.coupon ? " (" + priced.coupon.code + ")" : "" %></dt><dd>− <%= money(priced.totals.discount) %></dd></div><% } %>
+    <% if (priced.shipping.required) { %><div><dt>Livraison</dt><dd><%= priced.shipping.chosen ? money(priced.shipping.chosen.costCents) : "calculée à la commande" %></dd></div><% } %>
+    <% if (priced.totals.tax) { %><div><dt><%= priced.settings.prices_include_tax ? "dont taxes" : "Taxes" %></dt><dd><%= money(priced.totals.tax) %></dd></div><% } %>
+    <div class="sh-total"><dt>Total</dt><dd><%= money(priced.totals.total) %></dd></div>
+  </dl>
+  <p class="sh-actions">
+    <a class="sh-btn" href="<%= shop.base %>">Continuer mes achats</a>
+    <% if (priced.canCheckout) { %><a class="sh-btn sh-btn-primary" href="<%= shop.base %>/commande">Passer la commande</a><% } %>
+  </p>
+<% } %>

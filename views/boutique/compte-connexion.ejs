@@ -1,25 +1,7 @@
 <%- include("_top", { noindex: true }) %>
-<h1 class="sh-title">Mon compte</h1>
-<% if (info) { %><p class="sh-ok" role="status"><%= info %></p><% } %>
-<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
-<div class="sh-layout">
-<form class="sh-form" method="post" action="<%= shop.base %>/compte/connexion">
-  <h2>Se connecter</h2>
-  <label>Adresse e-mail<input type="email" name="email" value="<%= values.email || "" %>" required autocomplete="email"></label>
-  <label>Mot de passe<input type="password" name="password" required autocomplete="current-password"></label>
-  <button class="sh-btn sh-btn-primary" type="submit">Connexion</button>
-</form>
-<form class="sh-form" method="post" action="<%= shop.base %>/compte/inscription">
-  <h2>Créer un compte</h2>
-  <label>Nom<input name="name" value="<%= values.name || "" %>" autocomplete="name" maxlength="120"></label>
-  <label>Adresse e-mail<input type="email" name="email" required autocomplete="email"></label>
-  <label>Mot de passe (10 caractères minimum)<input type="password" name="password" required minlength="10" autocomplete="new-password"></label>
-  <button class="sh-btn" type="submit">Créer mon compte</button>
-</form>
-<form class="sh-form" method="post" action="<%= shop.base %>/compte/mot-de-passe-oublie">
-  <h2>Mot de passe oublié</h2>
-  <label>Adresse e-mail<input type="email" name="email" required autocomplete="email"></label>
-  <button class="sh-btn" type="submit">Recevoir un lien</button>
-</form>
-</div>
+<% if (typeof themeTemplate !== "undefined" && themeTemplate) { %>
+  <%- themeTemplate %>
+<% } else { %>
+<%- include("_compte-connexion-body") %>
+<% } %>
 <%- include("_bottom") %>

@@ -1,25 +1,7 @@
 <%- include("_top", { noindex: true }) %>
-<h1 class="sh-title">Commande <%= order.number %></h1>
-<% if (error) { %><p class="sh-error" role="alert"><%= error %></p><% } %>
-<p class="sh-status" role="status">Statut : <strong><%= statusLabels[order.status] %></strong><% if (order.payment_status === "paid") { %> — paiement confirmé<% } else if (order.status === "pending") { %> — paiement non confirmé pour le moment<% } %></p>
-<% if (order.status === "pending" && order.payment_method === "manual" && instructions) { %><div class="sh-callout"><p><strong>Comment payer</strong></p><p><%= instructions %></p></div><% } %>
-<% if (order.status === "pending" && order.payment_method === "stripe") { %>
-<p>Votre paiement n'est pas encore confirmé. Si vous venez de payer, actualisez cette page dans un instant.</p>
-<form method="post" action="<%= shop.base %>/commande/<%= encodeURIComponent(order.number) %>/payer?k=<%= key %>"><button class="sh-btn sh-btn-primary" type="submit">Payer par carte</button></form>
+<% if (typeof themeTemplate !== "undefined" && themeTemplate) { %>
+  <%- themeTemplate %>
+<% } else { %>
+<%- include("_confirmation-body") %>
 <% } %>
-<table class="sh-table"><thead><tr><th scope="col">Article</th><th scope="col">Qté</th><th scope="col">Total</th></tr></thead><tbody>
-<% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %><% if (i.custom_text) { %><br><small class="sh-custom"><%= i.custom_label || "Personnalisation" %> : « <%= i.custom_text %> »</small><% } %><% if (order.payment_status === "paid" && i.product_id && typeof reviewable !== "undefined" && reviewable.has(i.product_id)) { %><br><a class="sh-link" href="<%= shop.base %>/avis/<%= encodeURIComponent(order.number) %>/<%= i.product_id %>?k=<%= key %>">Donner mon avis</a><% } %></th><td><%= i.quantity %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
-</tbody></table>
-<dl class="sh-totals">
-  <div><dt>Sous-total</dt><dd><%= money(order.subtotal_cents) %></dd></div>
-  <% if (order.discount_cents) { %><div><dt>Réduction</dt><dd>− <%= money(order.discount_cents) %></dd></div><% } %>
-  <% if (order.shipping_method_name) { %><div><dt>Livraison (<%= order.shipping_method_name %>)</dt><dd><%= money(order.shipping_cents) %></dd></div><% } %>
-  <% order.taxLines.forEach((t) => { %><div><dt><%= order.prices_include_tax ? "dont " : "" %><%= t.name %></dt><dd><%= money(t.amountCents) %></dd></div><% }) %>
-  <div class="sh-total"><dt>Total</dt><dd><%= money(order.total_cents) %></dd></div>
-</dl>
-<% if (order.delivery_date) { %><p>Créneau de livraison : <strong><%= slotText %></strong></p><% } %>
-<% if (order.tracking_number) { %><p>Suivi du colis : <strong><%= order.tracking_number %></strong></p><% } %>
-<% if (typeof files !== "undefined" && files.length) { %><h2>Vos téléchargements</h2><ul><% files.forEach((f) => { %><li><% if (f.state === "ok") { %><a href="<%= shop.base %>/telechargement/<%= f.token %>"><%= f.label %></a> <small>(<%= f.max_downloads == null ? "téléchargements illimités" : (f.max_downloads - f.download_count) + " téléchargement(s) restant(s)" %><%= f.expires_at ? ", jusqu'au " + String(f.expires_at).slice(0, 10) : "" %>)</small><% } else { %><%= f.label %> — <em><%= f.state === "expired" ? "lien expiré" : f.state === "exhausted" ? "limite de téléchargements atteinte" : "indisponible" %></em><% } %></li><% }) %></ul><% } %>
-<% if (typeof docs !== "undefined" && docs.length) { %><h2>Factures</h2><ul><% docs.forEach((d) => { %><li><a href="<%= shop.base %>/commande/<%= encodeURIComponent(order.number) %>/facture/<%= d.id %>?k=<%= key %>" target="_blank" rel="noopener"><%= d.kind === "invoice" ? "Facture" : "Avoir" %> <%= d.number %></a></li><% }) %></ul><% } %>
-<p><a class="sh-btn" href="<%= shop.base %>">Retour à la boutique</a></p>
 <%- include("_bottom") %>

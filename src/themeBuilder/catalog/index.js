@@ -7,7 +7,7 @@ const Modes = require("./identityModes");
 const MODE_TYPES = new Set(["single_product", "single_page"]); // catalogues dont les modèles portent leur identité propre ET proposent les modes indépendant / hérité / hybride
 const Types = require("../types");
 
-const FILES = ["header", "footer", "single_page", "single_post", "archive", "search_results", "not_found", "single_product", "product_archive"];
+const FILES = ["header", "footer", "single_page", "single_post", "archive", "search_results", "not_found", "single_product", "product_archive", "cart", "checkout", "order_received", "my_account"];
 const LOADED = new Map();
 function def(type) {
   if (!FILES.includes(type)) return null;

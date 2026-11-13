@@ -86,7 +86,20 @@ module.exports = ({ db }) => {
     if (!siteName) siteName = "Boutique";
     return { shop: { base: BASE, name: siteName, cartCount: count, customer: req.shopCustomer, currency: settings.currency, settings }, site, tokensToCss, money: (c) => view.money(c, settings.currency), flash: null };
   };
-  const render = (req, res, tpl, locals = {}, status = 200) => res.status(status).render(`boutique/${tpl}`, { ...present(req), ...locals });
+  // Pages dont le CONTENU peut être remplacé par un modèle du Theme Builder (panier, commande, confirmation, compte) : le modèle publié applicable reçoit les données réelles de la page (scope.shopPage)
+  // et ses éléments « page de boutique » rendent les mêmes formulaires ; sans modèle publié, la page par défaut s'affiche exactement comme avant.
+  const FAMILY_OF = { panier: "cart", commande: "checkout", confirmation: "order_received", compte: "my_account", "compte-connexion": "my_account" };
+  const render = (req, res, tpl, locals = {}, status = 200) => {
+    const full = { ...present(req), ...locals };
+    const family = FAMILY_OF[tpl];
+    if (!family) return res.status(status).render(`boutique/${tpl}`, full);
+    let answered = false;
+    const answer = (html) => {
+      if (answered) return; answered = true;
+      try { res.status(status).render(`boutique/${tpl}`, { ...full, themeTemplate: html || null }); } catch (error) { try { res.status(status).render(`boutique/${tpl}`, { ...full, themeTemplate: null }); } catch (e2) { res.status(500).render("error", { message: "Page momentanément indisponible." }); } }
+    };
+    try { region(req, res, family, { scope: { shopPage: { kind: tpl, locals: full } } }, answer); } catch (error) { answer(null); }
+  };
   const wantsJson = (req) => /json/.test(req.get("accept") || "") || req.get("x-requested-with") === "fetch";
   const myCart = (req, res, { create = false } = {}) => {
     const { s } = req.shop;

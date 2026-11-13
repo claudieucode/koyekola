@@ -30,6 +30,10 @@ const FAMILY = {
   author_archive: { type: "archive", view: "archive", kind: "author" },
   search_results: { type: "search_results", view: "search", kind: "search" },
   not_found: { type: "not_found", view: "not_found" },
+  cart: { type: "cart", view: "cart" },
+  checkout: { type: "checkout", view: "checkout" },
+  order_received: { type: "order_received", view: "order_received" },
+  my_account: { type: "my_account", view: "account" },
   static_page: { type: "single_page", view: "page" },
 };
 const list = (v) => [].concat(v || []).filter(Boolean).map(String);
