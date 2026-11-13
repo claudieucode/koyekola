@@ -2078,10 +2078,10 @@ function selectField(label, value, options, onChange, opts) {
     if (!isPanel && ["link", "sub", "icon", "badge"].indexOf(sel.part) < 0) sel.part = "link";
     var rerender = function () { renderInspector(); };
     box.appendChild(h("p", { class: "pb-hint", text: "Choisissez un lien, un état et un écran : les valeurs saisies ne s'appliquent qu'à ce lien (● = déjà personnalisé). Laissez vide pour retirer une valeur." }));
-    box.appendChild(selectField("Lien", sel.key, keys, function (v) { sel.key = v; rerender(); }, { disabled: disabled }));
-    box.appendChild(selectField("Partie", sel.part, isPanel ? [["panel", "Le panneau"], ["backdrop", "Le fond assombri"], ["close", "Le bouton de fermeture"], ["links", "Les liens du panneau"], ["list", "La liste du panneau"]] : [["link", "Le lien"], ["sub", "Son sous-menu / méga-menu"], ["icon", "Son icône"], ["badge", "Son badge"]], function (v) { sel.part = v; rerender(); }, { disabled: disabled }));
-    box.appendChild(selectField("État", sel.state, [["base", "Normal"], ["hover", "Survol"], ["focus", "Focus clavier"], ["active", "Clic"], ["current", "Page courante"]], function (v) { sel.state = v; rerender(); }, { disabled: disabled }));
-    box.appendChild(selectField("Écran", sel.bp, [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]], function (v) { sel.bp = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("Lien", sel.key, keys, function (v) { if (probing) return; sel.key = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("Partie", sel.part, isPanel ? [["panel", "Le panneau"], ["backdrop", "Le fond assombri"], ["close", "Le bouton de fermeture"], ["links", "Les liens du panneau"], ["list", "La liste du panneau"]] : [["link", "Le lien"], ["sub", "Son sous-menu / méga-menu"], ["icon", "Son icône"], ["badge", "Son badge"]], function (v) { if (probing) return; sel.part = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("État", sel.state, [["base", "Normal"], ["hover", "Survol"], ["focus", "Focus clavier"], ["active", "Clic"], ["current", "Page courante"]], function (v) { if (probing) return; sel.state = v; rerender(); }, { disabled: disabled }));
+    box.appendChild(selectField("Écran", sel.bp, [["desktop", "Ordinateur"], ["tablet", "Tablette"], ["mobile", "Mobile"]], function (v) { if (probing) return; sel.bp = v; rerender(); }, { disabled: disabled }));
     // chemin des réglages : base → styles[écran] ; survol, focus, clic → states[état ou état@écran] ; page courante → current[écran]
     var bag = function (x, create) {
       var e;
