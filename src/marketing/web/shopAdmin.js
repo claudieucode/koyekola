@@ -308,7 +308,7 @@ module.exports = () => {
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
     const detail = orders.orderDetail(s, order);
     const next = orders.TRANSITIONS[order.status].filter((t) => (t !== "paid" || order.payment_method === "manual") && t !== "refunded");
-    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next, docs: invoices.forOrder(s, order.id) });
+    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next, docs: invoices.forOrder(s, order.id), refundKey: require("node:crypto").randomBytes(12).toString("hex") });
   });
   // ── Création manuelle d'une commande (vente par téléphone, boutique physique) ──
   route("get", "/commandes/nouvelle", "shop.orders", (req, res, s) => {
