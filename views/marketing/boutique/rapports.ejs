@@ -1,0 +1,64 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Rapports" }) %>
+<% const sm = rep.summary, p = rep.period; const q = `from=${p.from}&to=${p.to}`; const max = Math.max(1, ...rep.days.map((d) => d.cents)); %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" aria-label="Période">
+    <div class="field-group"><label for="r-from">Du</label><input id="r-from" type="date" name="from" value="<%= p.from %>"></div>
+    <div class="field-group"><label for="r-to">Au</label><input id="r-to" type="date" name="to" value="<%= p.to %>"></div>
+    <button class="btn btn-outline btn-sm" type="submit">Afficher</button>
+  </form>
+  <p class="mk-sub">Une vente = une commande payée et non annulée, comptée à la date de son paiement. Les remboursements réussis sont retirés.</p>
+</section>
+<section class="mk-panel">
+  <h2>Chiffres de la période</h2>
+  <dl class="mk-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0">
+    <% [["Ventes brutes", money(sm.grossCents)], ["Remboursé", money(sm.refundedCents)], ["Ventes nettes", money(sm.netCents)], ["Commandes payées", sm.orders], ["Panier moyen", money(sm.averageCents)], ["Articles vendus", sm.unitsSold], ["Taxes", money(sm.taxCents)], ["Livraison facturée", money(sm.shippingCents)], ["Remises accordées", money(sm.discountCents)], ["Nouveaux clients", sm.newCustomers], ["Commandes à traiter", sm.toProcess]].forEach(([l, v]) => { %>
+      <div style="border:1px solid var(--line,#ddd);border-radius:10px;padding:12px"><dt class="mk-sub" style="margin:0"><%= l %></dt><dd style="margin:4px 0 0;font-size:1.35rem;font-weight:700"><%= v %></dd></div>
+    <% }) %>
+  </dl>
+</section>
+<section class="mk-panel">
+  <h2>Ventes par jour</h2>
+  <% if (!sm.orders) { %><p class="mk-sub">Aucune vente sur cette période.</p><% } else { %>
+  <svg role="img" aria-label="Ventes par jour" viewBox="0 0 <%= Math.max(rep.days.length * 12, 120) %> 100" preserveAspectRatio="none" style="width:100%;height:140px;background:var(--surface-2,#f6f6f6);border-radius:8px">
+    <% rep.days.forEach((d, i) => { const h = Math.round((d.cents / max) * 92); %><rect x="<%= i * 12 + 2 %>" y="<%= 98 - h %>" width="8" height="<%= h %>" fill="currentColor" opacity=".75"><title><%= d.day %> : <%= money(d.cents) %> (<%= d.orders %>)</title></rect><% }) %>
+  </svg>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Ventes par jour</caption><thead><tr><th scope="col">Jour</th><th scope="col">Commandes</th><th scope="col">Ventes</th></tr></thead><tbody>
+    <% rep.days.filter((d) => d.orders).forEach((d) => { %><tr><th scope="row"><%= d.day %></th><td><%= d.orders %></td><td><%= money(d.cents) %></td></tr><% }) %>
+  </tbody></table></div>
+  <% } %>
+</section>
+<section class="mk-panel">
+  <h2>Meilleurs produits</h2>
+  <% if (!rep.top.length) { %><p class="mk-sub">Aucun produit vendu sur cette période.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Meilleurs produits</caption><thead><tr><th scope="col">Produit</th><th scope="col">Quantité</th><th scope="col">Ventes</th></tr></thead><tbody>
+    <% rep.top.forEach((t) => { %><tr><th scope="row"><%= t.name %></th><td><%= t.qty %></td><td><%= money(t.cents) %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+</section>
+<section class="mk-panel">
+  <h2>Commandes par statut (créées sur la période)</h2>
+  <% if (!rep.statuses.length) { %><p class="mk-sub">Aucune commande.</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Statuts</caption><thead><tr><th scope="col">Statut</th><th scope="col">Commandes</th><th scope="col">Montant</th></tr></thead><tbody>
+    <% rep.statuses.forEach((r) => { %><tr><th scope="row"><%= statusLabels[r.status] || r.status %></th><td><%= r.n %></td><td><%= money(r.cents) %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+  <% if (rep.methods.length) { %><h3>Moyens de paiement (ventes)</h3><ul><% rep.methods.forEach((m) => { %><li><%= m.method === "stripe" ? "Carte (Stripe)" : m.method === "manual" ? "Paiement manuel" : m.method %> : <%= m.n %> commande(s), <%= money(m.cents) %></li><% }) %></ul><% } %>
+  <% if (rep.coupons.length) { %><h3>Coupons utilisés</h3><ul><% rep.coupons.forEach((c) => { %><li><strong><%= c.code %></strong> : <%= c.n %> fois, <%= money(c.cents) %> de remise</li><% }) %></ul><% } %>
+</section>
+<section class="mk-panel">
+  <h2>Stock bas</h2>
+  <% if (!rep.low.length) { %><p class="mk-sub">Aucun produit publié sous le seuil d'alerte (<%= shopSettings.low_stock_threshold %>).</p><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Stock bas</caption><thead><tr><th scope="col">Produit</th><th scope="col">SKU</th><th scope="col">Stock</th></tr></thead><tbody>
+    <% rep.low.forEach((l) => { %><tr><th scope="row"><a href="<%= base %>/produits/<%= l.id %>"><%= l.name %></a></th><td><%= l.sku || "—" %></td><td><%= l.stock_qty %></td></tr><% }) %>
+  </tbody></table></div><% } %>
+</section>
+<section class="mk-panel">
+  <h2>Exports CSV</h2>
+  <p class="mk-sub">Fichiers lisibles dans Excel (séparateur « ; », montants en euros avec virgule). La période ci-dessus s'applique aux commandes et lignes.</p>
+  <p>
+    <% if (canExportPeople) { %><a class="btn btn-outline btn-sm" href="<%= base %>/rapports/export/commandes?<%= q %>">Commandes</a>
+    <a class="btn btn-outline btn-sm" href="<%= base %>/rapports/export/lignes?<%= q %>">Lignes de commande</a>
+    <a class="btn btn-outline btn-sm" href="<%= base %>/rapports/export/clients">Clients</a><% } %>
+    <a class="btn btn-outline btn-sm" href="<%= base %>/rapports/export/produits">Produits</a>
+  </p>
+</section>
+<%- include("../partials/bottom") %>

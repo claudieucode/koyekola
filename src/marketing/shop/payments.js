@@ -26,6 +26,15 @@ async function start(s, order, { settings, successUrl, cancelUrl }) {
   }
   if (order.payment_method !== "stripe" || !PROVIDERS.stripe.configured()) throw new MarketingError("payment_unavailable", "Ce moyen de paiement n'est pas disponible pour le moment.");
   if (order.total_cents < gateway.MIN_AMOUNT_CENTS) throw new MarketingError("payment_unavailable", "Le montant est inférieur au minimum payable par carte.");
+  // Nouvelle tentative : jamais de seconde session si la précédente est encore ouverte (la réutiliser) ou déjà payée (la constater).
+  const previous = s.db.prepare("SELECT provider_ref FROM mk_shop_payments WHERE order_id = ? AND provider = 'stripe' AND provider_ref IS NOT NULL ORDER BY id DESC").get(order.id);
+  if (previous) {
+    try {
+      const old = await gateway.retrieveStripeSession(previous.provider_ref);
+      if (old && old.payment_status === "paid") { applySession(s, old, order.id); return { kind: "paid" }; }
+      if (old && old.status === "open" && old.url) return { kind: "redirect", url: old.url };
+    } catch (error) { console.error(`[KOLAKISA] Boutique : relecture de la session précédente ${order.number} : ${error.message}`); }
+  }
   let session;
   try {
     session = await gateway.stripeRequest("POST", "/v1/checkout/sessions", {

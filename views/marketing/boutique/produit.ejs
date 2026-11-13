@@ -84,6 +84,26 @@
 </section>
 <% } %>
 <% if (product && product.type === "variable") { %>
+<% if (product.type === "digital") { %>
+<section class="mk-panel" aria-labelledby="dl-h"><h2 id="dl-h">Fichiers à télécharger</h2>
+  <p class="field-hint">Les fichiers sont stockés en privé et ne sont remis qu'aux acheteurs d'une commande payée, par un lien personnel limité en nombre et en durée. Formats : PDF, ZIP, EPUB, audio, vidéo, images, Office, texte (25 Mo au plus).</p>
+  <% if (!files.length) { %><p class="mk-empty">Aucun fichier : un produit numérique sans fichier ne livre rien. Ajoutez-en au moins un avant de le publier.</p><% } else { %>
+  <ul><% files.forEach((f) => { %><li><strong><%= f.label %></strong> — <%= f.original_name %> (<%= Math.max(1, Math.round(f.size_bytes / 1024)) %> Ko)
+    <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/fichiers/<%= f.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer ce fichier ? Les acheteurs ne pourront plus le télécharger." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } %>
+  <% if (canWrite) { %>
+  <form class="mk-form" method="post" enctype="multipart/form-data" action="<%= base %>/produits/<%= product.id %>/fichiers">
+    <div class="field-group"><label for="dl-l">Nom affiché à l'acheteur</label><input id="dl-l" name="label" maxlength="120"></div>
+    <div class="field-group"><label for="dl-f">Fichier</label><input id="dl-f" name="file" type="file" required></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter le fichier</button>
+  </form>
+  <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/telechargement">
+    <div class="field-group"><label for="dl-n">Téléchargements autorisés par achat</label><input id="dl-n" name="download_limit" inputmode="numeric" value="<%= dl.download_limit == null ? "" : dl.download_limit %>" placeholder="5 (0 = illimité)"></div>
+    <div class="field-group"><label for="dl-d">Durée du lien, en jours</label><input id="dl-d" name="download_days" inputmode="numeric" value="<%= dl.download_days == null ? "" : dl.download_days %>" placeholder="30 (0 = sans limite)"></div>
+    <button class="btn btn-outline btn-sm" type="submit">Enregistrer les règles</button>
+  </form>
+  <% } %>
+</section>
+<% } %>
 <section class="mk-panel" aria-labelledby="var-h"><h2 id="var-h">Variantes</h2>
   <% if (!product.attributes.length) { %><p class="mk-empty">Définissez d'abord les attributs (ex. « Taille: S, M, L »), enregistrez, puis ajoutez les variantes.</p><% } else { %>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Variantes</caption><thead><tr><th scope="col">Combinaison</th><th scope="col">SKU</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>

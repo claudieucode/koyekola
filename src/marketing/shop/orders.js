@@ -204,6 +204,8 @@ function markPaid(s, orderId, { provider, providerRef, amountCents, currency, ac
     }
     giftLists.onPaid(s, order.id); // liste de cadeaux : « offert » n'augmente qu'ici, à la commande payée
     addEvent(s.db, order.id, { kind: "paid", from: order.status, to: "paid", actor: actor || `provider:${provider}`, note: late ? "Confirmation tardive après annulation : commande rétablie, stock à vérifier." : null });
+    require("./invoices").sync(s, order.id); // facture numérotée à l'encaissement (ne lève jamais)
+    require("./downloads").grant(s, order.id); // droits de téléchargement des produits numériques (ne lève jamais)
     return { status: "paid", order: getOrder(s, order.id), late };
   });
 }
@@ -265,12 +267,31 @@ function changeStatus(s, orderId, to, { actor, note, canMarkPaid = false, tracki
   });
 }
 
-// Commandes en attente de paiement depuis trop longtemps : annulées, stock rendu. Appelée au passage en caisse (aucune tâche de fond requise).
-function expireStale(s, minutes = 60) {
-  const cutoff = new Date(Date.now() - minutes * 60000).toISOString().slice(0, 19).replace("T", " ");
-  const rows = s.db.prepare(`SELECT id FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND status = 'pending' AND payment_method <> 'manual' AND created_at < ?`).all(s.organizationId, ...siteArgs(s), cutoff);
-  for (const r of rows) { try { cancelOrder(s, r.id, { actor: "system", note: "Délai de paiement dépassé" }); } catch { /* déjà traitée */ } }
-  return rows.length;
+// Commandes en attente de paiement depuis trop longtemps : annulées, stock rendu.
+//  - paiement en ligne : après `minutes` (60 par défaut) ;
+//  - paiement manuel (virement, à la livraison) : après `manualDays` jours (14 par défaut, 0 = jamais), pour ne pas bloquer le stock indéfiniment.
+// Appelée au passage en caisse ET par le balayage périodique `expireAll`.
+function expireStale(s, minutes = 60, manualDays = 14) {
+  const fmt = (ms) => new Date(Date.now() - ms).toISOString().slice(0, 19).replace("T", " ");
+  const online = s.db.prepare(`SELECT id FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND status = 'pending' AND payment_status <> 'paid' AND payment_method <> 'manual' AND created_at < ?`).all(s.organizationId, ...siteArgs(s), fmt(minutes * 60000));
+  const manual = manualDays > 0 ? s.db.prepare(`SELECT id FROM mk_shop_orders WHERE organization_id = ? AND ${siteCond(s)} AND status = 'pending' AND payment_status <> 'paid' AND payment_method = 'manual' AND created_at < ?`).all(s.organizationId, ...siteArgs(s), fmt(manualDays * 86400000)) : [];
+  for (const r of online) { try { cancelOrder(s, r.id, { actor: "system", note: "Délai de paiement dépassé" }); } catch { /* déjà traitée */ } }
+  for (const r of manual) { try { cancelOrder(s, r.id, { actor: "system", note: `Paiement manuel non reçu après ${manualDays} jours : commande annulée, stock rendu` }); } catch { /* déjà traitée */ } }
+  return online.length + manual.length;
+}
+
+// Balayage de toutes les boutiques (toutes organisations, tous sites) ; ne lève jamais. Limité à un passage toutes les 10 minutes par processus.
+let lastSweep = 0;
+function expireAll(db, { force = false } = {}) {
+  const every = Number.isFinite(Number(process.env.SHOP_SWEEP_INTERVAL_MS)) && process.env.SHOP_SWEEP_INTERVAL_MS !== undefined && process.env.SHOP_SWEEP_INTERVAL_MS !== "" ? Number(process.env.SHOP_SWEEP_INTERVAL_MS) : 600000;
+  if (!force && Date.now() - lastSweep < every) return 0;
+  lastSweep = Date.now();
+  let n = 0;
+  try {
+    const scopes = db.prepare("SELECT DISTINCT organization_id, site_id FROM mk_shop_orders WHERE status = 'pending'").all();
+    for (const sc of scopes) n += expireStale({ db, organizationId: sc.organization_id, siteId: sc.site_id ?? null });
+  } catch (error) { console.error(`[KOLAKISA] Boutique : balayage des commandes en attente : ${error.message}`); }
+  return n;
 }
 
 // Commande de réassort d'un abonnement : créée DIRECTEMENT « payée » quand le fournisseur confirme une facture payée (jamais avant).
@@ -299,7 +320,8 @@ function createSubscriptionOrder(s, d) {
       else addEvent(s.db, orderId, { kind: "stock_short", actor: "system", note: "Stock insuffisant pour ce réassort déjà payé : à traiter à la main (expédier plus tard ou rembourser)." });
     }
   }
+  require("./invoices").sync(s, orderId);
   return getOrder(s, orderId);
 }
 
-module.exports = { createSubscriptionOrder, TRANSITIONS, STATUS_LABELS, createFromCart, getOrder, orderByNumber, orderDetail, listOrders, recordPaymentAttempt, markPaid, markPaymentFailed, cancelOrder, changeStatus, expireStale, addEvent };
+module.exports = { createSubscriptionOrder, TRANSITIONS, STATUS_LABELS, createFromCart, getOrder, orderByNumber, orderDetail, listOrders, recordPaymentAttempt, markPaid, markPaymentFailed, cancelOrder, changeStatus, expireStale, expireAll, addEvent };

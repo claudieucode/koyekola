@@ -21,6 +21,11 @@ const refunds = require("../shop/refunds");
 const deliverySlots = require("../shop/deliverySlots");
 const age = require("../shop/age");
 const compare = require("../shop/compare");
+const reports = require("../shop/reports");
+const invoices = require("../shop/invoices");
+const downloads = require("../shop/downloads");
+const multer = require("multer");
+const fileUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: downloads.MAX_BYTES, files: 1, fields: 10 } }).single("file");
 
 const PAGE = 25;
 module.exports = () => {
@@ -99,12 +104,51 @@ module.exports = () => {
   route("get", "/produits/:pid(\\d+)", "shop.read", (req, res, s) => {
     const product = catalog.productById(s, req.params.pid);
     if (!product) return res.status(404).render("error", { message: "Produit introuvable." });
-    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id), ageLevel: age.productLevel(s.db, product.id), specs: compare.specsToText(compare.getSpecs(s.db, product.id)), plans: require("../shop/subscriptions").listPlans(s, product.id), stripeReady: require("../shop/stripeClient").configured() });
+    render(req, res, "produit", product.name, "boutique", { product, categories: catalog.listCategories(s), variants: catalog.listVariants(s, product.id), values: {}, personalization: personalization.get(s.db, product.id), ageLevel: age.productLevel(s.db, product.id), specs: compare.specsToText(compare.getSpecs(s.db, product.id)), plans: require("../shop/subscriptions").listPlans(s, product.id), stripeReady: require("../shop/stripeClient").configured(), files: downloads.listFiles(s, product.id), dl: s.db.prepare("SELECT download_limit, download_days FROM mk_shop_products WHERE id = ?").get(product.id) });
   });
   route("post", "/produits/:pid(\\d+)", "shop.write", (req, res, s) => {
     catalog.updateProduct(s, Number(req.params.pid), productInput(req.body));
     audit(req, s, "shop_product.updated", "shop_product", req.params.pid);
     flashOk(req, "Produit enregistré.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  // ── Produits numériques : fichiers à télécharger ──
+  // Le fichier arrive en mémoire (25 Mo au plus) ; le droit et le site sont vérifiés AVANT d'écrire quoi que ce soit.
+  for (const P of PREFIXES) {
+    router.post(`${P}/boutique/produits/:pid(\\d+)/fichiers`, need("shop.write"), (req, res, next) => {
+      const s = scopeOf(req, res);
+      if (!s) return undefined;
+      if (!writable(req.shopSpace)) { flashError(req, "Ce site est archivé : sa boutique est en lecture seule."); return res.redirect(req.shopSpace.base + "/boutique"); }
+      return fileUpload(req, res, (err) => {
+        const back = `${req.shopSpace.base}/boutique/produits/${req.params.pid}`;
+        try {
+          if (err) throw new MarketingError("invalid", err.code === "LIMIT_FILE_SIZE" ? "Fichier trop volumineux (25 Mo au plus)." : "Envoi impossible.");
+          if (!req.file) throw new MarketingError("invalid", "Choisissez un fichier.");
+          const id = downloads.addFile(s, Number(req.params.pid), { label: req.body.label, buffer: req.file.buffer, originalName: req.file.originalname });
+          audit(req, s, "shop_file.added", "shop_file", id, { product: req.params.pid });
+          flashOk(req, "Fichier ajouté : il sera proposé au téléchargement aux acheteurs de ce produit.");
+        } catch (error) {
+          if (!(error instanceof MarketingError)) return next(error);
+          flashError(req, error.message);
+        }
+        return res.redirect(back);
+      });
+    });
+  }
+  route("post", "/produits/:pid(\\d+)/fichiers/:fid(\\d+)/supprimer", "shop.write", (req, res, s) => {
+    downloads.removeFile(s, Number(req.params.fid));
+    audit(req, s, "shop_file.removed", "shop_file", req.params.fid, { product: req.params.pid });
+    flashOk(req, "Fichier supprimé.");
+    res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
+  }, { write: true });
+  route("post", "/produits/:pid(\\d+)/telechargement", "shop.write", (req, res, s) => {
+    const n = (v, max) => { const x = Math.floor(Number(String(v).replace(",", "."))); return Number.isFinite(x) && x >= 0 && x <= max ? x : null; };
+    const lim = req.body.download_limit === "" ? null : n(req.body.download_limit, 1000);
+    const days = req.body.download_days === "" ? null : n(req.body.download_days, 3650);
+    if ((req.body.download_limit !== "" && lim === null) || (req.body.download_days !== "" && days === null)) throw new MarketingError("invalid", "Valeurs de téléchargement invalides.");
+    if (!catalog.productById(s, req.params.pid)) throw new MarketingError("not_found", "Produit introuvable.");
+    s.db.prepare("UPDATE mk_shop_products SET download_limit = ?, download_days = ? WHERE id = ? AND organization_id = ?").run(lim, days, Number(req.params.pid), s.organizationId);
+    flashOk(req, "Règles de téléchargement enregistrées (elles s'appliquent aux prochaines commandes).");
     res.redirect(`${req.shopSpace.base}/boutique/produits/${req.params.pid}`);
   }, { write: true });
   route("post", "/produits/:pid(\\d+)/supprimer", "shop.write", (req, res, s) => {
@@ -239,7 +283,7 @@ module.exports = () => {
     if (!order) return res.status(404).render("error", { message: "Commande introuvable." });
     const detail = orders.orderDetail(s, order);
     const next = orders.TRANSITIONS[order.status].filter((t) => (t !== "paid" || order.payment_method === "manual") && t !== "refunded");
-    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next });
+    render(req, res, "commande", `Commande ${order.number}`, "boutique/commandes", { order: detail, slotText: deliverySlots.describe(detail), statusLabels: orders.STATUS_LABELS, next, docs: invoices.forOrder(s, order.id) });
   });
   route("post", "/commandes/:oid(\\d+)/statut", "shop.orders", (req, res, s, next) => {
     const { order } = orderCtx(req, s);
@@ -280,6 +324,39 @@ module.exports = () => {
   }, { write: true });
 
   // ── Clients ──
+  // ── Factures et avoirs ──
+  route("get", "/factures", "shop.read", (req, res, s) => {
+    render(req, res, "factures", "Boutique — factures", "boutique/factures", { company: invoices.getCompany(s), list: invoices.list(s, { page: req.query.page, perPage: PAGE }), canPaySettings: req.mk.can("shop.write") });
+  });
+  route("post", "/factures/vendeur", "shop.write", (req, res, s) => {
+    invoices.saveCompany(s, req.body);
+    audit(req, s, "shop_company.saved", "shop_company", s.siteId ?? "principal");
+    flashOk(req, "Informations du vendeur enregistrées : elles figureront sur les prochaines factures (les factures déjà émises ne changent pas).");
+    res.redirect(`${req.shopSpace.base}/boutique/factures`);
+  }, { write: true });
+  route("get", "/commandes/:oid(\\d+)/factures/:iid(\\d+)", "shop.read", (req, res, s) => {
+    const { order } = orderCtx(req, s);
+    const inv = order && invoices.get(s, order.id, req.params.iid);
+    if (!inv) throw new MarketingError("not_found", "Document introuvable.");
+    res.set("Cache-Control", "no-store");
+    res.render("marketing/boutique/facture", { inv, money: (c) => view.money(c, inv.currency) });
+  });
+
+  // ── Rapports et exports CSV ──
+  route("get", "/rapports", "shop.read", (req, res, s) => {
+    const settings = store.getSettings(s);
+    render(req, res, "rapports", "Boutique — rapports", "boutique/rapports", { rep: reports.report(s, req.query, settings), statusLabels: orders.STATUS_LABELS, canExportPeople: req.mk.can("shop.orders") });
+  });
+  route("get", "/rapports/export/:kind", "shop.read", (req, res, s) => {
+    const kind = String(req.params.kind);
+    if (!Object.prototype.hasOwnProperty.call(reports.EXPORTS, kind)) throw new MarketingError("not_found", "Export inconnu.");
+    if ((kind === "commandes" || kind === "lignes" || kind === "clients") && !req.mk.can("shop.orders")) return res.status(403).render("error", { message: "Vous n'avez pas le droit d'exporter les commandes et les clients." });
+    const p = reports.period(req.query);
+    const csv = reports.EXPORTS[kind](s, p);
+    audit(req, s, "shop.export", "shop_export", kind, { from: p.from, to: p.to });
+    res.set({ "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="boutique-${kind}-${p.from}_${p.to}.csv"`, "Cache-Control": "no-store" });
+    res.send(csv);
+  });
   route("get", "/clients", "shop.read", (req, res, s) => render(req, res, "clients", "Boutique — clients", "boutique/clients", { list: customers.listCustomers(s, { q: req.query.q, page: req.query.page, perPage: PAGE }) }));
   route("post", "/clients/:cid(\\d+)/statut", "shop.write", (req, res, s) => {
     customers.setStatus(s, Number(req.params.cid), req.body.statut);

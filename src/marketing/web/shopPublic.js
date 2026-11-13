@@ -34,18 +34,34 @@ const AGE_COOKIE = "kola_age";
 const CMP_COOKIE = "kola_cmp";
 const BASE = "/boutique";
 // Origine des liens envoyés par e-mail : l'adresse enregistrée du site (jamais l'en-tête Host brut)
+const invoices = require("../shop/invoices");
+const downloads = require("../shop/downloads");
 const shopOrigin = (req) => (req.kwSite && req.kwSite.base) || (process.env.SITE_URL ? String(process.env.SITE_URL).replace(/\/+$/, "") : `${req.protocol}://${req.get("host")}`);
 
 module.exports = ({ db }) => {
   const router = express.Router();
   const authLimiter = createRateLimiter(10, 15 * 60 * 1000);
   const resetLimiter = createRateLimiter(5, 60 * 60 * 1000);
+  // Limites de rythme (par adresse et par site) : panier (60 actions / 5 min) et validation de commande (15 / 15 min)
+  const cartLimiter = createRateLimiter(60, 5 * 60 * 1000);
+  const checkoutLimiter = createRateLimiter(15, 15 * 60 * 1000);
+  const limited = (limiter, label) => (req, res, next) => {
+    const key = `${req.ip}|${req.shop ? req.shop.s.siteId : ""}`;
+    if (limiter.isLimited(key)) {
+      res.set("Retry-After", "60");
+      if (wantsJson(req)) return res.status(429).json({ ok: false, code: "rate_limited", message: "Trop de demandes. Réessayez dans un instant." });
+      return res.status(429).render("error", { message: `Trop de ${label} en peu de temps. Réessayez dans quelques minutes.` });
+    }
+    limiter.hit(key);
+    next();
+  };
 
   router.use(BASE, (req, res, next) => {
     const marketing = req.app.locals.marketing;
     if (!marketing || !marketing.ready) return res.status(503).render("error", { message: "La boutique est momentanément indisponible." });
     const siteId = req.kwSite && Number.isInteger(req.kwSite.id) ? req.kwSite.id : null;
     const s = { db, organizationId: marketing.organizationId, siteId };
+    orders.expireAll(db); // commandes en attente trop anciennes : annulées, stock rendu (au plus toutes les 10 min)
     if (!siteModules.isEnabled(db, s.organizationId, siteId, "commerce")) return res.status(404).render("error", { message: "Cette page n'existe pas ou n'est plus en ligne." });
     const settings = store.getSettings(s);
     if (!settings.enabled) return res.status(404).render("error", { message: "Cette boutique n'est pas ouverte." });
@@ -383,9 +399,9 @@ module.exports = ({ db }) => {
       res.redirect(303, `${back}?erreur=${encodeURIComponent(error.message)}`);
     }
   };
-  router.post(`${BASE}/panier/ajouter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/panier`));
+  router.post(`${BASE}/panier/ajouter`, limited(cartLimiter, "actions sur le panier"), cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/panier`));
   // Achat immédiat : MÊME action que l'ajout au panier (mêmes validations de produit, variante, quantité, stock, âge, accès, personnalisation) puis redirection vers la commande
-  router.post(`${BASE}/panier/acheter`, cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/commande`));
+  router.post(`${BASE}/panier/acheter`, limited(cartLimiter, "actions sur le panier"), cartAction((req, k) => cart.addItem(req.shop.s, k, { productId: Number(req.body.product_id), variantId: req.body.variant_id ? Number(req.body.variant_id) : null, quantity: req.body.quantity || 1, expectedVersion: req.body.version, customText: req.body.custom_text, ageConfirmed: ageOf(req) }), () => `${BASE}/commande`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)`, cartAction((req, k) => cart.setQuantity(req.shop.s, k, Number(req.params.id), req.body.quantity, req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/ligne/:id(\\d+)/supprimer`, cartAction((req, k) => cart.removeItem(req.shop.s, k, Number(req.params.id), req.body.version), () => `${BASE}/panier`));
   router.post(`${BASE}/panier/coupon`, cartAction((req, k) => cart.setCoupon(req.shop.s, k, req.body.retirer ? "" : req.body.code), () => `${BASE}/panier`));
@@ -405,7 +421,7 @@ module.exports = ({ db }) => {
   };
   router.get(`${BASE}/commande`, (req, res) => checkoutPage(req, res));
 
-  router.post(`${BASE}/commande`, async (req, res, next) => {
+  router.post(`${BASE}/commande`, limited(checkoutLimiter, "validations de commande"), async (req, res, next) => {
     const { s, settings } = req.shop;
     const k = myCart(req, res);
     if (!k) return res.redirect(303, `${BASE}/panier`);
@@ -465,10 +481,37 @@ module.exports = ({ db }) => {
   router.get(`${BASE}/commande/confirmation/:number`, (req, res) => {
     const order = loadOrderFor(req, res);
     if (!order) return;
-    render(req, res, "confirmation", { title: `Commande ${order.number}`, slotText: deliverySlots.describe(order), order: orders.orderDetail(req.shop.s, order), reviewable: req.shop.settings.reviews_enabled ? new Set(db.prepare("SELECT product_id FROM mk_shop_order_items WHERE order_id = ? AND product_id IS NOT NULL").all(order.id).map((r) => r.product_id)) : new Set(), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
+    render(req, res, "confirmation", { title: `Commande ${order.number}`, slotText: deliverySlots.describe(order), order: orders.orderDetail(req.shop.s, order), docs: invoices.forOrder(req.shop.s, order.id), files: downloads.forOrder(req.shop.s, order.id), reviewable: req.shop.settings.reviews_enabled ? new Set(db.prepare("SELECT product_id FROM mk_shop_order_items WHERE order_id = ? AND product_id IS NOT NULL").all(order.id).map((r) => r.product_id)) : new Set(), key: view.orderToken(order), statusLabels: orders.STATUS_LABELS, instructions: order.payment_method === "manual" ? req.shop.settings.manual_instructions : null, error: req.query.erreur ? String(req.query.erreur).slice(0, 200) : null });
+  });
+  // Téléchargement d'un produit numérique : lien signé personnel ; refusé si commande non payée / remboursée, lien expiré ou épuisé. Compté de façon atomique.
+  const dlLimiter = createRateLimiter(30, 10 * 60 * 1000);
+  router.get(`${BASE}/telechargement/:token`, (req, res, next) => {
+    try {
+      const key = `${req.ip}|${req.shop.s.siteId}`;
+      if (dlLimiter.isLimited(key)) return res.status(429).render("error", { message: "Trop de téléchargements en peu de temps. Réessayez dans quelques minutes." });
+      dlLimiter.hit(key);
+      const { s } = req.shop;
+      const r = downloads.resolve(s, req.params.token);
+      if (!r.ok) {
+        const msg = { invalid: "Lien de téléchargement invalide.", revoked: "Ce téléchargement n'est plus disponible (commande remboursée ou annulée).", expired: "Ce lien de téléchargement a expiré.", exhausted: "Le nombre de téléchargements autorisés est atteint.", missing: "Le fichier est momentanément indisponible. Contactez la boutique." }[r.reason] || "Téléchargement impossible.";
+        return res.status(r.reason === "invalid" ? 404 : 410).render("error", { message: msg });
+      }
+      if (!downloads.consume(s, r.row.id)) return res.status(410).render("error", { message: "Le nombre de téléchargements autorisés est atteint." });
+      res.set({ "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff", "X-Robots-Tag": "noindex" });
+      res.download(r.path, r.row.original_name, { headers: { "Content-Type": r.row.mime } }, (err) => { if (err && !res.headersSent) next(err); });
+    } catch (error) { next(error); }
+  });
+  // Facture / avoir d'une commande : même droit d'accès que la page de commande (lien secret ou client connecté)
+  router.get(`${BASE}/commande/:number/facture/:iid(\\d+)`, (req, res) => {
+    const order = loadOrderFor(req, res);
+    if (!order) return;
+    const inv = invoices.get(req.shop.s, order.id, req.params.iid);
+    if (!inv) return res.status(404).render("error", { message: "Document introuvable." });
+    res.set({ "Cache-Control": "no-store", "X-Robots-Tag": "noindex" });
+    res.render("marketing/boutique/facture", { inv, money: (c) => view.money(c, inv.currency) });
   });
   // Nouvelle tentative de paiement d'une commande en attente (carte)
-  router.post(`${BASE}/commande/:number/payer`, async (req, res, next) => {
+  router.post(`${BASE}/commande/:number/payer`, limited(checkoutLimiter, "tentatives de paiement"), async (req, res, next) => {
     try {
       const order = loadOrderFor(req, res);
       if (!order) return;
