@@ -123,4 +123,29 @@ describe("Header Builder : style individuel de chaque lien du menu (navigateur)"
     await context.close();
     assert.deepEqual(env.errors, []);
   });
+
+  test("mouvement du menu : le sous-menu s'ouvre en glissant, reste ouvert pendant le délai de fermeture, puis se ferme ; les éléments arrivent en cascade ; le lien se soulève au survol", async () => {
+    const db = env.db, menu = Number(db.prepare("SELECT menu_id FROM nav_locations WHERE site_id = ? AND location = 'header'").get(env.site).menu_id);
+    db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, ?, 0, 'custom', '/chaussures', 'Chaussures', 'published')").run(menu, ids.b);
+    db.prepare("INSERT INTO nav_items (menu_id, parent_id, position, type, url, label, status) VALUES (?, ?, 1, 'custom', '/sacs', 'Sacs', 'published')").run(menu, ids.b);
+    const menuMotion = { enter: "slide-up", duration: 200, openDelay: 0, closeDelay: 600, distance: 14, cascade: 90, linkHover: "lift", hoverDistance: 6 };
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", menuMotion }));
+    const { context, page } = await env.visit();
+    const sub = page.locator(".lp-site-header .kw-menu-item.has-sub > .kw-submenu").first();
+    assert.equal(await sub.evaluate((e) => getComputedStyle(e).visibility), "hidden", "fermé au départ");
+    const top = page.locator(".lp-site-header .kw-menu-item.has-sub > .kw-menu-link").first();
+    const before = await top.evaluate((e) => getComputedStyle(e).transform);
+    await top.hover(); await page.waitForTimeout(500);
+    assert.equal(await sub.evaluate((e) => getComputedStyle(e).visibility), "visible");
+    assert.equal(await sub.evaluate((e) => getComputedStyle(e).opacity), "1");
+    const delays = await sub.locator("> li").evaluateAll((ls) => ls.map((l) => getComputedStyle(l).transitionDelay));
+    assert.notEqual(delays[0], delays[1], "cascade : délais différents");
+    assert.notEqual(await top.evaluate((e) => getComputedStyle(e).transform), before, "le lien se soulève au survol");
+    await page.mouse.move(5, 700); await page.waitForTimeout(250);
+    assert.equal(await sub.evaluate((e) => getComputedStyle(e).visibility), "visible", "toujours ouvert pendant le délai de fermeture");
+    await page.waitForTimeout(1100);
+    assert.equal(await sub.evaluate((e) => getComputedStyle(e).visibility), "hidden", "fermé après le délai");
+    await context.close();
+    assert.deepEqual(env.errors, []);
+  });
 });

@@ -2051,6 +2051,19 @@ function selectField(label, value, options, onChange, opts) {
     sel.addEventListener("change", function () { onChange(sel.value); });
     return withRestore(h("div", { class: "pb-field" }, h("label", { for: id, text: label }), sel), function () { onChange(sel.value); });
   }
+  // Mouvement du menu : animation d'ouverture des sous-menus / méga-menus, durée, courbe, délais, cascade, animation des liens au survol (props.menuMotion ; chaque valeur par défaut est retirée)
+  function menuMotionPanel(box, it, p, disabled) {
+    var mm = p.menuMotion || {};
+    var set = function (key, v, dflt) { change(function () { var x = byId(it.id).props; x.menuMotion = x.menuMotion || {}; if (v === "" || v === null || v === dflt) delete x.menuMotion[key]; else x.menuMotion[key] = v; if (!Object.keys(x.menuMotion).length) delete x.menuMotion; }); };
+    box.appendChild(h("p", { class: "pb-hint", text: "Ouverture fluide des sous-menus avec délais (évite les fermetures accidentelles). Désactivé tant que rien n'est réglé." }));
+    box.appendChild(selectField("Animation d'ouverture", mm.enter || "none", [["none", "Aucune (affichage direct)"], ["fade", "Fondu"], ["slide-up", "Glisse vers le haut"], ["slide-down", "Glisse vers le bas"], ["slide-left", "Glisse vers la gauche"], ["slide-right", "Glisse vers la droite"], ["zoom", "Zoom"], ["flip", "Bascule"], ["blur", "Flou"], ["clip", "Révélation (masque)"]], function (v) { change(function () { var x = byId(it.id).props; x.menuMotion = x.menuMotion || {}; if (v === "none") delete x.menuMotion.enter; else x.menuMotion.enter = v; if (!Object.keys(x.menuMotion).length) delete x.menuMotion; }); }, { disabled: disabled }));
+    [["duration", "Durée (ms)", 180, 0, 1500], ["openDelay", "Délai d'ouverture (ms)", 0, 0, 1000], ["closeDelay", "Délai de fermeture (ms)", 0, 0, 1500], ["distance", "Distance de glissement (px)", 10, 0, 80], ["cascade", "Décalage entre éléments (ms, 0 = pas de cascade)", 0, 0, 250]].forEach(function (f) {
+      box.appendChild(numberField(f[1], mm[f[0]] === undefined ? f[2] : mm[f[0]], { min: f[3], max: f[4], step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; set(f[0], n, f[2]); }));
+    });
+    box.appendChild(selectField("Courbe", mm.ease || "ease", [["ease", "Douce"], ["ease-out", "Freinée"], ["ease-in-out", "Entrée et sortie"], ["linear", "Linéaire"], ["snappy", "Nerveuse"], ["spring", "Ressort"], ["smooth", "Fluide"]], function (v) { set("ease", v, "ease"); }, { disabled: disabled }));
+    box.appendChild(selectField("Lien au survol", mm.linkHover || "none", [["none", "Aucun"], ["lift", "Se soulève"], ["shift", "Se décale"], ["grow", "Grossit"], ["shrink", "Rétrécit"], ["tilt", "S'incline"]], function (v) { set("linkHover", v, "none"); }, { disabled: disabled }));
+    if (mm.linkHover) box.appendChild(numberField("Intensité du survol (px ou %)", mm.hoverDistance === undefined ? 3 : mm.hoverDistance, { min: 1, max: 30, step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; set("hoverDistance", n, 3); }));
+  }
   // Style INDIVIDUEL d'un lien du menu : un lien, une partie (lien, sous-menu, icône, badge), un état, un écran ; chaque valeur ne touche que ce lien (props.itemStyles).
   var LINK_STYLE_SEL = { key: "p0", part: "link", state: "base", bp: "desktop" };
   var LINK_STYLE_FIELDS = [["color", "Couleur du texte", "#rrggbb"], ["backgroundColor", "Fond", "#rrggbb"], ["fontSize", "Taille du texte", "16px"], ["fontWeight", "Épaisseur (300 à 900)", "600"], ["letterSpacing", "Espacement des lettres", "1px"], ["textTransform", "Casse (none, uppercase, lowercase, capitalize)", "uppercase"], ["paddingTop", "Marge intérieure haut", "6px"], ["paddingRight", "Marge intérieure droite", "14px"], ["paddingBottom", "Marge intérieure bas", "6px"], ["paddingLeft", "Marge intérieure gauche", "14px"], ["borderRadius", "Arrondi", "999px"], ["borderWidth", "Épaisseur de bordure", "1px"], ["borderColor", "Couleur de bordure", "#rrggbb"], ["opacity", "Opacité (0 à 1)", "1"]];
@@ -2373,6 +2386,8 @@ function selectField(label, value, options, onChange, opts) {
         }
         box.appendChild(selectField("Indicateur de sous-menu", p.indicator || "chevron", [["chevron", "Chevron (par défaut)"], ["angle", "Angle"], ["plus", "Plus / moins"], ["none", "Aucun"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "chevron") delete x.indicator; else x.indicator = v; }); }, { disabled: disabled }));
         box.appendChild(selectField("Animation d'ouverture des sous-menus", p.submenuAnim || "", [["", "Aucune"], ["fade", "Fondu"], ["slide", "Glissement"]], function (v) { change(function () { var x = byId(it.id).props; if (v) x.submenuAnim = v; else delete x.submenuAnim; }); }, { disabled: disabled }));
+        if (grp) box = grp("Mouvement du menu");
+        menuMotionPanel(box, it, p, disabled);
         if (grp) box = grp("Style d'un lien (individuel)");
         linkStylePanel(box, it, p, disabled);
         if (grp) box = grp("Bouton mobile (hamburger)");

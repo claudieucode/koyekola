@@ -649,6 +649,9 @@ const NODE_TYPES = {
     // Réglages PROPRES à chaque lien (clé = place « p0 », « p2-1 » ou identifiant du menu du CMS « m12 ») : voir normalizeItemStyles
     const itemStyles = normalizeItemStyles(p.itemStyles, at, h);
     if (itemStyles) out.itemStyles = itemStyles;
+    // Mouvement du menu : ouverture/fermeture des sous-menus et méga-menus (animation, durée, courbe, délais d'ouverture et de fermeture), cascade des éléments, animation des liens au survol
+    const menuMotion = normalizeMenuMotion(p.menuMotion);
+    if (menuMotion) out.menuMotion = menuMotion;
     // Panneau du menu mobile (tiroir, plein écran, panneau du bas) : panneau, fond assombri, bouton de fermeture, liens du panneau
     const panelStyles = normalizePanelStyles(p.panelStyles, at, h);
     if (panelStyles) out.panelStyles = panelStyles;
@@ -1978,6 +1981,23 @@ function normalizeItemStyles(raw, at, h) {
   }
   return Object.keys(out).length ? out : null;
 }
+const MM_ENTER = ["none", "fade", "slide-up", "slide-down", "slide-left", "slide-right", "zoom", "flip", "blur", "clip"];
+const MM_EASE = { ease: "ease", "ease-out": "ease-out", "ease-in-out": "ease-in-out", linear: "linear", snappy: "cubic-bezier(.2,.8,.2,1)", spring: "cubic-bezier(.34,1.56,.64,1)", smooth: "cubic-bezier(.4,0,.2,1)" };
+const MM_HOVER = ["none", "lift", "shift", "grow", "shrink", "tilt"];
+function normalizeMenuMotion(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {}, num = (v, lo, hi) => { const n = Number(v); return v !== "" && v !== null && v !== undefined && Number.isFinite(n) && n >= lo && n <= hi ? Math.round(n) : null; };
+  if (MM_ENTER.includes(raw.enter) && raw.enter !== "none") out.enter = raw.enter;
+  let n;
+  if ((n = num(raw.duration, 0, 1500)) !== null && n !== 180) out.duration = n;
+  if (Object.hasOwn(MM_EASE, raw.ease) && raw.ease !== "ease") out.ease = raw.ease;
+  if ((n = num(raw.openDelay, 0, 1000))) out.openDelay = n;
+  if ((n = num(raw.closeDelay, 0, 1500))) out.closeDelay = n;
+  if ((n = num(raw.distance, 0, 80)) !== null && n !== 10) out.distance = n;
+  if ((n = num(raw.cascade, 0, 250))) out.cascade = n;
+  if (MM_HOVER.includes(raw.linkHover) && raw.linkHover !== "none") { out.linkHover = raw.linkHover; if ((n = num(raw.hoverDistance, 1, 30)) !== null && n !== 3) out.hoverDistance = n; }
+  return Object.keys(out).length ? out : null;
+}
 const PANEL_PARTS = { panel: ["Panneau du menu mobile", ".kw-menu-panel"], backdrop: ["Fond assombri du menu mobile", ".kw-menu-backdrop"], close: ["Bouton de fermeture du menu mobile", ".kw-menu-panel .kw-menu-close"], links: ["Liens du panneau mobile", ".kw-menu-panel .kw-menu-link"], list: ["Liste du panneau mobile", ".kw-menu-panel .kw-menu-list"] };
 function normalizePanelStyles(raw, at, h) {
   if (raw === undefined || raw === null) return null;
@@ -2244,6 +2264,12 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       stateRules(fixed, set.states, false, rules, false);
     }
   };
+  const addMotion = (n) => {
+    const m = n.type === "menu" && n.props && n.props.menuMotion;
+    if (!m || !NODE_ID.test(String(n.id || ""))) return;
+    const v = [`--kw-mm-dur:${m.duration !== undefined ? m.duration : 180}ms`, `--kw-mm-ease:${MM_EASE[m.ease || "ease"]}`, `--kw-mm-open:${m.openDelay || 0}ms`, `--kw-mm-close:${m.closeDelay || 0}ms`, `--kw-mm-dist:${m.distance !== undefined ? m.distance : 10}px`, `--kw-mm-step:${m.cascade || 0}ms`, `--kw-mm-lh:${m.hoverDistance || 3}px`];
+    rules.base.push(`.kw-node.kw-n-${n.id}{${v.join(";")}}`);
+  };
   const add = (id, styles, states, band = false, calm = false, type = "") => {
     if (!NODE_ID.test(String(id || ""))) return;
     const sel = `.kw-n-${id}`;
@@ -2316,7 +2342,7 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
       if (seenIds.has(n.id)) return;
       seenIds.add(n.id);
       add(n.id, guardContrast(n.styles), n.states, n.type === "container" && Boolean(n.props && n.props.band && !n.props.full), Boolean(n.motion && n.motion.alwaysMotion), n.type);
-    addParts(n); addItems(n); addPanel(n);
+    addParts(n); addItems(n); addPanel(n); addMotion(n);
       if (n.children && n.children.length) rowMarginRules(n.id, n.type, n.styles, n.children, false);
       // Image : « Hauteur » et « Proportions » de l'élément s'appliquent à la boîte (<figure>) ; l'image doit la REMPLIR pour que « Cadrage » et « Point focal »
       // aient un effet (sans cela l'image garde sa hauteur naturelle et la boîte reste vide en dessous). Seulement pour un écran qui fixe l'une de ces valeurs :

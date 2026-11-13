@@ -55,3 +55,18 @@ describe("menu : réglages du panneau mobile", () => {
   });
   test("partie inconnue refusée", () => assert.throws(() => withPanel({ nimporte: { styles: { desktop: { color: "#fff" } } } }), /pas une partie du panneau/));
 });
+
+describe("menu : mouvement (menuMotion)", () => {
+  const withMotion = (m) => { const { A } = freshMarketing(); const p = pages.createPage(A, { name: "Mouvement", kind: "page" }); const d = doc(null); d[0].children[0].children[0].props.menuMotion = m; return pages.saveDraft(A, p.id, { sections: d }, { revision: pages.getPage(A, p.id).revision }); };
+  test("valeurs bornées et variables écrites ; valeurs inconnues ignorées", () => {
+    const r = withMotion({ enter: "slide-up", duration: 320, ease: "spring", openDelay: 60, closeDelay: 400, distance: 18, cascade: 45, linkHover: "lift", hoverDistance: 5, nimporte: 1 });
+    const m = r.content.sections[0].children[0].children[0].props.menuMotion;
+    assert.deepEqual(m, { enter: "slide-up", duration: 320, ease: "spring", openDelay: 60, closeDelay: 400, distance: 18, cascade: 45, linkHover: "lift", hoverDistance: 5 });
+    const css = nodes.pageCss(r.content.sections);
+    assert.match(css, /\.kw-node\.kw-n-menu00000001\{--kw-mm-dur:320ms;--kw-mm-ease:cubic-bezier\(\.34,1\.56,\.64,1\);--kw-mm-open:60ms;--kw-mm-close:400ms;--kw-mm-dist:18px;--kw-mm-step:45ms;--kw-mm-lh:5px\}/);
+  });
+  test("hors bornes ou inconnu : retiré ; défauts non enregistrés", () => {
+    const m = withMotion({ enter: "magie", duration: 99999, ease: "x", closeDelay: -5, linkHover: "explose" }).content.sections[0].children[0].children[0].props.menuMotion;
+    assert.equal(m, undefined);
+  });
+});

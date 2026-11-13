@@ -17,9 +17,9 @@ Je n'ai pas relu aujourd'hui les documentations officielles complètes d'Element
 | Copier / coller le style d'un lien, réinitialiser un lien | Non | **Oui** (inspecteur) | Copier seulement typo / couleurs / animations |
 | Méga-menu (un composant par rubrique du CMS, hover/clic, largeur) | Oui | Inchangé | Contenu dynamique (produits, catégories) |
 | Hamburger : modèle d'icône, texte, forme, tiroir/plein écran/panneau du bas | Oui | + dimensions et épaisseur des traits, état survol, fond du bouton | Morphing personnalisé, SVG personnalisé |
-| Sticky / transparent / réduit / masqué au défilement, logo alternatif | Oui | Inchangé | Seuils numériques, masquer en descendant / afficher en remontant |
+| Sticky / transparent / réduit / masqué en descendant et réaffiché en remontant, seuil, logo alternatif | Oui (`headerFx`, `data-kw-hide`, `data-kw-threshold`) | Inchangé (déjà complet ; vérifié dans le code) | Animations d'apparition dédiées |
 | Accessibilité : clavier, Échap, focus piégé dans le tiroir, ARIA | Oui | Conservé et testé | Audit lecteur d'écran réel |
-| Motion : animation d'entrée, survol, transitions | Oui (effets de mouvement généraux) | Les transitions sont réglables par lien (durée dans les parties) | Séquences / cascade / timeline dédiées au menu |
+| Motion : ouverture des sous-menus et méga-menus (10 animations, durée, courbe, délais d'ouverture et de fermeture), cascade des éléments, animation des liens au survol | Seulement fondu / glissement fixes | **Oui** : `props.menuMotion` (opt-in, grand écran, `prefers-reduced-motion` respecté), délai de fermeture contre les fermetures accidentelles | Timeline libre multi-propriétés, séquences sur plusieurs widgets |
 | Breakpoints personnalisés nommés | Quatre écrans fixes + seuil de repli du menu | Inchangé | Écrans personnalisés |
 
 ## 3. Architecture (modèle de propriétés)
@@ -41,7 +41,8 @@ Sélectionnez le menu dans l'en-tête, ouvrez « Style d'un lien (individuel) »
 ## 5. Tests
 * `tests/menu-liens-individuels.test.js` (7) : validation, enregistrement, règles par lien/état/écran/page courante/sous-menu/badge, clé du CMS, refus des valeurs dangereuses, aucun style sur les liens non réglés, panneau mobile.
 * `tests/header-widgets-navigateur.test.js` (+2, vrai Chrome) : seul « Boutique » est personnalisé (couleur, graisse, fond, arrondi, survol) et « Accueil » et « Contact » restent intacts ; tiroir mobile stylé (fond, largeur 300 px, fond assombri, fermeture, liens) et fermé par Échap.
-* Limite honnête : le panneau de l'inspecteur (`linkStylePanel` dans `public/js/page-builder.js`) est vérifié par contrôle de syntaxe et par les tests existants de l'éditeur, pas encore par un test piloté dans Chrome.
+* `tests/menu-liens-individuels.test.js` (+2) et `header-widgets-navigateur` (+1, Chrome) : le sous-menu glisse, reste ouvert pendant le délai de fermeture de 600 ms puis se ferme, cascade (délais différents par élément), lien qui se soulève au survol.
+* Limite honnête : le panneau de l'inspecteur (`linkStylePanel` dans `public/js/page-builder.js`) est vérifié par contrôle de syntaxe et par les tests existants de l'éditeur, pas par un test piloté dans Chrome (tentative faite : la sélection du menu dans l'éditeur automatisé était instable ; les fonctions du panneau ont été exécutées avec succès hors navigateur avec des composants factices). Le panneau « Mouvement du menu » est dans le même cas.
 
 ## 6. Prochains lots (non faits)
-Séquences d'animation en cascade et timeline ; comportements de défilement (afficher en remontant) ; constructeur de méga-menu par lien avec contenu dynamique ; écrans personnalisés ; copier uniquement typo/couleurs ; audit lecteur d'écran ; étude détaillée source par source des six logiciels.
+Timeline libre d'animation (plusieurs propriétés) ; constructeur de méga-menu par lien avec contenu dynamique ; écrans personnalisés ; copier uniquement typo/couleurs ; audit lecteur d'écran ; étude détaillée source par source des six logiciels.
