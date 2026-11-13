@@ -9,6 +9,7 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1><%= title %></h1><p class="mk-head-sub">Site « <%= space.name %> ». <% if (mode === "settings") { %>Ces réglages ne concernent que ce site ; un champ laissé vide revient à la valeur neutre du site (jamais celle du site principal).<% } else if (mode === "redirects") { %>Les redirections ci-dessous ne s'appliquent que sur le domaine de ce site.<% } else { %>Adresses introuvables demandées sur le domaine de ce site.<% } %></p></div></div>
     <% if (note) { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p><%= note %></p></div><% } %>
+<% if (mode === "redirects") { %>    <%- include("partials/redirections-tabs", { rdActive: "toutes" }) %><% } %>
 
 <% if (mode === "settings") { %>
     <form method="post" action="<%= space.base %>/seo" class="mk-form" id="seo-site-form">
@@ -41,8 +42,8 @@
     <form id="nouvelle" method="post" action="<%= space.base %>/redirections" class="mk-form mk-cms-create">
       <div class="field-group"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
       <div class="field-group"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" placeholder="/nouvelle-page (vide pour un 410)"></div>
-      <div class="field-group"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="410">410 — supprimée</option></select></div>
-      <div class="field-group"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
+      <div class="field-group"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="303">303 — temporaire, vers une consultation (GET)</option><option value="410">410 — supprimée</option><option value="451">451 — indisponible (légal)</option></select></div>
+      <div class="field-group"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="contains">Contient un texte</option><option value="endswith">Se termine par un texte</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
       <div class="field-group"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200"></div>
       <button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button>
     </form>
@@ -54,7 +55,7 @@
         <td><% if (can.edit) { %><details><summary>Modifier</summary>
             <form method="post" action="<%= space.base %>/redirections/<%= r.id %>" class="mk-form">
               <input type="text" name="source" value="<%= r.source_path %>" maxlength="300" required aria-label="Ancienne adresse"><input type="text" name="target" value="<%= r.target %>" maxlength="500" aria-label="Nouvelle adresse">
-              <select name="status" aria-label="Type"><option value="301" <%= r.status === 301 ? "selected" : "" %>>301</option><option value="302" <%= r.status === 302 ? "selected" : "" %>>302</option><option value="307" <%= r.status === 307 ? "selected" : "" %>>307</option><option value="308" <%= r.status === 308 ? "selected" : "" %>>308</option><option value="410" <%= r.status === 410 ? "selected" : "" %>>410</option></select>
+              <select name="status" aria-label="Type"><option value="301" <%= r.status === 301 ? "selected" : "" %>>301</option><option value="302" <%= r.status === 302 ? "selected" : "" %>>302</option><option value="307" <%= r.status === 307 ? "selected" : "" %>>307</option><option value="308" <%= r.status === 308 ? "selected" : "" %>>308</option><option value="303" <%= r.status === 303 ? "selected" : "" %>>303</option><option value="410" <%= r.status === 410 ? "selected" : "" %>>410</option><option value="451" <%= r.status === 451 ? "selected" : "" %>>451</option></select>
               <label><input type="checkbox" name="enabled" value="1" <%= r.enabled ? "checked" : "" %>> Active</label><input type="text" name="note" value="<%= r.note %>" maxlength="200" aria-label="Note">
               <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></form></details><% } %>
           <% if (can.delete) { %><form method="post" action="<%= space.base %>/redirections/<%= r.id %>/supprimer" data-confirm="Supprimer cette redirection ?"><button type="submit" class="btn btn-outline btn-sm">Supprimer</button></form><% } %></td></tr><% }) %>

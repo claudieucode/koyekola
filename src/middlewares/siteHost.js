@@ -191,6 +191,8 @@ function normalizePaths(req, res, next) {
 function movedFallback(req, res, next) {
   if (!isRead(req)) return next();
   let loc = null;
+  // Redirections > Paramètres : « automatique » (défaut), « à valider » ou « désactivé » — les deux derniers ne redirigent pas les anciennes adresses des pages et des catégories d'un site tant qu'une règle n'a pas été validée
+  try { if (require("../seo/redirectTools").autoModeFor(req.kwSite ? req.kwSite.id : null) !== "auto") return next(); } catch { /* réglage illisible : comportement habituel */ }
   try { loc = urls.movedLocation(req.path, { hostSite: req.kwSite || null }); } catch { loc = null; }
   if (!loc) return next();
   res.redirect(301, `${loc}${queryOf(req)}`);

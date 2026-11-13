@@ -16,6 +16,9 @@ const { siteBase } = require("../../utils/seo");
 const BASE = "/marketing/site-web";
 const PER_PAGE = 25;
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
+// Options avancées du formulaire (correspondance, groupe, priorité, période, paramètres) : le moteur les valide toutes
+const advanced = (b) => ({ matchType: b.match_type || undefined, groupId: b.group_id === undefined ? undefined : b.group_id || null, priority: b.priority === undefined ? undefined : b.priority,
+  startsAt: b.starts_at === undefined ? undefined : b.starts_at, endsAt: b.ends_at === undefined ? undefined : b.ends_at, queryMode: b.query_mode || undefined });
 const denied = (res) => res.status(403).render("error", { message: "Vous n'avez pas la permission d'effectuer cette action." });
 
 module.exports = () => {
@@ -33,23 +36,26 @@ module.exports = () => {
     const sites = sitesOf(ctx);
     const f = {
       q: String(req.query.q || "").trim().slice(0, 100),
-      type: ["301", "302"].includes(String(req.query.type)) ? String(req.query.type) : "",
+      type: redirects.STATUSES.map(String).includes(String(req.query.type)) ? String(req.query.type) : "",
+      groupe: /^\d+$/.test(String(req.query.groupe || "")) || req.query.groupe === "none" ? String(req.query.groupe) : "",
+      corr: redirects.MATCH_TYPES.includes(String(req.query.corr)) ? String(req.query.corr) : "",
       etat: ["active", "inactive"].includes(String(req.query.etat)) ? String(req.query.etat) : "",
       site: req.query.site === "none" || sites.some((s) => String(s.id) === String(req.query.site)) ? String(req.query.site) : "",
       tri: Object.hasOwn(redirects.SORTS, req.query.tri) ? req.query.tri : "recent",
     };
-    const result = redirects.query({ q: f.q, status: f.type, state: f.etat, site: f.site, sort: f.tri, page: req.query.page, perPage: PER_PAGE, siteIds: sites.map((s) => s.id) });
+    const result = redirects.query({ q: f.q, status: f.type, state: f.etat, site: f.site, sort: f.tri, page: req.query.page, perPage: PER_PAGE, siteIds: sites.map((s) => s.id), group: f.groupe, match: f.corr });
+    const groups = require("../../seo/redirectTools").listGroups({ siteId: null, visible: sites.map((s) => s.id) });
     res.render("marketing/redirects", {
-      title: "Redirections", active: "redirections", f, rows: result.rows, total: result.total, page: result.page, pages: result.pages, sites,
+      title: "Redirections", active: "redirections", f, rows: result.rows, total: result.total, page: result.page, pages: result.pages, sites, groups, MATCHES: redirects.MATCH_LABELS, QUERY_MODES: redirects.QUERY_MODES,
       chains: redirects.chains().length, can: { create: req.mk.can("redirects.create"), edit: req.mk.can("redirects.edit"), del: req.mk.can("redirects.delete"), external: req.mk.can("redirects.external") },
-      urlsJs: true,
+      urlsJs: true, rdJs: true,
     });
   });
 
   // ----- Création -----
   router.post("/site-web/redirections", need("redirects.create"), (req, res) => {
     const { ctx } = req.mk;
-    const input = { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, siteId: req.body.site_id ? siteIdOf(ctx, req.body.site_id) : null };
+    const input = { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, siteId: req.body.site_id ? siteIdOf(ctx, req.body.site_id) : null, ...advanced(req.body) };
     if (req.body.site_id && input.siteId === null) { flash(req, "error", "Site introuvable."); return res.redirect(back(req)); }
     if (/^https?:\/\//i.test(String(req.body.target || "").trim()) && !req.mk.can("redirects.external")) {
       flash(req, "error", "Rediriger vers un site extérieur est réservé aux administrateurs (permission « redirects.external »).");
@@ -69,7 +75,7 @@ module.exports = () => {
     if (wantsExternal && !req.mk.can("redirects.external")) { flash(req, "error", "Une redirection vers un site extérieur ne peut être modifiée que par un administrateur (permission « redirects.external »)."); return res.redirect(back(req)); }
     const siteId = req.body.site_id === undefined ? undefined : (req.body.site_id ? siteIdOf(ctx, req.body.site_id) : null);
     if (req.body.site_id && siteId === null) { flash(req, "error", "Site introuvable."); return res.redirect(back(req)); }
-    const r = redirects.update(before.id, { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, enabled: before.enabled ? "1" : "0", siteId }, req.session.user.id);
+    const r = redirects.update(before.id, { source: req.body.source, target: req.body.target, status: req.body.status, note: req.body.note, enabled: before.enabled ? "1" : "0", siteId, ...advanced(req.body) }, req.session.user.id);
     if (!r.ok) flash(req, "error", r.errors.join(" ")); else flash(req, "ok", "Redirection enregistrée.");
     res.redirect(back(req));
   });

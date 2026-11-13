@@ -1,0 +1,13 @@
+<%#
+  Navigation commune des écrans Redirections (site principal et espace d'un site). Paramètre : rdActive = clé de l'écran courant.
+  Les adresses viennent du périmètre : /marketing/site-web/redirections (principal) ou <espace du site>/redirections.
+%><%
+  const rdSp = typeof siteSpace !== "undefined" && siteSpace && !siteSpace.principal ? siteSpace : null;
+  const rdBase = rdSp ? `${rdSp.base}/redirections` : "/marketing/site-web/redirections";
+  const rdTabs = [["tableau-de-bord", "Tableau de bord", `${rdBase}/tableau-de-bord`], ["toutes", "Toutes les redirections", rdBase], ["groupes", "Groupes", `${rdBase}/groupes`],
+    ["erreurs-404", "Liens cassés (404)", `${rdBase}/erreurs-404`], ["journaux", "Journaux et statistiques", `${rdBase}/journaux`], ["adresses", "Permaliens et adresses", `${rdBase}/adresses`],
+    ["import-export", "Importer / Exporter", `${rdBase}/import-export`], ["outils", "Outils avancés", `${rdBase}/outils`], ["parametres", "Paramètres", `${rdBase}/parametres`]];
+%>
+    <nav class="mk-tabs mk-cms-tabs rd-tabs" aria-label="Redirections">
+      <% rdTabs.forEach(([k, label, href]) => { %><a class="mk-tab" href="<%= href %>"<%- rdActive === k ? ' aria-current="page"' : "" %>><%= label %></a><% }) %>
+    </nav>

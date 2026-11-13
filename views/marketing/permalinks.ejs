@@ -5,11 +5,7 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Permaliens et adresses</h1><p class="mk-head-sub">Les adresses publiques de vos contenus. Elles ne changent pas toutes seules : quand une adresse change, l'ancienne redirige (301) vers la nouvelle, et les menus qui pointent vers la ressource suivent son adresse actuelle.</p></div></div>
 
-    <nav class="mk-tabs mk-cms-tabs" aria-label="Adresses">
-      <a class="mk-tab" href="/marketing/site-web/redirections">Redirections</a>
-      <a class="mk-tab" href="/marketing/site-web/liens-casses">Liens cassés</a>
-      <a class="mk-tab" href="/marketing/site-web/permaliens" aria-current="page">Permaliens et adresses</a>
-    </nav>
+    <%- include("partials/redirections-tabs", { rdActive: "adresses" }) %>
 
     <section class="mk-panel" aria-labelledby="ur-s-check">
       <h2 id="ur-s-check">Que se passe-t-il à cette adresse ?</h2>

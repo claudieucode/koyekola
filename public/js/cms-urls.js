@@ -17,6 +17,10 @@
       $("#ur-status").value = r ? String(r.status) : "301";
       var site = $("#ur-site"); if (site) site.value = r && r.site_id ? String(r.site_id) : "";
       $("#ur-note").value = r ? r.note : "";
+      var set = function (id, v) { var n = $(id); if (n) n.value = v; };
+      set("#ur-match", r ? r.match_type : "exact"); set("#ur-group", r && r.group_id ? String(r.group_id) : ""); set("#ur-priority", r ? String(r.priority) : "100");
+      set("#ur-starts", r ? r.starts_at : ""); set("#ur-ends", r ? r.ends_at : ""); set("#ur-query", r ? r.query_mode : "keep");
+      var adv = $(".rd-adv", f); if (adv) adv.open = Boolean(r && (r.group_id || r.priority !== 100 || r.starts_at || r.ends_at || r.query_mode === "drop"));
     };
     document.addEventListener("click", function (e) {
       var n = e.target.closest("[data-ur-new]"), ed = e.target.closest("[data-ur-edit]");

@@ -1,0 +1,265 @@
+<%#
+  KOLAKISA CMS → Redirections : espace de travail (tableau de bord, groupes, liens cassés 404, journaux, changements d'adresse, import / export, outils, paramètres).
+  Toutes les valeurs affichées viennent de la base (aucun chiffre inventé). Le périmètre (site principal ou un site) est celui de l'adresse : rd.base.
+%><%- include("partials/top", { title, active }) %>
+<%
+  const fdate = (v) => (v ? new Date(String(v).includes("T") || String(v).includes("Z") ? v : `${String(v).replace(" ", "T")}Z`).toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Paris" }) : "—");
+  const fday = (v) => new Date(`${v}T12:00:00Z`).toLocaleDateString("fr-FR", { day: "numeric", month: "short", timeZone: "Europe/Paris" });
+  const num = (n) => Number(n || 0).toLocaleString("fr-FR");
+  const KEY = { "tableau-de-bord": "tableau-de-bord", "erreurs-404": "erreurs-404", groupes: "groupes", journaux: "journaux", adresses: "adresses", "import-export": "import-export", outils: "outils", parametres: "parametres" };
+  const STATUS_LABEL = { 301: "301 définitive", 302: "302 temporaire", 303: "303 vers GET", 307: "307 temporaire", 308: "308 définitive", 410: "410 supprimée", 451: "451 indisponible" };
+  const MATCH_LABEL = { exact: "exacte", prefix: "préfixe", contains: "contient", endswith: "finit par", regex: "regex" };
+  const state = (cls, text) => `<span class="mk-status ${cls}">${text}</span>`;
+  // Graphique en barres (SVG, sans bibliothèque) : une barre par jour, hauteur proportionnelle au maximum réel
+  const bars = (series, label) => {
+    const max = Math.max(1, ...series.map((x) => x.hits));
+    const w = 10, h = 60;
+    const body = series.map((x, i) => { const bh = Math.round((x.hits / max) * (h - 4)); return `<rect x="${i * w + 1}" y="${h - bh}" width="${w - 2}" height="${bh}" rx="1"><title>${fday(x.day)} : ${x.hits}</title></rect>`; }).join("");
+    return `<svg class="rd-chart" viewBox="0 0 ${series.length * w} ${h}" preserveAspectRatio="none" role="img" aria-label="${label}">${body}</svg>`;
+  };
+  const delta = (now, prev) => (prev ? `${now >= prev ? "+" : "−"}${Math.abs(Math.round(((now - prev) / prev) * 100))} %` : null);
+%>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1><%= title %></h1>
+        <p class="mk-head-sub"><% if (rd.space) { %>Site « <%= rd.space.name %> » : seules les règles de ce site sont affichées.<% } else { %>Règles communes et règles des sites que vous gérez. Chaque règle reste propre à son site.<% } %></p></div>
+      <div class="mk-actions"><% if (can.create) { %><a class="btn btn-primary btn-sm" href="<%= rd.base %>?nouvelle=1">Ajouter une redirection</a><% } %></div>
+    </div>
+    <% if (rd.readonly) { %><div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Ce site est archivé : ses redirections sont en lecture seule.</p></div><% } %>
+    <%- include("partials/redirections-tabs", { rdActive: KEY[screen] || "toutes" }) %>
+
+<% if (screen === "tableau-de-bord") { %>
+    <form class="mk-cms-toolbar" method="get" action="<%= rd.base %>/tableau-de-bord" aria-label="Période">
+      <label for="rd-days">Période</label>
+      <select id="rd-days" name="jours" data-rd-autosubmit><% [7, 30, 90].forEach((n) => { %><option value="<%= n %>"<%= d.days === n ? " selected" : "" %>><%= n %> derniers jours</option><% }) %></select>
+      <noscript><button class="btn btn-outline btn-sm" type="submit">Afficher</button></noscript>
+    </form>
+    <section class="rd-kpis" aria-label="Indicateurs">
+      <div class="rd-kpi"><span>Redirections</span><strong><%= num(d.total) %></strong><small><%= num(d.active) %> actives · <%= num(d.disabled) %> désactivées</small></div>
+      <div class="rd-kpi"><span>Permanentes</span><strong><%= num(d.permanent) %></strong><small>301 et 308</small></div>
+      <div class="rd-kpi"><span>Temporaires</span><strong><%= num(d.temporary) %></strong><small>302, 303 et 307</small></div>
+      <div class="rd-kpi"><span>Supprimées / indisponibles</span><strong><%= num(d.gone) %></strong><small>410 et 451</small></div>
+      <div class="rd-kpi"><span>Redirections déclenchées</span><strong><%= num(d.hitsAll) %></strong><small>au total depuis la création des règles</small></div>
+      <div class="rd-kpi"><span>Liens cassés à traiter</span><strong><%= num(d.notFound.open) %></strong><small><%= num(d.notFound.hits) %> visites</small></div>
+      <div class="rd-kpi<%= d.problems.chains ? " is-warn" : "" %>"><span>Chaînes</span><strong><%= num(d.problems.chains) %></strong><small>A → B → C</small></div>
+      <div class="rd-kpi<%= d.problems.loops ? " is-bad" : "" %>"><span>Boucles</span><strong><%= num(d.problems.loops) %></strong><small>A → B → A</small></div>
+    </section>
+    <section class="rd-panel"><h2>Activité des redirections</h2>
+      <% if (!d.hasDaily) { %><p class="mk-sub">Le détail par jour est collecté à partir de maintenant : les graphiques se rempliront avec les prochaines visites (le total ci-dessus est conservé depuis le début).</p>
+      <% } else { %><%- bars(d.series, `Redirections déclenchées par jour sur ${d.days} jours`) %>
+        <p class="mk-sub"><strong><%= num(d.hitsPeriod) %></strong> déclenchement<%= d.hitsPeriod > 1 ? "s" : "" %> sur la période<% if (delta(d.hitsPeriod, d.hitsPrevious)) { %> (<%= delta(d.hitsPeriod, d.hitsPrevious) %> par rapport aux <%= d.days %> jours précédents : <%= num(d.hitsPrevious) %>)<% } %>.</p><% } %>
+    </section>
+    <% if (d.problemList.length) { %><section class="rd-panel"><h2>Alertes</h2><ul class="rd-list">
+      <% d.problemList.forEach((p) => { %><li class="is-<%= p.level %>"><strong><%= p.source || "" %></strong> <%= p.text %></li><% }) %></ul>
+      <p><a href="<%= rd.base %>/outils">Ouvrir les outils de diagnostic</a></p></section><% } %>
+    <div class="rd-cols">
+      <section class="rd-panel"><h2>Les plus utilisées</h2>
+        <% if (!d.top.length) { %><p class="mk-sub">Aucune redirection n'a encore été déclenchée.</p><% } else { %><ol class="rd-list"><% d.top.forEach((r) => { %><li><code><%= r.source_path %></code> → <code><%= r.target || "—" %></code> <span class="mk-sub"><%= num(r.hits) %> visite<%= r.hits > 1 ? "s" : "" %></span></li><% }) %></ol><% } %></section>
+      <section class="rd-panel"><h2>Récemment créées</h2>
+        <% if (!d.recentCreated.length) { %><p class="mk-sub">Aucune redirection pour l'instant.</p><% } else { %><ul class="rd-list"><% d.recentCreated.forEach((r) => { %><li><code><%= r.source_path %></code> → <code><%= r.target || "—" %></code> <span class="mk-sub"><%= fdate(r.created_at) %></span></li><% }) %></ul><% } %></section>
+      <section class="rd-panel"><h2>Récemment modifiées</h2>
+        <% if (!d.recentEdited.length) { %><p class="mk-sub">Aucune modification récente.</p><% } else { %><ul class="rd-list"><% d.recentEdited.forEach((r) => { %><li><code><%= r.source_path %></code> → <code><%= r.target || "—" %></code> <span class="mk-sub"><%= fdate(r.updated_at) %></span></li><% }) %></ul><% } %></section>
+      <section class="rd-panel"><h2>Activité récente</h2>
+        <% if (!d.activity.length) { %><p class="mk-sub">Aucune action enregistrée.</p><% } else { %><ul class="rd-list"><% d.activity.forEach((a) => { %><li><%= a.new_value || (a.old_value ? `Supprimée : ${a.old_value}` : "—") %> <span class="mk-sub"><%= fdate(a.created_at) %><%= a.username ? ` · ${a.username}` : "" %></span></li><% }) %></ul><% } %></section>
+    </div>
+    <section class="rd-panel"><h2>Raccourcis</h2><div class="mk-actions">
+      <% if (can.create) { %><a class="btn btn-primary btn-sm" href="<%= rd.base %>?nouvelle=1">Ajouter une redirection</a><a class="btn btn-outline btn-sm" href="<%= rd.base %>/import-export">Importer</a><% } %>
+      <a class="btn btn-outline btn-sm" href="<%= rd.base %>/erreurs-404">Traiter les liens cassés</a><a class="btn btn-outline btn-sm" href="<%= rd.base %>/outils">Tester une adresse</a></div></section>
+
+<% } else if (screen === "groupes") { %>
+    <% if (can.edit) { %><form method="post" action="<%= rd.base %>/groupes" class="rd-inline">
+      <div class="field-group"><label for="rd-gname">Nom du groupe *</label><input id="rd-gname" name="name" maxlength="80" required placeholder="Anciennes pages, Migration, Campagne d'été…"></div>
+      <div class="field-group"><label for="rd-gdesc">Description</label><input id="rd-gdesc" name="description" maxlength="300"></div>
+      <% if (rd.principal && rd.sites.length) { %><div class="field-group"><label for="rd-gsite">Site</label><select id="rd-gsite" name="site_id"><option value="">Règles communes</option><% rd.sites.forEach((s) => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div><% } %>
+      <button class="btn btn-primary btn-sm" type="submit">Créer le groupe</button></form><% } %>
+    <% if (!groups.length) { %><div class="mk-empty"><h2>Aucun groupe</h2><p>Un groupe réunit des redirections (une campagne, une migration, d'anciennes pages) pour les activer, désactiver ou exporter ensemble.</p></div>
+    <% } else { %><div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Groupes de redirections</caption>
+      <thead><tr><th scope="col">Groupe</th><th scope="col">Règles</th><th scope="col">Actives</th><th scope="col" class="mk-num">Visites</th><th scope="col">État</th><th scope="col">Créé le</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody><% groups.forEach((g) => { %><tr>
+        <th scope="row"><a href="<%= rd.base %>?groupe=<%= g.id %>"><%= g.name %></a><% if (g.description) { %><span class="mk-sub"><%= g.description %></span><% } %></th>
+        <td><%= g.rules %></td><td><%= g.active %></td><td class="mk-num"><%= num(g.hits) %></td>
+        <td><span class="mk-status <%= g.enabled ? "mk-status-ok" : "mk-status-off" %>"><%= g.enabled ? "Actif" : "Désactivé" %></span></td><td><%= fdate(g.created_at) %></td>
+        <td class="mk-row-actions"><% if (can.edit) { %>
+          <form method="post" action="<%= rd.base %>/groupes/<%= g.id %>" class="rd-inline-btn"><input type="hidden" name="enabled" value="<%= g.enabled ? "0" : "1" %>"><input type="hidden" name="name" value="<%= g.name %>"><button class="btn btn-outline btn-sm" type="submit"><%= g.enabled ? "Désactiver" : "Activer" %></button></form><% } %>
+          <% if (can.del) { %><form method="post" action="<%= rd.base %>/groupes/<%= g.id %>/supprimer" class="rd-inline-btn" data-rd-confirm="Supprimer le groupe « <%= g.name %> » ? Ses règles sont conservées, sans groupe."><button class="btn btn-ghost btn-sm" type="submit">Supprimer</button></form><% } %></td></tr><% }) %></tbody></table></div><% } %>
+    <p class="mk-sub">Désactiver un groupe suspend toutes ses règles sans les supprimer. Pour déplacer des règles, cochez-les dans « Toutes les redirections » puis « Déplacer dans un groupe ».</p>
+
+<% } else if (screen === "erreurs-404") { %>
+    <section class="rd-panel"><h2>Visites sur des pages introuvables</h2>
+      <%- bars(daily, "Visites sur des pages introuvables par jour, 30 derniers jours") %>
+      <p class="mk-sub"><%= stats.urls %> adresse<%= stats.urls > 1 ? "s" : "" %> à surveiller · <%= num(stats.human) %> visite<%= stats.human > 1 ? "s" : "" %> de personnes · <%= num(stats.bot) %> visite<%= stats.bot > 1 ? "s" : "" %> de robots. Les adresses sont journalisées sans identité du visiteur.</p></section>
+    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="<%= rd.base %>/erreurs-404" role="search" aria-label="Filtrer les liens cassés">
+      <label class="mk-search"><span class="sr-only">Rechercher une adresse</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= q %>" placeholder="Rechercher une adresse"></label>
+      <label class="sr-only" for="rd-nf-etat">État</label><select id="rd-nf-etat" name="etat"><% Object.entries(states).forEach(([k, l]) => { %><option value="<%= k %>"<%= state === k ? " selected" : "" %>><%= l %></option><% }) %></select>
+      <label class="sr-only" for="rd-nf-filtre">Visiteurs</label><select id="rd-nf-filtre" name="filtre"><option value="all"<%= filter === "all" ? " selected" : "" %>>Tous les visiteurs</option><option value="human"<%= filter === "human" ? " selected" : "" %>>Personnes</option><option value="bot"<%= filter === "bot" ? " selected" : "" %>>Robots seulement</option></select>
+      <label class="sr-only" for="rd-nf-tri">Trier</label><select id="rd-nf-tri" name="tri"><option value="visites"<%= sort === "visites" ? " selected" : "" %>>Plus fréquentes</option><option value="recent"<%= sort === "recent" ? " selected" : "" %>>Plus récentes</option><option value="adresse"<%= sort === "adresse" ? " selected" : "" %>>Adresse A → Z</option></select>
+      <button class="btn btn-outline btn-sm" type="submit">Filtrer</button></form>
+    <% if (clusters.length) { %><p class="mk-sub">Adresses similaires : <% clusters.forEach(([k, n], i) => { %><a href="<%= rd.base %>/erreurs-404?q=<%= encodeURIComponent(k) %>"><code><%= k %></code> (<%= n %>)</a><%= i < clusters.length - 1 ? " · " : "" %><% }) %> — une règle par préfixe peut les traiter ensemble.</p><% } %>
+    <% if (!rows.length) { %><div class="mk-empty"><h2>Aucun lien cassé<%= state === "open" ? " à traiter" : "" %></h2><p>Les pages introuvables réellement visitées apparaissent ici ; rien n'est inventé.</p></div>
+    <% } else { %>
+    <form id="rd-bulk" method="post" action="<%= rd.base %>/erreurs-404/actions"></form>
+    <div>
+      <div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Pages introuvables</caption>
+        <thead><tr><% if (can.edit) { %><th scope="col"><input type="checkbox" data-rd-all aria-label="Tout sélectionner"></th><% } %><th scope="col">Adresse demandée</th><th scope="col" class="mk-num">Visites</th><th scope="col">Dernière visite</th><th scope="col">Page d'origine</th><th scope="col">Suggestion</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody><% rows.forEach((r) => { const sug = suggestions[r.path] || []; %><tr>
+          <% if (can.edit) { %><td><input type="checkbox" form="rd-bulk" name="path" value="<%= r.path %>" aria-label="Sélectionner <%= r.path %>"></td><% } %>
+          <th scope="row"><code><%= r.path %></code><span class="mk-sub">première vue : <%= fdate(r.first_seen) %><%= r.ignored ? " · ignorée" : "" %><%= r.handled_at ? " · traitée" : "" %></span></th>
+          <td class="mk-num"><%= num(r.hits_human + r.hits_bot) %><span class="mk-sub"><%= num(r.hits_human) %> personnes</span></td>
+          <td><%= fdate(r.last_seen) %></td>
+          <td><%= r.last_referrer ? r.last_referrer.replace(/^https?:\/\//, "").slice(0, 50) : "—" %></td>
+          <td><% if (sug.length) { sug.forEach((s) => { %><div class="rd-sug"><code><%= s.path %></code><span class="mk-sub">suggestion · <%= s.why %></span>
+            <% if (can.create) { %><form method="post" action="<%= rd.base %>/erreurs-404/rediriger" class="rd-inline-btn"><input type="hidden" name="path" value="<%= r.path %>"><input type="hidden" name="target" value="<%= s.path %>"><input type="hidden" name="from" value="suggestion"><button class="btn btn-outline btn-sm" type="submit">Rediriger ici</button></form><% } %></div><% }) } else { %><span class="mk-sub">aucune</span><% } %></td>
+          <td class="mk-row-actions"><% if (can.create) { %><button type="button" class="btn btn-ghost btn-sm" data-rd-redirect="<%= r.path %>">Rediriger…</button><% } %></td></tr><% }) %></tbody></table></div>
+      <% if (can.edit) { %><div class="mk-actions rd-bulkbar"><span class="mk-sub">Pour la sélection :</span>
+        <button class="btn btn-outline btn-sm" type="submit" form="rd-bulk" name="action" value="ignorer">Ignorer</button>
+        <% if (canHandle) { %><button class="btn btn-outline btn-sm" type="submit" form="rd-bulk" name="action" value="traitee">Marquer comme traitée</button><% } %>
+        <button class="btn btn-outline btn-sm" type="submit" form="rd-bulk" name="action" value="rouvrir">Rouvrir</button>
+        <% if (can.del) { %><button class="btn btn-ghost btn-sm" type="submit" form="rd-bulk" name="action" value="supprimer" data-rd-confirm="Supprimer ces adresses du journal ?">Supprimer du journal</button><% } %></div><% } %>
+    </div>
+    <p class="mk-sub"><%= totalRows > rows.length ? `${rows.length} adresses affichées sur ${totalRows} : affinez avec la recherche.` : "" %> Les suggestions sont proposées d'après la ressemblance des adresses et des titres ; vérifiez-les avant de rediriger.</p>
+    <% if (can.create) { %><dialog class="mk-dialog mk-modal" id="rd-redirect" aria-labelledby="rd-redirect-title"><form method="post" action="<%= rd.base %>/erreurs-404/rediriger">
+      <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="rd-redirect-title">Rediriger une adresse introuvable</h2></div><button type="button" class="mk-dialog-close" data-rd-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+      <div class="mk-dialog-body"><input type="hidden" name="path" id="rd-redirect-path">
+        <p>Adresse : <code id="rd-redirect-show"></code></p>
+        <div class="field-group"><label for="rd-redirect-target">Nouvelle adresse *</label><input id="rd-redirect-target" name="target" required maxlength="500" placeholder="/page-existante" autocomplete="off"><span class="field-hint">Une page qui existe vraiment<%= can.external ? " ou une adresse en https://" : "" %>. Ne redirigez pas vers une page sans rapport : les moteurs de recherche la considéreraient comme une fausse erreur.</span></div>
+        <div class="field-group"><label for="rd-redirect-status">Type</label><select id="rd-redirect-status" name="status"><option value="301">301 — définitive (conseillé)</option><option value="302">302 — temporaire</option></select></div></div>
+      <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-rd-close>Annuler</button><button class="btn btn-primary btn-sm" type="submit">Créer la redirection</button></div></form></dialog><% } %>
+    <% } %>
+    <% if (rd.principal) { %><p class="mk-sub">Besoin de vérifier aussi les liens internes des menus, pages et articles ? <a href="/marketing/site-web/liens-casses">Analyse des liens internes</a>.</p><% } %>
+
+<% } else if (screen === "journaux") { %>
+    <form class="mk-cms-toolbar" method="get" action="<%= rd.base %>/journaux"><label for="rd-j-days">Période</label><select id="rd-j-days" name="jours" data-rd-autosubmit><% [7, 30, 90].forEach((n) => { %><option value="<%= n %>"<%= days === n ? " selected" : "" %>><%= n %> derniers jours</option><% }) %></select><noscript><button class="btn btn-outline btn-sm" type="submit">Afficher</button></noscript></form>
+    <div class="rd-cols">
+      <section class="rd-panel"><h2>Redirections déclenchées</h2>
+        <% if (!d.hasDaily) { %><p class="mk-sub">Le détail par jour est collecté depuis la mise en service de cet écran. Il se remplira avec les prochaines visites.</p>
+        <% } else { %><%- bars(d.series, `Redirections déclenchées par jour sur ${days} jours`) %><p class="mk-sub"><strong><%= num(d.hitsPeriod) %></strong> sur la période<% if (delta(d.hitsPeriod, d.hitsPrevious)) { %> · <%= delta(d.hitsPeriod, d.hitsPrevious) %> par rapport à la période précédente (<%= num(d.hitsPrevious) %>)<% } %>.</p><% } %></section>
+      <section class="rd-panel"><h2>Visites sur des liens cassés</h2><%- bars(nfDaily, "Visites sur des pages introuvables par jour") %><p class="mk-sub"><a href="<%= rd.base %>/erreurs-404">Traiter les liens cassés</a></p></section>
+    </div>
+    <div class="rd-cols">
+      <section class="rd-panel"><h2>Règles les plus utilisées</h2>
+        <% if (!d.top.length) { %><p class="mk-sub">Aucune redirection déclenchée pour l'instant.</p><% } else { %><ol class="rd-list"><% d.top.forEach((r) => { %><li><code><%= r.source_path %></code> <span class="mk-sub"><%= num(r.hits) %> · dernière : <%= fdate(r.last_hit_at) %></span></li><% }) %></ol><% } %></section>
+      <section class="rd-panel"><h2>Destinations les plus utilisées</h2>
+        <% if (!targets.length) { %><p class="mk-sub">Aucune donnée.</p><% } else { %><ol class="rd-list"><% targets.forEach((t) => { %><li><code><%= t.target %></code> <span class="mk-sub"><%= num(t.hits) %> visite<%= t.hits > 1 ? "s" : "" %> · <%= t.rules %> règle<%= t.rules > 1 ? "s" : "" %></span></li><% }) %></ol><% } %></section>
+      <section class="rd-panel"><h2>Actives mais jamais utilisées</h2>
+        <% if (!inactive.length) { %><p class="mk-sub">Toutes les règles actives ont servi au moins une fois.</p><% } else { %><ul class="rd-list"><% inactive.forEach((r) => { %><li><code><%= r.source_path %></code> <span class="mk-sub">créée le <%= fdate(r.created_at) %></span></li><% }) %></ul><% } %></section>
+    </div>
+    <section class="rd-panel"><h2>Historique des modifications</h2>
+      <p><a class="btn btn-outline btn-sm" href="<%= rd.base %>/journaux/export.csv">Exporter le journal (CSV)</a></p>
+      <% if (!hist.length) { %><p class="mk-sub">Aucune modification enregistrée.</p><% } else { %><div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Historique</caption>
+        <thead><tr><th scope="col">Date</th><th scope="col">Qui</th><th scope="col">Avant</th><th scope="col">Après</th><th scope="col">Origine</th></tr></thead>
+        <tbody><% hist.forEach((h) => { %><tr><td><%= fdate(h.created_at) %></td><td><%= h.username || "—" %></td><td><%= h.old_value || "—" %></td><td><%= h.new_value || "—" %></td><td><%= h.source %></td></tr><% }) %></tbody></table></div>
+      <nav class="mk-cms-pager" aria-label="Pagination"><span class="mk-cms-pager-nav"><% if (page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= rd.base %>/journaux?jours=<%= days %>&page=<%= page - 1 %>">Précédent</a><% } %><% if (hist.length === 30) { %><a class="btn btn-ghost btn-sm" href="<%= rd.base %>/journaux?jours=<%= days %>&page=<%= page + 1 %>">Suivant</a><% } %></span></nav><% } %></section>
+
+<% } else if (screen === "adresses") { %>
+    <section class="rd-panel"><h2>Changement d'adresse d'une page ou d'une catégorie</h2>
+      <p>Quand l'adresse d'une page change, KOLAKISA peut rediriger l'ancienne vers la nouvelle. Choisissez le comportement de ce <%= rd.space ? "site" : "site principal" %> :</p>
+      <form method="post" action="<%= rd.base %>/parametres" class="rd-inline"><fieldset class="rd-modes"><legend class="sr-only">Comportement</legend>
+        <% Object.entries(modes).forEach(([k, l]) => { %><label><input type="radio" name="autoMode" value="<%= k %>"<%= settings.autoMode === k ? " checked" : "" %><%= can.edit ? "" : " disabled" %>> <%= l %></label><% }) %></fieldset>
+        <% if (can.edit) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><% } %></form>
+      <p class="mk-sub">Ce choix s'applique aux pages et aux catégories / étiquettes d'un site ; les articles et les formations du site principal gardent leur redirection automatique. Aucune redirection inutile n'est créée pour une page qui n'a jamais été publiée.</p></section>
+    <section class="rd-panel"><h2>Changements d'adresse constatés</h2>
+      <% if (!proposals.length) { %><p class="mk-sub">Aucun changement d'adresse enregistré.</p>
+      <% } else { %><form method="post" action="<%= rd.base %>/adresses/accepter"><div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Changements d'adresse</caption>
+        <thead><tr><% if (can.create) { %><th scope="col"><span class="sr-only">Choisir</span></th><% } %><th scope="col">Ancienne adresse</th><th scope="col">Nouvelle adresse</th><th scope="col">Motif</th><th scope="col">Date</th><th scope="col">État</th></tr></thead>
+        <tbody><% proposals.forEach((p) => { %><tr><% if (can.create) { %><td><% if (!p.converted) { %><input type="checkbox" name="id" value="<%= p.id %>" aria-label="Créer la redirection pour <%= p.from %>"><% } %></td><% } %>
+          <th scope="row"><code><%= p.from %></code></th><td><code><%= p.to %></code></td><td><%= p.reason %></td><td><%= fdate(p.at) %></td>
+          <td><%= p.converted ? "Règle créée" : settings.autoMode === "auto" ? "Redirigée automatiquement" : "À valider" %></td></tr><% }) %></tbody></table></div>
+        <% if (can.create) { %><button class="btn btn-primary btn-sm" type="submit">Créer une règle pour la sélection</button><% } %></form><% } %></section>
+    <section class="rd-panel"><h2>Remplacer un préfixe (dossier entier)</h2>
+      <p class="mk-sub">Exemple : tout ce qui commence par <code>/ancien-blog</code> mène vers <code>/blog</code>, en conservant la suite de l'adresse.</p>
+      <% if (can.create) { %><form method="post" action="<%= rd.base %>/adresses/prefixe" class="rd-inline">
+        <div class="field-group"><label for="rd-p-from">Ancien préfixe</label><input id="rd-p-from" name="from" required placeholder="/ancien-blog" maxlength="300"></div>
+        <div class="field-group"><label for="rd-p-to">Nouveau préfixe</label><input id="rd-p-to" name="to" required placeholder="/blog" maxlength="500"></div>
+        <div class="field-group"><label for="rd-p-status">Type</label><select id="rd-p-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option></select></div>
+        <button class="btn btn-primary btn-sm" type="submit">Créer la règle</button></form><% } else { %><p class="mk-sub">Vous n'avez pas la permission de créer des redirections.</p><% } %></section>
+    <section class="rd-panel"><h2>Préparer une migration : couverture des anciennes adresses</h2>
+      <p class="mk-sub">Collez les anciennes adresses (une par ligne) : chacune est suivie à travers vos règles actives, sans rien rediriger.</p>
+      <form method="get" action="<%= rd.base %>/adresses"><div class="field-group"><label for="rd-old">Anciennes adresses</label><textarea id="rd-old" name="anciennes" rows="6" maxlength="20000" placeholder="/ancien-article&#10;/ancienne-categorie/page.html"><%= anciennes %></textarea></div>
+        <button class="btn btn-outline btn-sm" type="submit">Vérifier la couverture</button></form>
+      <% if (migration) { %><p role="status"><strong><%= migration.covered %> / <%= migration.total %></strong> adresse<%= migration.total > 1 ? "s" : "" %> redirigée<%= migration.covered > 1 ? "s" : "" %> · <%= migration.uncovered.length %> sans règle · <%= migration.chained %> avec chaîne · <%= migration.loops %> en boucle.</p>
+        <% if (migration.uncovered.length) { %><h3>Sans redirection</h3><ul class="rd-list"><% migration.uncovered.slice(0, 50).forEach((u) => { %><li><code><%= u.input %></code></li><% }) %></ul><% } %><% } %></section>
+    <p class="mk-sub">Structure des adresses (pages, articles, formations, catégories) : <a href="<%= rd.principal ? "/marketing/site-web/permaliens" : `${rd.space.base}/seo` %>"><%= rd.principal ? "Permaliens du site principal" : "Réglages SEO du site" %></a>. Toute modification de structure affiche d'abord son impact.</p>
+
+<% } else if (screen === "import-export") { %>
+    <% if (preview) { %>
+    <section class="rd-panel"><h2>Aperçu de l'import <span class="mk-sub">(format détecté : <%= formats[preview.source] || preview.source %>)</span></h2>
+      <p role="status"><strong><%= preview.summary.total %></strong> ligne<%= preview.summary.total > 1 ? "s" : "" %> · <strong><%= preview.summary.ok %></strong> importable<%= preview.summary.ok > 1 ? "s" : "" %> · <%= preview.summary.errors %> invalide<%= preview.summary.errors > 1 ? "s" : "" %> · <%= preview.summary.exists %> déjà présente<%= preview.summary.exists > 1 ? "s" : "" %> · <%= preview.summary.duplicates %> doublon<%= preview.summary.duplicates > 1 ? "s" : "" %><%= preview.truncated ? " · fichier tronqué à 2 000 lignes" : "" %>.</p>
+      <form method="post" action="<%= rd.base %>/import-export/appliquer"><input type="hidden" name="text" value="<%= preview.text %>"><input type="hidden" name="format" value="<%= preview.source %>">
+        <div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Aperçu</caption>
+          <thead><tr><th scope="col"><input type="checkbox" data-rd-all checked aria-label="Tout sélectionner"></th><th scope="col">Ligne</th><th scope="col">Source</th><th scope="col">Destination</th><th scope="col">Type</th><th scope="col">Correspondance</th><th scope="col">Résultat</th></tr></thead>
+          <tbody><% preview.items.slice(0, 500).forEach((it) => { %><tr class="<%= it.state === "ok" ? "" : "is-skipped" %>">
+            <td><input type="checkbox" name="sel" value="<%= it.index %>"<%= it.state === "ok" ? " checked" : " disabled" %> aria-label="Importer la ligne <%= it.index + 1 %>"></td>
+            <td><%= it.index + 1 %></td><td><code><%= it.row.source %></code></td><td><code><%= it.row.target || "—" %></code></td><td><%= STATUS_LABEL[it.row.status] || it.row.status %></td><td><%= MATCH_LABEL[it.row.match] || it.row.match %></td>
+            <td><%- it.state === "ok" ? state("mk-status-ok", "Prête") : it.state === "exists" ? state("mk-status-off", "Déjà présente") : it.state === "duplicate" ? state("mk-status-off", "Doublon") : state("mk-status-bad", "Refusée") %><% if (it.errors.length) { %><span class="mk-sub"><%= it.errors[0] %></span><% } %></td></tr><% }) %></tbody></table></div>
+        <p class="mk-sub"><%= preview.items.length > 500 ? "Les 500 premières lignes sont affichées ; toutes les lignes cochées sont importées." : "" %></p>
+        <label class="rd-confirm"><input type="checkbox" name="confirm" value="1" required> Je confirme l'import des règles cochées. Une copie de sécurité est conservée.</label>
+        <div class="mk-actions"><button class="btn btn-primary btn-sm" type="submit">Importer la sélection</button><a class="btn btn-outline btn-sm" href="<%= rd.base %>/import-export">Annuler</a></div></form></section>
+    <% } else { %>
+    <% if (can.create) { %><section class="rd-panel"><h2>Importer des redirections</h2>
+      <p class="mk-sub">Formats reconnus : <%= Object.values(formats).join(" ; ") %>. Les fichiers de Redirection, Rank Math, Yoast SEO, AIOSEO et SEOPress sont lus d'après les noms de leurs colonnes (source, destination, type…). Rien n'est enregistré avant l'aperçu et votre confirmation.</p>
+      <form method="post" action="<%= rd.base %>/import-export/apercu"><div class="field-group"><label for="rd-imp-file">Fichier</label><input id="rd-imp-file" type="file" accept=".csv,.json,.txt,.conf,.htaccess,text/*,application/json" data-rd-file="#rd-imp-text"></div>
+        <div class="field-group"><label for="rd-imp-text">Ou collez le contenu</label><textarea id="rd-imp-text" name="text" rows="8" required maxlength="2000000" placeholder="/ancienne-page,/nouvelle-page,301"></textarea></div>
+        <div class="field-group"><label for="rd-imp-format">Format</label><select id="rd-imp-format" name="format"><option value="">Détection automatique</option><% Object.entries(formats).forEach(([k, l]) => { %><option value="<%= k %>"><%= l %></option><% }) %></select></div>
+        <button class="btn btn-primary btn-sm" type="submit">Analyser et afficher l'aperçu</button></form></section><% } %>
+    <section class="rd-panel"><h2>Exporter</h2>
+      <form method="get" action="<%= rd.base %>/import-export/export" class="rd-inline">
+        <div class="field-group"><label for="rd-ex-c">Contenu</label><select id="rd-ex-c" name="contenu"><option value="regles">Les redirections</option><option value="404">Les erreurs 404</option></select></div>
+        <div class="field-group"><label for="rd-ex-f">Format</label><select id="rd-ex-f" name="format"><option value="csv">CSV</option><option value="json">JSON</option><option value="apache">Apache (.htaccess)</option><option value="nginx">Nginx</option></select></div>
+        <div class="field-group"><label for="rd-ex-g">Groupe</label><select id="rd-ex-g" name="groupe"><option value="">Tous</option><% groups.forEach((g) => { %><option value="<%= g.id %>"><%= g.name %></option><% }) %></select></div>
+        <div class="field-group"><label for="rd-ex-e">État</label><select id="rd-ex-e" name="etat"><option value="">Toutes</option><option value="active">Actives</option><option value="inactive">Désactivées</option></select></div>
+        <button class="btn btn-outline btn-sm" type="submit">Télécharger</button></form>
+      <p class="mk-sub">Les exports Apache et Nginx servent à migrer vers un autre serveur ; dans KOLAKISA, les règles s'exécutent directement, sans fichier de serveur.</p></section>
+    <section class="rd-panel"><h2>Sauvegarde et restauration</h2>
+      <p><a class="btn btn-outline btn-sm" href="<%= rd.base %>/import-export/sauvegarde.json">Télécharger une sauvegarde complète (JSON)</a></p>
+      <% if (can.edit) { %><form method="post" action="<%= rd.base %>/import-export/restaurer"><div class="field-group"><label for="rd-rs-file">Fichier de sauvegarde</label><input id="rd-rs-file" type="file" accept=".json,application/json" data-rd-file="#rd-rs-text"></div>
+        <div class="field-group"><label for="rd-rs-text">Contenu de la sauvegarde</label><textarea id="rd-rs-text" name="text" rows="4" required maxlength="2000000"></textarea></div>
+        <div class="field-group"><label for="rd-rs-mode">Mode</label><select id="rd-rs-mode" name="mode"><option value="merge">Ajouter les règles absentes</option><% if (can.del) { %><option value="replace">Remplacer toutes les règles<%= rd.principal ? " communes" : " du site" %></option><% } %></select></div>
+        <label class="rd-confirm"><input type="checkbox" name="confirm" value="1" required> Je confirme. Une copie de sécurité d'avant est conservée.</label>
+        <button class="btn btn-primary btn-sm" type="submit">Restaurer</button></form><% } %>
+      <% if (snapshot) { %><div class="rd-undo"><p>Dernière copie de sécurité : <%= snapshot.reason %> (<%= fdate(snapshot.at) %>, <%= snapshot.rules.length %> règle<%= snapshot.rules.length > 1 ? "s" : "" %>).</p>
+        <% if (can.del) { %><form method="post" action="<%= rd.base %>/import-export/annuler" data-rd-confirm="Remplacer les règles actuelles par cette copie de sécurité ?"><button class="btn btn-outline btn-sm" type="submit">Revenir à cette copie</button></form><% } %></div><% } %></section>
+    <% } %>
+
+<% } else if (screen === "outils") { %>
+    <section class="rd-panel"><h2>Simulateur : que se passe-t-il pour cette adresse ?</h2>
+      <form method="get" action="<%= rd.base %>/outils" class="rd-inline"><div class="field-group"><label for="rd-sim">Adresse</label><input id="rd-sim" name="adresse" value="<%= address %>" placeholder="/ancienne-page?utm=1" maxlength="400" autocomplete="off"></div><button class="btn btn-primary btn-sm" type="submit">Simuler</button></form>
+      <p class="mk-sub">Les règles actives sont appliquées comme pour un visiteur, mais aucune redirection n'est lancée et aucune visite n'est comptée.</p>
+      <% if (sim) { %><% if (sim.ok === false) { %><p class="mk-error" role="alert"><%= sim.errors.join(" ") %></p><% } else { %>
+        <ol class="rd-steps" aria-label="Étapes"><li><code><%= sim.start %></code><span class="mk-sub">adresse demandée</span></li>
+          <% sim.steps.forEach((s, i) => { %><li><span class="mk-status mk-status-ok"><%= s.status %></span> règle n° <%= s.ruleId %> (<%= MATCH_LABEL[s.match] || s.match %>, priorité <%= s.priority %><%= s.group ? `, groupe « ${s.group} »` : "" %>) → <code><%= s.to || (s.status === 451 ? "indisponible (451)" : "supprimée (410)") %></code></li><% }) %></ol>
+        <p><strong>Résultat :</strong> <%= { none: "aucune règle : le site répond normalement", final: "destination finale atteinte", external: "mène vers un site extérieur", loop: "BOUCLE", gone: "page supprimée (410)", legal: "indisponible (451)" }[sim.verdict] %> · <%= sim.hops %> étape<%= sim.hops > 1 ? "s" : "" %>.</p>
+        <% sim.issues.forEach((t) => { %><p class="mk-note"><%= t %></p><% }) %><% } %><% } %></section>
+    <section class="rd-panel"><h2>Test en lot</h2>
+      <form method="get" action="<%= rd.base %>/outils"><div class="field-group"><label for="rd-batch">Adresses (une par ligne, 100 au plus)</label><textarea id="rd-batch" name="lot" rows="5" maxlength="20000"><%= batchText %></textarea></div><button class="btn btn-outline btn-sm" type="submit">Tester la liste</button></form>
+      <% if (batch) { %><div class="mk-table-wrap"><table class="mk-table mk-cms-table"><caption class="sr-only">Résultats</caption><thead><tr><th scope="col">Adresse</th><th scope="col">Étapes</th><th scope="col">Résultat</th><th scope="col">Remarques</th></tr></thead>
+        <tbody><% batch.forEach((b) => { %><tr><td><code><%= b.input %></code></td><td><%= b.ok === false ? "—" : b.hops %></td><td><%= b.ok === false ? "Adresse invalide" : (b.final || b.start) %></td><td><%= b.ok === false ? b.errors.join(" ") : b.issues.join(" ") %></td></tr><% }) %></tbody></table></div><% } %></section>
+    <section class="rd-panel"><h2>Testeur d'expression régulière</h2>
+      <form method="post" action="<%= rd.base %>/outils/regex"><div class="rd-inline">
+        <div class="field-group"><label for="rd-re-p">Expression (commence par ^)</label><input id="rd-re-p" name="pattern" value="<%= regexForm.pattern %>" maxlength="200" placeholder="^/ancien/(.*)$"></div>
+        <div class="field-group"><label for="rd-re-r">Destination (avec $1, $2…)</label><input id="rd-re-r" name="replacement" value="<%= regexForm.replacement %>" maxlength="300" placeholder="/nouveau/$1"></div></div>
+        <div class="field-group"><label for="rd-re-s">Adresses d'essai (une par ligne)</label><textarea id="rd-re-s" name="samples" rows="4" maxlength="5000"><%= regexForm.samples %></textarea></div>
+        <button class="btn btn-outline btn-sm" type="submit">Tester</button></form>
+      <% if (regex) { %><% if (regex.ok === false) { %><p class="mk-error" role="alert"><%= regex.errors.join(" ") %></p><% } else { %><ul class="rd-list"><% regex.results.forEach((x) => { %><li><code><%= x.input %></code> → <%= x.match ? (x.result !== null ? x.result : "correspond") : "ne correspond pas" %></li><% }) %></ul><% } %><% } %>
+      <p class="mk-sub">Mêmes garde-fous que le moteur : expression ancrée, 200 caractères, sans références arrière ni répétitions imbriquées.</p></section>
+    <section class="rd-panel"><h2>Diagnostic des règles</h2>
+      <p role="status"><strong><%= diag.counts.total %></strong> point<%= diag.counts.total > 1 ? "s" : "" %> relevé<%= diag.counts.total > 1 ? "s" : "" %> : <%= diag.counts.loops %> boucle(s), <%= diag.counts.chains %> chaîne(s), <%= diag.counts.duplicates %> doublon(s), <%= diag.counts.missing %> destination(s) à vérifier, <%= diag.counts.dead %> règle(s) inutilisée(s).</p>
+      <% if (!diag.items.length) { %><p class="mk-sub">Aucun problème détecté.</p><% } else { %><ul class="rd-list"><% diag.items.slice(0, 60).forEach((p) => { %><li class="is-<%= p.level %>"><strong><%= p.source || "" %></strong> <%= p.text %>
+        <% if (p.fix && can.edit) { %><form method="post" action="<%= rd.base %>/outils/raccourcir" class="rd-inline-btn"><input type="hidden" name="id" value="<%= p.fix.id %>"><button class="btn btn-outline btn-sm" type="submit"><%= p.fix.label %></button></form><% } %></li><% }) %></ul><% } %>
+      <% if (can.edit && diag.counts.dead) { %><form method="post" action="<%= rd.base %>/outils/desactiver-inutilisees" data-rd-confirm="Désactiver les règles inutilisées ? Rien n'est supprimé."><button class="btn btn-outline btn-sm" type="submit">Désactiver les règles inutilisées</button></form><% } %></section>
+
+<% } else if (screen === "parametres") { %>
+    <form method="post" action="<%= rd.base %>/parametres" class="rd-panel"><h2>Réglages</h2>
+      <fieldset class="rd-modes"><legend>Changement d'adresse d'une page ou d'une catégorie</legend>
+        <% Object.entries(modes).forEach(([k, l]) => { %><label><input type="radio" name="autoMode" value="<%= k %>"<%= settings.autoMode === k ? " checked" : "" %><%= can.edit ? "" : " disabled" %>> <%= l %></label><% }) %></fieldset>
+      <div class="field-group"><label for="rd-s-ret">Conservation du journal des liens cassés (jours)</label><input id="rd-s-ret" type="number" name="retentionDays" min="30" max="730" value="<%= settings.retentionDays %>"<%= can.edit ? "" : " disabled" %>><span class="field-hint">Les adresses traitées ou ignorées, sans visite depuis ce délai, peuvent être supprimées (bouton ci-dessous).</span></div>
+      <div class="field-group"><label for="rd-s-dead">Règle considérée inutilisée après (jours)</label><input id="rd-s-dead" type="number" name="deadDays" min="30" max="730" value="<%= settings.deadDays %>"<%= can.edit ? "" : " disabled" %>></div>
+      <div class="field-group"><label for="rd-s-hosts">Domaines extérieurs autorisés</label><textarea id="rd-s-hosts" name="allowedHosts" rows="3" maxlength="3000"<%= can.edit ? "" : " disabled" %> placeholder="exemple.com"><%= settings.allowedHosts.join("\n") %></textarea>
+        <span class="field-hint">Vide : toute adresse https:// est admise pour les personnes autorisées. Sinon, seules ces destinations (et leurs sous-domaines) sont acceptées. Les adresses http:// et les protocoles dangereux sont toujours refusés.</span></div>
+      <% if (can.edit) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><% } %></form>
+    <% if (can.del && !rd.principal) { %><form method="post" action="<%= rd.base %>/parametres/purger-404" class="rd-panel" data-rd-confirm="Supprimer du journal les anciennes adresses traitées ou ignorées ?"><h2>Nettoyage</h2><p class="mk-sub">Supprime du journal des liens cassés les adresses déjà traitées ou ignorées, sans visite depuis <%= settings.retentionDays %> jours. Les adresses encore à traiter sont conservées.</p><button class="btn btn-outline btn-sm" type="submit">Nettoyer le journal</button></form><% } %>
+    <section class="rd-panel"><h2>Qui peut faire quoi</h2><ul class="rd-list">
+      <li><strong>Consulter, simuler, exporter</strong> : permission « redirects.view ».</li><li><strong>Créer, importer, valider un changement d'adresse</strong> : « redirects.create ».</li>
+      <li><strong>Modifier, groupes, réglages, actions groupées</strong> : « redirects.edit ».</li><li><strong>Supprimer, remplacer toutes les règles, annuler une restauration</strong> : « redirects.delete ».</li>
+      <li><strong>Rediriger vers un site extérieur</strong> : « redirects.external » (administrateurs).</li></ul>
+      <p class="mk-sub">Les permissions se règlent dans Utilisateurs → Rôles et permissions.</p></section>
+<% } %>
+<%- include("partials/bottom") %>

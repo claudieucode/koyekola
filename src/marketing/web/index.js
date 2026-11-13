@@ -101,6 +101,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
   admin.use(require("./shopAdmin")()); // Programme 20.5 : boutique d'un site (produits, commandes, clients, réglages) — avant l'espace du site
+  admin.use(require("./redirectsHub")()); // Redirections : tableau de bord, groupes, 404, journaux, adresses, import / export, outils, paramètres (site principal et sites)
   admin.use(require("./siteSeo")()); // R8 lot 6C : SEO d'un site (réglages, redirections, 404) — avant l'espace du site (ses routes /sites/:id/redirections sont plus précises)
   admin.use(require("./siteSpace")()); // Espace d'administration d'UN site (palier 3, B1) : après siteWeb (ses routes /sites/:id/… sont plus précises)
   admin.use(require("./funnels")());

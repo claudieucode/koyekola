@@ -31,20 +31,38 @@ db.exec("CREATE INDEX IF NOT EXISTS idx_seo_redirects_site ON seo_redirects(site
 let schemaReady = false;
 function ensureSchema() {
   if (schemaReady) return;
-  if (!db.prepare("PRAGMA table_info(seo_redirects)").all().some((c) => c.name === "match_type")) db.exec("ALTER TABLE seo_redirects ADD COLUMN match_type TEXT NOT NULL DEFAULT 'exact'");
+  const cols = db.prepare("PRAGMA table_info(seo_redirects)").all().map((c) => c.name);
+  if (!cols.includes("match_type")) db.exec("ALTER TABLE seo_redirects ADD COLUMN match_type TEXT NOT NULL DEFAULT 'exact'");
+  // Refonte du module (phase 3) : groupe, priorité, période de validité, comportement des paramètres, origine. Mêmes précautions que match_type (colonnes ajoutées à la première utilisation).
+  const add = (name, ddl) => { if (!cols.includes(name)) db.exec(`ALTER TABLE seo_redirects ADD COLUMN ${name} ${ddl}`); };
+  add("group_id", "INTEGER"); add("priority", "INTEGER NOT NULL DEFAULT 100"); add("starts_at", "TEXT"); add("ends_at", "TEXT");
+  add("query_mode", "TEXT NOT NULL DEFAULT 'keep'"); add("origin", "TEXT NOT NULL DEFAULT 'manual'");
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS seo_redirect_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, site_id INTEGER, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '', enabled INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_seo_redirect_groups_site ON seo_redirect_groups(site_id);
+    CREATE INDEX IF NOT EXISTS idx_seo_redirects_group ON seo_redirects(group_id);
+    CREATE TABLE IF NOT EXISTS seo_redirect_daily (redirect_id INTEGER NOT NULL, day TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (redirect_id, day));
+    CREATE TABLE IF NOT EXISTS seo_404_daily (site_id INTEGER NOT NULL DEFAULT 0, path TEXT NOT NULL, day TEXT NOT NULL, hits INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (site_id, path, day));
+  `);
   schemaReady = true;
 }
 
 // Espaces techniques ou privés : jamais redirigeables (sécurité, connexion, administration, fichiers)
 const PROTECTED = ["/__introuvable__", "/formateur", "/marketing", "/connexion", "/inscription", "/deconnexion", "/api", "/uploads", "/css", "/js", "/img", "/fonts", "/webhooks", "/t/", "/u/", "/preferences", "/sante", "/robots.txt", "/sitemap"];
-const STATUSES = [301, 302, 307, 308, 410];
+const STATUSES = [301, 302, 303, 307, 308, 410, 451];
 const GONE = 410;
-const MATCH_TYPES = ["exact", "prefix", "regex"];
-const MATCH_LABELS = { exact: "Adresse exacte", prefix: "Préfixe (section entière)", regex: "Expression régulière" };
+const NO_DEST = [410, 451]; // réponses sans destination : « supprimée définitivement » (410) et « indisponible pour raison légale » (451)
+const GONE_TEXT = { 410: "Cette page a été supprimée définitivement.", 451: "Cette page n'est pas disponible pour des raisons légales." };
+const MATCH_TYPES = ["exact", "prefix", "contains", "endswith", "regex"];
+const MATCH_LABELS = { exact: "Adresse exacte", prefix: "Préfixe (section entière)", contains: "Contient", endswith: "Se termine par", regex: "Expression régulière" };
+const QUERY_MODES = { keep: "Conserver les paramètres de l'adresse", drop: "Ignorer les paramètres de l'adresse" };
 const MAX_RULES = 200; // règles de préfixe / d'expression par périmètre : chaque requête les parcourt
 const MAX_REGEX = 200;
 // Alias acceptés à l'import (CSV, JSON)
-const MATCH_ALIASES = { exact: "exact", exacte: "exact", prefix: "prefix", prefixe: "prefix", "préfixe": "prefix", regex: "regex", regexp: "regex", expression: "regex" };
+const MATCH_ALIASES = { exact: "exact", exacte: "exact", prefix: "prefix", prefixe: "prefix", "préfixe": "prefix", contains: "contains", contient: "contains", endswith: "endswith", "finit par": "endswith", "se termine par": "endswith", regex: "regex", regexp: "regex", expression: "regex" };
 const matchOf = (v) => MATCH_ALIASES[String(v || "").trim().toLowerCase()] || null;
 
 // Expression régulière sûre pour une exécution à chaque requête : ancrée au début, courte, sans référence arrière ni quantificateurs imbriqués (risque d'attente interminable)
@@ -79,11 +97,16 @@ const isProtected = (p) => PROTECTED.some((x) => p === x || p.startsWith(x.endsW
 // Sur le domaine d'un site : la redirection du site passe avant la commune (qui reste active partout, comme avant) ; sur l'hôte principal : communes seulement.
 let cache = null;
 let rulesCache = null; // règles « préfixe » / « expression » activées, dans l'ordre de création
+// « Maintenant » à l'heure de Paris, au format des dates de validité saisies (AAAA-MM-JJTHH:MM) : une période s'applique à l'heure du site, pas à celle du serveur
+const parisNow = () => new Date().toLocaleString("sv-SE", { timeZone: "Europe/Paris" }).slice(0, 16).replace(" ", "T");
+const parisDay = () => parisNow().slice(0, 10);
+const inWindow = (r, now = parisNow()) => (!r.starts_at || r.starts_at <= now) && (!r.ends_at || r.ends_at >= now);
 const keyOf = (siteId, path) => `${Number.isInteger(siteId) && siteId > 0 ? siteId : 0}:${path}`;
 function map() {
   if (cache) return cache;
   ensureSchema();
-  const rows = db.prepare("SELECT id, source_path, target, status, site_id, match_type FROM seo_redirects WHERE enabled = 1 ORDER BY id").all();
+  // Une règle d'un groupe désactivé ne s'applique pas ; les règles complexes sont triées par priorité (petit nombre = d'abord), puis par ancienneté
+  const rows = db.prepare("SELECT r.id, r.source_path, r.target, r.status, r.site_id, r.match_type, r.priority, r.starts_at, r.ends_at, r.query_mode FROM seo_redirects r LEFT JOIN seo_redirect_groups g ON g.id = r.group_id WHERE r.enabled = 1 AND (g.id IS NULL OR g.enabled = 1) ORDER BY r.priority, r.id").all();
   cache = new Map(rows.filter((r) => r.match_type === "exact").map((r) => [keyOf(r.site_id, r.source_path), r]));
   rulesCache = rows.filter((r) => r.match_type !== "exact").map((r) => {
     if (r.match_type !== "regex") return r;
@@ -92,7 +115,7 @@ function map() {
   return cache;
 }
 // La redirection qui s'applique à cette adresse sur cet hôte (siteId = site du domaine servi, jamais une valeur de la requête)
-const lookup = (siteId, path) => { const m = map(); return (Number.isInteger(siteId) && m.get(keyOf(siteId, path))) || m.get(keyOf(null, path)) || null; };
+const lookup = (siteId, path) => { const m = map(); const now = parisNow(); const ok = (r) => (r && inWindow(r, now) ? r : null); return (Number.isInteger(siteId) && ok(m.get(keyOf(siteId, path)))) || ok(m.get(keyOf(null, path))) || null; };
 const invalidate = () => { cache = null; rulesCache = null; };
 
 // Règle de préfixe ou d'expression qui s'applique à ce chemin sur cet hôte → { r, target } ; celles du site passent avant les communes
@@ -100,15 +123,21 @@ function matchRule(siteId, path) {
   map();
   if (!rulesCache.length || isProtected(path) || path === "/") return null;
   const own = Number.isInteger(siteId) && siteId > 0 ? siteId : 0;
+  const now = parisNow();
   for (const scope of own ? [own, 0] : [0]) {
     for (const r of rulesCache) {
-      if ((r.site_id || 0) !== scope) continue;
+      if ((r.site_id || 0) !== scope || !inWindow(r, now)) continue;
       let target = null;
+      const none = NO_DEST.includes(r.status);
       if (r.match_type === "prefix") {
-        if (path === r.source_path || path.startsWith(`${r.source_path}/`)) target = r.status === GONE ? "" : `${r.target.replace(/\/+$/, "")}${path.slice(r.source_path.length)}`;
-      } else if (r.re.test(path)) target = r.status === GONE ? "" : path.replace(r.re, r.target);
+        if (path === r.source_path || path.startsWith(`${r.source_path}/`)) target = none ? "" : `${r.target.replace(/\/+$/, "")}${path.slice(r.source_path.length)}`;
+      } else if (r.match_type === "contains") {
+        if (path.toLowerCase().includes(r.source_path.toLowerCase())) target = none ? "" : r.target;
+      } else if (r.match_type === "endswith") {
+        if (path.toLowerCase().endsWith(r.source_path.toLowerCase())) target = none ? "" : r.target;
+      } else if (r.re.test(path)) target = none ? "" : path.replace(r.re, r.target);
       if (target === null) continue;
-      if (r.status !== GONE) {
+      if (!none) {
         const external = /^https:\/\/[^\s"'<>]{3,500}$/i.test(target);
         if (!external && !/^\/(?![/\\])[^\s"'<>\\]*$/.test(target)) continue; // jamais une adresse protocolaire (//hôte) ni un caractère douteux issu de la capture
         if (target === path || (!external && isProtected(target.split("?")[0]))) continue; // pas de boucle sur soi-même, pas de redirection vers un espace technique
@@ -125,9 +154,9 @@ function graph(siteId = null) {
   ensureSchema();
   const edges = new Map();
   // Redirections manuelles qui s'appliquent à ce périmètre : les communes, puis celles du site (qui passent avant, comme sur le domaine du site)
-  for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status != 410 AND match_type = 'exact' AND site_id IS NULL").all()) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
+  for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status NOT IN (410, 451) AND match_type = 'exact' AND site_id IS NULL").all()) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
   if (Number.isInteger(siteId)) {
-    for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status != 410 AND match_type = 'exact' AND site_id = ?").all(siteId)) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
+    for (const r of db.prepare("SELECT source_path, target, id FROM seo_redirects WHERE enabled = 1 AND status NOT IN (410, 451) AND match_type = 'exact' AND site_id = ?").all(siteId)) edges.set(r.source_path, { target: r.target, id: r.id, kind: "manual" });
     return edges; // les historiques automatiques (formations, articles, pages) sont ceux du site principal
   }
   for (const r of db.prepare("SELECT h.old_slug, c.slug FROM course_slug_history h JOIN courses c ON c.id = h.course_id").all()) if (!edges.has(`/cours/${r.old_slug}`)) edges.set(`/cours/${r.old_slug}`, { target: `/cours/${r.slug}`, kind: "course" });
@@ -160,13 +189,14 @@ function follow(start, edges = graph(), extra = null) {
   return { path: pathSeen, loop: true };
 }
 
-function validate({ source, target, status, siteId, matchType }, { exceptId = null } = {}) {
+function validate({ source, target, status, siteId, matchType, groupId, priority, startsAt, endsAt, queryMode, origin }, { exceptId = null } = {}) {
   ensureSchema();
   const errors = [];
   const mt = matchType === undefined || matchType === null || matchType === "" ? "exact" : matchOf(matchType);
   if (!mt) errors.push("Mode de correspondance invalide (adresse exacte, préfixe ou expression régulière).");
   const rule = mt === "regex";
-  let src = rule ? String(source || "").trim() : normalizePath(source);
+  const plain = mt === "contains" || mt === "endswith"; // texte simple cherché dans le chemin (sans distinction de casse)
+  let src = rule || plain ? String(source || "").trim() : normalizePath(source);
   // Expression régulière : la destination peut contenir $1…$9 ; l'hôte d'une destination extérieure ne peut jamais venir de la capture
   const dst = rule && /\$[1-9]/.test(String(target || "")) && /^[/]|^https:\/\/[^$/]+(\/|$)/i.test(String(target).trim()) && !/[\s"'<>\\]/.test(String(target)) ? String(target).trim() : normalizeTarget(target);
   const st = Number(status) || 301;
@@ -174,18 +204,22 @@ function validate({ source, target, status, siteId, matchType }, { exceptId = nu
   if (rule) {
     const bad = checkRegex(src);
     if (bad) { errors.push(bad); src = null; }
+  } else if (plain) {
+    if (!src || src.length < 2 || src.length > 200 || /[\s<>"\\?#]/.test(src)) { errors.push("Texte à chercher invalide : 2 à 200 caractères, sans espace (par exemple /ancien-blog/ ou .html)."); src = null; }
+    else if (src.startsWith("/") && isProtected(src.replace(/\/+$/, "") || "/")) errors.push(`« ${src} » est un espace technique ou privé du site : il ne peut pas être redirigé.`);
   } else if (!src) errors.push("Adresse source invalide : un chemin du site, par exemple /ancienne-page.");
   else if (src === "/") errors.push(mt === "prefix" ? "Le préfixe « / » couvrirait tout le site : choisissez une section (par exemple /ancien-blog)." : "La page d'accueil ne peut pas être redirigée.");
   else if (isProtected(src)) errors.push(`« ${src} » est un espace technique ou privé du site : il ne peut pas être redirigé.`);
-  if (st !== GONE && !dst) errors.push("Destination invalide : un chemin du site (/nouvelle-page) ou une adresse complète en https://.");
-  if (mt === "prefix" && src && dst && st !== GONE && !/^https:/i.test(dst) && (dst === src || dst.startsWith(`${src}/`))) errors.push("La destination se trouve dans la section redirigée : cela créerait une boucle.");
-  if (!STATUSES.includes(st)) errors.push("Type de redirection invalide (301, 302, 307, 308 ou 410).");
-  if (st !== GONE && src && dst && src === dst && mt === "exact") errors.push("La source et la destination sont identiques.");
+  if (!NO_DEST.includes(st) && !dst) errors.push("Destination invalide : un chemin du site (/nouvelle-page) ou une adresse complète en https://.");
+  if (mt === "prefix" && src && dst && !NO_DEST.includes(st) && !/^https:/i.test(dst) && (dst === src || dst.startsWith(`${src}/`))) errors.push("La destination se trouve dans la section redirigée : cela créerait une boucle.");
+  if (!STATUSES.includes(st)) errors.push("Type de redirection invalide (301, 302, 303, 307, 308, 410 ou 451).");
+  if (!NO_DEST.includes(st) && src && dst && src === dst && mt === "exact") errors.push("La source et la destination sont identiques.");
   let site = null;
   if (siteId !== undefined && siteId !== null && siteId !== "") {
     site = Number(siteId);
     if (!Number.isInteger(site) || !db.prepare(`SELECT 1 FROM mk_sites WHERE id = ?${primarySite.excludeSql(db)}`).get(site)) { errors.push("Site introuvable."); site = null; }
   }
+  if (dst && /^https:\/\//i.test(dst) && !NO_DEST.includes(st) && !errors.length && !require("./redirectTools").externalAllowed(site, dst)) errors.push("Ce domaine extérieur n'est pas dans la liste des domaines autorisés (Redirections → Paramètres).");
   if (src && !errors.length) {
     // L'ancienne adresse n'est unique que PAR site (une redirection commune et celle d'un site peuvent coexister : celle du site passe avant sur son domaine)
     const other = db.prepare(`SELECT id FROM seo_redirects WHERE source_path = ? AND ${sameScope("site_id")}`).get(src, site);
@@ -195,13 +229,32 @@ function validate({ source, target, status, siteId, matchType }, { exceptId = nu
       if (n >= MAX_RULES) errors.push(`${MAX_RULES} règles de préfixe ou d'expression au plus : regroupez-en ou supprimez-en.`);
     }
   }
-  if (mt === "exact" && st !== GONE && src && dst && !errors.length) {
+  // Options avancées (toutes facultatives) : groupe du même périmètre, priorité 1-999, période de validité, paramètres de l'adresse
+  const extra = { group_id: null, priority: 100, starts_at: null, ends_at: null, query_mode: "keep", origin: "manual" };
+  if (groupId !== undefined && groupId !== null && groupId !== "") {
+    const g = Number.isInteger(Number(groupId)) ? db.prepare("SELECT id, site_id FROM seo_redirect_groups WHERE id = ?").get(Number(groupId)) : null;
+    if (!g || (g.site_id || 0) !== (site || 0)) errors.push("Groupe introuvable pour ce périmètre.");
+    else extra.group_id = g.id;
+  }
+  if (priority !== undefined && priority !== null && priority !== "") {
+    const n = Number(priority);
+    if (!Number.isInteger(n) || n < 1 || n > 999) errors.push("La priorité est un nombre entier de 1 à 999 (1 = passe en premier)."); else extra.priority = n;
+  }
+  const dateOf = (v) => { const t = String(v || "").trim(); if (!t) return null; if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return `${t}T00:00`; return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(t) && !Number.isNaN(Date.parse(t)) ? t : false; };
+  const d1 = dateOf(startsAt), d2 = dateOf(endsAt);
+  if (d1 === false || d2 === false) errors.push("Date de validité invalide (AAAA-MM-JJ ou AAAA-MM-JJ HH:MM)."); else {
+    extra.starts_at = d1; extra.ends_at = d2;
+    if (d1 && d2 && d2 <= d1) errors.push("La fin de validité doit être après le début.");
+  }
+  if (queryMode !== undefined && queryMode !== null && queryMode !== "") { if (QUERY_MODES[queryMode]) extra.query_mode = queryMode; else errors.push("Comportement des paramètres invalide."); }
+  if (["manual", "auto-slug", "import", "migration", "404", "suggestion"].includes(origin)) extra.origin = origin;
+  if (mt === "exact" && !NO_DEST.includes(st) && src && dst && !errors.length) {
     const edges = graph(site);
     if (exceptId) for (const [k, v] of edges) if (v.id === exceptId) edges.delete(k);
     const f = follow(src, edges, { source: src, target: dst });
     if (f.loop) errors.push(`Boucle de redirection : ${f.path.join(" → ")}. Elle rendrait ces pages inaccessibles.`);
   }
-  return { errors, value: { source_path: src, target: st === GONE ? "" : dst, status: st, site_id: site, match_type: mt || "exact" } };
+  return { errors, value: { source_path: src, target: NO_DEST.includes(st) ? "" : dst, status: st, site_id: site, match_type: mt || "exact", ...extra } };
 }
 
 function list({ q = "" } = {}) {
@@ -212,12 +265,15 @@ const get = (id) => db.prepare("SELECT * FROM seo_redirects WHERE id = ?").get(i
 
 // Liste du gestionnaire du CMS : recherche, filtres (type, état, site), tri et pagination dans la base
 const SORTS = { recent: "r.id DESC", source: "r.source_path COLLATE NOCASE ASC", visites: "r.hits DESC, r.id DESC", derniere: "COALESCE(r.last_hit_at, '') DESC, r.id DESC" };
-function query({ q = "", status = "", state = "", site = "", sort = "recent", page = 1, perPage = 25, siteIds = null } = {}) {
+function query({ q = "", status = "", state = "", site = "", sort = "recent", page = 1, perPage = 25, siteIds = null, group = "", match = "" } = {}) {
+  ensureSchema();
   const where = [];
   const args = [];
   const needle = String(q).trim().slice(0, 100);
   if (needle) { const like = `%${needle.replace(/[\\%_]/g, (c) => `\\${c}`)}%`; where.push("(r.source_path LIKE ? ESCAPE '\\' OR r.target LIKE ? ESCAPE '\\' OR r.note LIKE ? ESCAPE '\\')"); args.push(like, like, like); }
   if (STATUSES.includes(Number(status))) { where.push("r.status = ?"); args.push(Number(status)); }
+  if (/^\d+$/.test(String(group))) { where.push("r.group_id = ?"); args.push(Number(group)); } else if (group === "none") where.push("r.group_id IS NULL");
+  if (MATCH_TYPES.includes(match)) { where.push("r.match_type = ?"); args.push(match); }
   if (state === "active") where.push("r.enabled = 1"); else if (state === "inactive") where.push("r.enabled = 0");
   if (site === "none") where.push("r.site_id IS NULL"); else if (/^\d+$/.test(String(site))) { where.push("r.site_id = ?"); args.push(Number(site)); }
   // Un compte limité à certains sites ne voit que les redirections de ces sites et celles de tous les sites
@@ -237,8 +293,8 @@ function create(input, userId, { source = "admin" } = {}) {
   ensureSchema();
   const { errors, value } = validate(input);
   if (errors.length) return { ok: false, errors };
-  const info = db.prepare("INSERT INTO seo_redirects (source_path, target, status, note, created_by, site_id, match_type) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(value.source_path, value.target, value.status, String(input.note || "").slice(0, 200), userId ?? null, value.site_id, value.match_type);
+  const info = db.prepare("INSERT INTO seo_redirects (source_path, target, status, note, created_by, site_id, match_type, group_id, priority, starts_at, ends_at, query_mode, origin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(value.source_path, value.target, value.status, String(input.note || "").slice(0, 200), userId ?? null, value.site_id, value.match_type, value.group_id, value.priority, value.starts_at, value.ends_at, value.query_mode, value.origin);
   logChange({ entityType: "redirect", entityKey: String(info.lastInsertRowid), field: "redirect", before: null, after: `${value.source_path} → ${value.target} (${value.status})${value.match_type === "exact" ? "" : ` [${value.match_type}]`}`, userId, source, siteId: value.site_id });
   invalidate();
   return { ok: true, id: Number(info.lastInsertRowid) };
@@ -247,12 +303,14 @@ function create(input, userId, { source = "admin" } = {}) {
 function update(id, input, userId) {
   const before = get(id);
   if (!before) return { ok: false, errors: ["Redirection introuvable."] };
-  const { errors, value } = validate({ ...(input.siteId === undefined ? { ...input, siteId: before.site_id } : input), matchType: input.matchType === undefined ? before.match_type : input.matchType }, { exceptId: before.id });
+  const keep = (k, col) => (input[k] === undefined ? before[col] : input[k]);
+  const { errors, value } = validate({ ...(input.siteId === undefined ? { ...input, siteId: before.site_id } : input), matchType: input.matchType === undefined ? before.match_type : input.matchType,
+    groupId: keep("groupId", "group_id"), priority: keep("priority", "priority"), startsAt: keep("startsAt", "starts_at"), endsAt: keep("endsAt", "ends_at"), queryMode: keep("queryMode", "query_mode"), origin: before.origin }, { exceptId: before.id });
   if (errors.length) return { ok: false, errors };
   const enabled = input.enabled === undefined ? before.enabled : (input.enabled === "1" || input.enabled === true ? 1 : 0);
   const siteId = input.siteId === undefined ? before.site_id : value.site_id;
-  db.prepare("UPDATE seo_redirects SET source_path = ?, target = ?, status = ?, enabled = ?, note = ?, site_id = ?, match_type = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(value.source_path, value.target, value.status, enabled, String(input.note ?? before.note).slice(0, 200), siteId, value.match_type, id);
+  db.prepare("UPDATE seo_redirects SET source_path = ?, target = ?, status = ?, enabled = ?, note = ?, site_id = ?, match_type = ?, group_id = ?, priority = ?, starts_at = ?, ends_at = ?, query_mode = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(value.source_path, value.target, value.status, enabled, String(input.note ?? before.note).slice(0, 200), siteId, value.match_type, value.group_id, value.priority, value.starts_at, value.ends_at, value.query_mode, id);
   logChange({ entityType: "redirect", entityKey: String(id), field: "redirect", before: `${before.source_path} → ${before.target} (${before.status})${before.enabled ? "" : " [désactivée]"}`, after: `${value.source_path} → ${value.target} (${value.status})${enabled ? "" : " [désactivée]"}`, userId, siteId });
   invalidate();
   return { ok: true };
@@ -262,6 +320,7 @@ function remove(id, userId) {
   const before = get(id);
   if (!before) return false;
   db.prepare("DELETE FROM seo_redirects WHERE id = ?").run(id);
+  try { db.prepare("DELETE FROM seo_redirect_daily WHERE redirect_id = ?").run(id); } catch { /* table créée à la première utilisation */ }
   logChange({ entityType: "redirect", entityKey: String(id), field: "redirect", before: `${before.source_path} → ${before.target} (${before.status})`, after: null, userId, siteId: before.site_id });
   invalidate();
   return true;
@@ -295,13 +354,20 @@ function middleware(req, res, next) {
   const p = normalizePath(req.path);
   // Le site est celui du DOMAINE servi (vérifié par le serveur, req.kwSite) : une redirection propre à un site ne s'applique que sur son domaine ; aucune valeur de la requête n'intervient
   const siteId = req.kwSite ? req.kwSite.id : null;
+  if (p && isProtected(p)) return next(); // les espaces techniques ne sont jamais redirigés, même si une ligne de la base le demandait
   let r = p && lookup(siteId, p);
   let ruleTarget = null;
   if (!r && p) { const hit = matchRule(siteId, p); if (hit) { r = hit.r; ruleTarget = hit.target; } } // l'adresse exacte passe avant les règles de préfixe / d'expression
   if (!r) return next();
-  if (!require("./probe").isProbe(req)) require("../utils/writeBehind").defer(() => db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id)); // compteur d'audience : écriture groupée
-  if (r.status === GONE) { res.status(GONE).set({ "Cache-Control": "public, max-age=3600", "X-Robots-Tag": "noindex" }).type("text/plain; charset=utf-8").send("Cette page a été supprimée définitivement."); return; }
-  const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  if (!require("./probe").isProbe(req)) {
+    const day = parisDay(); // compteur d'audience (total + une ligne par règle et par jour, sans donnée personnelle) : écriture groupée
+    require("../utils/writeBehind").defer(() => {
+      db.prepare("UPDATE seo_redirects SET hits = hits + 1, last_hit_at = datetime('now') WHERE id = ?").run(r.id);
+      db.prepare("INSERT INTO seo_redirect_daily (redirect_id, day, hits) VALUES (?, ?, 1) ON CONFLICT(redirect_id, day) DO UPDATE SET hits = hits + 1").run(r.id, day);
+    });
+  }
+  if (NO_DEST.includes(r.status)) { res.status(r.status).set({ "Cache-Control": "public, max-age=3600", "X-Robots-Tag": "noindex" }).type("text/plain; charset=utf-8").send(GONE_TEXT[r.status]); return; }
+  const query = r.query_mode === "drop" ? "" : req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
   const dest = ruleTarget === null ? r.target : ruleTarget;
   const target = /^https:\/\//i.test(dest) || dest.includes("?") ? dest : `${encodeURI(dest)}${query}`;
   res.redirect(r.status, target);
@@ -369,4 +435,4 @@ function exportCsv() {
   return ["source,destination,type,note,active,utilisations,derniere_utilisation,correspondance", ...rows.map((r) => [r.source_path, r.target, r.status, r.note, r.enabled ? "oui" : "non", r.hits, r.last_hit_at || "", r.match_type].map(csvCell).join(","))].join("\n") + "\n";
 }
 
-module.exports = { csvCell, ensureSchema, MATCH_TYPES, MATCH_LABELS, matchOf, checkRegex, matchRule, cacheInfo, lookup, getForSite, queryForSite, createForSite, updateForSite, removeForSite, importCsvForSite, exportCsvForSite, query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };
+module.exports = { csvCell, ensureSchema, NO_DEST, QUERY_MODES, parisNow, parisDay, inWindow, MATCH_TYPES, MATCH_LABELS, matchOf, checkRegex, matchRule, cacheInfo, lookup, getForSite, queryForSite, createForSite, updateForSite, removeForSite, importCsvForSite, exportCsvForSite, query, SORTS, isExternal, STATUSES, list, get, create, update, remove, chains, fixChain, middleware, importCsv, exportCsv, normalizePath, graph, follow, validate, invalidate };

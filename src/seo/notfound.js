@@ -23,6 +23,7 @@ const BOT = /bot|crawl|spider|slurp|bingpreview|facebookexternalhit|embedly|quor
 // Fichiers que les robots réclament sans cesse (aucun intérêt à les journaliser)
 const NOISE = /^\/(wp-|xmlrpc|\.env|\.git|apple-touch-icon|favicon|ads\.txt|\.well-known)/i;
 let writes = 0;
+let dailyReady = false;
 
 function record(req) {
   if (require("./probe").isProbe(req)) return; // sonde interne (test de redirection, liens cassés) : jamais comptée
@@ -47,6 +48,10 @@ function write(path, siteId, bot, ref, ua) {
       ON CONFLICT(path) DO UPDATE SET hits_human = hits_human + excluded.hits_human, hits_bot = hits_bot + excluded.hits_bot, last_seen = datetime('now'),
         last_referrer = COALESCE(excluded.last_referrer, last_referrer), last_user_agent = excluded.last_user_agent`).run(path, bot ? 0 : 1, bot ? 1 : 0, ref, ua);
   }
+  try { // série par jour (sans donnée personnelle) pour les statistiques des liens cassés
+    if (!dailyReady) { require("./redirects").ensureSchema(); dailyReady = true; }
+    db.prepare("INSERT INTO seo_404_daily (site_id, path, day, hits) VALUES (?, ?, ?, 1) ON CONFLICT(site_id, path, day) DO UPDATE SET hits = hits + 1").run(siteId || 0, path, require("./redirects").parisDay());
+  } catch { /* la série par jour ne doit jamais bloquer le journal */ }
   if (++writes % 200 === 0) {
     // Borne par site d'abord (le site qui déborde est le seul touché), puis borne globale
     if (siteSchemaReady()) {
