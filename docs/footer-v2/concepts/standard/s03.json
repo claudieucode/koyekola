@@ -1,0 +1,254 @@
+{
+ "concepts": [
+  {
+   "id": "c-454-guichet-de-proximite",
+   "ordre": 454,
+   "nom": "Guichet de proximité",
+   "famille": "Banques et mutuelles",
+   "secteur": "banque",
+   "directionArtistique": {
+    "texte": "Pour une banque de proximité : bande marine avec phrase en serif et trois raccourcis dont la flèche avance au survol, quatre cartes métiers qui se soulèvent, puis coordonnées, horaires, aide et lettre sur fond clair."
+   },
+   "typographies": {
+    "titre": "Source Serif 4",
+    "corps": "Source Sans 3",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "banque",
+    "proximité",
+    "marine",
+    "bleu",
+    "cartes",
+    "raccourcis",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-455-livret-mutualiste",
+   "ordre": 455,
+   "nom": "Livret mutualiste",
+   "famille": "Banques et mutuelles",
+   "secteur": "mutuelle",
+   "directionArtistique": {
+    "texte": "Pour une mutuelle de santé : volet vert profond avec phrase, coordonnées et horaires, carré de statut qui respire ; à droite sur crème, trois colonnes de liens à filet et une carte blanche pour la lettre des adhérents."
+   },
+   "typographies": {
+    "titre": "Fraunces",
+    "corps": "Nunito Sans",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "mutuelle",
+    "santé",
+    "vert",
+    "crème",
+    "deux volets",
+    "adhérents",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-456-coffre-de-nuit",
+   "ordre": 456,
+   "nom": "Coffre de nuit",
+   "famille": "Banques et mutuelles",
+   "secteur": "banque privée",
+   "directionArtistique": {
+    "texte": "Pour une banque privée : noir profond et filets d'or, cinq grandes lignes numérotées I à V dont le fond s'éclaire et le texte glisse au survol, rendez-vous, coordonnées, horaires et lettre privée."
+   },
+   "typographies": {
+    "titre": "Cormorant Garamond",
+    "corps": "Hanken Grotesk",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "banque privée",
+    "patrimoine",
+    "noir",
+    "or",
+    "sommaire numéroté",
+    "sombre",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-457-caisse-regionale",
+   "ordre": 457,
+   "nom": "Caisse régionale",
+   "famille": "Banques et mutuelles",
+   "secteur": "banque coopérative",
+   "directionArtistique": {
+    "texte": "Pour une banque coopérative : bandeau brique avec la lettre d'information en tête, quatre colonnes de liens par public sur crème, puis une barre « besoin d'aide » en trois cellules (horaires, coordonnées, questions fréquentes)."
+   },
+   "typographies": {
+    "titre": "Zilla Slab",
+    "corps": "Libre Franklin",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "coopérative",
+    "banque",
+    "brique",
+    "crème",
+    "lettre en tête",
+    "colonnes",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-458-courtage-clair",
+   "ordre": 458,
+   "nom": "Courtage clair",
+   "famille": "Banques et mutuelles",
+   "secteur": "courtage",
+   "directionArtistique": {
+    "texte": "Pour un courtier en assurance ou en crédit : double rangée de liens (assurances en grand, aide en petit), bandeau d'appel sarcelle « comparer, puis décider » avec bouton, puis coordonnées, horaires et lettre sur gris clair."
+   },
+   "typographies": {
+    "titre": "DM Serif Display",
+    "corps": "DM Sans",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "courtage",
+    "assurance",
+    "crédit",
+    "sarcelle",
+    "double rangée",
+    "bandeau d'appel",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-459-fibre-ouverte",
+   "ordre": 459,
+   "nom": "Fibre ouverte",
+   "famille": "Télécoms et accès internet",
+   "secteur": "fournisseur d'accès",
+   "directionArtistique": {
+    "texte": "Pour un fournisseur d'accès : nuit violette et menthe, grand bandeau d'éligibilité avec bouton plein et carré qui respire, quatre colonnes à filet qui s'illumine, coordonnées, horaires, lettre et mentions."
+   },
+   "typographies": {
+    "titre": "Space Grotesk",
+    "corps": "Inter",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "fibre",
+    "internet",
+    "fournisseur d'accès",
+    "violet",
+    "éligibilité",
+    "sombre",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-460-forfaits-en-grille",
+   "ordre": 460,
+   "nom": "Forfaits en grille",
+   "famille": "Télécoms et accès internet",
+   "secteur": "opérateur mobile",
+   "directionArtistique": {
+    "texte": "Pour un opérateur mobile : jaune franc et noir, grand titre et contact à gauche, grille 2 x 2 de blocs noirs (forfaits, mobiles, options, assistance) qui se soulèvent, barre basse noire avec liens, lettre et mentions."
+   },
+   "typographies": {
+    "titre": "Archivo Black",
+    "corps": "Work Sans",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "mobile",
+    "opérateur",
+    "forfaits",
+    "jaune",
+    "noir",
+    "grille",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-461-assistance-degagee",
+   "ordre": 461,
+   "nom": "Assistance dégagée",
+   "famille": "Télécoms et accès internet",
+   "secteur": "assistance opérateur",
+   "directionArtistique": {
+    "texte": "Pour l'assistance d'un opérateur : barre latérale bleue « besoin d'aide ? » avec coordonnées, horaires et bouton, à droite trois rubriques d'aide numérotées en police à chasse fixe sur gris bleuté, et la lettre."
+   },
+   "typographies": {
+    "titre": "IBM Plex Mono",
+    "corps": "IBM Plex Sans",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "assistance",
+    "support",
+    "opérateur",
+    "bleu",
+    "barre latérale",
+    "chasse fixe",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-462-etapes-de-raccordement",
+   "ordre": 462,
+   "nom": "Étapes de raccordement",
+   "famille": "Télécoms et accès internet",
+   "secteur": "opérateur local",
+   "directionArtistique": {
+    "texte": "Pour un opérateur local : trois grandes étapes numérotées (éligibilité, offre, installation) séparées par des filets, rangée de liens, coordonnées, horaires et lettre sur blanc et vert forêt, barre basse verte."
+   },
+   "typographies": {
+    "titre": "Sora",
+    "corps": "Manrope",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "opérateur local",
+    "raccordement",
+    "étapes",
+    "vert",
+    "blanc",
+    "numéros",
+    "angles droits"
+   ]
+  },
+  {
+   "id": "c-463-ligne-entreprise",
+   "ordre": 463,
+   "nom": "Ligne entreprise",
+   "famille": "Télécoms et accès internet",
+   "secteur": "télécoms pour entreprises",
+   "directionArtistique": {
+    "texte": "Pour un opérateur télécoms pour entreprises : anthracite et orange, quatre solutions en grandes lignes à flèche et ressources à gauche, encadré orange « parler à un conseiller » à droite, barre basse avec lettre."
+   },
+   "typographies": {
+    "titre": "Barlow Condensed",
+    "corps": "Barlow",
+    "accent": null,
+    "source": "Bibliothèque locale de polices"
+   },
+   "tags": [
+    "télécoms",
+    "entreprises",
+    "anthracite",
+    "orange",
+    "solutions",
+    "encadré",
+    "angles droits"
+   ]
+  }
+ ]
+}

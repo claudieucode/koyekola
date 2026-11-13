@@ -66,3 +66,9 @@
 - Vérifications : bibliothèque 1318/1318, bascule, bas (512 combinaisons), comportements réels, reconstruction, rendu unifié, isolation (v2 et ancien), éditeur ; test Chrome sur les 168 pieds ; audit Chrome 390/1280 : 8 défauts initiaux, 2 corrigés (ft2-343, ft2-345), restent des chevauchements mineurs de bouton/illustration à 390 px (ft2-328, 331, 334) et des libellés d'adresse du widget coupés (ft2-329).
 - Limites honnêtes : animations non vues en direct ; ressemblance structurelle maximale 0,65 (seuil du test : 0,85).
 - Retour arrière : `FOOTER_V2=0` (variable Hostinger) ou `git revert` de la fusion.
+
+## Extension « standard pro animé » (80 pieds ft2-434 à ft2-513, 16 familles) — total 513 modèles, 91 familles
+- 80 pieds sans illustration : typographie, couleurs, grilles, cartes, filets, sommaires numérotés, formulaires et widgets de données ; animations de 360 ms (survol, filet qui s'étire, carte qui se soulève, carré de statut qui respire). Liste : `CATALOGUE_STANDARD.md`.
+- Bas de page : 9 styles de barre × 8 × 8 = 576 combinaisons (`bas.js`, NB_P = 9) : un bas unique par modèle.
+- Vérifications : bibliothèque 1560/1560, bascule, bas, comportements réels (le test supprime désormais chaque modèle de test après usage, la plateforme limitant à 200 modèles par site), reconstruction, rendu unifié, isolation (v2 et ancien), éditeur, Chrome sur les 80 pieds (160 contrôles : angles droits, polices, focus, cibles 44 px, survol, mouvement réduit), audit Chrome 390/1280 : 160 mesures, 0 défaut. Ressemblance structurelle maximale 0,60 sur les 80 nouveaux.
+- Limites : animations non vues en direct ; la lettre d'information affiche « non configurée » tant qu'aucun formulaire n'est publié (comportement normal).

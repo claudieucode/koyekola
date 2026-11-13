@@ -1,0 +1,264 @@
+{
+  "concepts": [
+    {
+      "id": "c-474-poste-de-travail",
+      "ordre": 474,
+      "nom": "Poste de travail",
+      "famille": "Coworking et incubateurs",
+      "secteur": "espace de coworking",
+      "directionArtistique": {
+        "texte": "Deux volets : à gauche un volet marine pleine hauteur (phrase, bouton de visite, horaires, coordonnées) ; à droite, sur gris très clair, trois cartes de formules qui se soulèvent et se bordent de bleu au survol, puis trois colonnes de liens et la lettre d'information. Standard pro, angles droits, sans illustration."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "espace partagé",
+        "formules",
+        "marine",
+        "bleu",
+        "deux volets",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-475-parcours-d-incubation",
+      "ordre": 475,
+      "nom": "Parcours d'incubation",
+      "famille": "Coworking et incubateurs",
+      "secteur": "incubateur de startups",
+      "directionArtistique": {
+        "texte": "Nuit noire et vert citron : une frise de quatre étapes numérotées (candidature, accompagnement, mentors, démonstration) dont le filet s'illumine et qui montent au survol, une rangée de liens à plat, puis horaires, coordonnées et réseaux. Aucun chiffre inventé, aucun dessin."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "incubateur",
+        "startups",
+        "programme",
+        "frise",
+        "noir",
+        "vert citron",
+        "étapes numérotées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-476-dans-la-boucle",
+      "ordre": 476,
+      "nom": "Dans la boucle",
+      "famille": "Coworking et incubateurs",
+      "secteur": "tiers-lieu et coworking événementiel",
+      "directionArtistique": {
+        "texte": "Deux bandes très contrastées : un grand aplat corail avec la lettre d'information en vedette (phrase en Archivo Black, champ à filet noir), puis un socle noir avec une grande liste de six liens, les horaires, le contact et les réseaux. Liens qui glissent de 6 px."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "tiers-lieu",
+        "newsletter",
+        "corail",
+        "noir",
+        "deux bandes",
+        "contraste",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-477-open-space",
+      "ordre": 477,
+      "nom": "Open space",
+      "famille": "Coworking et incubateurs",
+      "secteur": "coworking en bâtiment rénové",
+      "directionArtistique": {
+        "texte": "Greige chaud et vert sauge : quatre lignes (titre à gauche, liens à plat à droite, lettre en dernier) dont le filet haut verdit au survol, face à un panneau sauge plein (horaires, coordonnées, bouton de visite) ; ligne finale réseaux et mentions. Aéré, calme, serif élégant."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "open space",
+        "greige",
+        "sauge",
+        "lignes de liens",
+        "panneau",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-478-pepiniere-d-entreprises",
+      "ordre": 478,
+      "nom": "Pépinière d'entreprises",
+      "famille": "Coworking et incubateurs",
+      "secteur": "pépinière d'entreprises",
+      "directionArtistique": {
+        "texte": "Pied compact et institutionnel, marine profond et ocre : phrase en Fraunces, navigation à plat en six liens, puis trois cellules séparées par des filets verticaux (horaires avec invitation à visiter dont le carré ocre respire, contact, lettre d'information)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pépinière",
+        "entreprises",
+        "institutionnel",
+        "marine",
+        "ocre",
+        "compact",
+        "navigation à plat",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-479-bon-a-tirer",
+      "ordre": 479,
+      "nom": "Bon à tirer",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimerie de labeur et de papeterie",
+      "directionArtistique": {
+        "texte": "Bande de contrôle d'imprimerie : un filet de quatre aplats cyan, magenta, jaune et noir, une phrase en DM Serif Display, un cartouche à bordure noire (devis et lettre), puis quatre colonnes de catalogue à liseré coloré qui devient magenta au survol. Papier blanc cassé, encre noire."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "papeterie",
+        "quadrichromie",
+        "papier",
+        "encre",
+        "colonnes",
+        "cartouche",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-480-presse-de-nuit",
+      "ordre": 480,
+      "nom": "Presse de nuit",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimerie numérique grand format",
+      "directionArtistique": {
+        "texte": "Noir profond, blanc et rose vif : phrase géante en capitales condensées, cadre rose « nouveau projet », ruban de produits en grandes capitales séparés par des barres obliques (chaque produit est un lien qui se colore et monte), puis horaires, contact, réseaux et lettre."
+      },
+      "typographies": {
+        "titre": "Big Shoulders",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "grand format",
+        "numérique",
+        "noir",
+        "rose",
+        "ruban de produits",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-481-chantier-de-pose",
+      "ordre": 481,
+      "nom": "Chantier de pose",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "enseigniste et poseur de signalétique",
+      "directionArtistique": {
+        "texte": "Aplat jaune signalétique et noir : phrase en Anton, quatre pavés noirs numérotés (devis, maquette, fabrication, pose) qui montent de 8 px au survol, puis socle noir de trois colonnes de liens et cadre jaune d'horaires et de contact."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "enseigne",
+        "signalétique",
+        "pose",
+        "jaune",
+        "noir",
+        "étapes",
+        "pavés",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-482-nuancier-de-commande",
+      "ordre": 482,
+      "nom": "Nuancier de commande",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimeur de supports publicitaires",
+      "directionArtistique": {
+        "texte": "Crème chaleureux et nuancier : six pavés de couleur pleine sur deux rangées, chacun un lien de catalogue avec sa référence, qui se soulève au survol ; phrase en Young Serif, puis horaires, contact et lettre, une rangée de liens soulignés et les mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "nuancier",
+        "supports publicitaires",
+        "crème",
+        "pavés de couleur",
+        "catalogue",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-483-tableau-de-direction",
+      "ordre": 483,
+      "nom": "Tableau de direction",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "signalétique d'orientation et d'intérieur",
+      "directionArtistique": {
+        "texte": "Tableau d'orientation en bleu de signalisation, blanc et jaune : six lignes de destination lettrées A à F en deux colonnes, dont la ligne s'illumine en jaune et glisse au survol, puis horaires, contact, lettre et mentions sur un socle bleu plus sombre."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "signalétique",
+        "orientation",
+        "bleu",
+        "jaune",
+        "lignes lettrées",
+        "tableau",
+        "capitales",
+        "angles droits"
+      ]
+    }
+  ]
+}

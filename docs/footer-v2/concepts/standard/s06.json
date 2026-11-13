@@ -1,0 +1,246 @@
+{
+  "concepts": [
+    {
+      "id": "c-484-passage-impeccable",
+      "ordre": 484,
+      "nom": "Passage impeccable",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour une société de propreté : phrase d'accroche à gauche sur fond pâle, quatre cadres à filet turquoise (prestations, ressources, contact, horaires) à droite, puis une bande turquoise avec lettre et bouton de devis. Les liens glissent, le bouton s'inverse, un carré de statut respire."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "propreté",
+        "entreprise",
+        "turquoise",
+        "cadres à filet",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-485-carnet-de-tournee",
+      "ordre": 485,
+      "nom": "Carnet de tournée",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un nettoyage de bureaux, copropriétés et sites industriels : colonne de contact à gauche, trois cartes de secteurs qui se soulèvent à droite, lettre et mentions. Bleu nuit et vert citron."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "multiservices",
+        "bleu nuit",
+        "vert citron",
+        "cartes de secteurs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-486-cahier-d-entretien",
+      "ordre": 486,
+      "nom": "Cahier d'entretien",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un nettoyage soigné ou une conciergerie : pied centré sur ivoire, nom en serif, trois groupes de liens séparés de filets fins, deux cartes (horaires, contact) et bande vert profond pour la lettre."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "conciergerie",
+        "centré",
+        "ivoire",
+        "vert sauge",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-487-blouse-jaune",
+      "ordre": 487,
+      "nom": "Blouse jaune",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un multiservices franc : barre de liens rapides, puis deux panneaux, jaune signal avec prestations en capitales qui se remplissent de noir, et noir avec contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "multiservices",
+        "nettoyage industriel",
+        "jaune",
+        "noir",
+        "deux panneaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-488-grille-des-prestations",
+      "ordre": 488,
+      "nom": "Grille des prestations",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de propreté qui détaille ses services : en-tête avec bouton de devis, mosaïque de six cartes qui se soulèvent au survol, bandeau vert profond (ressources, horaires, contact, lettre)."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "prestations",
+        "grille de cartes",
+        "gris clair",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-489-poste-de-garde",
+      "ordre": 489,
+      "nom": "Poste de garde",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "sécurité",
+      "directionArtistique": {
+        "texte": "Pour une société de sécurité ou de gardiennage : bande d'appel orange, nom en capitales massives sur anthracite avec contact et horaires, listes de liens et lettre sous filets orange épais."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "sécurité",
+        "gardiennage",
+        "anthracite",
+        "orange",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-490-trois-temps",
+      "ordre": 490,
+      "nom": "Trois temps",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "serrurerie",
+      "directionArtistique": {
+        "texte": "Pour un serrurier ou un dépannage : phrase en serif sur brun profond, trois cartes numérotées (contact, déplacement, remise en service) qui se soulèvent, puis lettre, contact, horaires et liens en rang. Brun et laiton."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "serrurerie",
+        "dépannage",
+        "brun",
+        "laiton",
+        "étapes numérotées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-491-registre-de-securite",
+      "ordre": 491,
+      "nom": "Registre de sécurité",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "télésurveillance",
+      "directionArtistique": {
+        "texte": "Pour une société de télésurveillance : un registre en lignes à filets (prestations, ressources, contact et horaires, lettre) dont le fond s'éclaire au survol, sous une barre rouge. Blanc, rouge sombre, noir."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "télésurveillance",
+        "alarmes",
+        "registre",
+        "lignes à filets",
+        "blanc",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-492-ronde-de-nuit",
+      "ordre": 492,
+      "nom": "Ronde de nuit",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "vidéosurveillance",
+      "directionArtistique": {
+        "texte": "Pour une société de vidéosurveillance : bande de lettre en tête, nom et contact à gauche, grille 2 × 2 de blocs de liens dont le filet cyan s'allonge au survol. Marine nuit et cyan."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vidéosurveillance",
+        "marine",
+        "cyan",
+        "lettre en tête",
+        "grille de blocs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-493-trois-panneaux",
+      "ordre": 493,
+      "nom": "Trois panneaux",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "serrurerie",
+      "directionArtistique": {
+        "texte": "Pour un serrurier ou un spécialiste du contrôle d'accès : trois panneaux de bord à bord (bleu acier, gris clair, jaune sécurité) pour le nom, les liens et le contact, puis barre sombre avec lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Barlow",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "serrurerie",
+        "contrôle d'accès",
+        "bleu acier",
+        "jaune",
+        "trois panneaux",
+        "angles droits"
+      ]
+    }
+  ]
+}

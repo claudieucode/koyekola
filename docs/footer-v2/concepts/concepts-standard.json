@@ -1,0 +1,2021 @@
+{
+  "concepts": [
+    {
+      "id": "c-434-comptoir-de-l-officine",
+      "ordre": 434,
+      "nom": "Comptoir de l'officine",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine de quartier : bandeau vert d'appel au conseil avec boutons carrés, puis cinq colonnes bien classées (officine, rayons, informations, contact et horaires, lettre sur fond menthe) et barre de mentions. Liens qui glissent, bouton qui s'inverse, statut qui respire."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "officine",
+        "cinq colonnes",
+        "bandeau d'appel",
+        "vert",
+        "blanc",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-435-ordonnance-numerotee",
+      "ordre": 435,
+      "nom": "Ordonnance numérotée",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine qui guide ses clients : sur vert sapin, titre en grand et six rubriques numérotées en deux colonnes dont la rangée s'éclaire et s'indente au survol, puis une bande de contact, horaires et lettre. Menthe sur vert profond, capitales mono."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "sommaire numéroté",
+        "ordonnance",
+        "vert sapin",
+        "menthe",
+        "mono",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-436-rayons-de-parapharmacie",
+      "ordre": 436,
+      "nom": "Rayons de parapharmacie",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "parapharmacie",
+      "directionArtistique": {
+        "texte": "Pour une parapharmacie en ligne : titre serif sur ivoire, six rayons en cartes carrées réparties en trois piles qui se soulèvent, filet corail qui s'étire, bande corail pour la lettre puis contact, horaires et liens."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parapharmacie",
+        "grille de cartes",
+        "rayons",
+        "ivoire",
+        "corail",
+        "boutique",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-437-horaires-de-l-officine",
+      "ordre": 437,
+      "nom": "Horaires de l'officine",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine dont l'essentiel est l'ouverture : grand panneau pâle latéral (horaires, contact) qui se soulève, bandeau d'appel à contour ciel, trois colonnes de liens et lettre sur bleu nuit. Titres condensés en capitales."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "horaires",
+        "barre latérale",
+        "bandeau d'appel",
+        "bleu nuit",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-438-le-conseil-du-pharmacien",
+      "ordre": 438,
+      "nom": "Le conseil du pharmacien",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine qui répond aux questions : bande sarcelle avec grand titre serif et quatre questions fréquentes qui glissent, puis bande blanche (liens, contact, horaires) et encart sable pour la lettre."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "questions fréquentes",
+        "sarcelle",
+        "serif",
+        "conseil",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-439-sourire-clair",
+      "ordre": 439,
+      "nom": "Sourire clair",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet dentaire de quartier : pied entièrement centré, nom, ligne de liens, grand bouton de rendez-vous qui s'inverse, trois blocs centrés séparés par des filets (adresse, horaires, lettre) et barre bleue de mentions."
+      },
+      "typographies": {
+        "titre": "Jost",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "cabinet dentaire",
+        "centré",
+        "rendez-vous",
+        "bleu glace",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-440-plan-de-soins",
+      "ordre": 440,
+      "nom": "Plan de soins",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet qui explique son parcours : titre et bouton sur marine, quatre étapes numérotées en cellules à filets qui se soulèvent et dont la barre s'allonge, puis quatre colonnes blanches (cabinet et lettre, liens, contact, horaires)."
+      },
+      "typographies": {
+        "titre": "Manrope",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "étapes numérotées",
+        "parcours de soins",
+        "marine",
+        "cyan",
+        "quatre colonnes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-441-cabinet-en-trois-temps",
+      "ordre": 441,
+      "nom": "Cabinet en trois temps",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "centre dentaire",
+      "directionArtistique": {
+        "texte": "Pour un centre dentaire : trois bandes d'une seule rangée aux fonds différents, blanc (nom en capitales et liens séparés par des barres), menthe (contact, horaires, rendez-vous), vert profond (lettre et mentions)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "centre dentaire",
+        "trois bandes",
+        "menthe",
+        "vert profond",
+        "une rangée",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-442-urgence-dentaire",
+      "ordre": 442,
+      "nom": "Urgence dentaire",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet qui accueille les urgences : bandeau rouge brique d'appel avec bouton blanc qui s'inverse, trois colonnes de liens et lettre sur anthracite, carte blanche de contact et d'horaires qui se soulève."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "urgence",
+        "bandeau d'appel",
+        "rouge brique",
+        "anthracite",
+        "carte",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-443-alignement-lavande",
+      "ordre": 443,
+      "nom": "Alignement lavande",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "orthodontie",
+      "directionArtistique": {
+        "texte": "Pour un cabinet d'orthodontie : nom, grande phrase en capitales et bouton sur violet profond, quatre cartes lavande bord à bord dont le filet s'allonge et qui se soulèvent, puis contact, horaires et lettre sur violet plus sombre."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "orthodontie",
+        "cartes",
+        "capitales",
+        "violet profond",
+        "lavande",
+        "monochrome",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-444-bilan-de-vue",
+      "ordre": 444,
+      "nom": "Bilan de vue",
+      "famille": "Optique et audition",
+      "secteur": "opticien indépendant",
+      "directionArtistique": {
+        "texte": "Un sommaire numéroté de quatre soins (examen de vue, lentilles, montures, solaires) en rangées qui s'éclairent et dont le libellé glisse au survol, face à un cadre à contour bleu nuit pour les coordonnées et les horaires. Barre basse marine pour la lettre et les mentions. Ivoire, bleu nuit, terre cuite ; angles droits."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "optique",
+        "opticien",
+        "sommaire numéroté",
+        "ivoire",
+        "bleu nuit",
+        "terre cuite",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-445-salle-d-ecoute",
+      "ordre": 445,
+      "nom": "Salle d'écoute",
+      "famille": "Optique et audition",
+      "secteur": "audioprothésiste",
+      "directionArtistique": {
+        "texte": "Trois grandes tuiles numérotées (bilan auditif, appareils, examen de vue) qui se soulèvent et s'éclaircissent au survol, puis une bande d'infos : nom, bouton de rendez-vous, horaires, coordonnées et réseaux carrés. Bas de page graphite avec la lettre d'information. Graphite et menthe ; angles droits."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "audition",
+        "audioprothésiste",
+        "tuiles",
+        "graphite",
+        "menthe",
+        "réseaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-446-monture-et-lentille",
+      "ordre": 446,
+      "nom": "Monture et lentille",
+      "famille": "Optique et audition",
+      "secteur": "centre vue et audition",
+      "directionArtistique": {
+        "texte": "Deux moitiés bord à bord : un aplat vert profond portant la phrase « Voir juste. Entendre bien. » en capitales, un bouton carré miel et les horaires ; en face, quatre cartes blanches (lunettes, lentilles, audition, entretien) qui se soulèvent. Ligne légale sur vert sombre. Vert profond et miel ; angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "optique",
+        "audition",
+        "deux moitiés",
+        "cartes",
+        "vert profond",
+        "miel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-447-cabinet-d-audition",
+      "ordre": 447,
+      "nom": "Cabinet d'audition",
+      "famille": "Optique et audition",
+      "secteur": "cabinet d'audioprothèse",
+      "directionArtistique": {
+        "texte": "Quatre colonnes de liens classés (audition, appareils, accompagnement, cabinet) coiffées d'un filet bleu, puis un bandeau à contour marine de trois cellules (coordonnées, horaires, rendez-vous) qui s'éclaircissent au survol, et une rangée marine pour la lettre et les mentions. Blanc, marine, bleu ciel ; angles droits."
+      },
+      "typographies": {
+        "titre": "Manrope",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "audioprothèse",
+        "colonnes classées",
+        "bandeau de contact",
+        "blanc",
+        "marine",
+        "bleu ciel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-448-atelier-des-verres",
+      "ordre": 448,
+      "nom": "Atelier des verres",
+      "famille": "Optique et audition",
+      "secteur": "atelier d'optique, lunetier",
+      "directionArtistique": {
+        "texte": "Le nom du site en grandes capitales sous un filet épais, puis trois rangées d'annuaire (vue, audition, pratique) dont le fond s'éclaire au survol. Barre noire : horaires et coordonnées à gauche, lettre d'information et mentions à droite. Monochrome os et noir ; angles droits."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "lunetier",
+        "atelier",
+        "annuaire en rangées",
+        "monochrome",
+        "os",
+        "noir",
+        "grand nom",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-449-code-et-conduite",
+      "ordre": 449,
+      "nom": "Code et conduite",
+      "famille": "Auto-écoles et permis",
+      "secteur": "auto-école de quartier",
+      "directionArtistique": {
+        "texte": "Un grand bandeau jaune signalisation « Prêt à prendre la route ? » en capitales noires avec deux boutons carrés qui s'inversent ; dessous, trois rangées de liens étiquetées (permis, code, élèves) face à une carte à contour jaune (coordonnées, horaires), puis une fine bande de mentions. Jaune et noir ; angles droits."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "permis",
+        "bandeau d'appel",
+        "jaune",
+        "noir",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-450-parcours-du-permis",
+      "ordre": 450,
+      "nom": "Parcours du permis",
+      "famille": "Auto-écoles et permis",
+      "secteur": "auto-école de ville ou en ligne",
+      "directionArtistique": {
+        "texte": "Une frise de cinq étapes numérotées (inscription, code, conduite, examen, permis) dont les cellules changent de fond au survol et dont le libellé glisse ; dessous, le nom et les coordonnées face aux horaires et à la lettre d'information, puis les mentions. Bleu marine, blanc et ambre ; angles droits."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "frise numérotée",
+        "étapes",
+        "bleu marine",
+        "ambre",
+        "lettre d'information",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-451-formules-du-permis",
+      "ordre": 451,
+      "nom": "Formules du permis",
+      "famille": "Auto-écoles et permis",
+      "secteur": "auto-école présentant ses formules",
+      "directionArtistique": {
+        "texte": "Quatre cartes de formules à contour noir (permis B, conduite accompagnée, code seul, heures en plus) qui se soulèvent au survol, une bande vert sapin de trois blocs (nom et réseaux carrés, coordonnées, horaires), puis une rangée de liens utiles et les mentions. Vert sapin et gris clair ; angles droits."
+      },
+      "typographies": {
+        "titre": "Albert Sans",
+        "corps": null,
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "formules",
+        "cartes",
+        "bande verte",
+        "vert sapin",
+        "gris clair",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-452-depart-au-vert",
+      "ordre": 452,
+      "nom": "Départ au vert",
+      "famille": "Auto-écoles et permis",
+      "secteur": "auto-école, moto-école",
+      "directionArtistique": {
+        "texte": "Trois cartes de liens classés (passer le permis, aides et pratique, l'auto-école) coiffées d'une étiquette rouge et qui se soulèvent au survol ; un bandeau blanc de lettre d'information à grand titre « Ne manquez rien de votre permis » ; bande noire d'horaires, coordonnées et mentions. Blanc cassé, rouge feu, noir ; angles droits."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "moto-école",
+        "lettre d'information",
+        "cartes de liens",
+        "rouge",
+        "blanc cassé",
+        "noir",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-453-plaque-d-immatriculation",
+      "ordre": 453,
+      "nom": "Plaque d'immatriculation",
+      "famille": "Auto-écoles et permis",
+      "secteur": "auto-école, centre de formation",
+      "directionArtistique": {
+        "texte": "Un cartouche en forme de plaque : cadre clair épais, barre bleue verticale « Permis », nom en capitales à chasse fixe, deux rangées de liens séparés par des barres obliques et, à droite, les horaires. Dessous, lettre d'information, coordonnées et mentions sur anthracite. Anthracite et bleu plaque ; angles droits."
+      },
+      "typographies": {
+        "titre": "JetBrains Mono",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "auto-école",
+        "cartouche",
+        "plaque",
+        "anthracite",
+        "bleu",
+        "double rangée de liens",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-454-guichet-de-proximite",
+      "ordre": 454,
+      "nom": "Guichet de proximité",
+      "famille": "Banques et mutuelles",
+      "secteur": "banque",
+      "directionArtistique": {
+        "texte": "Pour une banque de proximité : bande marine avec phrase en serif et trois raccourcis dont la flèche avance au survol, quatre cartes métiers qui se soulèvent, puis coordonnées, horaires, aide et lettre sur fond clair."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "banque",
+        "proximité",
+        "marine",
+        "bleu",
+        "cartes",
+        "raccourcis",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-455-livret-mutualiste",
+      "ordre": 455,
+      "nom": "Livret mutualiste",
+      "famille": "Banques et mutuelles",
+      "secteur": "mutuelle",
+      "directionArtistique": {
+        "texte": "Pour une mutuelle de santé : volet vert profond avec phrase, coordonnées et horaires, carré de statut qui respire ; à droite sur crème, trois colonnes de liens à filet et une carte blanche pour la lettre des adhérents."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mutuelle",
+        "santé",
+        "vert",
+        "crème",
+        "deux volets",
+        "adhérents",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-456-coffre-de-nuit",
+      "ordre": 456,
+      "nom": "Coffre de nuit",
+      "famille": "Banques et mutuelles",
+      "secteur": "banque privée",
+      "directionArtistique": {
+        "texte": "Pour une banque privée : noir profond et filets d'or, cinq grandes lignes numérotées I à V dont le fond s'éclaire et le texte glisse au survol, rendez-vous, coordonnées, horaires et lettre privée."
+      },
+      "typographies": {
+        "titre": "Cormorant Garamond",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "banque privée",
+        "patrimoine",
+        "noir",
+        "or",
+        "sommaire numéroté",
+        "sombre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-457-caisse-regionale",
+      "ordre": 457,
+      "nom": "Caisse régionale",
+      "famille": "Banques et mutuelles",
+      "secteur": "banque coopérative",
+      "directionArtistique": {
+        "texte": "Pour une banque coopérative : bandeau brique avec la lettre d'information en tête, quatre colonnes de liens par public sur crème, puis une barre « besoin d'aide » en trois cellules (horaires, coordonnées, questions fréquentes)."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Libre Franklin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coopérative",
+        "banque",
+        "brique",
+        "crème",
+        "lettre en tête",
+        "colonnes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-458-courtage-clair",
+      "ordre": 458,
+      "nom": "Courtage clair",
+      "famille": "Banques et mutuelles",
+      "secteur": "courtage",
+      "directionArtistique": {
+        "texte": "Pour un courtier en assurance ou en crédit : double rangée de liens (assurances en grand, aide en petit), bandeau d'appel sarcelle « comparer, puis décider » avec bouton, puis coordonnées, horaires et lettre sur gris clair."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "courtage",
+        "assurance",
+        "crédit",
+        "sarcelle",
+        "double rangée",
+        "bandeau d'appel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-459-fibre-ouverte",
+      "ordre": 459,
+      "nom": "Fibre ouverte",
+      "famille": "Télécoms et accès internet",
+      "secteur": "fournisseur d'accès",
+      "directionArtistique": {
+        "texte": "Pour un fournisseur d'accès : nuit violette et menthe, grand bandeau d'éligibilité avec bouton plein et carré qui respire, quatre colonnes à filet qui s'illumine, coordonnées, horaires, lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "fibre",
+        "internet",
+        "fournisseur d'accès",
+        "violet",
+        "éligibilité",
+        "sombre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-460-forfaits-en-grille",
+      "ordre": 460,
+      "nom": "Forfaits en grille",
+      "famille": "Télécoms et accès internet",
+      "secteur": "opérateur mobile",
+      "directionArtistique": {
+        "texte": "Pour un opérateur mobile : jaune franc et noir, grand titre et contact à gauche, grille 2 x 2 de blocs noirs (forfaits, mobiles, options, assistance) qui se soulèvent, barre basse noire avec liens, lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "mobile",
+        "opérateur",
+        "forfaits",
+        "jaune",
+        "noir",
+        "grille",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-461-assistance-degagee",
+      "ordre": 461,
+      "nom": "Assistance dégagée",
+      "famille": "Télécoms et accès internet",
+      "secteur": "assistance opérateur",
+      "directionArtistique": {
+        "texte": "Pour l'assistance d'un opérateur : barre latérale bleue « besoin d'aide ? » avec coordonnées, horaires et bouton, à droite trois rubriques d'aide numérotées en police à chasse fixe sur gris bleuté, et la lettre."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "assistance",
+        "support",
+        "opérateur",
+        "bleu",
+        "barre latérale",
+        "chasse fixe",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-462-etapes-de-raccordement",
+      "ordre": 462,
+      "nom": "Étapes de raccordement",
+      "famille": "Télécoms et accès internet",
+      "secteur": "opérateur local",
+      "directionArtistique": {
+        "texte": "Pour un opérateur local : trois grandes étapes numérotées (éligibilité, offre, installation) séparées par des filets, rangée de liens, coordonnées, horaires et lettre sur blanc et vert forêt, barre basse verte."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Manrope",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "opérateur local",
+        "raccordement",
+        "étapes",
+        "vert",
+        "blanc",
+        "numéros",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-463-ligne-entreprise",
+      "ordre": 463,
+      "nom": "Ligne entreprise",
+      "famille": "Télécoms et accès internet",
+      "secteur": "télécoms pour entreprises",
+      "directionArtistique": {
+        "texte": "Pour un opérateur télécoms pour entreprises : anthracite et orange, quatre solutions en grandes lignes à flèche et ressources à gauche, encadré orange « parler à un conseiller » à droite, barre basse avec lettre."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "télécoms",
+        "entreprises",
+        "anthracite",
+        "orange",
+        "solutions",
+        "encadré",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-464-registre-de-copropriete",
+      "ordre": 464,
+      "nom": "Registre de copropriété",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic de copropriété",
+      "directionArtistique": {
+        "texte": "Pied standard en deux temps : sur ivoire, le nom du cabinet face à cinq rangées numérotées (espace copropriétaire, charges, assemblées, incident, devenir client) dont le fond s'éclaire et le libellé glisse au survol ; sur vert bouteille, une accroche avec la lettre, puis coordonnées et horaires. Filets fins, or discret, angles droits, aucune illustration."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "copropriété",
+        "registre",
+        "rangées numérotées",
+        "ivoire",
+        "vert bouteille",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-465-trois-portails",
+      "ordre": 465,
+      "nom": "Trois portails",
+      "famille": "Syndics et gestion locative",
+      "secteur": "administrateur de biens",
+      "directionArtistique": {
+        "texte": "Bande cobalt avec phrase d'accueil en grand et lettre d'information, puis trois cartes blanches à filet supérieur (copropriétaires, propriétaires bailleurs, locataires) qui se soulèvent au survol, et bande marine pour le cabinet, les coordonnées et les horaires. Palette cobalt, marine, blanc ; angles droits."
+      },
+      "typographies": {
+        "titre": "Manrope",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "administrateur de biens",
+        "gestion locative",
+        "portails",
+        "cartes",
+        "cobalt",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-466-degat-des-eaux",
+      "ordre": 466,
+      "nom": "Dégât des eaux ?",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic, gestion d'urgences",
+      "directionArtistique": {
+        "texte": "Bandeau d'appel safran en tête (« Un sinistre dans l'immeuble ? ») avec deux boutons carrés qui s'inversent au survol, puis de grands liens en capitales sur graphite, qui glissent au survol, et une bande noire pour nom, contact, horaires et lettre. Contraste franc graphite et safran, angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "urgence",
+        "sinistre",
+        "bandeau d'appel",
+        "graphite",
+        "safran",
+        "grands liens",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-467-calendrier-de-l-assemblee",
+      "ordre": 467,
+      "nom": "Calendrier de l'assemblée",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic, assemblées générales",
+      "directionArtistique": {
+        "texte": "Frise de quatre étapes numérotées (convocation, assemblée, procès-verbal, appel de fonds) sous de fortes barres terracotta, sur crème ; le fond de chaque cellule change au survol. Bande brun profond dessous pour contact, horaires et lettre. Ton chaleureux et sérieux, angles droits."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "assemblée générale",
+        "frise",
+        "étapes",
+        "crème",
+        "terracotta",
+        "brun",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-468-cabinet-et-immeubles",
+      "ordre": 468,
+      "nom": "Cabinet et immeubles",
+      "famille": "Syndics et gestion locative",
+      "secteur": "cabinet d'administration de biens",
+      "directionArtistique": {
+        "texte": "Barre latérale teal profond (nom, coordonnées, horaires) face à un panneau sable de trois catégories de liens (copropriété, location, cabinet) et de la lettre d'information ; fine barre teal pour les mentions. Mosaïque en deux blocs, carré de statut qui respire, angles droits."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "administrateur de biens",
+        "cabinet",
+        "barre latérale",
+        "catégories de liens",
+        "teal",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-469-candidats-et-entreprises",
+      "ordre": 469,
+      "nom": "Candidats et entreprises",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim généraliste",
+      "directionArtistique": {
+        "texte": "Deux panneaux de bord à bord : candidats sur blanc, entreprises sur violet nuit, chacun avec un grand titre, trois rangées de liens à filet qui s'éclairent au survol et un bouton carré qui s'inverse. Bande lavande pour l'agence, les horaires et les alertes offres. Violet, orange, blanc ; angles droits."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "emploi",
+        "candidats",
+        "entreprises",
+        "deux panneaux",
+        "violet",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-470-alerte-offres",
+      "ordre": 470,
+      "nom": "Alerte offres",
+      "famille": "Intérim et emploi",
+      "secteur": "site d'emploi, agence locale",
+      "directionArtistique": {
+        "texte": "Le pied commence par l'action : une bande corail avec la lettre d'alertes et un grand titre. Dessous, trois lignes de menus (candidats, entreprises, agence) sur blanc, puis deux cartes à filet noir (coordonnées, horaires) qui se soulèvent au survol, sur rose très pâle. Angles droits."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "emploi",
+        "intérim",
+        "alerte offres",
+        "lettre en tête",
+        "corail",
+        "menus en lignes",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-471-parcours-d-embauche",
+      "ordre": 471,
+      "nom": "Parcours d'embauche",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim, parcours candidat",
+      "directionArtistique": {
+        "texte": "Parcours en quatre cellules numérotées tracées par des filets menthe sur vert très profond, en police à chasse fixe ; le fond de la cellule s'éclaire au survol. Double rangée de liens (candidats, entreprises), puis agence, horaires et lettre. Monochrome vert et menthe, angles droits."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "parcours",
+        "étapes numérotées",
+        "double rangée de liens",
+        "vert profond",
+        "menthe",
+        "mono",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-472-annuaire-des-metiers",
+      "ordre": 472,
+      "nom": "Annuaire des métiers",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim par secteurs",
+      "directionArtistique": {
+        "texte": "Très grand titre en capitales condensées (« Trouvez votre mission. ») face à neuf étiquettes carrées de secteurs qui se remplissent de vert citron au survol, sur anthracite ; bande citron dessous pour l'agence, les horaires et la lettre. Percutant, angles droits."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "métiers",
+        "secteurs",
+        "étiquettes",
+        "capitales condensées",
+        "anthracite",
+        "vert citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-473-espace-candidat",
+      "ordre": 473,
+      "nom": "Espace candidat",
+      "famille": "Intérim et emploi",
+      "secteur": "cabinet de recrutement, site d'emploi",
+      "directionArtistique": {
+        "texte": "Barre d'accès blanche (nom, « Se connecter » en contour, « Créer mon compte » plein magenta), filet d'encre épais, annuaire à cinq colonnes (candidats, entreprises, ressources, agence et horaires) puis bande noire avec la lettre. Élégance éditoriale en serif, angles droits."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recrutement",
+        "emploi",
+        "barre d'accès",
+        "annuaire",
+        "colonnes",
+        "magenta",
+        "encre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-474-poste-de-travail",
+      "ordre": 474,
+      "nom": "Poste de travail",
+      "famille": "Coworking et incubateurs",
+      "secteur": "espace de coworking",
+      "directionArtistique": {
+        "texte": "Deux volets : à gauche un volet marine pleine hauteur (phrase, bouton de visite, horaires, coordonnées) ; à droite, sur gris très clair, trois cartes de formules qui se soulèvent et se bordent de bleu au survol, puis trois colonnes de liens et la lettre d'information. Standard pro, angles droits, sans illustration."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "espace partagé",
+        "formules",
+        "marine",
+        "bleu",
+        "deux volets",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-475-parcours-d-incubation",
+      "ordre": 475,
+      "nom": "Parcours d'incubation",
+      "famille": "Coworking et incubateurs",
+      "secteur": "incubateur de startups",
+      "directionArtistique": {
+        "texte": "Nuit noire et vert citron : une frise de quatre étapes numérotées (candidature, accompagnement, mentors, démonstration) dont le filet s'illumine et qui montent au survol, une rangée de liens à plat, puis horaires, coordonnées et réseaux. Aucun chiffre inventé, aucun dessin."
+      },
+      "typographies": {
+        "titre": "Syne",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "incubateur",
+        "startups",
+        "programme",
+        "frise",
+        "noir",
+        "vert citron",
+        "étapes numérotées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-476-dans-la-boucle",
+      "ordre": 476,
+      "nom": "Dans la boucle",
+      "famille": "Coworking et incubateurs",
+      "secteur": "tiers-lieu et coworking événementiel",
+      "directionArtistique": {
+        "texte": "Deux bandes très contrastées : un grand aplat corail avec la lettre d'information en vedette (phrase en Archivo Black, champ à filet noir), puis un socle noir avec une grande liste de six liens, les horaires, le contact et les réseaux. Liens qui glissent de 6 px."
+      },
+      "typographies": {
+        "titre": "Archivo Black",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "tiers-lieu",
+        "newsletter",
+        "corail",
+        "noir",
+        "deux bandes",
+        "contraste",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-477-open-space",
+      "ordre": 477,
+      "nom": "Open space",
+      "famille": "Coworking et incubateurs",
+      "secteur": "coworking en bâtiment rénové",
+      "directionArtistique": {
+        "texte": "Greige chaud et vert sauge : quatre lignes (titre à gauche, liens à plat à droite, lettre en dernier) dont le filet haut verdit au survol, face à un panneau sauge plein (horaires, coordonnées, bouton de visite) ; ligne finale réseaux et mentions. Aéré, calme, serif élégant."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "coworking",
+        "open space",
+        "greige",
+        "sauge",
+        "lignes de liens",
+        "panneau",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-478-pepiniere-d-entreprises",
+      "ordre": 478,
+      "nom": "Pépinière d'entreprises",
+      "famille": "Coworking et incubateurs",
+      "secteur": "pépinière d'entreprises",
+      "directionArtistique": {
+        "texte": "Pied compact et institutionnel, marine profond et ocre : phrase en Fraunces, navigation à plat en six liens, puis trois cellules séparées par des filets verticaux (horaires avec invitation à visiter dont le carré ocre respire, contact, lettre d'information)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pépinière",
+        "entreprises",
+        "institutionnel",
+        "marine",
+        "ocre",
+        "compact",
+        "navigation à plat",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-479-bon-a-tirer",
+      "ordre": 479,
+      "nom": "Bon à tirer",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimerie de labeur et de papeterie",
+      "directionArtistique": {
+        "texte": "Bande de contrôle d'imprimerie : un filet de quatre aplats cyan, magenta, jaune et noir, une phrase en DM Serif Display, un cartouche à bordure noire (devis et lettre), puis quatre colonnes de catalogue à liseré coloré qui devient magenta au survol. Papier blanc cassé, encre noire."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Archivo",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "papeterie",
+        "quadrichromie",
+        "papier",
+        "encre",
+        "colonnes",
+        "cartouche",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-480-presse-de-nuit",
+      "ordre": 480,
+      "nom": "Presse de nuit",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimerie numérique grand format",
+      "directionArtistique": {
+        "texte": "Noir profond, blanc et rose vif : phrase géante en capitales condensées, cadre rose « nouveau projet », ruban de produits en grandes capitales séparés par des barres obliques (chaque produit est un lien qui se colore et monte), puis horaires, contact, réseaux et lettre."
+      },
+      "typographies": {
+        "titre": "Big Shoulders",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "grand format",
+        "numérique",
+        "noir",
+        "rose",
+        "ruban de produits",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-481-chantier-de-pose",
+      "ordre": 481,
+      "nom": "Chantier de pose",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "enseigniste et poseur de signalétique",
+      "directionArtistique": {
+        "texte": "Aplat jaune signalétique et noir : phrase en Anton, quatre pavés noirs numérotés (devis, maquette, fabrication, pose) qui montent de 8 px au survol, puis socle noir de trois colonnes de liens et cadre jaune d'horaires et de contact."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "enseigne",
+        "signalétique",
+        "pose",
+        "jaune",
+        "noir",
+        "étapes",
+        "pavés",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-482-nuancier-de-commande",
+      "ordre": 482,
+      "nom": "Nuancier de commande",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "imprimeur de supports publicitaires",
+      "directionArtistique": {
+        "texte": "Crème chaleureux et nuancier : six pavés de couleur pleine sur deux rangées, chacun un lien de catalogue avec sa référence, qui se soulève au survol ; phrase en Young Serif, puis horaires, contact et lettre, une rangée de liens soulignés et les mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "imprimerie",
+        "nuancier",
+        "supports publicitaires",
+        "crème",
+        "pavés de couleur",
+        "catalogue",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-483-tableau-de-direction",
+      "ordre": 483,
+      "nom": "Tableau de direction",
+      "famille": "Imprimerie et signalétique",
+      "secteur": "signalétique d'orientation et d'intérieur",
+      "directionArtistique": {
+        "texte": "Tableau d'orientation en bleu de signalisation, blanc et jaune : six lignes de destination lettrées A à F en deux colonnes, dont la ligne s'illumine en jaune et glisse au survol, puis horaires, contact, lettre et mentions sur un socle bleu plus sombre."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "signalétique",
+        "orientation",
+        "bleu",
+        "jaune",
+        "lignes lettrées",
+        "tableau",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-484-passage-impeccable",
+      "ordre": 484,
+      "nom": "Passage impeccable",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour une société de propreté : phrase d'accroche à gauche sur fond pâle, quatre cadres à filet turquoise (prestations, ressources, contact, horaires) à droite, puis une bande turquoise avec lettre et bouton de devis. Les liens glissent, le bouton s'inverse, un carré de statut respire."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "propreté",
+        "entreprise",
+        "turquoise",
+        "cadres à filet",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-485-carnet-de-tournee",
+      "ordre": 485,
+      "nom": "Carnet de tournée",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un nettoyage de bureaux, copropriétés et sites industriels : colonne de contact à gauche, trois cartes de secteurs qui se soulèvent à droite, lettre et mentions. Bleu nuit et vert citron."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "multiservices",
+        "bleu nuit",
+        "vert citron",
+        "cartes de secteurs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-486-cahier-d-entretien",
+      "ordre": 486,
+      "nom": "Cahier d'entretien",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un nettoyage soigné ou une conciergerie : pied centré sur ivoire, nom en serif, trois groupes de liens séparés de filets fins, deux cartes (horaires, contact) et bande vert profond pour la lettre."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "conciergerie",
+        "centré",
+        "ivoire",
+        "vert sauge",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-487-blouse-jaune",
+      "ordre": 487,
+      "nom": "Blouse jaune",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour un multiservices franc : barre de liens rapides, puis deux panneaux, jaune signal avec prestations en capitales qui se remplissent de noir, et noir avec contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "multiservices",
+        "nettoyage industriel",
+        "jaune",
+        "noir",
+        "deux panneaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-488-grille-des-prestations",
+      "ordre": 488,
+      "nom": "Grille des prestations",
+      "famille": "Nettoyage et services généraux",
+      "secteur": "nettoyage",
+      "directionArtistique": {
+        "texte": "Pour une entreprise de propreté qui détaille ses services : en-tête avec bouton de devis, mosaïque de six cartes qui se soulèvent au survol, bandeau vert profond (ressources, horaires, contact, lettre)."
+      },
+      "typographies": {
+        "titre": "Lexend",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "nettoyage",
+        "prestations",
+        "grille de cartes",
+        "gris clair",
+        "vert",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-489-poste-de-garde",
+      "ordre": 489,
+      "nom": "Poste de garde",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "sécurité",
+      "directionArtistique": {
+        "texte": "Pour une société de sécurité ou de gardiennage : bande d'appel orange, nom en capitales massives sur anthracite avec contact et horaires, listes de liens et lettre sous filets orange épais."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "sécurité",
+        "gardiennage",
+        "anthracite",
+        "orange",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-490-trois-temps",
+      "ordre": 490,
+      "nom": "Trois temps",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "serrurerie",
+      "directionArtistique": {
+        "texte": "Pour un serrurier ou un dépannage : phrase en serif sur brun profond, trois cartes numérotées (contact, déplacement, remise en service) qui se soulèvent, puis lettre, contact, horaires et liens en rang. Brun et laiton."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "serrurerie",
+        "dépannage",
+        "brun",
+        "laiton",
+        "étapes numérotées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-491-registre-de-securite",
+      "ordre": 491,
+      "nom": "Registre de sécurité",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "télésurveillance",
+      "directionArtistique": {
+        "texte": "Pour une société de télésurveillance : un registre en lignes à filets (prestations, ressources, contact et horaires, lettre) dont le fond s'éclaire au survol, sous une barre rouge. Blanc, rouge sombre, noir."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "télésurveillance",
+        "alarmes",
+        "registre",
+        "lignes à filets",
+        "blanc",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-492-ronde-de-nuit",
+      "ordre": 492,
+      "nom": "Ronde de nuit",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "vidéosurveillance",
+      "directionArtistique": {
+        "texte": "Pour une société de vidéosurveillance : bande de lettre en tête, nom et contact à gauche, grille 2 × 2 de blocs de liens dont le filet cyan s'allonge au survol. Marine nuit et cyan."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "vidéosurveillance",
+        "marine",
+        "cyan",
+        "lettre en tête",
+        "grille de blocs",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-493-trois-panneaux",
+      "ordre": 493,
+      "nom": "Trois panneaux",
+      "famille": "Sécurité et serrurerie",
+      "secteur": "serrurerie",
+      "directionArtistique": {
+        "texte": "Pour un serrurier ou un spécialiste du contrôle d'accès : trois panneaux de bord à bord (bleu acier, gris clair, jaune sécurité) pour le nom, les liens et le contact, puis barre sombre avec lettre et mentions."
+      },
+      "typographies": {
+        "titre": "Barlow",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "serrurerie",
+        "contrôle d'accès",
+        "bleu acier",
+        "jaune",
+        "trois panneaux",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-494-premiers-pas",
+      "ordre": 494,
+      "nom": "Premiers pas",
+      "famille": "Petite enfance et seniors",
+      "secteur": "crèche, micro-crèche",
+      "directionArtistique": {
+        "texte": "Pied standard à angles droits. Bandeau de lettre vert sapin en tête (titre à gauche, formulaire à droite), puis quatre colonnes claires sur ivoire chaud : familles, la crèche, horaires d'accueil, nous joindre. Petits filets corail qui s'étirent au survol, carré de statut qui respire près des horaires."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "crèche",
+        "petite enfance",
+        "bandeau lettre en tête",
+        "quatre colonnes",
+        "ivoire",
+        "vert sapin",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-495-maison-des-tilleuls",
+      "ordre": 495,
+      "nom": "Maison des tilleuls",
+      "famille": "Petite enfance et seniors",
+      "secteur": "résidence pour seniors",
+      "directionArtistique": {
+        "texte": "Barre latérale : grand panneau bleu nuit à gauche (nom, phrase d'accueil, coordonnées en 18 px, bouton or qui s'inverse) et, à droite sur papier clair, deux listes de liens en 19 px, heures de visite et mentions. Pensé pour la lisibilité."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "seniors",
+        "résidence",
+        "barre latérale",
+        "bleu nuit",
+        "or",
+        "gros caractères",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-496-mille-et-un-jours",
+      "ordre": 496,
+      "nom": "Mille et un jours",
+      "famille": "Petite enfance et seniors",
+      "secteur": "relais d'assistantes maternelles",
+      "directionArtistique": {
+        "texte": "Sommaire numéroté 01 à 05 en rangées pleine largeur sur moutarde, texte brun profond. Au survol le fond de rangée s'éclaire, le retrait s'élargit et la flèche glisse. Bande brune en bas : horaires, coordonnées, mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "assistantes maternelles",
+        "relais",
+        "sommaire numéroté",
+        "moutarde",
+        "brun",
+        "rangées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-497-chez-soi-accompagne",
+      "ordre": 497,
+      "nom": "Chez soi, accompagné",
+      "famille": "Petite enfance et seniors",
+      "secteur": "aide à domicile",
+      "directionArtistique": {
+        "texte": "Nom et coordonnées en tête sur menthe très pâle, trois cartes blanches à angles droits avec barre turquoise latérale (aide à domicile, repas et courses, sécurité) qui se soulèvent au survol ; bande turquoise profond : lettre, horaires, liens en ligne et mentions."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aide à domicile",
+        "maintien à domicile",
+        "grille de cartes",
+        "menthe",
+        "turquoise",
+        "cartes qui se soulèvent",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-498-accueil-de-jour",
+      "ordre": 498,
+      "nom": "Accueil de jour",
+      "famille": "Petite enfance et seniors",
+      "secteur": "accueil de jour, soutien aux aidants",
+      "directionArtistique": {
+        "texte": "Prune profond monochrome. Grand appel « Un proche à accompagner ? Parlons-en. » avec bouton rose pâle, double rangée de liens horizontale (pour les proches, pour la structure) entre filets fins, puis bande aubergine : nom, coordonnées, horaires, mentions."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "accueil de jour",
+        "aidants",
+        "prune",
+        "monochrome",
+        "appel",
+        "double rangée de liens",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-499-langues-du-monde",
+      "ordre": 499,
+      "nom": "Langues du monde",
+      "famille": "Communication et traduction",
+      "secteur": "agence de traduction",
+      "directionArtistique": {
+        "texte": "Titre centré sur ivoire, grille de six tuiles de langues à bord net (Français vers…) qui s'inversent au survol et dont la flèche glisse, puis bande sable : liens en ligne, coordonnées, horaires, mentions. Langues d'exemple à adapter."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traduction",
+        "langues",
+        "tuiles",
+        "grille",
+        "ivoire",
+        "encre",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-500-parlons-net",
+      "ordre": 500,
+      "nom": "Parlons net",
+      "famille": "Communication et traduction",
+      "secteur": "agence de communication",
+      "directionArtistique": {
+        "texte": "Noir profond et vert acide. Le mot « Parlons. » monumental (jusqu'à 190 px) qui glisse au survol, bouton vert et lettre sur la même ligne, puis trois colonnes sobres entre filets (agence, contact, horaires) et mentions."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communication",
+        "agence",
+        "noir",
+        "vert acide",
+        "mot monumental",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-501-salle-de-presse",
+      "ordre": 501,
+      "nom": "Salle de presse",
+      "famille": "Communication et traduction",
+      "secteur": "relations presse",
+      "directionArtistique": {
+        "texte": "Pied de journal : nom centré entre doubles filets, trois colonnes serrées séparées par des filets verticaux (contact presse, rubriques, abonnement), puis bandeau de permanence de la rédaction. Papier crème et noir, rouge brique en accent."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "relations presse",
+        "journal",
+        "doubles filets",
+        "papier",
+        "serif",
+        "trois colonnes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-502-interpretes-a-la-demande",
+      "ordre": 502,
+      "nom": "Interprètes à la demande",
+      "famille": "Communication et traduction",
+      "secteur": "interprétariat",
+      "directionArtistique": {
+        "texte": "Parcours en quatre étapes numérotées sur bleu pétrole, cases séparées de filets fins qui s'éclairent au survol ; bande plus sombre : lettre et bouton de devis à gauche, contact et horaires à droite, liens en ligne et mentions."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "interprétariat",
+        "parcours",
+        "étapes numérotées",
+        "bleu pétrole",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-503-atelier-des-mots",
+      "ordre": 503,
+      "nom": "Atelier des mots",
+      "famille": "Communication et traduction",
+      "secteur": "studio de rédaction et de contenu",
+      "directionArtistique": {
+        "texte": "Titre centré en grand serif sur lavande claire, trois cartes à angles droits (studio, clients, coordonnées) qui se soulèvent au survol, puis bande violet profond : lettre d'information, horaires et mentions."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "rédaction",
+        "contenu",
+        "studio éditorial",
+        "titre centré",
+        "lavande",
+        "violet",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-504-comptoir-de-depart",
+      "ordre": 504,
+      "nom": "Comptoir de départ",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "agence de location de voitures et d'utilitaires",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : une grande bande jaune taxi pour réserver (phrase en capitales massives, deux boutons carrés qui s'inversent), puis une bande anthracite avec le nom, une rangée de liens, le contact, les horaires (carré de statut qui respire) et les réseaux. Angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location de voitures",
+        "utilitaires",
+        "agence",
+        "jaune taxi",
+        "anthracite",
+        "bande d'appel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-505-categories-de-vehicules",
+      "ordre": 505,
+      "nom": "Catégories de véhicules",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "loueur à plusieurs gammes",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : à gauche le nom de l'agence, une phrase et un bouton ; à droite six rangées à bloc numéroté vert pétrole (citadines, berlines, utilitaires, monospaces, électriques, avec chauffeur) qui glissent et passent à l'orange au survol. Bande vert pétrole pour contact, horaires, lettre et réseaux."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "catégories",
+        "rangées numérotées",
+        "ivoire",
+        "vert pétrole",
+        "orange",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-506-trajet-en-trois-temps",
+      "ordre": 506,
+      "nom": "Trajet en trois temps",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "service de chauffeurs VTC",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : fond noir profond, nom du service en grand, trois étapes numérotées (réserver, confirmer, voyager) séparées par des filets dont le fond s'éclaire au survol, rangée de services sous un filet menthe, puis contact, horaires et réseaux."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "VTC",
+        "chauffeur",
+        "trois étapes",
+        "noir",
+        "menthe",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-507-agence-et-horaires",
+      "ordre": 507,
+      "nom": "Agence et horaires",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "agence de proximité (location et chauffeurs)",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : trois colonnes égales sur blanc, séparées par de grands filets bleus : identité de l'agence avec contact et horaires, rubriques de liens en rangées dont le fond s'éclaire et le retrait grandit, lettre et réseaux. Barre bleu marine pour les mentions."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence",
+        "trois colonnes",
+        "filets",
+        "blanc",
+        "bleu marine",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-508-documents-a-prevoir",
+      "ordre": 508,
+      "nom": "Documents à prévoir",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "loueur qui rassure avant la location",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : bandeau rouge sécurité avec la lettre d'information, quatre cartes à coche carrée (permis, pièce d'identité, justificatif, moyen de paiement) qui se soulèvent et rosissent au survol, puis une bande grise compacte avec liens en ligne, contact et horaires."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "liste de contrôle",
+        "documents",
+        "rouge",
+        "gris",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-509-sommaire-du-sejour",
+      "ordre": 509,
+      "nom": "Sommaire du séjour",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping et village de vacances",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : bande d'accueil vert forêt (nom, phrase, bouton ocre), sommaire ivoire en quatre grands numéros 01 à 04 avec leurs listes de liens et filets verticaux (le fond de colonne s'éclaire au survol), bande forêt pour contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "village de vacances",
+        "sommaire numéroté",
+        "vert forêt",
+        "ivoire",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-510-bienvenue-a-l-accueil",
+      "ordre": 510,
+      "nom": "Bienvenue à l'accueil",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping familial",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : « Bienvenue. » en grand serif sur sable avec nom, horaires de la réception (carré qui respire) et contact ; à droite trois rubriques en lignes étiquetées et la lettre ; bande terre cuite pour réseaux, lien vers l'accueil et mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping familial",
+        "accueil",
+        "sable",
+        "terre cuite",
+        "serif",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-511-hebergements-en-cartes",
+      "ordre": 511,
+      "nom": "Hébergements en cartes",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping aux hébergements variés",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : à gauche une grande phrase, à droite quatre cartes plates 2 × 2 de couleurs franches (bleu lac, turquoise, sable, orange) qui se soulèvent au survol ; bande bleu nuit avec lettre, contact, horaires, liens et mentions."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "hébergements",
+        "cartes",
+        "bleu lac",
+        "turquoise",
+        "sable",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-512-panneau-d-entree",
+      "ordre": 512,
+      "nom": "Panneau d'entrée",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping et aire de loisirs",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : un panneau routier à fort contour ivoire en deux champs sur fond olive, jaune (accueil en capitales condensées, nom, horaires, contact) et ivoire (listes de liens à flèche qui glisse, lettre) ; barre olive pour réseaux et mentions."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "panneau",
+        "signalétique",
+        "olive",
+        "jaune",
+        "capitales condensées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-513-veillee-au-feu",
+      "ordre": 513,
+      "nom": "Veillée au feu",
+      "famille": "Campings et villages de vacances",
+      "secteur": "village de vacances et camping nature",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : pied centré sur brun nuit, grande phrase serif « Restons en contact. », lettre au centre, rangée de liens centrés entre deux filets, contact et horaires centrés, réseaux et mentions. Orange feu et crème."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping nature",
+        "village de vacances",
+        "centré",
+        "brun nuit",
+        "orange feu",
+        "serif",
+        "angles droits"
+      ]
+    }
+  ]
+}
