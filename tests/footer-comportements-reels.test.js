@@ -330,7 +330,7 @@ describe("Pieds de page : comportements réels (serveur)", () => {
       assert.ok(news.length >= 30 && contact.length >= 3, `${news.length} newsletters, ${contact.length} contacts`);
       const bad = [];
       for (const key of [...news, ...contact]) {
-        await publishOn(N1, key);
+        const tm = await publishOn(N1, key);
         for (const p of ["/", "/blog", "/introuvable-xyz"]) {
           const r = await hostReq(N1.host, p); const f = footerHtml(r.text);
           if (!/data-kw-state="not-configured"/.test(f)) bad.push(`${key} ${p} : pas d'état « non configuré »`);
@@ -339,6 +339,7 @@ describe("Pieds de page : comportements réels (serveur)", () => {
           if (!/non configurée? pour le moment|configuré/i.test(f) && !/data-kw-state/.test(f)) bad.push(`${key} ${p} : phrase absente`);
           if (/<button[^>]*kw-emailsub-submit/.test(f)) bad.push(`${key} ${p} : bouton d'envoi factice`);
         }
+        await post(U(N1.s, `/api/modeles/${tm.id}/archiver`)); await post(U(N1.s, `/api/modeles/${tm.id}/supprimer`));   // libère la place : la plateforme limite à 200 modèles par site
       }
       assert.deepEqual(bad, [], bad.slice(0, 20).join("\n"));
     });

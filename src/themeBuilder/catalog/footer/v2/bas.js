@@ -3,10 +3,10 @@
 //  1. la LIGNE DU MODÈLE (© et mentions légales : rangée « copyright + bizlegal » et le filet qui la précède) : 8 mises en page (S) × 6 filets (R) ;
 //  2. la BARRE DE LA PLATEFORME (« nom · Cookies · Confidentialité », ajoutée sous le pied) : 8 présentations (P), pilotées par des jetons --ft-legal-* sur la racine du pied (CSS : landing.css).
 // Le plan d'un modèle dépend UNIQUEMENT de son numéro (ft2-NNN) : stable, sans état. Un modèle peut le fixer lui-même avec `bas: { s, r, p }` (indices).
-const NB_S = 8, NB_R = 8, NB_P = 8, TOTAL = NB_S * NB_R * NB_P;
+const NB_S = 8, NB_R = 8, NB_P = 9, TOTAL = NB_S * NB_R * NB_P;
 
 const numeroDe = (id) => Number((/^ft2-(\d+)/.exec(String(id)) || [])[1]) || 0;
-// 97 est premier avec 512 : n ↦ n·97 mod 384 est injective sur 0..383, donc deux modèles (numéros différents < 512) n'ont jamais le même plan
+// 97 est premier avec 576 : n ↦ n·97 mod 384 est injective sur 0..383, donc deux modèles (numéros différents < 512) n'ont jamais le même plan
 function planDe(id, force) {
   const c = force || ((numeroDe(id) * 97) % TOTAL);
   const s = force && force.s !== undefined ? force.s : c % NB_S;
@@ -24,6 +24,7 @@ const BARRES = [
   { "--ft-legal-case": "uppercase", "--ft-legal-track": "0.14em", "--ft-legal-size": "11px", "--ft-legal-pad": "18px 20px 22px" },            // P5 : capitales espacées, centrée
   { "--ft-legal-case": "uppercase", "--ft-legal-track": "0.1em", "--ft-legal-size": "11px", "--ft-legal-justify": "flex-start", "--ft-legal-align": "left", "--ft-legal-pad": "18px 48px 22px", "--ft-legal-rule": "3px solid rgba(127, 127, 127, .35)" }, // P6 : capitales à gauche, filet épais
   { "--ft-legal-rule": "0 solid transparent", "--ft-legal-pad": "30px 20px 38px", "--ft-legal-opacity": "0.75", "--ft-legal-size": "12px", "--ft-legal-track": "0.04em" }, // P7 : sans filet, très aéré
+  { "--ft-legal-justify": "center", "--ft-legal-pad": "26px 20px 30px", "--ft-legal-case": "uppercase", "--ft-legal-track": "0.18em", "--ft-legal-size": "10px", "--ft-legal-rule": "2px solid rgba(127, 127, 127, .5)" }, // P8 : capitales très espacées, filet marqué
 ];
 
 // Parcours : parent de chaque nœud « copyright »

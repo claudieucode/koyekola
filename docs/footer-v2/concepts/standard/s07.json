@@ -1,0 +1,255 @@
+{
+  "concepts": [
+    {
+      "id": "c-494-premiers-pas",
+      "ordre": 494,
+      "nom": "Premiers pas",
+      "famille": "Petite enfance et seniors",
+      "secteur": "crèche, micro-crèche",
+      "directionArtistique": {
+        "texte": "Pied standard à angles droits. Bandeau de lettre vert sapin en tête (titre à gauche, formulaire à droite), puis quatre colonnes claires sur ivoire chaud : familles, la crèche, horaires d'accueil, nous joindre. Petits filets corail qui s'étirent au survol, carré de statut qui respire près des horaires."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Nunito",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "crèche",
+        "petite enfance",
+        "bandeau lettre en tête",
+        "quatre colonnes",
+        "ivoire",
+        "vert sapin",
+        "corail",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-495-maison-des-tilleuls",
+      "ordre": 495,
+      "nom": "Maison des tilleuls",
+      "famille": "Petite enfance et seniors",
+      "secteur": "résidence pour seniors",
+      "directionArtistique": {
+        "texte": "Barre latérale : grand panneau bleu nuit à gauche (nom, phrase d'accueil, coordonnées en 18 px, bouton or qui s'inverse) et, à droite sur papier clair, deux listes de liens en 19 px, heures de visite et mentions. Pensé pour la lisibilité."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "seniors",
+        "résidence",
+        "barre latérale",
+        "bleu nuit",
+        "or",
+        "gros caractères",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-496-mille-et-un-jours",
+      "ordre": 496,
+      "nom": "Mille et un jours",
+      "famille": "Petite enfance et seniors",
+      "secteur": "relais d'assistantes maternelles",
+      "directionArtistique": {
+        "texte": "Sommaire numéroté 01 à 05 en rangées pleine largeur sur moutarde, texte brun profond. Au survol le fond de rangée s'éclaire, le retrait s'élargit et la flèche glisse. Bande brune en bas : horaires, coordonnées, mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "assistantes maternelles",
+        "relais",
+        "sommaire numéroté",
+        "moutarde",
+        "brun",
+        "rangées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-497-chez-soi-accompagne",
+      "ordre": 497,
+      "nom": "Chez soi, accompagné",
+      "famille": "Petite enfance et seniors",
+      "secteur": "aide à domicile",
+      "directionArtistique": {
+        "texte": "Nom et coordonnées en tête sur menthe très pâle, trois cartes blanches à angles droits avec barre turquoise latérale (aide à domicile, repas et courses, sécurité) qui se soulèvent au survol ; bande turquoise profond : lettre, horaires, liens en ligne et mentions."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "aide à domicile",
+        "maintien à domicile",
+        "grille de cartes",
+        "menthe",
+        "turquoise",
+        "cartes qui se soulèvent",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-498-accueil-de-jour",
+      "ordre": 498,
+      "nom": "Accueil de jour",
+      "famille": "Petite enfance et seniors",
+      "secteur": "accueil de jour, soutien aux aidants",
+      "directionArtistique": {
+        "texte": "Prune profond monochrome. Grand appel « Un proche à accompagner ? Parlons-en. » avec bouton rose pâle, double rangée de liens horizontale (pour les proches, pour la structure) entre filets fins, puis bande aubergine : nom, coordonnées, horaires, mentions."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "accueil de jour",
+        "aidants",
+        "prune",
+        "monochrome",
+        "appel",
+        "double rangée de liens",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-499-langues-du-monde",
+      "ordre": 499,
+      "nom": "Langues du monde",
+      "famille": "Communication et traduction",
+      "secteur": "agence de traduction",
+      "directionArtistique": {
+        "texte": "Titre centré sur ivoire, grille de six tuiles de langues à bord net (Français vers…) qui s'inversent au survol et dont la flèche glisse, puis bande sable : liens en ligne, coordonnées, horaires, mentions. Langues d'exemple à adapter."
+      },
+      "typographies": {
+        "titre": "Libre Caslon Text",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "traduction",
+        "langues",
+        "tuiles",
+        "grille",
+        "ivoire",
+        "encre",
+        "rouge",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-500-parlons-net",
+      "ordre": 500,
+      "nom": "Parlons net",
+      "famille": "Communication et traduction",
+      "secteur": "agence de communication",
+      "directionArtistique": {
+        "texte": "Noir profond et vert acide. Le mot « Parlons. » monumental (jusqu'à 190 px) qui glisse au survol, bouton vert et lettre sur la même ligne, puis trois colonnes sobres entre filets (agence, contact, horaires) et mentions."
+      },
+      "typographies": {
+        "titre": "Space Grotesk",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "communication",
+        "agence",
+        "noir",
+        "vert acide",
+        "mot monumental",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-501-salle-de-presse",
+      "ordre": 501,
+      "nom": "Salle de presse",
+      "famille": "Communication et traduction",
+      "secteur": "relations presse",
+      "directionArtistique": {
+        "texte": "Pied de journal : nom centré entre doubles filets, trois colonnes serrées séparées par des filets verticaux (contact presse, rubriques, abonnement), puis bandeau de permanence de la rédaction. Papier crème et noir, rouge brique en accent."
+      },
+      "typographies": {
+        "titre": "Libre Baskerville",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "relations presse",
+        "journal",
+        "doubles filets",
+        "papier",
+        "serif",
+        "trois colonnes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-502-interpretes-a-la-demande",
+      "ordre": 502,
+      "nom": "Interprètes à la demande",
+      "famille": "Communication et traduction",
+      "secteur": "interprétariat",
+      "directionArtistique": {
+        "texte": "Parcours en quatre étapes numérotées sur bleu pétrole, cases séparées de filets fins qui s'éclairent au survol ; bande plus sombre : lettre et bouton de devis à gauche, contact et horaires à droite, liens en ligne et mentions."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "interprétariat",
+        "parcours",
+        "étapes numérotées",
+        "bleu pétrole",
+        "ambre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-503-atelier-des-mots",
+      "ordre": 503,
+      "nom": "Atelier des mots",
+      "famille": "Communication et traduction",
+      "secteur": "studio de rédaction et de contenu",
+      "directionArtistique": {
+        "texte": "Titre centré en grand serif sur lavande claire, trois cartes à angles droits (studio, clients, coordonnées) qui se soulèvent au survol, puis bande violet profond : lettre d'information, horaires et mentions."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "rédaction",
+        "contenu",
+        "studio éditorial",
+        "titre centré",
+        "lavande",
+        "violet",
+        "cartes",
+        "angles droits"
+      ]
+    }
+  ]
+}

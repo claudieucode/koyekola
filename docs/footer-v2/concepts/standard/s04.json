@@ -1,0 +1,262 @@
+{
+  "concepts": [
+    {
+      "id": "c-464-registre-de-copropriete",
+      "ordre": 464,
+      "nom": "Registre de copropriété",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic de copropriété",
+      "directionArtistique": {
+        "texte": "Pied standard en deux temps : sur ivoire, le nom du cabinet face à cinq rangées numérotées (espace copropriétaire, charges, assemblées, incident, devenir client) dont le fond s'éclaire et le libellé glisse au survol ; sur vert bouteille, une accroche avec la lettre, puis coordonnées et horaires. Filets fins, or discret, angles droits, aucune illustration."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "copropriété",
+        "registre",
+        "rangées numérotées",
+        "ivoire",
+        "vert bouteille",
+        "or",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-465-trois-portails",
+      "ordre": 465,
+      "nom": "Trois portails",
+      "famille": "Syndics et gestion locative",
+      "secteur": "administrateur de biens",
+      "directionArtistique": {
+        "texte": "Bande cobalt avec phrase d'accueil en grand et lettre d'information, puis trois cartes blanches à filet supérieur (copropriétaires, propriétaires bailleurs, locataires) qui se soulèvent au survol, et bande marine pour le cabinet, les coordonnées et les horaires. Palette cobalt, marine, blanc ; angles droits."
+      },
+      "typographies": {
+        "titre": "Manrope",
+        "corps": "Inter",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "administrateur de biens",
+        "gestion locative",
+        "portails",
+        "cartes",
+        "cobalt",
+        "marine",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-466-degat-des-eaux",
+      "ordre": 466,
+      "nom": "Dégât des eaux ?",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic, gestion d'urgences",
+      "directionArtistique": {
+        "texte": "Bandeau d'appel safran en tête (« Un sinistre dans l'immeuble ? ») avec deux boutons carrés qui s'inversent au survol, puis de grands liens en capitales sur graphite, qui glissent au survol, et une bande noire pour nom, contact, horaires et lettre. Contraste franc graphite et safran, angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "urgence",
+        "sinistre",
+        "bandeau d'appel",
+        "graphite",
+        "safran",
+        "grands liens",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-467-calendrier-de-l-assemblee",
+      "ordre": 467,
+      "nom": "Calendrier de l'assemblée",
+      "famille": "Syndics et gestion locative",
+      "secteur": "syndic, assemblées générales",
+      "directionArtistique": {
+        "texte": "Frise de quatre étapes numérotées (convocation, assemblée, procès-verbal, appel de fonds) sous de fortes barres terracotta, sur crème ; le fond de chaque cellule change au survol. Bande brun profond dessous pour contact, horaires et lettre. Ton chaleureux et sérieux, angles droits."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "syndic",
+        "assemblée générale",
+        "frise",
+        "étapes",
+        "crème",
+        "terracotta",
+        "brun",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-468-cabinet-et-immeubles",
+      "ordre": 468,
+      "nom": "Cabinet et immeubles",
+      "famille": "Syndics et gestion locative",
+      "secteur": "cabinet d'administration de biens",
+      "directionArtistique": {
+        "texte": "Barre latérale teal profond (nom, coordonnées, horaires) face à un panneau sable de trois catégories de liens (copropriété, location, cabinet) et de la lettre d'information ; fine barre teal pour les mentions. Mosaïque en deux blocs, carré de statut qui respire, angles droits."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "administrateur de biens",
+        "cabinet",
+        "barre latérale",
+        "catégories de liens",
+        "teal",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-469-candidats-et-entreprises",
+      "ordre": 469,
+      "nom": "Candidats et entreprises",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim généraliste",
+      "directionArtistique": {
+        "texte": "Deux panneaux de bord à bord : candidats sur blanc, entreprises sur violet nuit, chacun avec un grand titre, trois rangées de liens à filet qui s'éclairent au survol et un bouton carré qui s'inverse. Bande lavande pour l'agence, les horaires et les alertes offres. Violet, orange, blanc ; angles droits."
+      },
+      "typographies": {
+        "titre": "Plus Jakarta Sans",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "emploi",
+        "candidats",
+        "entreprises",
+        "deux panneaux",
+        "violet",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-470-alerte-offres",
+      "ordre": 470,
+      "nom": "Alerte offres",
+      "famille": "Intérim et emploi",
+      "secteur": "site d'emploi, agence locale",
+      "directionArtistique": {
+        "texte": "Le pied commence par l'action : une bande corail avec la lettre d'alertes et un grand titre. Dessous, trois lignes de menus (candidats, entreprises, agence) sur blanc, puis deux cartes à filet noir (coordonnées, horaires) qui se soulèvent au survol, sur rose très pâle. Angles droits."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "emploi",
+        "intérim",
+        "alerte offres",
+        "lettre en tête",
+        "corail",
+        "menus en lignes",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-471-parcours-d-embauche",
+      "ordre": 471,
+      "nom": "Parcours d'embauche",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim, parcours candidat",
+      "directionArtistique": {
+        "texte": "Parcours en quatre cellules numérotées tracées par des filets menthe sur vert très profond, en police à chasse fixe ; le fond de la cellule s'éclaire au survol. Double rangée de liens (candidats, entreprises), puis agence, horaires et lettre. Monochrome vert et menthe, angles droits."
+      },
+      "typographies": {
+        "titre": "IBM Plex Mono",
+        "corps": "IBM Plex Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "parcours",
+        "étapes numérotées",
+        "double rangée de liens",
+        "vert profond",
+        "menthe",
+        "mono",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-472-annuaire-des-metiers",
+      "ordre": 472,
+      "nom": "Annuaire des métiers",
+      "famille": "Intérim et emploi",
+      "secteur": "agence d'intérim par secteurs",
+      "directionArtistique": {
+        "texte": "Très grand titre en capitales condensées (« Trouvez votre mission. ») face à neuf étiquettes carrées de secteurs qui se remplissent de vert citron au survol, sur anthracite ; bande citron dessous pour l'agence, les horaires et la lettre. Percutant, angles droits."
+      },
+      "typographies": {
+        "titre": "Anton",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "intérim",
+        "métiers",
+        "secteurs",
+        "étiquettes",
+        "capitales condensées",
+        "anthracite",
+        "vert citron",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-473-espace-candidat",
+      "ordre": 473,
+      "nom": "Espace candidat",
+      "famille": "Intérim et emploi",
+      "secteur": "cabinet de recrutement, site d'emploi",
+      "directionArtistique": {
+        "texte": "Barre d'accès blanche (nom, « Se connecter » en contour, « Créer mon compte » plein magenta), filet d'encre épais, annuaire à cinq colonnes (candidats, entreprises, ressources, agence et horaires) puis bande noire avec la lettre. Élégance éditoriale en serif, angles droits."
+      },
+      "typographies": {
+        "titre": "Instrument Serif",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "recrutement",
+        "emploi",
+        "barre d'accès",
+        "annuaire",
+        "colonnes",
+        "magenta",
+        "encre",
+        "angles droits"
+      ]
+    }
+  ]
+}

@@ -14,7 +14,7 @@ const skins = new Map(V2.skins.map((s) => [s.key, s]));
 const construit = (e) => e.build(kit(skins.get(e.skin)), {});
 
 describe("Pied v2 : bas de page varié", () => {
-  test("plan unique : 512 combinaisons distinctes pour les numéros 1 à 512, donc jamais deux modèles identiques", () => {
+  test("plan unique : 576 combinaisons distinctes pour les numéros 1 à 576, donc jamais deux modèles identiques", () => {
     const vus = new Set();
     for (let n = 1; n <= Bas.TOTAL; n++) vus.add(JSON.stringify(Bas.planUnique(`ft2-${String(n).padStart(3, "0")}`)));
     assert.equal(vus.size, Bas.TOTAL);

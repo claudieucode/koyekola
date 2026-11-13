@@ -1,0 +1,256 @@
+{
+  "concepts": [
+    {
+      "id": "c-504-comptoir-de-depart",
+      "ordre": 504,
+      "nom": "Comptoir de départ",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "agence de location de voitures et d'utilitaires",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : une grande bande jaune taxi pour réserver (phrase en capitales massives, deux boutons carrés qui s'inversent), puis une bande anthracite avec le nom, une rangée de liens, le contact, les horaires (carré de statut qui respire) et les réseaux. Angles droits."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location de voitures",
+        "utilitaires",
+        "agence",
+        "jaune taxi",
+        "anthracite",
+        "bande d'appel",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-505-categories-de-vehicules",
+      "ordre": 505,
+      "nom": "Catégories de véhicules",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "loueur à plusieurs gammes",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : à gauche le nom de l'agence, une phrase et un bouton ; à droite six rangées à bloc numéroté vert pétrole (citadines, berlines, utilitaires, monospaces, électriques, avec chauffeur) qui glissent et passent à l'orange au survol. Bande vert pétrole pour contact, horaires, lettre et réseaux."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "catégories",
+        "rangées numérotées",
+        "ivoire",
+        "vert pétrole",
+        "orange",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-506-trajet-en-trois-temps",
+      "ordre": 506,
+      "nom": "Trajet en trois temps",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "service de chauffeurs VTC",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : fond noir profond, nom du service en grand, trois étapes numérotées (réserver, confirmer, voyager) séparées par des filets dont le fond s'éclaire au survol, rangée de services sous un filet menthe, puis contact, horaires et réseaux."
+      },
+      "typographies": {
+        "titre": "Sora",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "VTC",
+        "chauffeur",
+        "trois étapes",
+        "noir",
+        "menthe",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-507-agence-et-horaires",
+      "ordre": 507,
+      "nom": "Agence et horaires",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "agence de proximité (location et chauffeurs)",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : trois colonnes égales sur blanc, séparées par de grands filets bleus : identité de l'agence avec contact et horaires, rubriques de liens en rangées dont le fond s'éclaire et le retrait grandit, lettre et réseaux. Barre bleu marine pour les mentions."
+      },
+      "typographies": {
+        "titre": "Red Hat Display",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "agence",
+        "trois colonnes",
+        "filets",
+        "blanc",
+        "bleu marine",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-508-documents-a-prevoir",
+      "ordre": 508,
+      "nom": "Documents à prévoir",
+      "famille": "Location de véhicules et VTC",
+      "secteur": "loueur qui rassure avant la location",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : bandeau rouge sécurité avec la lettre d'information, quatre cartes à coche carrée (permis, pièce d'identité, justificatif, moyen de paiement) qui se soulèvent et rosissent au survol, puis une bande grise compacte avec liens en ligne, contact et horaires."
+      },
+      "typographies": {
+        "titre": "Oswald",
+        "corps": "Lato",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "location",
+        "liste de contrôle",
+        "documents",
+        "rouge",
+        "gris",
+        "cartes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-509-sommaire-du-sejour",
+      "ordre": 509,
+      "nom": "Sommaire du séjour",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping et village de vacances",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : bande d'accueil vert forêt (nom, phrase, bouton ocre), sommaire ivoire en quatre grands numéros 01 à 04 avec leurs listes de liens et filets verticaux (le fond de colonne s'éclaire au survol), bande forêt pour contact, horaires et lettre."
+      },
+      "typographies": {
+        "titre": "Zilla Slab",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "village de vacances",
+        "sommaire numéroté",
+        "vert forêt",
+        "ivoire",
+        "ocre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-510-bienvenue-a-l-accueil",
+      "ordre": 510,
+      "nom": "Bienvenue à l'accueil",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping familial",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : « Bienvenue. » en grand serif sur sable avec nom, horaires de la réception (carré qui respire) et contact ; à droite trois rubriques en lignes étiquetées et la lettre ; bande terre cuite pour réseaux, lien vers l'accueil et mentions."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping familial",
+        "accueil",
+        "sable",
+        "terre cuite",
+        "serif",
+        "horaires",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-511-hebergements-en-cartes",
+      "ordre": 511,
+      "nom": "Hébergements en cartes",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping aux hébergements variés",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : à gauche une grande phrase, à droite quatre cartes plates 2 × 2 de couleurs franches (bleu lac, turquoise, sable, orange) qui se soulèvent au survol ; bande bleu nuit avec lettre, contact, horaires, liens et mentions."
+      },
+      "typographies": {
+        "titre": "Outfit",
+        "corps": "Nunito Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "hébergements",
+        "cartes",
+        "bleu lac",
+        "turquoise",
+        "sable",
+        "orange",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-512-panneau-d-entree",
+      "ordre": 512,
+      "nom": "Panneau d'entrée",
+      "famille": "Campings et villages de vacances",
+      "secteur": "camping et aire de loisirs",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : un panneau routier à fort contour ivoire en deux champs sur fond olive, jaune (accueil en capitales condensées, nom, horaires, contact) et ivoire (listes de liens à flèche qui glisse, lettre) ; barre olive pour réseaux et mentions."
+      },
+      "typographies": {
+        "titre": "Bebas Neue",
+        "corps": "Cabin",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping",
+        "panneau",
+        "signalétique",
+        "olive",
+        "jaune",
+        "capitales condensées",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-513-veillee-au-feu",
+      "ordre": 513,
+      "nom": "Veillée au feu",
+      "famille": "Campings et villages de vacances",
+      "secteur": "village de vacances et camping nature",
+      "directionArtistique": {
+        "texte": "Standard pro animé sans illustration : pied centré sur brun nuit, grande phrase serif « Restons en contact. », lettre au centre, rangée de liens centrés entre deux filets, contact et horaires centrés, réseaux et mentions. Orange feu et crème."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "Albert Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "camping nature",
+        "village de vacances",
+        "centré",
+        "brun nuit",
+        "orange feu",
+        "serif",
+        "angles droits"
+      ]
+    }
+  ]
+}

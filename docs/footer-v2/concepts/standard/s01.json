@@ -1,0 +1,261 @@
+{
+  "meta": {
+    "titre": "10 pieds « standard pro animé » (s01) : pharmacie et dentaire",
+    "date": "2026-11-12",
+    "nombre": 10
+  },
+  "concepts": [
+    {
+      "id": "c-434-comptoir-de-l-officine",
+      "ordre": 434,
+      "nom": "Comptoir de l'officine",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine de quartier : bandeau vert d'appel au conseil avec boutons carrés, puis cinq colonnes bien classées (officine, rayons, informations, contact et horaires, lettre sur fond menthe) et barre de mentions. Liens qui glissent, bouton qui s'inverse, statut qui respire."
+      },
+      "typographies": {
+        "titre": "Source Serif 4",
+        "corps": "Public Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "officine",
+        "cinq colonnes",
+        "bandeau d'appel",
+        "vert",
+        "blanc",
+        "angles droits",
+        "horaires"
+      ]
+    },
+    {
+      "id": "c-435-ordonnance-numerotee",
+      "ordre": 435,
+      "nom": "Ordonnance numérotée",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine qui guide ses clients : sur vert sapin, titre en grand et six rubriques numérotées en deux colonnes dont la rangée s'éclaire et s'indente au survol, puis une bande de contact, horaires et lettre. Menthe sur vert profond, capitales mono."
+      },
+      "typographies": {
+        "titre": "IBM Plex Sans",
+        "corps": "IBM Plex Mono",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "sommaire numéroté",
+        "ordonnance",
+        "vert sapin",
+        "menthe",
+        "mono",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-436-rayons-de-parapharmacie",
+      "ordre": 436,
+      "nom": "Rayons de parapharmacie",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "parapharmacie",
+      "directionArtistique": {
+        "texte": "Pour une parapharmacie en ligne : titre serif sur ivoire, six rayons en cartes carrées réparties en trois piles qui se soulèvent, filet corail qui s'étire, bande corail pour la lettre puis contact, horaires et liens."
+      },
+      "typographies": {
+        "titre": "DM Serif Display",
+        "corps": "DM Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "parapharmacie",
+        "grille de cartes",
+        "rayons",
+        "ivoire",
+        "corail",
+        "boutique",
+        "serif",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-437-horaires-de-l-officine",
+      "ordre": 437,
+      "nom": "Horaires de l'officine",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine dont l'essentiel est l'ouverture : grand panneau pâle latéral (horaires, contact) qui se soulève, bandeau d'appel à contour ciel, trois colonnes de liens et lettre sur bleu nuit. Titres condensés en capitales."
+      },
+      "typographies": {
+        "titre": "Barlow Condensed",
+        "corps": "Barlow",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "horaires",
+        "barre latérale",
+        "bandeau d'appel",
+        "bleu nuit",
+        "capitales",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-438-le-conseil-du-pharmacien",
+      "ordre": 438,
+      "nom": "Le conseil du pharmacien",
+      "famille": "Pharmacie et parapharmacie",
+      "secteur": "pharmacie",
+      "directionArtistique": {
+        "texte": "Pour une officine qui répond aux questions : bande sarcelle avec grand titre serif et quatre questions fréquentes qui glissent, puis bande blanche (liens, contact, horaires) et encart sable pour la lettre."
+      },
+      "typographies": {
+        "titre": "Newsreader",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "pharmacie",
+        "questions fréquentes",
+        "sarcelle",
+        "serif",
+        "conseil",
+        "sable",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-439-sourire-clair",
+      "ordre": 439,
+      "nom": "Sourire clair",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet dentaire de quartier : pied entièrement centré, nom, ligne de liens, grand bouton de rendez-vous qui s'inverse, trois blocs centrés séparés par des filets (adresse, horaires, lettre) et barre bleue de mentions."
+      },
+      "typographies": {
+        "titre": "Jost",
+        "corps": "Mulish",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "cabinet dentaire",
+        "centré",
+        "rendez-vous",
+        "bleu glace",
+        "sobre",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-440-plan-de-soins",
+      "ordre": 440,
+      "nom": "Plan de soins",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet qui explique son parcours : titre et bouton sur marine, quatre étapes numérotées en cellules à filets qui se soulèvent et dont la barre s'allonge, puis quatre colonnes blanches (cabinet et lettre, liens, contact, horaires)."
+      },
+      "typographies": {
+        "titre": "Manrope",
+        "corps": "Source Sans 3",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "étapes numérotées",
+        "parcours de soins",
+        "marine",
+        "cyan",
+        "quatre colonnes",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-441-cabinet-en-trois-temps",
+      "ordre": 441,
+      "nom": "Cabinet en trois temps",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "centre dentaire",
+      "directionArtistique": {
+        "texte": "Pour un centre dentaire : trois bandes d'une seule rangée aux fonds différents, blanc (nom en capitales et liens séparés par des barres), menthe (contact, horaires, rendez-vous), vert profond (lettre et mentions)."
+      },
+      "typographies": {
+        "titre": "Fraunces",
+        "corps": "Work Sans",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "centre dentaire",
+        "trois bandes",
+        "menthe",
+        "vert profond",
+        "une rangée",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-442-urgence-dentaire",
+      "ordre": 442,
+      "nom": "Urgence dentaire",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "cabinet dentaire",
+      "directionArtistique": {
+        "texte": "Pour un cabinet qui accueille les urgences : bandeau rouge brique d'appel avec bouton blanc qui s'inverse, trois colonnes de liens et lettre sur anthracite, carte blanche de contact et d'horaires qui se soulève."
+      },
+      "typographies": {
+        "titre": "Archivo",
+        "corps": "Karla",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "dentiste",
+        "urgence",
+        "bandeau d'appel",
+        "rouge brique",
+        "anthracite",
+        "carte",
+        "angles droits"
+      ]
+    },
+    {
+      "id": "c-443-alignement-lavande",
+      "ordre": 443,
+      "nom": "Alignement lavande",
+      "famille": "Cabinets dentaires et orthodontie",
+      "secteur": "orthodontie",
+      "directionArtistique": {
+        "texte": "Pour un cabinet d'orthodontie : nom, grande phrase en capitales et bouton sur violet profond, quatre cartes lavande bord à bord dont le filet s'allonge et qui se soulèvent, puis contact, horaires et lettre sur violet plus sombre."
+      },
+      "typographies": {
+        "titre": "Young Serif",
+        "corps": "Hanken Grotesk",
+        "accent": null,
+        "source": "Bibliothèque locale de polices"
+      },
+      "tags": [
+        "orthodontie",
+        "cartes",
+        "capitales",
+        "violet profond",
+        "lavande",
+        "monochrome",
+        "angles droits"
+      ]
+    }
+  ]
+}
