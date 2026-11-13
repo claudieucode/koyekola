@@ -463,6 +463,9 @@
         var from = dlg.getAttribute("data-kw-auto-from"), until = dlg.getAttribute("data-kw-auto-until");
         if ((from && iso < from) || (until && iso > until)) return; // hors de la période d'affichage
         if (views < minViews || (source && source !== origin)) return; // règles d'affichage non remplies
+        var dev = dlg.getAttribute("data-kw-auto-device"), vis = dlg.getAttribute("data-kw-auto-visitor");
+        if (dev && (window.matchMedia("(max-width: 767px)").matches ? "mobile" : "desktop") !== dev) return; // ciblage par appareil
+        if (vis && (vis === "new") === returning) return; // ciblage : nouveau visiteur ou visiteur déjà venu
         done = true; mark(); show();
         var secs = Number(dlg.getAttribute("data-kw-auto-close")) || 0;
         if (secs) setTimeout(function () { if (dlg.open) dlg.close(); }, secs * 1000);
@@ -471,6 +474,7 @@
       // Pages vues pendant la visite (compteur de session, une seule fois par page chargée) et provenance du visiteur
       var minViews = Number(dlg.getAttribute("data-kw-auto-views")) || 0, source = dlg.getAttribute("data-kw-auto-source") || "", views = 1, origin = "direct";
       try { views = Number(window.sessionStorage.getItem("kw-views") || 0); if (!window.__kwViewed) { window.__kwViewed = true; views += 1; window.sessionStorage.setItem("kw-views", String(views)); } } catch (e) { /* stockage refusé */ }
+      var returning = false; try { returning = Boolean(window.localStorage.getItem("kw-visited")); window.localStorage.setItem("kw-visited", "1"); } catch (e) { /* stockage refusé : visiteur considéré comme nouveau */ }
       var ref = document.referrer, host = ""; try { host = ref ? new URL(ref).hostname.replace(/^www\./, "") : ""; } catch (e) { host = ""; }
       if (host && host !== location.hostname.replace(/^www\./, "")) origin = /(^|\.)(google|bing|duckduckgo|qwant|ecosia|yahoo|yandex|brave)\./.test(host) ? "search" : /(facebook|instagram|twitter|x\.com|t\.co|linkedin|tiktok|youtube|pinterest|reddit|whatsapp|snapchat)/.test(host) ? "social" : "other";
       else if (host) origin = "internal";

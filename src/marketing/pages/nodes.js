@@ -1663,6 +1663,11 @@ function modalAuto(p) {
   if (views) out.minViews = views;
   const source = oneOf(...Object.keys(MODAL_SOURCES))(p.source);
   if (source) out.source = source;
+  // Ciblage : appareil (ordinateur / mobile, d'après la largeur de l'écran) et visiteur nouveau ou déjà venu (mémorisé dans le navigateur du visiteur)
+  const device = oneOf("desktop", "mobile")(p.device);
+  if (device) out.device = device;
+  const visitor = oneOf("new", "returning")(p.visitor);
+  if (visitor) out.visitor = visitor;
   // Période d'affichage (dates incluses) et bouton « Ne plus afficher »
   const day = (v) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(v || "")); if (!m) return null; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? String(v) : null; };
   const from = day(p.startDate), until = day(p.endDate);
