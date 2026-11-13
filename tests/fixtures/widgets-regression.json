@@ -514,6 +514,14 @@
   "json": "815d35c7b3c2370da7bff70a3b625c6677c40162",
   "css": "48b72932269d0b9ca5388c2ed3682f0890761998"
  },
+ "shopaccountpage": {
+  "json": "227a2b781812c8e2cbfd7c65c4aa3c431c7ce409",
+  "css": "b473687c339e1dcc6bc915f383e2ce493f90dba0"
+ },
+ "shopbreadcrumb": {
+  "json": "6eb435af802c9bbfb08908b335cc41f21a36a3bb",
+  "css": "c0c0da89a6cadd6fadd7e096b3636e6c08669c43"
+ },
  "shopbuy": {
   "json": "0f4614fa09e8726bdddbdb4bc8b6f2ec1891adba",
   "css": "b1284c1aa45ede131148c427917f9857b62daa8c"
@@ -522,9 +530,21 @@
   "json": "400a61b4067ed43b0729b7fafd5e4ce47a734b2f",
   "css": "8edf5a18caa9e4a50a875b9c0ef1577bad119770"
  },
+ "shopcartpage": {
+  "json": "72567c7788fdf5bcc44124a35ea3df7debdebe6f",
+  "css": "8edf5a18caa9e4a50a875b9c0ef1577bad119770"
+ },
  "shopcategories": {
   "json": "ead100af108733ff7dea4750ee3072a983f5dec4",
   "css": "65f4715c7153d429b4f34834c110d44b4fb37d00"
+ },
+ "shopcheckoutpage": {
+  "json": "8ee9dbaa48ae8570d3f692d0d3b598bdb3efce41",
+  "css": "eb7e324ec15139fcbfde3e0cb7c90e081dd73c36"
+ },
+ "shopdescription": {
+  "json": "21f5e4d39443cd46e3857b2d0b5206f4980c2fb9",
+  "css": "7653c616753dca514f020e556b56a3189053dd23"
  },
  "shopfilters": {
   "json": "095defc4956ce0a7b4ce6b2530dd5a85fe3425ed",
@@ -542,6 +562,26 @@
   "json": "b6da5c14726c1b6dd47c36e5ecfc8b55257b29a5",
   "css": "cfbbde2cf98e5b9a5d7762d029f233f24d854697"
  },
+ "shopmeta": {
+  "json": "6ca3545292c37d7880f4b235f4c8dda2772a9839",
+  "css": "be3e4ef2a9d8d7d5adedbd4682baf91b43240c81"
+ },
+ "shopminicart": {
+  "json": "d0242f6853d490a38c7193900c0bf28e6be7b254",
+  "css": "b53f090fa5788c42e8d87fba619833a2738151b6"
+ },
+ "shoporderpage": {
+  "json": "76f2f370b3f524d9d13b64d2216fc38186456d2a",
+  "css": "61fa5440fe3761c08ecfbd2910a4bb7df4a7684a"
+ },
+ "shopprice": {
+  "json": "09405e5c86d2d5bd3a442ebf8b95f96622335b1e",
+  "css": "95ecfd50f58a88702f3905ab2f20aa8b0f572d13"
+ },
+ "shoprating": {
+  "json": "484ef6a64480b569d846593d72d2bd55527912a9",
+  "css": "87c70eb4ab86d2a4ddd489214b15cf4aa6fe84ad"
+ },
  "shopreviews": {
   "json": "7289bcddd0a31fb6e98f0ce5676648ac43f51a9e",
   "css": "f24acb3127af953b4536eb63b05d5b1f48fa0a77"
@@ -553,6 +593,14 @@
  "shopspecs": {
   "json": "74776fe7b85fdf38ebf50ef33bfa8232e7e190fb",
   "css": "5e39843e07a32cd1fa75847a9d35d2661a0d37ac"
+ },
+ "shopstock": {
+  "json": "4d03665e70b7143a234396f06971a04d1e502c26",
+  "css": "43c69f464bc5e697775f4ec0076aff83fe14477d"
+ },
+ "shoptitle": {
+  "json": "1ec69ff7b9240e80d009d7799cdcba2371931458",
+  "css": "3e0bcb62bf4e68204e93511f855d03b06e1f83b5"
  },
  "sidebar": {
   "json": "a0f1d85821776bcb32befe5e0660920c7e97e5d0",

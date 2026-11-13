@@ -1,0 +1,8 @@
+<%# Fil d'Ariane du produit (widgets/shop.js) %>
+<% if (d && d.closed || !d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Fil d'Ariane : s'affiche sur une fiche produit publiée.</p></section><% } %>
+<% } else { const sep = p.separator || "›"; %><nav class="<%= cls %> kw-shcrumb" aria-label="Fil d'Ariane"<%- attrs %>><ol>
+  <% if (p.showHome) { %><li><a href="/">Accueil</a></li><% } %>
+  <li><a href="/boutique">Boutique</a></li>
+  <% if (d.category) { %><li><a href="/boutique/categorie/<%= encodeURIComponent(d.category.slug) %>"><%= d.category.name %></a></li><% } %>
+  <li><span aria-current="page"><%= d.name %></span></li>
+</ol><style>.kw-shcrumb ol{display:flex;flex-wrap:wrap;gap:6px;list-style:none;margin:0;padding:0}.kw-shcrumb li+li::before{content:"<%= String(sep).replace(/[^\u0020-\u007e\u00a0-\uffff]/g, "").replace(/["\\]/g, "") %>";margin-right:6px;opacity:.6}</style></nav><% } %>

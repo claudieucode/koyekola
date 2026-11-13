@@ -1,0 +1,4 @@
+<%# Note du produit (widgets/shop.js) : données réelles uniquement %>
+<% if (d && d.closed || !d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Note : s'affiche sur une fiche produit publiée.</p></section><% } %>
+<% } else if (!d.count) { %><% if (p.noneLabel) { %><p class="<%= cls %> kw-shrating kw-shrating-none"<%- attrs %>><%= p.noneLabel %></p><% } %>
+<% } else { const full = Math.round(d.average); %><p class="<%= cls %> kw-shrating"<%- attrs %>><span class="kw-shrating-stars" role="img" aria-label="Note moyenne : <%= String(d.average).replace(".", ",") %> sur 5"><% for (let i = 1; i <= 5; i++) { %><span aria-hidden="true"><%= i <= full ? "★" : "☆" %></span><% } %></span> <strong><%= String(d.average).replace(".", ",") %></strong><% if (p.showCount) { %> <small>(<%= d.count %> avis)</small><% } %></p><% } %>

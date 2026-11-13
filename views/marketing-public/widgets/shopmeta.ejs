@@ -1,0 +1,8 @@
+<%# Références du produit (widgets/shop.js) %>
+<% if (d && d.closed || !d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Références : s'affichent sur une fiche produit publiée.</p></section><% } %>
+<% } else if (!d.sku && !(d.categories || []).length && !(d.tags || []).length) { %>
+<% } else { %><div class="<%= cls %> kw-shmeta"<%- attrs %>>
+  <% if (d.sku) { %><p>Référence : <strong><%= d.sku %></strong></p><% } %>
+  <% if ((d.categories || []).length) { %><p>Catégories : <% d.categories.forEach((c, i) => { %><%= i ? ", " : "" %><a href="/boutique/categorie/<%= encodeURIComponent(c.slug) %>"><%= c.name %></a><% }) %></p><% } %>
+  <% if ((d.tags || []).length) { %><p>Étiquettes : <% d.tags.forEach((x, i) => { %><%= i ? ", " : "" %><a href="/boutique/etiquette/<%= encodeURIComponent(x) %>"><%= x %></a><% }) %></p><% } %>
+</div><% } %>

@@ -1,0 +1,3 @@
+<%# Titre du produit (widgets/shop.js) %>
+<% if (d && d.closed || !d || d.product === null) { %><% if (isBuilder) { %><section class="<%= cls %>"<%- attrs %>><p class="kw-pb-msg">Titre du produit : s'affiche sur une fiche produit publiée.</p></section><% } %>
+<% } else { const tag = ["h1","h2","h3","p"].includes(p.tag) ? p.tag : "h1"; %><<%= tag %> class="<%= cls %> kw-shtitle"<%- attrs %>><%= d.name %></<%= tag %>><% } %>
