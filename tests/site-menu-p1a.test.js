@@ -52,10 +52,10 @@ before(async () => {
 after(() => srv.stop());
 
 describe("1 — le menu d'un site est la projection du registre", () => {
-  test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils (sans Extensions, fonction centrale)", async () => {
+  test("les groupes du registre, dans l'ordre, plus « Marketing du site » avant Outils (Extensions comprise, pour l'équipe)", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
     const labels = topLabels(html);
-    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
+    const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
     assert.equal(nav.SECTIONS.length, 16, "le registre compte 16 groupes (dont « Mes sites », gestionnaire central, « Extensions », fonction centrale, et « Formation », menu de l'extension LMS absent d'un site où elle n'est pas activée)");
   });

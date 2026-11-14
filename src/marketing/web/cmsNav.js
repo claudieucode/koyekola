@@ -64,11 +64,11 @@ const SECTIONS = [
   },
   // Extensions : modules activables PAR SITE (registre fermé siteModules.js). L'activation est réservée à l'équipe de l'organisation ; elle s'ajoute aux permissions et à l'isolation par site.
   { key: "extensions", label: "Extensions", icon: "plug", items: [
-    leaf("extensions", "Toutes les extensions", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true }),
-    leaf("extensions/activees", "Extensions activées", `${BASE}/extensions/activees`, { permission: "sites.modules", teamOnly: true }),
-    leaf("extensions/desactivees", "Extensions désactivées", `${BASE}/extensions/desactivees`, { permission: "sites.modules", teamOnly: true }),
-    leaf("extensions/gestion", "Gestion des extensions", `${BASE}/extensions/gestion`, { permission: "sites.modules", teamOnly: true }),
-    leaf("extensions/historique", "Historique et activité", `${BASE}/extensions/historique`, { permission: "sites.modules", teamOnly: true }),
+    leaf("extensions", "Toutes les extensions", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions" }),
+    leaf("extensions/activees", "Extensions activées", `${BASE}/extensions/activees`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/activees" }),
+    leaf("extensions/desactivees", "Extensions désactivées", `${BASE}/extensions/desactivees`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/desactivees" }),
+    leaf("extensions/gestion", "Gestion des extensions", `${BASE}/extensions/gestion`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/gestion" }),
+    leaf("extensions/historique", "Historique et activité", `${BASE}/extensions/historique`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/historique" }),
   ] },
   {
     key: "utilisateurs", label: "Comptes", icon: "users", items: [
@@ -401,8 +401,7 @@ const ABILITY = {
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
   "commentaires/indesirables": { mode: "open", module: "commentaires", sub: "indesirables" },
   "commentaires/corbeille": { mode: "open", module: "commentaires", sub: "corbeille" },
-  extensions: { mode: "central" }, // gestion des extensions : équipe de l'organisation, depuis l'administration centrale (choix du site dans l'écran ; écran historique par site : /sites/N/modules)
-  "extensions/activees": { mode: "central" }, "extensions/desactivees": { mode: "central" }, "extensions/gestion": { mode: "central" }, "extensions/historique": { mode: "central" },
+  // Extensions : présentes dans le menu de CHAQUE site (équipe seulement, voir projectItem : siteSpaceHref) ; l'écran du site ne montre et ne change que CE site
   "outils/sauvegardes": { mode: "central" },
   "outils/systeme": { mode: "central" },
   "outils/logs": { mode: "central" },
@@ -437,6 +436,8 @@ function marketingGroup(space) {
 function projectItem(item, group, space) {
   const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
   if (item.external) return { ...base, href: item.href, status: "live", external: true }; // entrée d'extension qui ouvre son propre espace (ex. Formation → /formateur)
+  // Entrée présente dans l'espace de chaque site, à l'adresse de CE site (ex. Extensions → /sites/N/extensions) ; réservée à l'équipe (jamais proposée à un accès limité à un site)
+  if (item.siteSpaceHref && !space.principal) return item.teamOnly && space.limited ? null : { ...base, href: `${space.base}${item.siteSpaceHref}`, status: "live" };
   // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
   if (space.principal && item.key === "apparence/theme-builder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };

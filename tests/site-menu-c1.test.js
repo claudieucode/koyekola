@@ -47,7 +47,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     assert.ok(site.length >= 13 && main.length >= 13); // 13 groupes depuis que « Navigation » est devenu Apparence → Menus
-    const strip = (labels) => labels.filter((l) => !["# Extensions", "Toutes les extensions", "Extensions activées", "Extensions désactivées", "Gestion des extensions", "Historique et activité", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
+    const strip = (labels) => labels.filter((l) => !["Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
     assert.deepEqual(flatLabels(site), strip(flatLabels(main))); // Theme Builder : présent dans le menu du principal comme dans celui d'un site créé
   });
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {

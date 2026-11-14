@@ -17,13 +17,15 @@ describe("registre : ordre des rubriques et absence de doublon", () => {
     const ik = cmsNav.ALL.map((i) => i.key); assert.equal(new Set(ik).size, ik.length);
     const hrefs = cmsNav.ALL.map((i) => i.href); assert.equal(new Set(hrefs).size, hrefs.length);
   });
-  test("Extensions est une fonction centrale réservée à l'équipe : présente dans le menu du principal, absente du menu d'un site", () => {
+  test("Extensions est réservée à l'équipe (permission sites.modules) : présente dans le menu du principal ET de chaque site, jamais proposée à un accès limité à un site", () => {
     const e = cmsNav.itemOf("extensions");
     assert.equal(e.teamOnly, true); assert.equal(e.permission, "sites.modules");
-    assert.deepEqual(cmsNav.ABILITY.extensions, { mode: "central" }, "fonction centrale : jamais ouverte dans un site");
     const keysOf = (space) => cmsNav.projectSections(space).flatMap((s) => s.items.map((i) => i.key));
     assert.ok(keysOf({ principal: true, base: "/p" }).includes("extensions"), "Extensions dans le menu du principal");
-    assert.ok(!keysOf({ siteId: 4, principal: false, base: "/s/4", name: "S" }).includes("extensions"), "pas d'Extensions dans l'espace d'un site");
+    assert.ok(keysOf({ siteId: 4, principal: false, base: "/s/4", name: "S" }).includes("extensions"), "Extensions dans l'espace de chaque site (équipe)");
+    assert.ok(!keysOf({ siteId: 4, principal: false, base: "/s/4", name: "S", limited: true }).includes("extensions"), "jamais pour un accès limité à un site");
+    const item = cmsNav.projectSections({ siteId: 4, principal: false, base: "/s/4", name: "S" }).flatMap((x) => x.items).find((i) => i.key === "extensions/gestion");
+    assert.equal(item.href, "/s/4/extensions/gestion", "l'adresse est celle de CE site");
     assert.deepEqual(cmsNav.buildCmsNav({ can: () => true, active: "sites" }).sections.map((s) => s.key), ["sites"], "le menu central reste « Mes sites » seulement");
   });
   test("« Marketing du site » vient juste avant Outils, dans le menu du principal comme dans celui d'un site", () => {
@@ -80,7 +82,7 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
   });
   test("un site créé n'a pas Extensions dans son menu ; le cadre d'un site n'est jamais plaqué sur l'écran central", async () => {
     const dash = await boss.get(`/marketing/site-web/sites/${A}/tableau-de-bord`); assert.equal(dash.status, 200);
-    assert.doesNotMatch(dash.text, /site-web\/extensions/);
+    assert.match(dash.text, new RegExp(`/sites/${A}/extensions`), "le menu du site propose Extensions (équipe)");
     const ext = (await boss.get(EXT)).text; assert.match(ext, /<li><a href="\/marketing\/site-web\/principal\/tableau-de-bord">Site principal<\/a><\/li>\s*<li>Extensions<\/li>\s*<li aria-current="page">Toutes les extensions<\/li>/, "fil d'Ariane : Site principal › Extensions › Toutes les extensions"); assert.doesNotMatch(ext, new RegExp(`/sites/${A}/tableau-de-bord`.replace(/\//g, "\\/") + '"[^>]*aria-current'), "aucun site créé n'est l'espace courant");
   });
   test("pied du panneau : « Retour au Marketing » puis commande « Replier le menu » accessible (bouton, libellé, état)", async () => {

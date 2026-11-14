@@ -15,8 +15,8 @@ const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparen
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
   "formation", "boutique", "boutique/commandes", "boutique/clients", "boutique/reglages", // Programme 20.5 : boutique du site (écrans de l'espace, données de CE site)
   "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "seo/liens-internes", "seo/positions", "seo/connexions", "seo/transfert", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
-const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
-const CENTRAL = ["sites", "extensions", "extensions/activees", "extensions/desactivees", "extensions/gestion", "extensions/historique", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
+const OUVERT_EQUIPE = ["extensions", "extensions/activees", "extensions/desactivees", "extensions/gestion", "extensions/historique"]; // Extensions : dans chaque site, équipe seulement // aucune entrée réservée à l'équipe pour l'instant
+const CENTRAL = ["sites", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   
   // SEO : les neuf rubriques sont ouvertes (isolation démontrée, seo-par-site-espace et seo-site-outils)
@@ -45,7 +45,7 @@ describe("inventaire : le menu réel = la table", () => {
     for (const i of it.filter((x) => !x.disabled && x.key !== "sites")) if (i.key === "apparence/personnaliser") assert.equal(i.href, `${nav.BASE}/personnaliser?site=5`); else assert.ok(i.href.startsWith(`${nav.BASE}/sites/5/`), `${i.key} : ${i.href}`);
   });
   test("menu d'un accès limité : mêmes entrées ouvertes que l'équipe (création d'article comprise : l'éditeur est ouvert aux accès limités depuis R6) — seules les permissions du rôle filtrent", () => {
-    assert.deepEqual(items(true).map((i) => i.key), items(false).map((i) => i.key));
+    assert.deepEqual(items(true).map((i) => i.key), items(false).map((i) => i.key).filter((k) => !OUVERT_EQUIPE.includes(k))); // sauf les entrées réservées à l'équipe (Extensions)
   });
 });
 
