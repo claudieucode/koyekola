@@ -13,11 +13,11 @@ before(async () => {
   const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${site}/reglages.json`)).text);
   await boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${H}` } } } });
   base = `/marketing/site-web/sites/${site}/boutique`;
+  await boss.post(`/marketing/site-web/sites/${site}/modules/commerce`, { etat: "activer" });
   await boss.post(`${base}/livraison/zones`, { name: "France", countries: "FR" });
   const zid = one("SELECT id FROM mk_shop_shipping_zones WHERE site_id = ?", site).id;
   await boss.post(`${base}/livraison/zones/${zid}/methodes`, { name: "Colis", kind: "flat", cost: "6,00" });
   await boss.post(`${base}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "AD", manual_instructions: "Virement" });
-  await boss.post(`/marketing/site-web/sites/${site}/modules/commerce`, { etat: "activer" });
   await boss.post(`${base}/produits`, { name: "Lampe", type: "simple", status: "published", price: "50,00", manage_stock: "1", stock_qty: "20", requires_shipping: "1", sku: "LAMPE" });
   pid = one("SELECT id FROM mk_shop_products WHERE site_id = ?", site).id;
 });

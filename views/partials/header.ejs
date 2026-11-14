@@ -14,6 +14,7 @@
   <link rel="preload" href="/fonts/figtree-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
   <script>/* barre de navigation : à gauche par défaut ; « bottom » mémorisé (bouton de position) = barre en bas sur grand écran (CSS ≥ 1280 px, pointeur précis) */ try { if (localStorage.getItem("kbDock") === "bottom") document.documentElement.setAttribute("data-kb-dock", "bottom"); } catch (e) {}</script>
+  <% if (typeof dash !== "undefined" && dash) { %><link rel="expect" href="#main" blocking="render"><% } %>
   <link rel="stylesheet" href="<%= asset('/css/style.css') %>">
   <% if (!(typeof dash !== "undefined" && dash)) { %><link rel="stylesheet" href="<%= asset('/css/kola-v3.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-art.css') %>"><link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>"><% } /* design system v3 : site public et espace élève (l'espace formateur garde son habillage dashboard) */ %>
   <% const ap = typeof appearance === "function" ? appearance() : null; %><% if (ap && ap.css) { %><style id="kw-appearance"><%- ap.css %></style><% } %>

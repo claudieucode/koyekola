@@ -21,8 +21,8 @@ before(async () => {
   const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${siteId}/reglages.json`)).text);
   assert.equal((await boss.request(`/marketing/site-web/sites/${siteId}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${HOST}` } } } })).status, 200);
   SA = `/marketing/site-web/sites/${siteId}/boutique`;
-  assert.equal((await boss.post(`${SA}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "RDV", notify_email: "vendeur@example.test", manual_instructions: "Virement" })).status, 302);
   assert.equal((await boss.post(`/marketing/site-web/sites/${siteId}/modules/commerce`, { etat: "activer" })).status, 302);
+  assert.equal((await boss.post(`${SA}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "RDV", notify_email: "vendeur@example.test", manual_instructions: "Virement" })).status, 302);
   orgId = one("SELECT organization_id AS o FROM mk_sites WHERE id = ?", siteId).o;
   DATE = plus(3); FAR = plus(200); PAST = plus(-2);
 });

@@ -10,7 +10,20 @@
   - formulaires en pile pleine largeur → grille adaptative ; champs courts jamais étirés ;
   - onglets de la boutique : défilement horizontal maîtrisé, onglet actif visible, groupes séparés.
 */
-.mk-shop { --bq-ctl: var(--kx-ctl-h, 36px); --bq-gap: 16px; }
+/* Échelle d'espacement de la charte (4 · 8 · 12 · 16 · 24 · 40) et rôles : tout espacement de la boutique passe par ces jetons. */
+.mk-shop {
+  --bq-ctl: var(--kx-ctl-h, 36px);
+  --bq-s1: 4px; --bq-s2: 8px; --bq-s3: 12px; --bq-s4: 16px; --bq-s5: 24px; --bq-s6: 40px;
+  --bq-section-gap: var(--bq-s5);    /* entre deux cartes / sections */
+  --bq-card-pad: var(--bq-s5);       /* intérieur d'une carte */
+  --bq-title-gap: var(--bq-s2);      /* titre → description / contenu */
+  --bq-block-gap: var(--bq-s4);      /* entre blocs d'une même carte */
+  --bq-field-gap-y: var(--bq-s4);    /* entre deux rangées de champs */
+  --bq-field-gap-x: var(--bq-s5);    /* entre deux champs d'une rangée */
+  --bq-label-gap: 6px;               /* étiquette → contrôle */
+  --bq-inline-gap: var(--bq-s3);     /* entre contrôles et boutons d'une rangée */
+  --bq-gap: var(--bq-section-gap);
+}
 
 /* ---------- Navigation secondaire : barre latérale verticale de la boutique ----------
    Trois colonnes : menu principal du CMS (inchangé) · cette barre · contenu. La zone de contenu (<main class="mk-content">) devient une grille à deux colonnes ;
@@ -63,6 +76,10 @@
 /* Filtres d'une liste (Tous / À relire / Publiés…) */
 .mk-shop .bq-subtabs { display: flex; flex-wrap: wrap; margin: 0 0 14px; padding: 0; background: none; }
 
+/* ---------- En-tête de page ---------- */
+.mk-shop .mk-content > .mk-head { margin-top: var(--bq-s2); margin-bottom: var(--bq-s5); }
+.mk-shop .mk-content > .mk-head .mk-head-sub { margin-top: var(--bq-s1); }
+
 /* ---------- Avis d'état (module, ouverture) : une ligne, discrets ---------- */
 .mk-shop .bq-notices { display: grid; gap: 8px; margin: 0 0 16px; }
 .mk-shop .bq-notice { display: flex; align-items: center; gap: 10px; margin: 0; padding: 9px 14px; font-size: .875rem; line-height: 1.45; }
@@ -70,11 +87,16 @@
 .mk-shop .mk-callout-warn.bq-notice svg, .mk-shop .mk-callout-warn.bq-notice .icon { color: var(--k-warn-fg, var(--warning-text)); }
 
 /* ---------- Panneaux : filet 1 px, rayon 12, pas d'ombre ---------- */
-.mk-shop .mk-panel { display: block; margin: 0 0 var(--bq-gap); padding: 20px 24px; background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); box-shadow: none; }
-.mk-shop .mk-panel > h2:first-child { margin: 0 0 6px; font-size: 1.05rem; font-weight: 650; color: var(--mk-text); }
+.mk-shop .mk-panel { display: block; margin: 0 0 var(--bq-section-gap); padding: var(--bq-card-pad); background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); box-shadow: none; }
+
+.mk-shop .mk-panel > h2:first-child { margin: 0 0 var(--bq-title-gap); font-size: 1.05rem; font-weight: 650; color: var(--mk-text); }
 .mk-shop .mk-panel > h2:first-child small { font-size: .8rem; font-weight: 600; color: var(--muted); }
-.mk-shop .mk-panel .field-hint, .mk-shop .mk-panel .mk-sub { max-width: 62ch; margin: 0 0 14px; color: var(--muted); font-size: .84rem; line-height: 1.5; }
-.mk-shop .mk-panel h3 { margin: 18px 0 10px; font-size: .95rem; font-weight: 650; color: var(--mk-text); }
+.mk-shop .mk-panel .field-hint, .mk-shop .mk-panel .mk-sub { max-width: 62ch; margin: 0 0 var(--bq-block-gap); color: var(--muted); font-size: .84rem; line-height: 1.5; }
+.mk-shop .mk-panel h3 { margin: var(--bq-s5) 0 var(--bq-s3); font-size: .95rem; font-weight: 650; color: var(--mk-text); }
+
+/* Dernier élément d'une carte : pas de marge basse (le padding de la carte suffit) */
+.mk-shop .mk-panel > :last-child:last-child { margin-bottom: 0; }
+.mk-shop .mk-panel > form + .field-hint, .mk-shop .mk-panel > form + .mk-sub { margin-top: var(--bq-block-gap); }
 
 /* ---------- Contrôles : une échelle (36 px), rayon 8 ---------- */
 .mk-shop :is(input:not([type]), input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="time"], input[type="url"], input[type="tel"], input[type="search"], input[type="password"], input[type="datetime-local"], select, textarea) {
@@ -89,7 +111,7 @@
 .mk-shop input[type="checkbox"], .mk-shop input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
 .mk-shop :is(input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]) { font-variant-numeric: tabular-nums; }
 .mk-shop label { font-size: .82rem; font-weight: 650; color: var(--mk-text); }
-.mk-body.mk-shop .field-group { display: flex; flex-direction: column; gap: 5px; margin: 0; min-width: 0; }
+.mk-body.mk-shop .field-group { display: flex; flex-direction: column; gap: var(--bq-label-gap); margin: 0; min-width: 0; }
 .mk-shop .field-group > :is(input, select, textarea) { flex: 0 0 auto; width: 100%; max-width: none; }
 .mk-shop .field-group > .field-hint { margin: 0; font-size: .78rem; }
 /* Case à cocher : ligne cliquable */
@@ -102,11 +124,10 @@
 .mk-shop fieldset:has(> label > input[type="checkbox"]) > legend { flex: 0 0 100%; }
 
 /* ---------- Formulaires : grille adaptative ---------- */
-.mk-shop form.mk-form:not(.mk-inline-form) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; max-width: none; }
-.mk-shop form.mk-form.mk-panel { align-items: start; }
+.mk-shop form.mk-form:not(.mk-inline-form) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--bq-field-gap-y) var(--bq-field-gap-x); align-items: start; max-width: none; }
 .mk-shop form.mk-form:not(.mk-inline-form) > :is(h2, h3, h4, fieldset, .field-hint, .mk-sub, .mk-callout, p, .bq-wide, .bq-actions, .mk-list, .mk-table-wrap) { grid-column: 1 / -1; }
 .mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> textarea), .mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> select[multiple]), .mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> label > input[type="checkbox"]) { grid-column: 1 / -1; }
-.mk-shop form.mk-form:not(.mk-inline-form) > :is(button, .btn) { justify-self: start; }
+.mk-shop form.mk-form:not(.mk-inline-form) > :is(button, .btn) { justify-self: start; align-self: end; }
 .mk-shop .bq-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--kb-rule, var(--mk-border)); }
 
 /* Longs formulaires (fiche produit…) : chaque section est séparée par un filet */
@@ -118,7 +139,7 @@
 .mk-shop form.mk-form > label:has(> textarea), .mk-shop form.mk-form > label:has(> input[type="checkbox"]) { grid-column: 1 / -1; }
 .mk-shop .bq-zone > form.mk-form + form.mk-inline-form { margin-top: 10px; }
 /* Plusieurs champs dans un même groupe (dimensions L / l / h) : côte à côte sous une seule étiquette */
-.mk-shop .field-group:has(> input ~ input:not([type="hidden"])) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 8px; }
+.mk-shop .field-group:has(> input ~ input:not([type="hidden"])) { grid-column: span 2; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 8px; }
 .mk-shop .field-group:has(> input ~ input:not([type="hidden"])) > label, .mk-shop .field-group:has(> input ~ input:not([type="hidden"])) > .field-hint { grid-column: 1 / -1; }
 /* Fieldsets : leurs champs se rangent en grille ; les lignes « article + quantité » restent sur une ligne */
 .mk-shop fieldset:has(> .field-group:not(.mk-inline-form)) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; }
@@ -128,15 +149,21 @@
 .mk-shop .field-group.mk-inline-form { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: center; }
 .mk-shop .field-group.mk-inline-form :is(select, input:not([type="checkbox"]):not([type="radio"])) { width: 100%; height: var(--bq-ctl); }
 
+/* Grilles à nombre de colonnes choisi selon le contenu (évite une ligne orpheline) : 1 = liste, 2 = paires, 4 = quatre champs courts */
+.mk-shop .bq-cols-1 { grid-template-columns: minmax(0, 1fr) !important; }
+.mk-shop .bq-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.mk-shop .bq-cols-4 { grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)) !important; }
+@media (max-width: 560px) { .mk-shop .bq-cols-2 { grid-template-columns: minmax(0, 1fr) !important; } }
+
 /* Groupes de champs d'une carte de réglages (formulaire unique à plusieurs cartes) */
 .mk-shop .bq-settings { display: block; }
-.mk-shop .bq-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; }
+.mk-shop .bq-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--bq-field-gap-y) var(--bq-field-gap-x); align-items: start; }
 .mk-shop .bq-fields > .bq-wide, .mk-shop .bq-wide { grid-column: 1 / -1; }
 .mk-shop .bq-fields.bq-checks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); align-items: start; }
 .mk-shop .bq-fields > .field-group:has(> .field-hint) > label:has(> input) { margin-bottom: 0; }
 .mk-shop .bq-settings .field-group.bq-wide { margin-top: 14px; }
 .mk-shop .bq-settings .bq-fields .field-group.bq-wide { margin-top: 0; }
-.mk-shop .bq-savebar { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 14px; background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); }
+.mk-shop .bq-savebar { display: flex; justify-content: flex-end; gap: var(--bq-inline-gap); margin: 0 0 var(--bq-section-gap); }
 .mk-shop .bq-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: start; }
 .mk-shop .bq-grid-2 > .mk-panel { margin-bottom: 0; }
 .mk-shop .bq-grid-2 + .mk-panel { margin-top: var(--bq-gap); }
@@ -144,7 +171,8 @@
 .mk-shop .bq-method { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px dashed var(--mk-border-strong); font-size: .9rem; }
 
 /* Formulaires en ligne (filtres, ajout rapide) : une rangée, étiquette au-dessus, largeurs maîtrisées */
-.mk-shop form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-start; gap: 12px 14px; max-width: none; }
+.mk-shop form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-start; gap: var(--bq-inline-gap); max-width: none; }
+.mk-shop form.mk-inline-form + form.mk-inline-form:not(td *) { margin-top: var(--bq-block-gap); }
 .mk-shop form.mk-inline-form .field-group { flex: 0 1 220px; min-width: 150px; }
 .mk-shop form.mk-inline-form .field-group:has(input[name="q"]) { flex: 1 1 260px; max-width: 420px; }
 .mk-shop form.mk-inline-form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 0 0 auto; width: 100%; height: var(--bq-ctl); min-height: var(--bq-ctl); }
@@ -162,14 +190,36 @@
 /* ---------- Tableaux (filets, survol et transitions : kola-brand) ---------- */
 .mk-shop .mk-table-wrap { margin: 0 0 14px; overflow-x: auto; }
 .mk-shop .mk-table { width: 100%; margin: 0; }
+.mk-shop .mk-datatable th a::after, .mk-shop .mk-table th a::after { content: none; }   /* ces tableaux ne se trient pas : pas de « ⇅ » */
+.mk-shop .mk-table :is(th, td) { padding: var(--bq-s3) var(--bq-s4); }
+.mk-shop .mk-table tbody th[scope="row"] { white-space: nowrap; }
+.mk-shop .mk-table td.mk-num, .mk-shop .mk-table th.mk-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mk-shop .mk-table td.bq-nowrap { white-space: nowrap; }
 .mk-shop .mk-table th, .mk-shop .mk-table td { vertical-align: middle; font-size: .9rem; }
 .mk-shop .mk-table .mk-sub { display: block; margin: 0; font-size: .78rem; font-weight: 400; color: var(--muted); }
 .mk-shop .mk-table code { padding: 1px 6px; border-radius: 6px; background: var(--mk-hover); font-size: .8rem; }
 .mk-shop .mk-table td:last-child:has(form) { white-space: nowrap; }
 .mk-shop ul.mk-list { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
-.mk-shop ul.mk-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); font-size: .9rem; }
+.mk-shop ul.mk-list > li > form:last-child:not(:only-child) { margin-left: auto; }
+.mk-shop ul.mk-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); font-size: .9rem; }
 .mk-shop .bq-pager { margin: 10px 0 0; color: var(--muted); font-size: .86rem; }
 .mk-shop .bq-pager .btn { min-width: var(--bq-ctl); }
+
+/* ---------- Indicateurs (StatCard) : une carte par chiffre, grille adaptative par groupe, aucun fond englobant ---------- */
+.mk-shop .bq-stats-section { margin: 0 0 var(--bq-section-gap); container-type: inline-size; }
+/* Groupe de 3 indicateurs sur 2 colonnes : le troisième prend toute la ligne (jamais de carte orpheline) */
+@container (max-width: 560px) { .mk-shop .bq-stats > .bq-stat:nth-child(3):last-child { grid-column: 1 / -1; } }
+.mk-shop .bq-stats-section > h2 { margin: 0 0 var(--bq-s4); font-size: 1.05rem; font-weight: 650; color: var(--mk-text); }
+.mk-shop .bq-stat-group + .bq-stat-group { margin-top: var(--bq-s5); }
+.mk-shop .bq-stat-group-title { margin: 0 0 var(--bq-s2); color: var(--muted); font-size: .8rem; font-weight: 650; }
+.mk-shop .bq-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: var(--bq-s4); margin: 0; padding: 0; background: none; border: 0; }
+.mk-shop .bq-stat { display: flex; flex-direction: column; justify-content: space-between; gap: var(--bq-s2); min-height: 92px; margin: 0; padding: var(--bq-s4) var(--bq-s4) var(--bq-s3); background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); }
+.mk-shop .bq-stat dt { margin: 0; color: var(--muted); font-size: .82rem; font-weight: 600; line-height: 1.3; }
+.mk-shop .bq-stat dd { margin: 0; color: var(--kb-navy, var(--mk-text)); font-size: 1.6rem; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Formulaire « Paniers abandonnés » : champ court, case sur sa ligne, bouton sous les champs */
+.mk-shop .bq-cart-form { max-width: 560px; }
+.mk-shop .bq-cart-form > .bq-actions { margin-top: 0; padding-top: 0; border-top: 0; }
 
 /* ---------- Fiche (client, commande) : listes de définitions en grille ---------- */
 .mk-shop .mk-panel dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 14px 24px; margin: 0 0 14px; }
@@ -177,12 +227,30 @@
 .mk-shop .mk-panel dt { margin: 0 0 2px; color: var(--muted); font-size: .78rem; font-weight: 650; }
 .mk-shop .mk-panel dd { margin: 0; font-size: .92rem; overflow-wrap: anywhere; }
 
+/* Résumé d'une commande : faits en grille, totaux alignés à droite, historique en colonnes */
+.mk-shop .bq-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: var(--bq-s4) var(--bq-s5); margin: 0 0 var(--bq-block-gap); }
+.mk-shop .bq-facts > div { min-width: 0; }
+.mk-shop .bq-facts dt, .mk-shop .bq-totals dt { margin: 0; }
+.mk-shop .bq-facts .bq-inline { display: inline; margin: 0; }
+.mk-shop .bq-totals { display: grid; gap: var(--bq-s2); width: min(100%, 360px); margin: var(--bq-block-gap) 0 0 auto; padding: var(--bq-s4); background: var(--mk-surface-2); border-radius: var(--kb-r-ctl, 8px); }
+.mk-shop .bq-totals > div { display: flex; justify-content: space-between; gap: var(--bq-s4); }
+.mk-shop .bq-totals dt { color: var(--muted); font-size: .88rem; font-weight: 500; }
+.mk-shop .bq-totals dd { margin: 0; font-variant-numeric: tabular-nums; }
+.mk-shop .bq-totals .bq-total { margin-top: var(--bq-s1); padding-top: var(--bq-s3); border-top: 1px solid var(--kb-rule, var(--mk-border)); font-weight: 700; }
+.mk-shop .bq-totals .bq-total dt { color: var(--mk-text); font-size: .95rem; font-weight: 700; }
+.mk-shop .bq-actions-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--bq-s4); }
+.mk-shop form.bq-action { display: flex; flex-direction: column; align-items: stretch; gap: var(--bq-s3); padding: var(--bq-s4); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); }
+.mk-shop form.bq-action > .btn { align-self: flex-start; margin-top: auto; }
+.mk-shop ul.bq-timeline.mk-list > li { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) auto minmax(0, 1.4fr); align-items: baseline; gap: var(--bq-s1) var(--bq-s3); }
+.mk-shop .bq-timeline .bq-note:empty { display: none; }
+@media (max-width: 720px) { .mk-shop ul.bq-timeline.mk-list > li { grid-template-columns: 1fr auto; } .mk-shop .bq-timeline .bq-when { grid-column: 1 / -1; } .mk-shop .bq-timeline .bq-note { grid-column: 1 / -1; } }
+
 /* ---------- États vides ---------- */
 .mk-shop .bq-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 36px 24px 40px; text-align: center; background: var(--mk-surface-2); border: 1px dashed var(--mk-border-strong); border-radius: var(--kb-r-ctl, 8px); box-shadow: none; }
 .mk-shop .bq-empty .kx-empty-ill { width: 150px; max-width: 60%; height: auto; margin-bottom: 4px; }
 .mk-shop .bq-empty h3 { margin: 0; font-size: 1rem; font-weight: 650; color: var(--mk-text); }
 .mk-shop .bq-empty p { max-width: 50ch; margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
-.mk-shop p.mk-empty { padding: 20px; text-align: center; background: var(--mk-surface-2); border: 1px dashed var(--mk-border-strong); border-radius: var(--kb-r-ctl, 8px); color: var(--muted); font-size: .9rem; }
+.mk-shop p.mk-empty { margin: 0 0 var(--bq-block-gap); padding: var(--bq-s4) var(--bq-s5); text-align: center; background: var(--mk-surface-2); border: 1px dashed var(--mk-border-strong); border-radius: var(--kb-r-ctl, 8px); color: var(--muted); font-size: .9rem; }
 
 /* ---------- Zones de livraison, fournisseurs de paiement ---------- */
 .mk-shop .bq-card-list { display: grid; gap: 14px; margin: 0 0 16px; }

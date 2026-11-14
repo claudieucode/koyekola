@@ -23,7 +23,7 @@ const pageStatus = (p) => ({ status: PAGE_STATUS[p.status] || { label: String(p.
 const safeCount = (db, sql, params = []) => { try { return db.prepare(sql).get(...params).n; } catch { return 0; } };
 
 // Informations du « bandeau d'identité » : seulement ce qui est vrai pour ce site
-const describe = (req, site) => ({ limited: Boolean(req.mk.siteOnly), siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null, listHref: listHref(req) });
+const describe = (req, site) => ({ limited: Boolean(req.mk.siteOnly), siteId: site.id, principal: false, base: `${BASE}/sites/${site.id}`, name: site.name, status: site.status === "archived" ? "archived" : "active", deleted: Boolean(site.deleted_at), slug: site.slug || null, listHref: listHref(req), extensions: new Set(require("../../extensions/state").enabledIds(req.mk.ctx.db, req.mk.ctx.organizationId, site.id)) });
 const listHref = (req) => (req.mk.siteOnly ? `${BASE}/mes-sites` : `${BASE}/sites`);
 function spaceOf(req) {
   const m = /^\/site-web\/(?:sites\/(\d{1,12})|principal)(?:\/|$)/.exec(req.path);

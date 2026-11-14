@@ -4,7 +4,7 @@
 <form class="bq-settings" method="post" action="<%= base %>/reglages">
   <section class="mk-panel" id="general"><h2>Boutique</h2>
     <p class="field-hint">Ouverture au public et réglages de base de la boutique de ce site.</p>
-    <div class="bq-fields">
+    <div class="bq-fields bq-cols-2">
       <div class="field-group bq-wide"><label><input type="checkbox" name="enabled" value="1"<%= st.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> Boutique ouverte au public</label><% if (!canPay) { %><p class="field-hint">Réservé aux personnes autorisées à gérer les paiements.</p><% } %></div>
       <div class="field-group"><label for="r-cur">Devise (code)</label><input type="text" id="r-cur" name="currency" value="<%= st.currency %>" maxlength="3" placeholder="eur"<%= dis %>></div>
       <div class="field-group"><label for="r-cty">Pays par défaut (code ISO)</label><input type="text" id="r-cty" name="default_country" value="<%= st.default_country || "" %>" maxlength="2" placeholder="FR"<%= dis %>></div>
@@ -14,7 +14,7 @@
     </div>
   </section>
   <section class="mk-panel" id="commandes-avis"><h2>Commandes et avis</h2>
-    <div class="bq-fields bq-checks">
+    <div class="bq-fields bq-checks bq-cols-1">
       <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
       <div class="field-group"><label><input type="checkbox" name="reviews_enabled" value="1"<%= st.reviews_enabled ? " checked" : "" %><%= dis %>> Autoriser les avis des clients ayant acheté le produit</label></div>
       <div class="field-group"><label><input type="checkbox" name="reviews_auto_publish" value="1"<%= st.reviews_auto_publish ? " checked" : "" %><%= dis %>> Publier les avis sans relecture (sinon vous les validez dans l'onglet Avis)</label></div>
@@ -79,7 +79,7 @@
   <p class="mk-callout mk-callout-warn"><span>Aucun taux n'est prérempli : saisissez les taux applicables à votre situation fiscale. Kolakisa applique ces règles mais ne garantit pas la conformité fiscale ; faites-les valider par un professionnel.</span></p>
   <% if (taxRules.length) { %><ul class="mk-list"><% taxRules.forEach((t) => { %><li><%= t.name %> — <%= t.country %><%= t.region ? " / " + t.region : "" %> : <%= (t.rate_bp / 100).toFixed(2) %> %<%= t.applies_to_shipping ? " (livraison comprise)" : "" %>
     <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/taxes/<%= t.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune règle de taxe.</p><% } %>
-  <% if (canWrite) { %><h3>Nouvelle règle de taxe</h3><form class="mk-form" method="post" action="<%= base %>/taxes">
+  <% if (canWrite) { %><h3>Nouvelle règle de taxe</h3><form class="mk-form bq-cols-4" method="post" action="<%= base %>/taxes">
     <div class="field-group"><label for="t-n">Nom</label><input type="text" id="t-n" name="name" required></div>
     <div class="field-group"><label for="t-c">Pays (code ou *)</label><input type="text" id="t-c" name="country" required maxlength="2"></div>
     <div class="field-group"><label for="t-r">Région (facultatif)</label><input type="text" id="t-r" name="region"></div>

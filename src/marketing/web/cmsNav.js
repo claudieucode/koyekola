@@ -10,6 +10,12 @@ const BASE = "/marketing/site-web";
 
 const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "live", permission: "forms.read", ...extra });
 
+// Menus des extensions : lus dans le registre (manifestes). Un groupe porte `extension` : il n'apparaît dans l'espace d'un site que si l'extension y est activée (voir projectSections).
+const extensionSections = () => require("../../extensions/registry").load().menuGroups().map((g) => ({
+  key: g.key, label: g.label, icon: g.icon, extension: g.extension,
+  items: g.items.map((i) => leaf(i.key, i.label, i.href, { permission: i.permission, ...(i.primary ? { primary: i.primary } : {}), ...(i.external ? { external: true } : {}) })),
+}));
+
 // Les clés « sitedash », « sites », « landing » et « pagetests » sont celles que passent déjà les écrans existants
 // (tableau de bord, sites, pages, tests A/B) : ils entrent dans la coque CMS sans changer.
 const SECTIONS = [
@@ -57,7 +63,13 @@ const SECTIONS = [
     ],
   },
   // Extensions : modules activables PAR SITE (registre fermé siteModules.js). L'activation est réservée à l'équipe de l'organisation ; elle s'ajoute aux permissions et à l'isolation par site.
-  { key: "extensions", label: "Extensions", icon: "plug", items: [leaf("extensions", "Modules", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true })] },
+  { key: "extensions", label: "Extensions", icon: "plug", items: [
+    leaf("extensions", "Toutes les extensions", `${BASE}/extensions`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions" }),
+    leaf("extensions/activees", "Extensions activées", `${BASE}/extensions/activees`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/activees" }),
+    leaf("extensions/desactivees", "Extensions désactivées", `${BASE}/extensions/desactivees`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/desactivees" }),
+    leaf("extensions/gestion", "Gestion des extensions", `${BASE}/extensions/gestion`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/gestion" }),
+    leaf("extensions/historique", "Historique et activité", `${BASE}/extensions/historique`, { permission: "sites.modules", teamOnly: true, siteSpaceHref: "/extensions/historique" }),
+  ] },
   {
     key: "utilisateurs", label: "Comptes", icon: "users", items: [
       leaf("utilisateurs", "Tous les comptes", `${BASE}/utilisateurs`, { permission: "users.view" }),
@@ -150,7 +162,7 @@ const itemOf = (key) => ALL.find((i) => i.key === key) || null;
 const isCmsKey = (key) => ALL.some((i) => i.key === key);
 
 // Clés servies par le routeur générique des écrans CMS (cmsScreens) : celles dont la route n'existe pas déjà ailleurs.
-const GENERIC_SECTIONS = ["articles", "apparence", "commentaires", "extensions", "utilisateurs", "seo", "redirections", "outils"];
+const GENERIC_SECTIONS = ["articles", "apparence", "commentaires", "utilisateurs", "seo", "redirections", "outils"];
 
 // Menu affiché pour un rôle : uniquement les entrées permises ; une section à une seule entrée devient un lien direct.
 function buildCmsNav({ can, active, space = null }) {
@@ -396,7 +408,7 @@ const ABILITY = {
   "commentaires/approuves": { mode: "open", module: "commentaires", sub: "approuves" },
   "commentaires/indesirables": { mode: "open", module: "commentaires", sub: "indesirables" },
   "commentaires/corbeille": { mode: "open", module: "commentaires", sub: "corbeille" },
-  extensions: { mode: "central" }, // activation des modules : équipe de l'organisation, depuis le site principal (écran par site : /sites/N/modules)
+  // Extensions : présentes dans le menu de CHAQUE site (équipe seulement, voir projectItem : siteSpaceHref) ; l'écran du site ne montre et ne change que CE site
   "outils/sauvegardes": { mode: "central" },
   "outils/systeme": { mode: "central" },
   "outils/logs": { mode: "central" },
@@ -449,10 +461,13 @@ function projectItem(item, group, space) {
 }
 
 // LA fonction qui produit le menu d'un espace (principal ou site) à partir du registre
+// Une extension est visible dans le menu d'un espace : toujours pour le principal (historique), pour un site seulement si elle y est activée (`space.extensions`, calculé côté serveur par siteSpace).
+const extensionVisible = (space, id) => Boolean(space.principal || (space.extensions && space.extensions.has(id)));
 function projectSections(space) {
   const out = [];
   for (const s of SECTIONS) {
     if (s.centralOnly) continue;
+    if (s.extension && !extensionVisible(space, s.extension)) continue;
     if (s.key === "outils") out.push(marketingGroup(space)); // « Marketing du site » vient juste avant Outils et Paramètres
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     // « Composants » n'est plus affiché dans le menu (hidden) mais reste une entrée résolvable : sa route, son fil d'Ariane et ses droits sont inchangés ; « Pages » reste un groupe déployable même avec une seule entrée

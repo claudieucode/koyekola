@@ -21,6 +21,8 @@ describe("boutique : interface dans le navigateur", { skip: SKIP }, () => {
     await env.boss.post(`${B}/reglages`, { enabled: "1", currency: "eur", default_country: "FR", order_prefix: "CMD", low_stock_threshold: "3", payment_methods: ["manual"] });
     for (const n of ["Tasse en grès", "Plaid en lin"]) await env.boss.post(`${B}/produits`, { name: n, price: "18,00", status: "published", type: "simple" });
     await env.boss.post(`${B}/livraison/zones`, { name: "France", countries: "FR" });
+    const pid = env.db.prepare("SELECT id FROM mk_shop_products ORDER BY id LIMIT 1").get().id;
+    await env.boss.post(`${B}/commandes`, { line_1: `${pid}:`, qty_1: "2", email: "awa@exemple.fr", name: "Awa", line1: "12 rue des Lilas", postal_code: "75011", city: "Paris", country: "FR" });
   });
   after(async () => { if (env) await env.close(); });
 
@@ -61,7 +63,7 @@ describe("boutique : interface dans le navigateur", { skip: SKIP }, () => {
     const { context, page } = await open("/reglages", 1440);
     try {
       const m = await page.evaluate(() => { const w = (s) => Math.round(document.querySelector(s).getBoundingClientRect().width); const lefts = ["#r-cur", "#r-cty", "#r-pre", "#r-low"].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)); return { cur: w("#r-cur"), panel: w("#general"), cols: new Set(lefts).size }; });
-      assert.ok(m.cur < m.panel / 2, `devise trop large : ${m.cur} / ${m.panel}`); assert.ok(m.cols >= 3, `champs courts sur ${m.cols} colonnes`);
+      assert.ok(m.cur < m.panel * 0.55, `devise trop large : ${m.cur} / ${m.panel}`); assert.equal(m.cols, 2, `champs courts sur ${m.cols} colonnes (2 attendues : paires équilibrées, sans ligne orpheline)`);
     } finally { await context.close(); }
   });
 
@@ -119,6 +121,48 @@ describe("boutique : interface dans le navigateur", { skip: SKIP }, () => {
       assert.equal(new URL(page.url()).pathname, `${B}/clients`);
       assert.match(await page.textContent("[data-bq-toggle]"), /Boutique · Clients/);
     } finally { await context.close(); }
+  });
+
+  test("espacements : même écart entre cartes (24 px), même padding (24 px), étiquette à 6 px de son champ — sur plusieurs écrans", async () => {
+    for (const path of ["/rapports", "/reglages", "/classes", "/commandes/1", "/produits/1", "/paiements"]) {
+      const { context, page } = await open(path, 1440);
+      try {
+        const m = await page.evaluate(() => {
+          const panels = [...document.querySelectorAll(".mk-content > .mk-panel, .mk-content > form > .mk-panel")].filter((e) => e.offsetParent);
+          const gaps = []; for (let i = 1; i < panels.length; i++) { const a = panels[i - 1].getBoundingClientRect(), b = panels[i].getBoundingClientRect(); if (panels[i - 1].nextElementSibling === panels[i]) gaps.push(Math.round(b.top - a.bottom)); }
+          const pads = panels.map((e) => parseFloat(getComputedStyle(e).paddingLeft));
+          const lab = [...document.querySelectorAll(".mk-panel .field-group > label")].filter((l) => l.nextElementSibling && /^(INPUT|SELECT|TEXTAREA)$/.test(l.nextElementSibling.tagName) && !l.querySelector("input")).slice(0, 12).map((l) => Math.round(l.nextElementSibling.getBoundingClientRect().top - l.getBoundingClientRect().bottom));
+          return { n: panels.length, gaps, pads, lab };
+        });
+        assert.ok(m.n >= 1, `${path} : cartes trouvées`);
+        for (const g of m.gaps) assert.ok(g >= 23 && g <= 25, `${path} : écart entre cartes ${g}px`);
+        for (const x of m.pads) assert.equal(x, 24, `${path} : padding de carte`);
+        for (const g of m.lab) assert.ok(g >= 4 && g <= 8, `${path} : étiquette → champ ${g}px`);
+      } finally { await context.close(); }
+    }
+  });
+
+  test("indicateurs : une carte chacune, hauteurs égales, aucune carte orpheline à 1440, 1024 et 390 px", async () => {
+    for (const width of [1440, 1024, 390]) {
+      const { context, page } = await open("/rapports", width);
+      try {
+        const g = await page.evaluate(() => [...document.querySelectorAll(".bq-stat-group")].map((grp) => {
+          const cards = [...grp.querySelectorAll(".bq-stat")].map((c) => { const r = c.getBoundingClientRect(); return { top: Math.round(r.top), left: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height), bg: getComputedStyle(c).backgroundColor }; });
+          return { cards, container: getComputedStyle(grp.querySelector(".bq-stats")).backgroundColor };
+        }));
+        assert.equal(g.length, 3);
+        assert.deepEqual(g.map((x) => x.cards.length), [4, 4, 3]);
+        for (const grp of g) {
+          assert.ok(grp.cards.every((c) => c.h === grp.cards[0].h), `${width}px : hauteurs égales`);
+          assert.equal(grp.container, "rgba(0, 0, 0, 0)", "pas de fond englobant");
+          const rows = {}; for (const c of grp.cards) (rows[c.top] = rows[c.top] || []).push(c);
+          const sizes = Object.values(rows).map((r) => r.length);
+          // une ligne plus courte que les autres n'est admise que si sa carte occupe toute la largeur (3 cartes sur 2 colonnes)
+          if (new Set(sizes).size > 1) { const short = Object.values(rows).find((r) => r.length < Math.max(...sizes)); const full = Math.max(...grp.cards.map((c) => c.w)); assert.ok(short.length === 1 && short[0].w >= full - 1 && sizes.length > 1 && short === Object.values(rows).slice(-1)[0], `${width}px : carte orpheline ${JSON.stringify(sizes)}`); }
+        }
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), false);
+      } finally { await context.close(); }
+    }
   });
 
   test("un formulaire envoie vraiment ses données depuis l'interface (nouvelle catégorie), la liste se met à jour", async () => {

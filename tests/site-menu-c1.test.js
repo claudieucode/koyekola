@@ -34,6 +34,7 @@ before(async () => {
   srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
   boss = await loginInstructor(srv); db = srv.db(); orgId = one("SELECT id FROM mk_organizations").id;
   A = mkSite("Site Alpha"); B = mkSite("Site Beta");
+  for (const m of ["commerce", "lms"]) db.prepare("INSERT INTO mk_site_modules (site_id, organization_id, module, enabled) VALUES (?, 1, ?, 1)").run(A, m); // menus d'extensions : présents dans l'espace d'un site seulement si activés (Extensions)
   memA = await newStudent(srv); viewerA = await newStudent(srv); memB = await newStudent(srv); outsider = await newStudent(srv);
   db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'editor')").run(A, uid(memA));
   db.prepare("INSERT INTO mk_site_members (site_id, user_id, role) VALUES (?, ?, 'viewer')").run(A, uid(viewerA));
@@ -46,7 +47,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
     const site = parse((await boss.get(`${SP}/${A}/tableau-de-bord`)).text);
     const main = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     assert.ok(site.length >= 13 && main.length >= 13); // 13 groupes depuis que « Navigation » est devenu Apparence → Menus
-    const strip = (labels) => labels.filter((l) => !["Modules", "Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
+    const strip = (labels) => labels.filter((l) => !["Sauvegardes", "Informations système", "Journal d'activité"].includes(l)).map((l) => (l === "Tableau de bord du site principal" ? "Tableau de bord" : l));
     assert.deepEqual(flatLabels(site), strip(flatLabels(main))); // Theme Builder : présent dans le menu du principal comme dans celui d'un site créé
   });
   test("les groupes Utilisateurs, Outils et Paramètres s'affichent sous LEUR titre, avec leurs sous-entrées (plus d'« Équipe du site », de « Réglages du site » en titre)", async () => {
@@ -65,7 +66,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   });
   test("chaque lien ouvert du menu répond 200 DANS le cadre du site (bandeau + menu) : aucun lien ne renvoie au CMS principal", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;
-    const links = [...new Set(parse(html).flatMap((g) => g.entrees).map((e) => e.href).filter(Boolean))].filter((h) => h !== SP);
+    const links = [...new Set(parse(html).flatMap((g) => g.entrees).map((e) => e.href).filter(Boolean))].filter((h) => h !== SP && h !== "/formateur"); // « Mes formations » (extension LMS) ouvre son propre espace, hors du cadre du site
     assert.ok(links.length >= 15, `liens ouverts : ${links.length}`);
     for (const h of links) {
       const r = await boss.get(h.replace(/#.*$/, ""));
@@ -101,7 +102,7 @@ describe("C1 — le menu rendu d'un site = le menu rendu du principal", () => {
   test("site principal : son menu garde les 72 entrées du registre et ses adresses historiques (régression)", async () => {
     const m = parse((await boss.get(`${PR}/tableau-de-bord`)).text);
     const entries = m.flatMap((g) => g.entrees);
-    assert.equal(entries.length, 79 + 4 + 4 + 10 - 1); // − 2 (En-tête et Pied de page retirés, gérés par le Theme Builder) + 1 (Theme Builder, désormais aussi pour le principal)
+    assert.equal(entries.length, 79 + 4 + 4 + 10 - 1 + 6 + 4 + 1); // + 6 écrans ajoutés depuis par d'autres chantiers (le décompte d'origine était déjà périmé sur main) ; // + 4 rubriques d'Extensions (Toutes, activées, désactivées, gestion, historique : 5 au lieu de 1) + « Mes formations » (extension LMS) // − 2 (En-tête et Pied de page retirés, gérés par le Theme Builder) + 1 (Theme Builder, désormais aussi pour le principal)
     // // + 4 écrans Boutique (Programme 20.5) ; + 4 écrans SEO du lot 2 ; /* « Composants » masqué du menu affiché */ // PERSONNALISER : + « Personnaliser » (écran plein cadre) // THEMES : + « Thèmes » ; 66 entrées du registre (« Mes sites » est le gestionnaire central) ; R8 lot 6D : + « Importer des contacts » dans Marketing
     assert.ok(entries.every((e) => !e.grise && e.href));
     for (const reg of nav.ALL.filter((i) => i.key !== "sites" && i.key !== "sitedash" && !i.siteOnly)) assert.ok(entries.some((e) => e.href === (reg.key === "apparence/theme-builder" ? `${PR}/constructeur-de-theme` : reg.href)), reg.href);

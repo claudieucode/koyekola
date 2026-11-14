@@ -16,11 +16,11 @@ const fresh = async (host, extraEnv = {}, stock = "5") => {
   const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${id}/reglages.json`)).text);
   await boss.request(`/marketing/site-web/sites/${id}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${host}` } } } });
   const base = `/marketing/site-web/sites/${id}/boutique`;
+  await boss.post(`/marketing/site-web/sites/${id}/modules/commerce`, { etat: "activer" });
   await boss.post(`${base}/livraison/zones`, { name: "France", countries: "FR" });
   const zid = one("SELECT id FROM mk_shop_shipping_zones WHERE site_id = ?", id).id;
   await boss.post(`${base}/livraison/zones/${zid}/methodes`, { name: "Colis", kind: "flat", cost: "5,00" });
   await boss.post(`${base}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual", "stripe"], guest_checkout: "1", order_prefix: "C", manual_instructions: "Virement" });
-  await boss.post(`/marketing/site-web/sites/${id}/modules/commerce`, { etat: "activer" });
   await boss.post(`${base}/produits`, { name: "Rareté", type: "simple", status: "published", price: "10,00", manage_stock: "1", stock_qty: stock, requires_shipping: "1" });
   return { srv, boss, db, one, id, base, h: hdr(host), pid: one("SELECT id FROM mk_shop_products WHERE site_id = ?", id).id, stop: async () => { db.close(); await srv.stop(); } };
 };

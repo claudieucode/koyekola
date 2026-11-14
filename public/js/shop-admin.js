@@ -17,6 +17,11 @@
   Array.prototype.forEach.call(document.querySelectorAll(".mk-shop table.mk-table"), function (table) {
     table.classList.add("mk-datatable");
     var heads = Array.prototype.map.call(table.querySelectorAll("thead th"), function (th) { return (th.textContent || "").trim(); });
+    // En-tête aligné comme sa colonne : si toutes les cellules d'une colonne sont numériques (classe mk-num), l'en-tête l'est aussi
+    Array.prototype.forEach.call(table.querySelectorAll("thead th"), function (th, i) {
+      var cells = Array.prototype.map.call(table.querySelectorAll("tbody tr"), function (tr) { return tr.children[i]; }).filter(function (c) { return c && c.tagName === "TD"; });
+      if (cells.length && cells.every(function (c) { return c.classList.contains("mk-num"); })) th.classList.add("mk-num");
+    });
     Array.prototype.forEach.call(table.querySelectorAll("tbody tr"), function (tr) {
       Array.prototype.forEach.call(tr.children, function (cell, i) { if (cell.tagName === "TD" && heads[i] && !cell.hasAttribute("data-label")) cell.setAttribute("data-label", heads[i]); });
     });

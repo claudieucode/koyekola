@@ -1,0 +1,4 @@
+<form method="get" action="<%= BASE %><%= tab ? '/' + tab : '' %>" class="mk-inline" style="margin:0 0 12px">
+  <label>Site <select name="site"><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select></label>
+  <button class="btn btn-outline btn-sm" type="submit">Afficher</button>
+</form>
