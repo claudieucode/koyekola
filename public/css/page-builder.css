@@ -451,6 +451,7 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 /* Barre d'actions posée sur l'élément sélectionné (canevas) */
 .pb-cbar { position: fixed; z-index: 40; display: flex; align-items: center; gap: 1px; padding: 3px; border: 1px solid var(--border); border-radius: var(--pb-radius-md); background: var(--card, #fff); box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16); }
 .pb-cbar[hidden] { display: none; }
+.pb-cbar.kol-leaving[hidden] { display: flex; transform-origin: 50% 100%; } /* sortie douce de la barre (opacité + recul) : elle reste affichée, inerte, ~90 ms */
 .pb-cbar-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: var(--pb-radius-md); background: none; color: var(--primary); cursor: pointer; }
 .pb-cbar-btn .icon { width: 16px; height: 16px; }
 .pb-cbar-btn:hover:not(:disabled) { background: var(--accent-light); color: var(--accent-dark); }
@@ -2517,3 +2518,13 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-hdr-tiles.is-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .pb-fm { display: flex; gap: 2px; height: 30px; margin-bottom: 6px; padding: 4px; border: 1px solid var(--editor-border-strong); border-radius: 6px; background: var(--editor-panel-secondary); box-sizing: border-box; }
 .pb-fm i { flex: 1; display: block; border-radius: 2px; background: var(--editor-accent); opacity: .55; }
+
+/* ---- Barre contextuelle : fenêtres avancées (informations, personnalisation) ---- */
+.pb-ctx-info { display: grid; grid-template-columns: minmax(110px, 34%) 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+.pb-ctx-info dt { color: var(--muted); font-weight: 600; }
+.pb-ctx-info dd { margin: 0; min-width: 0; overflow-wrap: anywhere; color: var(--text, var(--primary)); }
+.pb-ctx-pref { display: grid; gap: 2px; margin: 10px 0 12px; }
+.pb-ctx-pref-row { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 8px; border-radius: var(--pb-radius-md); cursor: pointer; }
+.pb-ctx-pref-row:hover { background: var(--accent-light); }
+.pb-ctx-pref-row .icon { width: 16px; height: 16px; color: var(--primary); }
+.pb-menu-item.is-on::before { content: "✓"; margin-right: -6px; color: var(--accent-dark); font-weight: 700; }

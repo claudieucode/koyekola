@@ -229,7 +229,7 @@ describe("partie droite de l'éditeur : thème, structure, inspecteur (navigateu
     await until(() => count() === before + 1, "élément dupliqué");
     await row("txt000000001").hover();
     await page.locator('.pb-node[data-id="txt000000001"] > .pb-row-item .pb-flag-more').click(); await wait(150);
-    await page.locator(".pb-menu:not([hidden]) .pb-menu-item", { hasText: /^Masquer/ }).click();
+    await page.locator(".pb-menu:not([hidden]) .pb-menu-item", { hasText: /^Masquer \(/ }).click();
     await until(() => { const e = find("txt000000001"); return e && e.hidden === true; }, "élément masqué");
     await page.locator('.pb-node[data-id="btn000000002"] > .pb-row-item').click();
     await page.locator('.pb-node[data-id="btn000000002"] > .pb-row-item .pb-flag-more').click(); await wait(150);
