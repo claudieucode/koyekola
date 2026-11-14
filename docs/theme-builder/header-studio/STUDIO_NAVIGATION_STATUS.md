@@ -52,3 +52,9 @@ Timeline libre d'animation (plusieurs propriétés) ; constructeur de méga-menu
 * Style d'un lien : boutons « Coller seulement la typographie » et « Coller seulement les couleurs » (toutes tailles d'écran et tous états conservés).
 * Tests : `tests/menu-hamburger-icone.test.js` (3), Chrome `header-widgets-navigateur` (+1), Chrome `header-menu-inspecteur-navigateur` (copier-coller partiel).
 * Reste à faire : éditeur d'animation libre (ligne de temps), points d'arrêt personnalisés, visibilité/ordre par écran, méga-menu à contenu dynamique par lien, audits lecteur d'écran et performance, relecture des six outils de référence à la source.
+
+## Lot 4 (14 novembre 2026) : méga-menu à contenu dynamique
+* Le méga-menu par rubrique existait déjà (panneau = composant du site, ouverture au survol/clic, largeur). Ajout : choix du « Modèle d'un nouveau panneau » avant « Créer un panneau » : colonnes de texte (défaut), **articles récents** (`querylist`), **produits** (`shopgrid`), **catégories de la boutique** (`shopcategories`). Le contenu vient du site et se met à jour sans republier le menu.
+* Style du panneau : partie `mega` + réglages `sub` d'un lien (lot 1).
+* Test Chrome : `tests/header-reglages-navigateur.test.js` (création des trois modèles, widget présent dans le composant, détachement).
+* Toujours à faire : éditeur d'animation libre, largeurs d'écran personnalisées, audits lecteur d'écran/performance, étude des six outils de référence à la source.

@@ -8033,9 +8033,20 @@ function selectField(label, value, options, onChange, opts) {
     var col = function (title) { return { type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "column", gap: "8px", flexGrow: "1" } }, children: [{ type: "heading", props: { text: title, level: "3" } }, { type: "text", props: { html: "<p>Décrivez cette rubrique en une phrase.</p>" } }, { type: "button", props: { label: "En savoir plus", url: "/" } }] }; };
     return { type: "layout", children: [{ type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "row", gap: "32px" }, mobile: { flexDirection: "column" } }, children: [col("Première colonne"), col("Deuxième colonne"), col("Troisième colonne")] }] };
   }
+  // Modèles de départ d'un panneau : colonnes de texte, ou contenu DYNAMIQUE du site (articles récents, produits, catégories de la boutique)
+  var MEGA_KINDS = [["columns", "Colonnes de texte"], ["posts", "Articles récents (dynamique)"], ["products", "Produits de la boutique (dynamique)"], ["categories", "Catégories de la boutique (dynamique)"]];
+  function megaStarterOf(kind, label) {
+    if (kind === "columns") return megaStarter();
+    var head = { type: "heading", props: { text: label, level: "3" } };
+    var widget = kind === "posts" ? { type: "querylist", props: { title: "", source: "posts", mode: "recent", count: 4 } } : kind === "products" ? { type: "shopgrid", props: {} } : { type: "shopcategories", props: {} };
+    return { type: "layout", children: [{ type: "container", props: {}, styles: { desktop: { display: "flex", flexDirection: "column", gap: "16px" } }, children: [head, widget] }] };
+  }
+  var megaKind = "columns";
   function megaSection(box, it, p, disabled) {
     box.appendChild(h("p", { class: "pb-sub", text: "Méga-menus" }));
     box.appendChild(h("p", { class: "pb-hint", text: "Une rubrique du menu peut ouvrir un panneau composé librement : colonnes, images, textes, boutons. Le panneau est un composant de ce site : « Modifier le panneau » l'ouvre dans l'éditeur, « Mettre à jour » le publie." }));
+    var kindSel = selectField("Modèle d'un nouveau panneau", megaKind, MEGA_KINDS, function (v) { megaKind = v; }, { disabled: disabled });
+    box.appendChild(kindSel);
     var host = h("div", { "data-pb-mega": "" }, h("p", { class: "pb-hint", text: "Chargement des rubriques du menu…" }));
     box.appendChild(host);
     var mega = p.mega || {}, ids = Object.keys(mega).map(function (k) { return mega[k]; });
@@ -8062,7 +8073,7 @@ function selectField(label, value, options, onChange, opts) {
     }, function () { host.textContent = ""; host.appendChild(h("p", { class: "pb-note is-warn", text: "Impossible de lire les rubriques du menu." })); });
     function createPanel(item) {
       var tryName = function (n) {
-        return api("POST", "/marketing/site-web/composants", { name: "Méga-menu · " + item.label + (n > 1 ? " (" + n + ")" : ""), section: megaStarter(), kind: "standard", global: !PAGE.siteId, siteId: PAGE.siteId }).catch(function (err) { if (n < 6 && /porte déjà ce nom/.test(err.message || "")) return tryName(n + 1); throw err; });
+        return api("POST", "/marketing/site-web/composants", { name: "Méga-menu · " + item.label + (n > 1 ? " (" + n + ")" : ""), section: megaStarterOf(megaKind, item.label), kind: "standard", global: !PAGE.siteId, siteId: PAGE.siteId }).catch(function (err) { if (n < 6 && /porte déjà ce nom/.test(err.message || "")) return tryName(n + 1); throw err; });
       };
       tryName(1).then(function (r) {
         change(function () { var x = byId(it.id).props; var m = Object.assign({}, x.mega || {}); m[String(item.id)] = r.component.id; x.mega = m; if (!x.megaTrigger) x.megaTrigger = "hover"; if (!x.megaWidth) x.megaWidth = "item"; });

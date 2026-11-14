@@ -199,5 +199,23 @@ describe("Header Builder L0 : panneau « En-tête » (navigateur)", { skip: SKIP
     await context.close();
   });
 
+  test("méga-menu : le modèle « Articles récents » crée un panneau dynamique (liste d'articles du site), « Produits » et « Catégories » aussi", async () => {
+    const t = await adopt("luxe-01.luxe-01");
+    const { context, page } = await open({ width: 1500, height: 950 }); await openEditor(page, t);
+    await page.locator("[data-pb-layers] li.pb-node > .pb-row-item", { hasText: /Menu de navigati/ }).first().click();
+    await page.locator("[data-pb-inspector] details.pb-hdr-acc > summary", { hasText: "Méga-menu" }).click();
+    const item = page.locator("[data-pb-mega-item]").first(); await item.waitFor();
+    const kinds = { posts: "querylist", products: "shopgrid", categories: "shopcategories" };
+    for (const [kind, type] of Object.entries(kinds)) {
+      await page.locator("[data-pb-inspector]").getByLabel("Modèle d'un nouveau panneau", { exact: true }).selectOption(kind);
+      const [popup] = await Promise.all([context.waitForEvent("page"), item.locator("[data-pb-mega-create]").click()]);
+      await popup.close(); await item.locator("[data-pb-mega-edit]").waitFor();
+      const comp = db.prepare("SELECT id, section, draft FROM mk_web_components WHERE name LIKE 'Méga-menu · %' AND site_id = ? ORDER BY id DESC LIMIT 1").get(site);
+      assert.ok(String(comp.draft || comp.section).includes(`"type":"${type}"`), `le panneau « ${kind} » contient un widget ${type}`);
+      await item.locator("[data-pb-mega-remove]").click(); await item.locator("[data-pb-mega-create]").waitFor();
+    }
+    await context.close();
+  });
+
   test("aucune erreur de script", () => { assert.deepEqual(errors, []); });
 });
