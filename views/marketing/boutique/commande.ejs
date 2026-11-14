@@ -2,11 +2,11 @@
 <%- include("_head", { heading: "Commande " + order.number }) %>
 <% const PS = { unpaid: "Non payée", pending: "Paiement en cours", paid: "Payée", failed: "Paiement échoué", refunded: "Remboursée" }; %>
 <section class="mk-panel"><h2>Résumé</h2>
-  <p>Statut : <strong><%= statusLabels[order.status] %></strong> · Paiement : <strong><%= PS[order.payment_status] %></strong> (<%= order.payment_method %>) · Client : <%= order.email %> · <%= String(order.created_at).slice(0, 16) %></p>
+  <dl class="bq-facts"><div><dt>Statut</dt><dd><strong><%= statusLabels[order.status] %></strong></dd></div><div><dt>Paiement</dt><dd><strong><%= PS[order.payment_status] %></strong> <span class="mk-sub bq-inline">(<%= order.payment_method %>)</span></dd></div><div><dt>Client</dt><dd><%= order.email %></dd></div><div><dt>Passée le</dt><dd><%= String(order.created_at).slice(0, 16).replace("T", " ") %></dd></div></dl>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Articles</caption><thead><tr><th scope="col">Article</th><th scope="col">SKU</th><th scope="col">Qté</th><th scope="col">Prix unitaire</th><th scope="col">Total</th></tr></thead><tbody>
   <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %><%= i.variant_label ? " (" + i.variant_label + ")" : "" %><% if (i.custom_text) { %><br><small><strong><%= i.custom_label || "Personnalisation" %> :</strong> « <%= i.custom_text %> »</small><% } %></th><td><%= i.sku || "—" %></td><td><%= i.quantity %></td><td><%= money(i.unit_price_cents) %></td><td><%= money(i.line_subtotal_cents - i.discount_cents) %></td></tr><% }) %>
   </tbody></table></div>
-  <p>Sous-total <%= money(order.subtotal_cents) %><% if (order.discount_cents) { %> · Réduction − <%= money(order.discount_cents) %> (<%= order.coupon_code %>)<% } %> · Livraison <%= money(order.shipping_cents) %><%= order.shipping_method_name ? " (" + order.shipping_method_name + ")" : "" %> · Taxes <%= money(order.tax_cents) %> <%= order.prices_include_tax ? "(incluses)" : "(en sus)" %> · <strong>Total <%= money(order.total_cents) %></strong></p>
+  <dl class="bq-totals"><div><dt>Sous-total</dt><dd><%= money(order.subtotal_cents) %></dd></div><% if (order.discount_cents) { %><div><dt>Réduction (<%= order.coupon_code %>)</dt><dd>− <%= money(order.discount_cents) %></dd></div><% } %><div><dt>Livraison<%= order.shipping_method_name ? " (" + order.shipping_method_name + ")" : "" %></dt><dd><%= money(order.shipping_cents) %></dd></div><div><dt>Taxes <%= order.prices_include_tax ? "(incluses)" : "(en sus)" %></dt><dd><%= money(order.tax_cents) %></dd></div><div class="bq-total"><dt>Total</dt><dd><%= money(order.total_cents) %></dd></div></dl>
   <% if (order.shippingAddress && order.shippingAddress.line1) { const a = order.shippingAddress; %><p>Livraison : <%= a.name %>, <%= a.line1 %> <%= a.line2 %>, <%= a.postal_code %> <%= a.city %>, <%= a.country %></p><% } %>
   <% if (order.delivery_date) { %><p><strong>Créneau de livraison :</strong> <%= slotText %></p><% } %>
   <% if (order.age_confirmed_at) { %><p><strong>Contrôle d'âge :</strong> le client a déclaré avoir au moins <%= order.age_confirmed_min %> ans le <%= String(order.age_confirmed_at).slice(0, 16) %> (case cochée à la commande). <small>Simple déclaration sur l'honneur, sans vérification d'identité : la livraison peut exiger une pièce d'identité.</small></p><% } %>
@@ -14,9 +14,10 @@
 </section>
 <% if (canOrders && next.length) { %>
 <section class="mk-panel"><h2>Changer le statut</h2>
+  <div class="bq-actions-grid">
   <% next.forEach((t) => { const sensitive = t === "paid" || t === "refunded"; %>
     <% if (!sensitive || canPay) { %>
-    <form class="mk-form mk-inline-form" method="post" action="<%= base %>/commandes/<%= order.id %>/statut">
+    <form class="mk-form bq-action" method="post" action="<%= base %>/commandes/<%= order.id %>/statut">
       <input type="hidden" name="statut" value="<%= t %>">
       <% if (t === "shipped") { %><div class="field-group"><label for="t-<%= t %>">Numéro de suivi</label><input type="text" id="t-<%= t %>" name="tracking" maxlength="80"></div><% } %>
       <div class="field-group"><label for="n-<%= t %>">Note (facultatif)</label><input type="text" id="n-<%= t %>" name="note" maxlength="300"></div>
@@ -24,6 +25,7 @@
     </form>
     <% } %>
   <% }) %>
+  </div>
 </section>
 <% } %>
 <% const refundedCents = (order.refunds || []).filter((r) => r.status === "succeeded" || r.status === "pending").reduce((n, r) => n + r.amount_cents, 0); const refundable = ["paid", "processing", "shipped", "completed"].includes(order.status) && order.payment_status === "paid"; const left = order.total_cents - refundedCents; %>
@@ -50,7 +52,7 @@
 </section>
 <% } %>
 <section class="mk-panel"><h2>Historique</h2>
-  <ul class="mk-list"><% order.events.forEach((e) => { %><li><span class="mk-sub"><%= String(e.created_at).slice(0, 16) %></span> — <%= e.to_status ? statusLabels[e.to_status] : e.kind %> <span class="mk-sub">(<%= e.actor %>)</span><%= e.note ? " — " + e.note : "" %></li><% }) %></ul>
+  <ul class="mk-list bq-timeline"><% order.events.forEach((e) => { %><li><span class="mk-sub bq-when"><%= String(e.created_at).slice(0, 16).replace("T", " ") %></span><span class="bq-what"><%= e.to_status ? statusLabels[e.to_status] : e.kind %></span><span class="mk-sub bq-who">(<%= e.actor %>)</span><span class="bq-note"><%= e.note || "" %></span></li><% }) %></ul>
   <% if (order.payments.length) { %><h3>Paiements</h3><ul class="mk-list"><% order.payments.forEach((p) => { %><li><%= p.provider %> · <%= money(p.amount_cents) %> · <%= p.status %><%= p.failure_reason ? " — " + p.failure_reason : "" %></li><% }) %></ul><% } %>
 </section>
 <%- include("../partials/bottom") %>
