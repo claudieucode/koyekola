@@ -1,20 +1,45 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head") %>
+<%
+  // Deux intégrations, un même système visuel. Les états viennent uniquement du serveur (integrations.status) : jamais « Connecté » sans une vérification réussie auprès de Google.
+  const PILL = { connected: ["ok", "Connecté"], error: ["bad", "Connexion impossible"], not_verified: ["warn", "Non vérifié"], not_connected: ["off", "Non connecté"], config_required: ["warn", "Configuration incomplète"] };
+  const CARDS = [
+    { base: "search_console", field: "property", label: "Adresse de la propriété", ph: "sc-domain:exemple.com ou https://www.exemple.com/", hint: "Propriété de type domaine (sc-domain:…) ou adresse complète en https://.", mode: "url",
+      desc: "Requêtes, clics et positions de votre site dans les résultats Google.",
+      perm: "Dans Search Console : Paramètres › Utilisateurs et autorisations › ajoutez l'adresse e-mail du compte de service comme utilisateur de la propriété (lecture seule)." },
+    { base: "analytics", field: "propertyId", label: "Identifiant de propriété GA4", ph: "123456789", hint: "Des chiffres uniquement : Admin › Détails de la propriété.", mode: "numeric",
+      desc: "Visites et comportement des visiteurs, lus dans votre propriété Google Analytics 4.",
+      perm: "Dans Analytics : Admin › Gestion des accès à la propriété › ajoutez l'adresse e-mail du compte de service avec le rôle Lecteur. L'API Google Analytics Data doit être activée dans son projet Google Cloud." },
+  ];
+%>
     <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Chaque site a SA propre connexion Google : sa propriété Search Console ou GA4 et sa clé de compte de service, stockée chiffrée et jamais réaffichée. Sans configuration, l'état reste « Non connecté » : rien n'est affiché qui ne vienne de Google.</p></div>
-    <% [["search_console", "Adresse de la propriété", "property", "sc-domain:exemple.com ou https://www.exemple.com/"], ["analytics", "Identifiant de propriété GA4", "propertyId", "123456789"]].forEach((c) => { const base = c[0]; const stt = st[base]; %>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="cx-<%= base %>"><h2 id="cx-<%= base %>"><%= names[base] %> — <%= stt.label %></h2>
-      <% if (stt.detail) { %><p class="field-hint"><%= stt.detail %></p><% } %>
+    <div class="gx-grid">
+    <% CARDS.forEach((c) => { const base = c.base, stt = st[base], pill = PILL[stt.state] || ["off", stt.label], saved = stt.state === "connected" || stt.state === "not_verified" || stt.state === "error"; %>
+    <section class="gx-card mk-seo-appear" aria-labelledby="cx-<%= base %>" data-gx-card="<%= base %>">
+      <header class="gx-head">
+        <span class="gx-logo gx-logo-<%= base %>" aria-hidden="true">
+          <% if (base === "search_console") { %><svg viewBox="0 0 32 32" width="28" height="28"><rect x="3" y="3" width="26" height="26" rx="7" fill="#4285f4"/><circle cx="14" cy="14" r="5.2" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M18 18l5.5 5.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <% } else { %><svg viewBox="0 0 32 32" width="28" height="28"><rect x="3" y="3" width="26" height="26" rx="7" fill="#fff4e0"/><rect x="19" y="7" width="6" height="18" rx="3" fill="#f9ab00"/><rect x="12" y="13" width="6" height="12" rx="3" fill="#e37400"/><circle cx="8" cy="22.5" r="3" fill="#e37400"/></svg><% } %>
+        </span>
+        <div class="gx-title"><h2 id="cx-<%= base %>"><%= names[base] %></h2><p><%= c.desc %></p></div>
+        <span class="gx-pill gx-pill-<%= pill[0] %>" data-gx-pill role="status"><span class="gx-dot" aria-hidden="true"></span><span data-gx-pill-text><%= pill[1] %></span></span>
+      </header>
+      <% if (stt.detail) { %><p class="gx-detail gx-detail-<%= pill[0] %>"><%= stt.detail %></p><% } %>
       <% if (canEdit) { %>
-      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="mk-form" data-busy-form autocomplete="off">
-        <div class="field-group"><label for="cx-<%= base %>-p"><%= c[1] %></label><input id="cx-<%= base %>-p" name="<%= c[2] %>" value="<%= config[base][c[2]] || "" %>" maxlength="300" placeholder="<%= c[3] %>" required></div>
-        <div class="field-group"><label for="cx-<%= base %>-k">Clé du compte de service (contenu du fichier JSON)</label><textarea id="cx-<%= base %>-k" name="service_account" rows="4" spellcheck="false" autocomplete="off" placeholder="<%= stt.state === "connected" || stt.state === "not_verified" || stt.state === "error" ? "Laisser vide pour conserver la clé enregistrée" : "{ &quot;type&quot;: &quot;service_account&quot;, … }" %>"></textarea>
-          <small>Ajoutez l'adresse e-mail du compte de service comme utilisateur de la propriété (lecture seule) dans Google.</small></div>
-        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer et vérifier</button></div>
+      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="gx-form" data-busy-form data-gx-form autocomplete="off">
+        <div class="gx-field"><label for="cx-<%= base %>-p"><%= c.label %></label>
+          <input id="cx-<%= base %>-p" name="<%= c.field %>" value="<%= config[base][c.field] || "" %>" maxlength="300" placeholder="<%= c.ph %>" required<%- c.mode === "numeric" ? ' inputmode="numeric" pattern="\\d{3,20}" title="Des chiffres uniquement"' : ' inputmode="url"' %> spellcheck="false">
+          <small><%= c.hint %></small></div>
+        <div class="gx-field"><label for="cx-<%= base %>-k">Clé du compte de service (contenu du fichier JSON)</label>
+          <textarea id="cx-<%= base %>-k" name="service_account" rows="9" spellcheck="false" autocomplete="off" autocapitalize="off" data-gx-json data-gx-saved="<%= saved ? "1" : "0" %>" placeholder="<%= saved ? "Laisser vide pour conserver la clé enregistrée" : '{ "type": "service_account", "client_email": "…", "private_key": "…" }' %>"></textarea>
+          <p class="gx-json-state" data-gx-json-state aria-live="polite"><%= saved ? "Une clé chiffrée est déjà enregistrée : elle n'est jamais réaffichée. Collez un nouveau fichier seulement pour la remplacer." : "Collez le contenu complet du fichier .json téléchargé depuis Google Cloud." %></p></div>
+        <p class="gx-perm"><%- icon("info", { size: 16 }) %><span><%= c.perm %></span></p>
+        <div class="gx-actions"><button type="submit" class="btn btn-primary btn-sm" data-gx-save>Enregistrer et vérifier</button>
+          <% if (stt.state !== "not_connected" && stt.state !== "config_required") { %><button type="submit" name="action" value="tester" class="btn btn-outline btn-sm" formnovalidate data-gx-test>Vérifier la connexion</button><button type="submit" name="action" value="deconnecter" class="btn btn-outline btn-sm gx-danger" formnovalidate data-confirm="Déconnecter ce site de Google ?">Déconnecter</button><% } %></div>
       </form>
-      <% if (stt.state !== "not_connected" && stt.state !== "config_required") { %>
-      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="mk-actions"><button type="submit" name="action" value="tester" class="btn btn-outline btn-sm">Tester</button> <button type="submit" name="action" value="deconnecter" class="btn btn-outline btn-sm" data-confirm="Déconnecter ce site de Google ?">Déconnecter</button></form>
-      <% } %>
       <% } %>
     </section>
     <% }) %>
+    </div>
+    <script src="<%= asset('/js/seo-google.js') %>" defer></script>
 <%- include("../partials/bottom") %>
