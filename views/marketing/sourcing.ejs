@@ -1,0 +1,7 @@
+<%- include("partials/top", { title, active }) %>
+    <div class="mk-head">
+      <div class="mk-head-main"><h1>Sourcing produit</h1></div></div>
+
+    <%# Point de montage de la future application : elle s'y branchera sans toucher au menu. Le site courant est donné par data-site. %>
+    <section id="sourcing-app" class="mk-sourcing" data-site="<%= siteId %>" aria-label="Sourcing produit"></section>
+<%- include("partials/bottom") %>
