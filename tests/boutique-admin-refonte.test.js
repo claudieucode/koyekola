@@ -93,10 +93,40 @@ describe("boutique : socle visuel de l'administration", () => {
     assert.match(p2, /Lot 01/); assert.doesNotMatch(p2, /Lot 27/); /* tri : les plus récents d'abord */
   });
 
+  test("Rapports : une carte par indicateur (11), regroupées en 3 groupes équilibrés, valeurs issues des vraies données", async () => {
+    await post("/commandes", { line_1: `${db.prepare("SELECT id FROM mk_shop_products WHERE name = 'Tasse en grès'").get().id}:`, qty_1: "2", email: "stat@exemple.fr", name: "Stat", line1: "1 rue", postal_code: "75001", city: "Paris", country: "FR" });
+    const html = (await boss.get(`${B}/rapports`)).text;
+    const section = html.match(/<section class="bq-stats-section"[^]*?<\/section>/)[0];
+    assert.equal((section.match(/class="bq-stat"/g) || []).length, 11, "11 indicateurs");
+    assert.deepEqual([...section.matchAll(/class="bq-stat-group-title">([^<]+)</g)].map((m) => m[1]), ["Ventes", "Activité", "Frais et remises"]);
+    const counts = [...section.matchAll(/<dl class="bq-stats">([^]*?)<\/dl>/g)].map((m) => (m[1].match(/class="bq-stat"/g) || []).length);
+    assert.deepEqual(counts, [4, 4, 3]);
+    for (const label of ["Ventes brutes", "Remboursé", "Ventes nettes", "Panier moyen", "Commandes payées", "Articles vendus", "Nouveaux clients", "Commandes à traiter", "Taxes", "Livraison facturée", "Remises accordées"]) assert.match(section, new RegExp(`<dt>${label}</dt><dd>`), label);
+    assert.doesNotMatch(html, /<dl class="mk-stats"/, "plus de conteneur englobant");
+    // les chiffres viennent de la base : la commande créée ci-dessus compte parmi « Commandes à traiter » / « Nouveaux clients »
+    assert.match(section, /<dt>Nouveaux clients<\/dt><dd>1<\/dd>/);
+  });
+
+  test("Paniers abandonnés : champ court, case sur sa ligne, bouton sous les champs ; la sauvegarde fonctionne", async () => {
+    const html = (await boss.get(`${B}/rapports`)).text;
+    assert.match(html, /<form class="mk-form bq-cart-form"/);
+    assert.equal((await post("/rapports/paniers", { minutes: "45", reminder: "1" })).status, 302);
+    const after = (await boss.get(`${B}/rapports`)).text;
+    assert.match(after, /name="minutes" inputmode="numeric" value="45"/); assert.match(after, /name="reminder" value="1" checked/);
+  });
+
+  test("fiche commande : résumé en faits, totaux, actions de statut et historique en colonnes (mêmes données, mêmes formulaires)", async () => {
+    const id = db.prepare("SELECT id FROM mk_shop_orders ORDER BY id DESC LIMIT 1").get().id;
+    const html = (await boss.get(`${B}/commandes/${id}`)).text;
+    assert.match(html, /class="bq-facts"/); assert.match(html, /class="bq-totals"/); assert.match(html, /class="bq-total"/);
+    assert.match(html, /class="mk-form bq-action" method="post" action="[^"]*\/commandes\/\d+\/statut"/);
+    assert.match(html, /class="mk-list bq-timeline"/);
+  });
+
   test("tableaux : classe de repli mobile et colonnes d'actions séparées (clients)", async () => {
     const html = (await boss.get(`${B}`)).text;
     assert.match(html, /<table class="mk-table">/);
-    assert.match((await boss.get(`${B}/clients`)).text, /Aucun client/);
+    const cl = (await boss.get(`${B}/clients`)).text; assert.match(cl, /<th scope="col">Actions<\/th>/); assert.match(cl, /stat@exemple\.fr/);
   });
 
   test("Réglages : une seule action d'enregistrement ; les groupes sont des cartes ; les données enregistrées sont restituées", async () => {

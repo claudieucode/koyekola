@@ -862,3 +862,12 @@ a.bl-title:hover { color: var(--dash-accent-text); text-decoration: underline; }
 .dash-site-all { display: block; margin-top: var(--s2); padding: 10px var(--s3); border-top: 1px solid var(--dash-border); font-size: 14px; font-weight: 600; color: var(--dash-accent-text); text-decoration: none; }
 .dash-site-denied { flex-basis: 100%; margin: 0; font-size: 14px; color: var(--dash-danger); }
 @media (max-width: 760px) { .dash-sitebar { padding: var(--s3) var(--s4); } .dash-site-pick { flex: 1 1 100%; } .dash-site-btn { width: 100%; } }
+
+/* Navigation sans flash dans Mon espace : l'ancienne page reste affichée jusqu'à la construction de la coque (header.ejs : rel="expect"), puis seul le contenu fond en 140 ms ; rail et menu ne bougent pas */
+@view-transition { navigation: auto; }
+::view-transition-group(root) { animation-duration: 140ms; animation-timing-function: ease-out; }
+@media (min-width: 1101px) { .dash-body .app-rail { view-transition-name: kola-rail; } .dash-body .dash-sidebar { view-transition-name: kola-sidebar; } }
+::view-transition-group(kola-rail), ::view-transition-group(kola-sidebar) { animation: none; }
+::view-transition-old(kola-rail), ::view-transition-new(kola-rail), ::view-transition-old(kola-sidebar), ::view-transition-new(kola-sidebar) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(kola-rail), ::view-transition-old(kola-sidebar) { display: none; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(root) { animation-duration: 0.01ms; } }

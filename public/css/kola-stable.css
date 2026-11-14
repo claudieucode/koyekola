@@ -62,3 +62,28 @@
   .mk-body.mk-body :is(.mk-fav, .mk-ml-viewbtn) { min-width: 44px; }
   .mk-body.mk-body .mk-chip-removable { align-items: center; }
 }
+
+/* ==========================================================================================================================================
+   Navigation sans flash (toutes les pages du CMS et du Marketing).
+   Cause mesurée (scripts/mesure-scintillement.js, Chrome avec réseau et processeur ralentis) : chaque clic charge un nouveau document ; le navigateur affichait
+   des images intermédiaires à moitié construites (barre du haut et rail, menu latéral encore vide et clair, contenu absent) = le « flash ». Remèdes :
+   1. top.ejs : <link rel="expect" href="#main" blocking="render"> — aucune image n'est affichée avant que la coque soit construite ;
+   2. transition de document : l'ancienne page reste à l'écran, seule la zone de contenu fond en 140 ms, les barres et menus (noms de transition ci-dessous)
+      ne bougent pas et passent à leur nouvel état (rubrique active) sans fondu. Navigateurs sans cette fonction : navigation habituelle, rien ne change.
+   ========================================================================================================================================== */
+@view-transition { navigation: auto; }
+::view-transition-group(root) { animation-duration: 140ms; animation-timing-function: ease-out; }
+@media (min-width: 1025px) {
+  .kab { view-transition-name: kola-adminbar; }
+  .app-rail { view-transition-name: kola-rail; }
+  .mk-sidebar { view-transition-name: kola-sidebar; }
+}
+::view-transition-group(kola-adminbar), ::view-transition-group(kola-rail), ::view-transition-group(kola-sidebar) { animation: none; }
+::view-transition-old(kola-adminbar), ::view-transition-new(kola-adminbar), ::view-transition-old(kola-rail), ::view-transition-new(kola-rail), ::view-transition-old(kola-sidebar), ::view-transition-new(kola-sidebar) { animation: none; mix-blend-mode: normal; }
+::view-transition-old(kola-adminbar), ::view-transition-old(kola-rail), ::view-transition-old(kola-sidebar) { display: none; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(root) { animation-duration: 0.01ms; } }
+/* Entrées du contenu au changement de rubrique : chaque bloc montait de 8 px en 400 ms avec un décalage jusqu'à 160 ms (apparitions échelonnées à chaque clic = vibration).
+   Désormais un seul fondu court de 150 ms, sans décalage ni déplacement, identique pour tous les blocs (opacité seulement). Mouvement réduit : aucune animation (règle d'origine). */
+@media (prefers-reduced-motion: no-preference) {
+  .mk-body .mk-content > :is(.mk-panel, .mk-table-wrap, .mk-stats, .mk-cms-toolbar, .mk-filterbar, .mk-tabs, .mk-cms-cards, .mk-empty, .mk-lead, .mk-head) { animation: kx-fade 150ms ease-out backwards; animation-delay: 0s; }
+}

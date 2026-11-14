@@ -15,6 +15,8 @@ const fs = require("fs");
       ch(await env.boss.post(`${B}/reglages`, { enabled: "1", currency: "eur", default_country: "FR", order_prefix: "CMD", low_stock_threshold: "3", guest_checkout: "1", payment_methods: ["manual"], manual_instructions: "Virement à réception." }), "réglages");
       ch(await env.boss.post(`${B}/categories`, { name: "Maison" }), "catégorie");
       for (const [n, p] of [["Tasse en grès", "18,00"], ["Plaid en lin", "64,00"], ["Bougie ambrée", "24,50"]]) ch(await env.boss.post(`${B}/produits`, { name: n, price: p, status: "published", type: "simple", manage_stock: "1", stock_qty: "12" }), "produit " + n);
+      const pids = env.db.prepare("SELECT id FROM mk_shop_products ORDER BY id").all().map((r) => r.id);
+      for (const [i, who] of [["1", "awa@exemple.fr"], ["2", "koffi@exemple.fr"], ["3", "mariam@exemple.fr"]]) ch(await env.boss.post(`${B}/commandes`, { line_1: `${pids[Number(i) - 1]}:`, qty_1: "2", email: who, name: who.split("@")[0], line1: "12 rue des Lilas", postal_code: "75011", city: "Paris", country: "FR" }), "commande " + who);
       ch(await env.boss.post(`${B}/livraison/zones`, { name: "France", countries: "FR, BE" }), "zone");
       ch(await env.boss.post(`${B}/taxes`, { name: "TVA", country: "FR", rate: "20" }), "taxe");
       ch(await env.boss.post(`${B}/coupons`, { code: "BIENVENUE", kind: "percent", value: "10" }), "coupon");

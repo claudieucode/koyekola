@@ -9,13 +9,15 @@
   </form>
   <p class="mk-sub">Une vente = une commande payée et non annulée, comptée à la date de son paiement. Les remboursements réussis sont retirés.</p>
 </section>
-<section class="mk-panel">
-  <h2>Chiffres de la période</h2>
-  <dl class="mk-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin:0">
-    <% [["Ventes brutes", money(sm.grossCents)], ["Remboursé", money(sm.refundedCents)], ["Ventes nettes", money(sm.netCents)], ["Commandes payées", sm.orders], ["Panier moyen", money(sm.averageCents)], ["Articles vendus", sm.unitsSold], ["Taxes", money(sm.taxCents)], ["Livraison facturée", money(sm.shippingCents)], ["Remises accordées", money(sm.discountCents)], ["Nouveaux clients", sm.newCustomers], ["Commandes à traiter", sm.toProcess]].forEach(([l, v]) => { %>
-      <div style="border:1px solid var(--line,#ddd);border-radius:10px;padding:12px"><dt class="mk-sub" style="margin:0"><%= l %></dt><dd style="margin:4px 0 0;font-size:1.35rem;font-weight:700"><%= v %></dd></div>
-    <% }) %>
-  </dl>
+<section class="bq-stats-section" aria-labelledby="bq-stats-h">
+  <h2 id="bq-stats-h">Chiffres de la période</h2>
+  <% const statGroups = [
+    ["Ventes", [["Ventes brutes", money(sm.grossCents)], ["Remboursé", money(sm.refundedCents)], ["Ventes nettes", money(sm.netCents)], ["Panier moyen", money(sm.averageCents)]]],
+    ["Activité", [["Commandes payées", sm.orders], ["Articles vendus", sm.unitsSold], ["Nouveaux clients", sm.newCustomers], ["Commandes à traiter", sm.toProcess]]],
+    ["Frais et remises", [["Taxes", money(sm.taxCents)], ["Livraison facturée", money(sm.shippingCents)], ["Remises accordées", money(sm.discountCents)]]],
+  ]; %>
+  <% statGroups.forEach(([group, items]) => { %><div class="bq-stat-group" role="group" aria-label="<%= group %>"><p class="bq-stat-group-title"><%= group %></p>
+    <dl class="bq-stats"><% items.forEach(([l, v]) => { %><div class="bq-stat"><dt><%= l %></dt><dd><%= v %></dd></div><% }) %></dl></div><% }) %>
 </section>
 <section class="mk-panel">
   <h2>Ventes par jour</h2>
@@ -57,10 +59,10 @@
   <% if (carts.items.length) { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Paniers abandonnés</caption><thead><tr><th scope="col">Abandonné le</th><th scope="col">Client</th><th scope="col">Articles</th><th scope="col">Relance</th></tr></thead><tbody>
     <% carts.items.forEach((c) => { %><tr><th scope="row"><%= String(c.abandoned_at).slice(0, 16) %></th><td><%= c.email || "inconnu" %></td><td><%= c.quantity %> — <%= c.names %></td><td><%= c.reminder_sent_at ? "envoyée" : "—" %></td></tr><% }) %>
   </tbody></table></div><% } %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/rapports/paniers">
+  <% if (canWrite) { %><form class="mk-form bq-cart-form" method="post" action="<%= base %>/rapports/paniers">
     <div class="field-group"><label for="ca-m">Inactivité avant « abandonné » (minutes)</label><input type="text" id="ca-m" name="minutes" inputmode="numeric" value="<%= cartSettings.abandoned_minutes %>"></div>
-    <div class="field-group"><label><input type="checkbox" name="reminder" value="1"<%= cartSettings.abandoned_reminder ? " checked" : "" %>> Envoyer un e-mail de rappel aux clients qui ont un compte</label></div>
-    <button class="btn btn-outline btn-sm" type="submit">Enregistrer</button>
+    <div class="field-group bq-wide"><label><input type="checkbox" name="reminder" value="1"<%= cartSettings.abandoned_reminder ? " checked" : "" %>> Envoyer un e-mail de rappel aux clients qui ont un compte</label></div>
+    <div class="bq-actions"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button></div>
   </form><p class="field-hint">L'événement « Boutique : un panier est abandonné » est aussi disponible pour les automatisations et les webhooks. Les invités ne reçoivent jamais de rappel automatique.</p><% } %>
 </section>
 <section class="mk-panel">

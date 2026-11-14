@@ -1,7 +1,7 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: product ? product.name : "Nouveau produit" }) %>
 <% const v = product ? { name: product.name, type: product.type, status: product.status, sku: product.sku, short_description: product.short_description, description: product.description, price: (product.price_cents / 100).toFixed(2), sale_price: product.sale_price_cents != null ? (product.sale_price_cents / 100).toFixed(2) : "", sale_starts_at: product.sale_starts_at, sale_ends_at: product.sale_ends_at, manage_stock: product.manage_stock, stock_qty: product.stock_qty, weight_grams: product.weight_grams, length_mm: product.length_mm, width_mm: product.width_mm, height_mm: product.height_mm, requires_shipping: product.requires_shipping, image_url: product.image_url, gallery: product.gallery.join("\n"), tags: product.tags.join(", "), is_featured: product.is_featured, seo_title: product.seo_title, seo_description: product.seo_description, attributes: product.attributes.map((a) => a.name + ": " + a.values.join(", ")).join("\n") } : values; const sel = product ? product.categories.map((c) => c.id) : [].concat(values.category_ids || []).map(Number); const dis = canWrite ? "" : " disabled"; %>
-<form class="mk-form mk-panel" method="post" action="<%= base %>/produits<%= product ? "/" + product.id : "" %>">
+<form class="mk-form mk-panel bq-cols-4" method="post" action="<%= base %>/produits<%= product ? "/" + product.id : "" %>">
   <h2>Informations</h2>
   <div class="field-group"><label for="f-name">Nom</label><input type="text" id="f-name" name="name" value="<%= v.name || "" %>" required maxlength="200"<%= dis %>></div>
   <div class="field-group"><label for="f-type">Type de produit</label>
