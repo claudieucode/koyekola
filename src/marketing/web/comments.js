@@ -45,7 +45,7 @@ module.exports = () => {
     res.render("marketing/comments", {
       title: "Commentaires", active: sub ? `commentaires/${sub}` : "commentaires", sub, status, tabs: TABS, counts, f, result, rows: result.rows,
       contents: comments.commentedContents(100, siteContent.scopePredicate(req.mk.ctx, "post", "p.id")), focus: f.contenu && siteContent.allowedContent(req.mk.ctx, "post", Number(f.contenu.split(":")[1])) ? comments.contentInfo(...f.contenu.split(":").map((v, i) => (i ? Number(v) : v))) : null,
-      TYPES: comments.TYPES, userId: req.session.user.id, canModerate: can("comments.moderate"), canDelete: can("comments.delete"), canEmail: can("comments.email"), cmsPagesJs: true, STATUS_LABELS: comments.STATUS_LABELS, BASE,
+      TYPES: comments.TYPES, userId: req.session.user.id, canModerate: can("comments.moderate"), canDelete: can("comments.delete"), canEmail: can("comments.email"), cmsPagesJs: true, cmComments: true, STATUS_LABELS: comments.STATUS_LABELS, BASE,
       cfg: comments.settings(),
     });
   };
