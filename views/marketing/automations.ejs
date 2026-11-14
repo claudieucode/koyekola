@@ -17,8 +17,6 @@
         <p>Partez d'un parcours tout prêt (bienvenue, suivi après achat, relance…) ou créez votre propre scénario.</p>
         <div class="mk-actions"><a class="btn btn-primary btn-sm" href="/marketing/automatisations/parcours">Voir les parcours tout prêts</a><% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-mk-modal-open="nouveau">Créer un scénario</button><% } %></div>
       </div>
-        <div class="mk-empty-art" aria-hidden="true"><%- include("partials/empty-art", { kind: "chart" }) %></div>
-      </div></div>
     <% } else { %>
       <div class="mk-table-wrap"><table class="mk-table">
         <caption class="sr-only">Scénarios</caption>
