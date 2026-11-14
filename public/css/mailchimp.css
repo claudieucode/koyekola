@@ -1,5 +1,5 @@
 /* ===== Marketing → Mailchimp (.mk-mc-*) — console de l'intégration Mailchimp ===== */
-.mk-mc { max-width: 1180px; margin: 0 auto; padding: 8px 0 80px; color: var(--mk-text, #1b2b45); --mc-ok: #1a6b38; --mc-warn: #8a5300; --mc-bad: #a3281a; --mc-info: #0b5cab; }
+.mk-mc { max-width: 1440px; margin: 0 auto; padding: 8px 0 80px; color: var(--mk-text, #1b2b45); --mc-ok: #1a6b38; --mc-warn: #8a5300; --mc-bad: #a3281a; --mc-info: #0b5cab; }
 [data-mk-theme="gris"] .mk-mc, [data-mk-theme="noir"] .mk-mc, [data-mk-theme="nuit"] .mk-mc { --mc-ok: #7fd6a0; --mc-warn: #f0c36a; --mc-bad: #ff9d90; --mc-info: #8cc4ff; }
 .mk-mc [hidden] { display: none !important; }
 .mk-mc .sr-only, .mk-mc-dialog .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -11,10 +11,38 @@
 .mk-mc-note.is-bad { border-color: var(--mc-bad); color: var(--mc-bad); } .mk-mc-note.is-warn { border-color: var(--mc-warn); color: var(--mc-warn); } .mk-mc-note.is-ok { border-color: var(--mc-ok); color: var(--mc-ok); }
 .mk-mc-bar { margin: 0 0 12px; } .mk-mc-barinner { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 8px 12px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 8px; background: var(--mk-surface, #fff); }
 .mk-mc-who { font-weight: 600; } .mk-mc-sync { flex: 1 1 240px; font-size: .85rem; color: var(--mk-muted, #5a687d); } .mk-mc-sync.is-bad { color: var(--mc-bad); } .mk-mc-sync.is-warn { color: var(--mc-warn); }
-.mk-mc-tabs { display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid var(--mk-border, #dbe4ea); margin: 0 0 16px; }
-.mk-mc-tab { padding: 9px 14px; border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; background: transparent; font: inherit; font-size: .875rem; font-weight: 600; color: var(--mk-muted, #5a687d); cursor: pointer; min-height: 40px; }
+/* Navigation latérale (espace de travail Mailchimp) */
+.mk-mc { max-width: 1440px; }
+.mk-mc-shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); gap: 24px; align-items: start; margin-top: 16px; }
+.mk-mc-shell.is-folded { grid-template-columns: 56px minmax(0, 1fr); }
+.mk-mc-side { position: sticky; top: 72px; display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 96px); padding: 12px 8px; border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; background: var(--mk-surface, #fff); }
+.mk-mc-fold { align-self: flex-end; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--mk-muted, #5a687d); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.mk-mc-fold:hover { background: var(--mk-hover, #f1f6fa); color: var(--mk-text, #1b2b45); }
+.mk-mc-fold svg { transition: transform 180ms cubic-bezier(.22, .8, .3, 1); }
+.mk-mc-shell.is-folded .mk-mc-fold { align-self: center; } .mk-mc-shell.is-folded .mk-mc-fold svg { transform: rotate(180deg); }
+.mk-mc-tabs { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 0 2px; }
+.mk-mc-navgroup { display: flex; flex-direction: column; gap: 2px; }
+.mk-mc-navgroup + .mk-mc-navgroup { padding-top: 12px; border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-mc-navtitle { margin: 0 0 4px; padding: 0 12px; font-size: .75rem; font-weight: 700; letter-spacing: .02em; color: var(--mk-muted, #5a687d); }
+.mk-mc-tab { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 40px; padding: 8px 12px; border: 0; border-radius: 8px; background: transparent; font: inherit; font-size: .875rem; font-weight: 600; text-align: left; color: var(--mk-muted, #5a687d); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.mk-mc-ico { flex: none; }
 .mk-mc-tab:hover { color: var(--mk-text, #1b2b45); background: var(--mk-hover, #f1f6fa); }
-.mk-mc-tab[aria-selected="true"] { color: var(--mk-text, #0f2a5c); background: var(--mk-surface, #fff); border-color: var(--mk-border, #dbe4ea); box-shadow: 0 2px 0 var(--mk-surface, #fff); position: relative; top: 1px; }
+.mk-mc-tab[aria-selected="true"] { color: var(--mk-navy, #0f2a5c); background: color-mix(in srgb, var(--mk-navy, #0f2a5c) 9%, var(--mk-surface, #fff)); box-shadow: inset 3px 0 0 var(--mk-navy, #0f2a5c); }
+.mk-mc-shell.is-folded .mk-mc-navtitle, .mk-mc-shell.is-folded .mk-mc-tablabel { display: none; }
+.mk-mc-shell.is-folded .mk-mc-tab { justify-content: center; padding: 8px; }
+.mk-mc-shell.is-folded .mk-mc-navgroup + .mk-mc-navgroup { padding-top: 8px; }
+.mk-mc-main { min-width: 0; }
+@media (max-width: 900px) {
+  .mk-mc-shell, .mk-mc-shell.is-folded { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .mk-mc-side, .mk-mc-shell.is-folded .mk-mc-side { position: static; max-height: none; padding: 8px; }
+  .mk-mc-fold { display: none; }
+  .mk-mc-tabs { flex-direction: row; gap: 4px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+  .mk-mc-navgroup, .mk-mc-navgroup + .mk-mc-navgroup { flex-direction: row; align-items: center; gap: 4px; padding: 0 0 0 8px; border-top: 0; border-left: 1px solid var(--mk-border, #dbe4ea); }
+  .mk-mc-navgroup:first-child { padding-left: 0; border-left: 0; } .mk-mc-navtitle { display: none; }
+  .mk-mc-tab, .mk-mc-shell.is-folded .mk-mc-tab { width: auto; flex: none; white-space: nowrap; justify-content: flex-start; padding: 8px 12px; } .mk-mc-shell.is-folded .mk-mc-tablabel { display: inline; }
+  .mk-mc-tab[aria-selected="true"] { box-shadow: inset 0 -3px 0 var(--mk-navy, #0f2a5c); }
+}
+@media (prefers-reduced-motion: reduce) { .mk-mc-fold svg, .mk-mc-tab, .mk-mc-fold { transition: none; } }
 .mk-mc-tab.is-locked { opacity: .55; cursor: not-allowed; }
 .mk-mc-tab:focus-visible, .mk-mc-btn:focus-visible, .mk-mc-chipbtn:focus-visible { outline: 2px solid var(--mk-navy, #0f2a5c); outline-offset: 2px; }
 .mk-mc-h2 { margin: 0 0 12px; font-size: 1.2rem; } .mk-mc-loading { color: var(--mk-muted, #5a687d); } .mk-mc-panel[aria-busy="true"] { opacity: .85; }

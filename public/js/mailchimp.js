@@ -282,22 +282,47 @@
     try { await api("POST", "/sync", { full: Boolean(full) }); if (!quiet) flash("Synchronisation lancée. Vous pouvez continuer à travailler.", "ok"); state.sync = Object.assign({}, state.sync, { running: true }); renderBar(); schedulePoll(); }
     catch (e) { fail(e); }
   }
+  // Navigation latérale : mêmes onglets (role=tab, ids inchangés), regroupés par thème. Aucune rubrique sans fonction.
+  var GROUPS = [["Connexion", ["connexion"]], ["Tableau de bord", ["apercu"]], ["Audience", ["audiences", "contacts"]], ["Campagnes", ["campagnes"]], ["Création", ["modeles", "pages"]],
+    ["Automatisation", ["automatisations"]], ["Analyse", ["rapports"]], ["Intégrations", ["webhooks", "boutiques"]], ["Gestion du compte", ["compte", "transactionnel", "journal"]]];
+  var ICONS = { connexion: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1", apercu: "M4 5h7v7H4zM13 5h7v4h-7zM13 11h7v8h-7zM4 14h7v5H4z", audiences: "M16 19v-1a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v1M10 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6M20 19v-1a3 3 0 0 0-2-2.8M16 5.2a3 3 0 0 1 0 5.6",
+    contacts: "M5 4h14v16H5zM9 9h6M9 13h6M9 17h3", campagnes: "M4 12l16-7-6 15-3-6z", modeles: "M4 4h16v16H4zM4 9h16M9 9v11", pages: "M7 3h8l4 4v14H7zM15 3v4h4", automatisations: "M13 3L5 14h6l-1 7 8-11h-6z",
+    rapports: "M5 20V10M12 20V4M19 20v-7", webhooks: "M9 7a3 3 0 1 1 3 3l-3 6M12 17a3 3 0 1 0 5-2h-5M6 15a3 3 0 1 0 1 5l3-5", boutiques: "M4 8l1-4h14l1 4M4 8v12h16V8M4 8h16M9 12h6", compte: "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M5 20a7 7 0 0 1 14 0", transactionnel: "M4 6h16v12H4zM4 7l8 6 8-6", journal: "M8 4h10v16H8zM8 8H5M8 12H5M8 16H5M11 9h4M11 13h4" };
+  function icon(id) {
+    var ns = "http://www.w3.org/2000/svg", s = document.createElementNS(ns, "svg"), p = document.createElementNS(ns, "path");
+    s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("width", "18"); s.setAttribute("height", "18"); s.setAttribute("aria-hidden", "true"); s.setAttribute("class", "mk-mc-ico");
+    p.setAttribute("d", ICONS[id] || ICONS.apercu); p.setAttribute("fill", "none"); p.setAttribute("stroke", "currentColor"); p.setAttribute("stroke-width", "1.7"); p.setAttribute("stroke-linecap", "round"); p.setAttribute("stroke-linejoin", "round");
+    s.appendChild(p); return s;
+  }
   function buildTabs() {
     clear(tabsEl);
-    tabs.forEach(function (t, i) {
-      var locked = t.needsConnection && !connected();
-      var b = h("button", { type: "button", role: "tab", id: "mc-tab-" + t.id, "aria-controls": "mc-panel", "aria-selected": state.tab === t.id ? "true" : "false", tabindex: state.tab === t.id ? "0" : "-1", "aria-disabled": locked ? "true" : null, class: "mk-mc-tab" + (locked ? " is-locked" : ""), text: t.label });
-      b.addEventListener("click", function () { selectTab(t.id, true); });
-      b.addEventListener("keydown", function (ev) {
-        var idx = i, key = ev.key;
-        if (key === "ArrowRight") idx = (i + 1) % tabs.length; else if (key === "ArrowLeft") idx = (i - 1 + tabs.length) % tabs.length; else if (key === "Home") idx = 0; else if (key === "End") idx = tabs.length - 1; else return;
-        ev.preventDefault();
-        var target = tabsEl.children[idx]; target.focus();
+    var order = [];
+    GROUPS.forEach(function (g) {
+      var items = g[1].map(function (id) { return tabs.filter(function (t) { return t.id === id; })[0]; }).filter(Boolean);
+      if (!items.length) return;
+      var sec = h("div", { class: "mk-mc-navgroup", role: "presentation" }, h("p", { class: "mk-mc-navtitle", "aria-hidden": "true", text: g[0] }));
+      items.forEach(function (t) {
+        var locked = t.needsConnection && !connected();
+        var i = order.length; order.push(t);
+        var b = h("button", { type: "button", role: "tab", id: "mc-tab-" + t.id, "aria-controls": "mc-panel", "aria-selected": state.tab === t.id ? "true" : "false", tabindex: state.tab === t.id ? "0" : "-1", "aria-disabled": locked ? "true" : null, title: t.label, class: "mk-mc-tab" + (locked ? " is-locked" : "") }, icon(t.id), h("span", { class: "mk-mc-tablabel", text: t.label }));
+        b.addEventListener("click", function () { selectTab(t.id, true); });
+        b.addEventListener("keydown", function (ev) {
+          var idx = i, key = ev.key, n = order.length;
+          if (key === "ArrowRight" || key === "ArrowDown") idx = (i + 1) % n; else if (key === "ArrowLeft" || key === "ArrowUp") idx = (i - 1 + n) % n; else if (key === "Home") idx = 0; else if (key === "End") idx = n - 1; else return;
+          ev.preventDefault();
+          var target = document.getElementById("mc-tab-" + order[idx].id); if (target) target.focus();
+        });
+        sec.appendChild(b);
       });
-      tabsEl.appendChild(b);
+      tabsEl.appendChild(sec);
     });
+    tabsEl.setAttribute("aria-orientation", "vertical");
     panel.setAttribute("role", "tabpanel"); panel.id = "mc-panel";
   }
+  // Réduction de la barre latérale (préférence mémorisée dans ce navigateur)
+  var shell = root.querySelector("[data-mc-shell]"), fold = root.querySelector("[data-mc-fold]");
+  function setFold(on) { if (!shell) return; shell.classList.toggle("is-folded", on); if (fold) { fold.setAttribute("aria-expanded", String(!on)); fold.setAttribute("aria-label", on ? "Déplier la navigation" : "Replier la navigation"); } try { localStorage.setItem("mk-mc-fold", on ? "1" : "0"); } catch (e) { /* stockage indisponible */ } }
+  if (fold) { fold.addEventListener("click", function () { setFold(!shell.classList.contains("is-folded")); }); try { if (localStorage.getItem("mk-mc-fold") === "1") setFold(true); } catch (e) { /* stockage indisponible */ } }
   function selectTab(id, userAction) {
     var t = tabs.filter(function (x) { return x.id === id; })[0] || tabs[0];
     if (t.needsConnection && !connected()) { flash("Connectez d'abord votre compte Mailchimp (onglet « Connexion »).", "error"); if (userAction) return; t = tabs[0]; }
