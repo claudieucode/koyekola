@@ -1,5 +1,7 @@
 # Extensions — plan de migration par paliers
 
+**État au 14/11/2026 : P1 à P11 réalisés** (voir `07_TESTS_ET_RESULTATS.md`). Le tableau ci-dessous est le plan d'origine.
+
 Principe : **faire grandir le socle R7**, ne rien reconstruire. Chaque palier est indépendant, testé, documenté, et ne démarre que si le précédent est sans erreur. Aucune migration destructive ; les tables `mk_site_modules`, `mk_shop_*`, `mk_course_sites` et celles du LMS ne sont ni renommées ni vidées.
 
 | Palier | Contenu | Fichiers principaux | Risque | Retour arrière |
