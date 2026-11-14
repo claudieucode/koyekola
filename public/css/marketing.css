@@ -2024,3 +2024,11 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* Ergonomie : écart régulier entre les entrées du menu latéral du marketing et entre les liens de la barre d'applications */
 .mk-nav-group + .mk-nav-group, .mk-nav-head + .mk-nav-head { margin-top: 2px; }
 .mk-nav-head { min-height: 36px; }
+
+/* Sourcing produit : l'application occupe tout l'espace sous le titre, dans un cadre à filet unique (charte : rayon de panneau, sans ombre) */
+.mk-body .mk-sourcing { display: block; margin: 0; }
+.mk-body .mk-sourcing-frame {
+  display: block; width: 100%; height: max(640px, calc(100dvh - 190px)); border: 1px solid var(--kb-rule, var(--border));
+  border-radius: var(--kb-r-panel, 12px); background: var(--kb-canvas, var(--bg)); color-scheme: normal;
+}
+@media (max-width: 640px) { .mk-body .mk-sourcing-frame { height: max(560px, calc(100dvh - 150px)); border-radius: var(--kb-r-ctl, 8px); } }
