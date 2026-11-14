@@ -47,8 +47,11 @@
   $$("[data-pv-goto]").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); show(a.getAttribute("data-pv-goto"), true); window.scrollTo({ top: 0 }); }); });
 
   // ---------- Accordéons ----------
+  // Un seul geste, sans mesure ni minuterie : on bascule l'attribut et la classe (une seule mise en page, au clic).
+  // Le mouvement (fondu + léger glissement du contenu, chevron) est purement CSS et ne touche que opacity/transform.
   $$("[data-pv-acc-btn]").forEach(function (b) {
-    b.addEventListener("click", function () { var open = b.getAttribute("aria-expanded") === "true"; b.setAttribute("aria-expanded", String(!open)); b.closest("[data-pv-acc]").classList.toggle("is-open", !open); });
+    var acc = b.closest("[data-pv-acc]");
+    b.addEventListener("click", function () { var next = b.getAttribute("aria-expanded") !== "true"; b.setAttribute("aria-expanded", String(next)); acc.classList.toggle("is-open", next); });
   });
 
   // ---------- État affiché (relu du serveur après chaque action) ----------
