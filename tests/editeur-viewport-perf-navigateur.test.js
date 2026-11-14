@@ -78,6 +78,22 @@ describe("fluidité du zoom et de la main (navigateur, document volumineux)", { 
     const box = await page.locator("[data-pb-frame]").boundingBox();
     const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
     Object.assign(out, await scenario("mainPan_120", async () => { await page.mouse.move(cx, cy); await page.mouse.down(); for (let i = 1; i <= 120; i++) await page.mouse.move(cx - i * 2, cy - i * 3); await page.mouse.up(); }));
+    // Navigator ouvert : coût d'ouverture (jusqu'à la miniature réelle), tâches longues, puis fluidité de la main et du zoom PENDANT qu'il est ouvert
+    if (process.env.PERF_NAVIGATOR) {
+      await page.click('.pb-tool[data-mode="select"]'); await wait(200);
+      await page.evaluate(() => { window.__lt = []; try { new PerformanceObserver((l) => l.getEntries().forEach((e) => window.__lt.push(Math.round(e.duration)))).observe({ entryTypes: ["longtask"] }); } catch (e) { /* non pris en charge */ } });
+      const tn = Date.now(); await page.click("[data-pb-navigator]");
+      await page.waitForFunction(() => { const f = document.querySelector(".pb-nvs-frame"); return f && f.contentDocument && f.contentDocument.readyState === "complete" && f.contentDocument.body && f.contentDocument.body.textContent.length > 20; }, null, { timeout: 60000 });
+      out.navigatorOpenToReadyMs = Date.now() - tn; await wait(600);
+      out.navigatorLongTasksMs = await page.evaluate(() => window.__lt.slice());
+      await page.click('.pb-tool[data-mode="hand"]'); await wait(200);
+      Object.assign(out, await scenario("mainPan_120_navigateurOuvert", async () => { await page.mouse.move(cx, cy); await page.mouse.down(); for (let i = 1; i <= 120; i++) await page.mouse.move(cx - i * 2, cy + i * 3); await page.mouse.up(); }));
+      await page.click('.pb-tool[data-mode="select"]'); await wait(200);
+      Object.assign(out, await scenario("zoomCycle_x20_navigateurOuvert", async () => { for (let r = 0; r < 2; r++) { for (let i = 0; i < 5; i++) { await clickZoom("+"); await wait(60); } for (let i = 0; i < 5; i++) { await clickZoom("-"); await wait(60); } } }));
+      out.navigatorLongTasksAfterMs = await page.evaluate(() => window.__lt.slice());
+      await page.click('.pb-nvs-btn[data-nav="close"]'); await wait(400);
+      out.heapAfterCloseMB = Math.round((await cdp.send("Performance.getMetrics")).metrics.find((x) => x.name === "JSHeapUsedSize").value / 1048576 * 10) / 10;
+    }
     out.scrollAfterPan = await page.evaluate(() => ({ y: document.querySelector("[data-pb-frame]").contentWindow.scrollY, sl: document.querySelector("[data-pb-stage]").scrollLeft }));
     console.log("PERF " + JSON.stringify(out));
     if (process.env.PERF_OUT) fs.writeFileSync(process.env.PERF_OUT, JSON.stringify(out, null, 2));

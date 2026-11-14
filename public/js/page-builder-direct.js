@@ -64,7 +64,7 @@
   function place(node, r) { node.style.left = r.left + "px"; node.style.top = r.top + "px"; node.style.width = r.width + "px"; node.style.height = r.height + "px"; }
 
   // ---------- Survol intelligent : UNE cible, la plus profonde, jamais pendant un geste ----------
-  function hoverEnabled() { return DOC && !st.drag && !B.gesture() && !B.editing() && B.tool() !== "hand" && !st.touch; }
+  function hoverEnabled() { return DOC && !st.drag && !B.gesture() && !B.editing() && B.tool() === "select" && !st.touch; }
   function setHover(node) {
     var id = node ? idOf(node) : null;
     if (id === st.hoverId) return;
@@ -160,7 +160,7 @@
     if (st.drag) return;
     clearHandles();
     var sel = B.selection();
-    if (sel.length !== 1 || B.gesture() || B.editing() || B.tool() === "hand") { layer.classList.remove("is-near"); return; }
+    if (sel.length !== 1 || B.gesture() || B.editing() || B.tool() !== "select") { layer.classList.remove("is-near"); return; }
     var it = B.byId(sel[0]), elm = it && B.canvasEl(it.id);
     if (!usable(it) || !elm) return;
     var caps = B.caps(it), cs = DOC.defaultView.getComputedStyle(elm), rect = B.pageRect(elm);
@@ -362,7 +362,7 @@
       document.addEventListener("pb:tool", sync); sync();
     }
     var d0 = B.frame().contentDocument; if (d0 && d0.body && d0.body.classList.contains("lp-builder")) canvas(d0); // le canevas était déjà chargé
-    document.addEventListener("pb:tool", function () { if (B.tool() === "hand") { setHover(null); clearHandles(); if (layer) layer.classList.remove("is-near"); } else refresh(); });
+    document.addEventListener("pb:tool", function () { if (B.tool() !== "select") { setHover(null); clearHandles(); if (layer) layer.classList.remove("is-near"); } else refresh(); });
   }
   root.pbDirect = { attach: attach, canvas: canvas, refresh: refresh, register: register, controls: function () { return CONTROLS.map(function (c) { return c.id; }); } };
 })(window);

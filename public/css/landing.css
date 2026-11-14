@@ -558,6 +558,7 @@
 body.pb-outlines .kw-node,body.pb-outlines .lp-block{outline:1px dashed rgba(2,119,182,.35);outline-offset:-1px}
 body.pb-hand,body.pb-hand *{cursor:grab}
 body.pb-hand.is-panning,body.pb-hand.is-panning *{cursor:grabbing}
+body.pb-zoomarea,body.pb-zoomarea *{cursor:zoom-in}
 .pb-editing{outline:2px solid #ff9f1c;outline-offset:3px;cursor:text}
 .lp-builder .kw-node.is-selected,.lp-builder .lp-block.is-selected{outline:none}
 

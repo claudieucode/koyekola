@@ -1592,6 +1592,7 @@
   var TOOLS = [
     { key: "select", label: "Sélection (V)", icon: "mousePointer", mode: true },
     { key: "hand", label: "Main (H)", tip: "Main : faire défiler la page en la glissant (H)", icon: "arrowRightLeft", mode: true },
+    { key: "zoomarea", label: "Zoom par zone (Z)", tip: "Zoom par zone : encadrez la partie à examiner (Z). Alt + clic : zoom arrière. Échap : annuler", icon: "search", mode: true },
     { sep: true },
     { cat: "layout", label: "Mise en page", tip: "Mise en page : section, conteneur, grille, colonnes, pile, groupe", icon: "layout" },
     { cat: "basic", label: "Basique", tip: "Basique : titre, image, texte, vidéo, bouton, séparateur, espaceur, icône…", icon: "type" },
@@ -1682,7 +1683,10 @@
     document.dispatchEvent(new CustomEvent("pb:tool", { detail: k }));
     $$(".pb-tool[data-mode]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.mode === k)); });
     var doc = frame.contentDocument;
-    if (doc && doc.body) doc.body.classList.toggle("pb-hand", k === "hand");
+    if (doc && doc.body) { doc.body.classList.toggle("pb-hand", k === "hand"); doc.body.classList.toggle("pb-zoomarea", k === "zoomarea"); }
+    stage.classList.toggle("is-zoomarea", k === "zoomarea");
+    var za = $("[data-pb-zoomarea]"); if (za) za.setAttribute("aria-pressed", String(k === "zoomarea"));
+    if (k !== "zoomarea") cancelArea();
     placeCanvasBar();
   }
   // Modèle de l'équipe inséré dans la page en cours : une copie de ses sections (nouveaux identifiants)
@@ -5558,7 +5562,7 @@ function selectField(label, value, options, onChange, opts) {
   // défilement restent en place : plus de rechargement complet à chaque modification. Tout ce qui sortirait de ce cadre simple
   // (en-tête ou pied changé, scripts, sections interactives : onglets, carrousel, animations, formulaires…) recharge le cadre
   // en entier, comme avant.
-  var lastRender = null;
+  var lastRender = null, renderText = "", renderGen = 0;
   var INTERACTIVE = /\sdata-kw-(?!add\b)[a-z-]+|<script|<iframe|<video|<audio|<form|<input|<details|<style/i;
   function renderSignature(text) {
     var d = new DOMParser().parseFromString(text, "text/html");
@@ -5679,6 +5683,7 @@ function selectField(label, value, options, onChange, opts) {
           return;
         }
         errBox.hidden = true;
+        renderText = res.text; renderGen++;   // le Navigateur réutilise CE rendu (jamais une copie du DOM interactif)
         if (errorItemId) { errorItemId = null; markError(); }
         if (editing || gesture) { pendingRender = true; return; }
         // Un rechargement précédent n'a pas fini : son contenu est dépassé, on le jette et on recharge avec ce rendu-ci
@@ -5729,7 +5734,7 @@ function selectField(label, value, options, onChange, opts) {
     if (window.pbMotionStudio) window.pbMotionStudio.canvas(frame.contentWindow); // runtime Motion Studio du canevas (mode éditeur : lecture / pause / position)
     if (window.pbDirect) window.pbDirect.canvas(doc); // manipulation directe : couche de survol et poignées de ce document
     doc.body.classList.toggle("pb-outlines", aids.outlines);
-    doc.body.classList.toggle("pb-hand", tool === "hand");
+    doc.body.classList.toggle("pb-hand", tool === "hand"); doc.body.classList.toggle("pb-zoomarea", tool === "zoomarea");
     frame.contentWindow.scrollTo(0, y);
     doc.addEventListener("mousedown", function (e) { canvasPointerAt = Date.now(); closeMenu(); releasePart(e); }, true); // le canevas est un iframe : ses clics n'atteignent pas l'écouteur du document parent
     doc.addEventListener("keydown", function (e) { if (e.key === "Tab") tabAt = Date.now(); }, true);
@@ -5740,7 +5745,7 @@ function selectField(label, value, options, onChange, opts) {
     });
     doc.addEventListener("click", function (e) {
       if (selectedGuide) { selectedGuide = null; drawGuides(); }
-      if (tool === "hand") { e.preventDefault(); return; }
+      if (tool === "hand" || tool === "zoomarea") { e.preventDefault(); return; }
       // Fin d'un redimensionnement (poignée, séparation de colonnes) : le relâchement n'est pas un clic de sélection
       if (Date.now() < ignoreClickUntil) { e.preventDefault(); return; }
       if (editing && editing.el.contains(e.target)) return;
@@ -5790,10 +5795,10 @@ function selectField(label, value, options, onChange, opts) {
       dragIds = selection.indexOf(id) >= 0 ? selection.slice() : [id]; dragNew = null;
       e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
     });
-    doc.addEventListener("pointerdown", function (e) { if (tool === "hand" && e.isPrimary && e.button === 0) panStart(e); });
+    doc.addEventListener("pointerdown", function (e) { if (!e.isPrimary || e.button !== 0) return; if (tool === "hand") panStart(e); else if (tool === "zoomarea") areaStart(e, true); });
     doc.addEventListener("wheel", onZoomWheel, { passive: false });
     doc.addEventListener("mousedown", function (e) {
-      if (tool === "hand") { e.preventDefault(); return; }
+      if (tool === "hand" || tool === "zoomarea") { e.preventDefault(); return; }
       var el = targetOf(e);
       var id = idOfEl(el);
       if (el && selection.indexOf(id) >= 0 && !editing && canWrite && !lockedDeep(id) && !e.target.closest(".pb-handle")) el.setAttribute("draggable", "true");
@@ -6281,7 +6286,7 @@ function selectField(label, value, options, onChange, opts) {
     if (!cbar) return; // appel pendant l'initialisation
     if (mode === "structure") { hideCbar(); return; }
     var items = selectedItems();
-    var acts = editing || gesture || tool === "hand" ? [] : canvasActionsFor(items);
+    var acts = editing || gesture || tool !== "select" ? [] : canvasActionsFor(items);
     var el = acts.length ? canvasEl(selection[0]) : null;
     if (!el) { hideCbar(); return; }
     var key = selection.join(",") + "|" + acts.join(",") + "|" + items.map(function (x) { return (x.hidden ? "h" : "") + (x.locked ? "l" : "") + ((kidsOf(x) || []).length); }).join(",") + "|" + device;
@@ -6349,6 +6354,125 @@ function selectField(label, value, options, onChange, opts) {
     var dx = (x - v.x) * zoom;
     if (Math.abs(dx) >= 0.5) stage.scrollLeft += dx;
   }
+  // ---- Historique de vues (léger : 20 positions au plus) : Précédent / Suivant, comme un navigateur ----
+  var backViews = [], fwdViews = [], lastViewMemo = 0;
+  function currentView() {
+    var v = viewState();
+    return v ? { z: zoom, fit: zoomFit, cx: v.x + v.w / 2, cy: v.y + v.h / 2 } : null;
+  }
+  function rememberView(soft) {   // « soft » : gestes continus (molette) regroupés, une seule entrée par rafale
+    var now = performance.now();
+    if (soft && now - lastViewMemo < 600) { lastViewMemo = now; return; }
+    lastViewMemo = now;
+    var v = currentView(); if (!v) return;
+    backViews.push(v); if (backViews.length > 20) backViews.shift();
+    fwdViews = [];
+  }
+  function restoreView(v) { setZoom(v.fit ? "fit" : v.z, { animate: true, center: { x: v.cx, y: v.cy } }); }
+  function viewBack() { if (!backViews.length) { toast("Aucune vue précédente."); return false; } var cur = currentView(); if (cur) fwdViews.push(cur); restoreView(backViews.pop()); return true; }
+  function viewForward() { if (!fwdViews.length) { toast("Aucune vue suivante."); return false; } var cur = currentView(); if (cur) backViews.push(cur); restoreView(fwdViews.pop()); return true; }
+  function historyState() { return { back: backViews.length, forward: fwdViews.length }; }
+
+  // ---- Zoom sur une zone : rectangle en coordonnées du DOCUMENT -> le zoom qui le fait entrer dans la zone de travail, centré ----
+  function docRectOf(el) { var win = frame.contentWindow, r = el.getBoundingClientRect(); return { x: r.left + win.scrollX, y: r.top + win.scrollY, w: Math.max(1, r.width), h: Math.max(1, r.height) }; }
+  function zoomToRect(rc, o) {
+    var availW = Math.max(120, stage.clientWidth - STAGE_PAD), availH = Math.max(120, stage.clientHeight - STAGE_PAD);
+    var z = o && o.heightOnly ? availH / rc.h : Math.min(availW / rc.w, availH / rc.h);
+    z = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.floor(z * 100) / 100));
+    rememberView(false);
+    setZoom(z, { animate: true, center: { x: rc.x + rc.w / 2, y: rc.y + rc.h / 2 } });
+  }
+  function selectionRect() { var id = selection[0], el = id ? canvasEl(id) : null; return el ? docRectOf(el) : null; }
+  function zoomToSelection() {
+    var r = selectionRect();
+    if (!r) { toast("Sélectionnez d'abord un élément."); return false; }
+    zoomToRect({ x: r.x - 16, y: r.y - 16, w: r.w + 32, h: r.h + 32 });
+    return true;
+  }
+  function sectionAtView() {   // la section sélectionnée, sinon celle qui est au centre de la zone visible
+    var doc = frame.contentDocument; if (!doc) return null;
+    if (selection.length) { var top = topOf(selection[0]); if (top) { var e = doc.querySelector('[data-section-id="' + top.id + '"]'); if (e) return e; } }
+    var v = viewState(); if (!v) return null;
+    var mid = v.y + v.h / 2, hit = null;
+    Array.prototype.forEach.call(doc.querySelectorAll("[data-section-id]"), function (el) { var r = docRectOf(el); if (r.y <= mid && mid <= r.y + r.h) hit = el; });
+    return hit;
+  }
+  function fitHeightSection() {   // « Ajuster à la hauteur » : la section en cours remplit la hauteur de la zone de travail
+    var el = sectionAtView();
+    if (!el) { toast("Aucune section à ajuster."); return false; }
+    zoomToRect(docRectOf(el), { heightOnly: true });
+    return true;
+  }
+  function fitWidthFill() {       // « Ajuster à la largeur » : la largeur de la page remplit la zone (jusqu'à 400 %, contrairement à « Ajuster à l'écran » qui ne dépasse pas 100 %)
+    rememberView(false);
+    if (device === "desktop") { setZoom("fit", { animate: true }); return; }
+    setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.floor((stage.clientWidth - STAGE_PAD) / WIDTH[device] * 100) / 100)), { animate: true, center: { x: WIDTH[device] / 2, y: viewState() ? viewState().y + viewState().h / 2 : 0 } });
+  }
+  function centerDocument() { stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2); notifyView(); }
+  function goTo(where) {          // début, centre, fin : défilement doux (instantané si « mouvement réduit »)
+    var win = frame.contentWindow, de = frame.contentDocument && frame.contentDocument.documentElement, v = viewState();
+    if (!de || !v) return;
+    rememberView(false);
+    var top = where === "start" ? 0 : where === "end" ? de.scrollHeight : Math.max(0, de.scrollHeight / 2 - v.h / 2);
+    win.scrollTo({ top: top, behavior: reducedMotion.matches ? "auto" : "smooth" });
+  }
+  function sectionsList() { return content.sections.map(function (sec, i) { return { id: sec.id, name: (i + 1) + ". " + nameOf(sec) }; }); }
+  function goToSection(id) {
+    var doc = frame.contentDocument, el = doc && doc.querySelector('[data-section-id="' + id + '"]');
+    if (!el) return;
+    rememberView(false);
+    var r = docRectOf(el);
+    frame.contentWindow.scrollTo({ top: Math.max(0, r.y - 8), behavior: reducedMotion.matches ? "auto" : "smooth" });
+  }
+
+  // ---- Outil « Zoom par zone » : on dessine un rectangle sur le canevas, le zoom s'y ajuste ----
+  var areaBox = null, areaDrag = null;
+  function cancelArea() {
+    if (areaDrag) { areaDrag.cancel(); }
+    if (areaBox) areaBox.hidden = true;
+  }
+  function areaStart(e, inFrame) {
+    e.preventDefault();
+    cancelArea();
+    var z = zoom || 1, fr = wrap.getBoundingClientRect(), doc = frame.contentDocument, win = frame.contentWindow;
+    var s0x = inFrame ? fr.left + e.clientX * z : e.clientX, s0y = inFrame ? fr.top + e.clientY * z : e.clientY;   // départ en coordonnées d'ÉCRAN
+    var ox = e.screenX, oy = e.screenY, id = e.pointerId, src = inFrame ? doc.documentElement : stage, cx = s0x, cy = s0y, queued = false, alt = e.altKey;
+    if (!areaBox) { areaBox = h("div", { class: "pb-area", "aria-hidden": "true", hidden: "" }); document.body.appendChild(areaBox); }
+    var paint = function () {
+      queued = false;
+      areaBox.style.transform = "translate3d(" + Math.min(s0x, cx) + "px," + Math.min(s0y, cy) + "px,0)";
+      areaBox.style.width = Math.abs(cx - s0x) + "px"; areaBox.style.height = Math.abs(cy - s0y) + "px";
+    };
+    var move = function (ev) { if (ev.pointerId !== id) return; cx = s0x + (ev.screenX - ox); cy = s0y + (ev.screenY - oy); if (!queued) { queued = true; requestAnimationFrame(paint); } };
+    var done = function () {
+      src.removeEventListener("pointermove", move); src.removeEventListener("pointerup", up); src.removeEventListener("pointercancel", cancel); document.removeEventListener("keydown", key, true);
+      try { src.releasePointerCapture(id); } catch (x) { /* déjà relâché */ }
+      areaBox.hidden = true; areaDrag = null;
+    };
+    var up = function (ev) {
+      if (ev.pointerId !== id) return;
+      var w = Math.abs(cx - s0x), hh = Math.abs(cy - s0y), x0 = Math.min(s0x, cx), y0 = Math.min(s0y, cy);
+      done();
+      var f = wrap.getBoundingClientRect(), sc = 0;
+      try { sc = win.scrollY; } catch (x) { sc = 0; }
+      if (w < 8 && hh < 8) {   // simple clic : un niveau de zoom (Alt : arrière), centré sur le point cliqué
+        rememberView(false);
+        var px = x0, py = y0;
+        setZoom(alt || ev.altKey ? zoomStep(-1) : zoomStep(1), { animate: true, anchor: { x: (px - f.left) / z, y: sc + (py - f.top) / z, sx: px, sy: py } });
+        return;
+      }
+      zoomToRect({ x: (x0 - f.left) / z, y: sc + (y0 - f.top) / z, w: w / z, h: hh / z });
+    };
+    var cancel = function () { done(); };
+    var key = function (ev) { if (ev.key === "Escape") { ev.stopPropagation(); ev.preventDefault(); done(); } };
+    areaDrag = { cancel: done };
+    try { src.setPointerCapture(id); } catch (x) { /* capture indisponible */ }
+    areaBox.hidden = false; paint();
+    src.addEventListener("pointermove", move); src.addEventListener("pointerup", up); src.addEventListener("pointercancel", cancel); document.addEventListener("keydown", key, true);
+  }
+  stage.addEventListener("pointerdown", function (e) { if (tool === "zoomarea" && e.isPrimary && e.button === 0 && !(e.target.closest && e.target.closest("iframe, button, [role=button]"))) areaStart(e, false); });
+  (function () { var b = $("[data-pb-zoomarea]"); if (b) b.addEventListener("click", function () { setTool(tool === "zoomarea" ? "select" : "zoomarea"); }); })();
+
   // « Afficher la page entière » : le zoom pour lequel toute la hauteur de la page tient dans la zone de travail (quelques essais : la hauteur dépend de la largeur affichée)
   function showWholePage() {
     var doc = frame.contentDocument, de = doc && doc.documentElement;
@@ -6367,7 +6491,11 @@ function selectField(label, value, options, onChange, opts) {
   var navigatorLoading = null;
   function withNavigator(fn) {
     var go = function () { fn(window.pbNavigator.attach({ frame: function () { return frame; }, stage: stage, canvas: function () { return $("[data-pb-canvas]"); }, window: window, store: store,
-      zoomStep: zoomStep, setZoom: setZoom, viewState: viewState, viewTo: viewTo, showWholePage: showWholePage,
+      zoomStep: zoomStep, setZoom: setZoom, viewState: viewState, viewTo: viewTo, showWholePage: showWholePage, zoomToSelection: zoomToSelection, fitWidthFill: fitWidthFill, fitHeightSection: fitHeightSection,
+      centerDocument: centerDocument, goTo: goTo, goToSection: goToSection, sections: sectionsList, viewBack: viewBack, viewForward: viewForward, history: historyState, rememberView: rememberView,
+      selectionRect: selectionRect, hasSelection: function () { return selection.length > 0; }, tool: function () { return tool; }, setTool: setTool,
+      openZoomMenu: function (r) { zoomMenu(r); }, zoomMin: MIN_ZOOM, zoomMax: MAX_ZOOM, levels: ZOOM_LEVELS.slice(), render: function () { return { gen: renderGen, html: renderText }; },
+      gesture: function () { return gesture || Boolean(editing) || Boolean(zoomAnim); },
       subscribe: function (f) { viewListeners.push(f); return function () { var i = viewListeners.indexOf(f); if (i >= 0) viewListeners.splice(i, 1); }; },
       subscribeContent: function (f) { navListeners.push(f); return function () { var i = navListeners.indexOf(f); if (i >= 0) navListeners.splice(i, 1); }; } })); };
     if (window.pbNavigator) { go(); return; }
@@ -6398,16 +6526,26 @@ function selectField(label, value, options, onChange, opts) {
     doc.body.classList.add("is-panning"); document.body.classList.add("is-panning"); // curseur « main fermée » pendant le déplacement
     root.addEventListener("pointermove", move); root.addEventListener("pointerup", up); root.addEventListener("pointercancel", up);
   }
-  // Ctrl/⌘ + molette (et pincement du pavé tactile) : un niveau de zoom par geste, jamais une rafale de recalculs
-  var wheelAcc = 0, wheelAt = 0;
+  // Ctrl/⌘ + molette (et pincement du pavé tactile) : zoom PROGRESSIF (toutes les valeurs, pas seulement les niveaux usuels), le point sous le curseur reste sous le curseur.
+  // Les crans sont cumulés et appliqués au plus toutes les ~70 ms : jamais une rafale de recalculs de mise en page.
+  var wheelAcc = 0, wheelAt = 0, wheelPt = null, wheelTimer = 0;
   function onZoomWheel(e) {
     if (!(e.ctrlKey || e.metaKey) || mode !== "visual") return;
     e.preventDefault();
     wheelAcc += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
-    var now = performance.now();
-    if (Math.abs(wheelAcc) < 24 || now - wheelAt < 110) return;
-    var dir = wheelAcc < 0 ? 1 : -1; wheelAcc = 0; wheelAt = now;
-    setZoom(zoomStep(dir), { animate: true });
+    wheelPt = { cx: e.clientX, cy: e.clientY, inFrame: e.view && e.view !== window };
+    if (wheelTimer) return;
+    var wait = Math.max(0, 70 - (performance.now() - wheelAt));
+    wheelTimer = setTimeout(function () {
+      wheelTimer = 0; wheelAt = performance.now();
+      var next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(zoom * Math.exp(-wheelAcc * 0.0028) * 100) / 100));
+      if (Math.abs(next - zoom) < 0.01) return;   // trop petit pour changer l'affichage : le cumul continue
+      wheelAcc = 0;
+      var fr = wrap.getBoundingClientRect(), z = shownScale(), sx = wheelPt.inFrame ? fr.left + wheelPt.cx * z : wheelPt.cx, sy = wheelPt.inFrame ? fr.top + wheelPt.cy * z : wheelPt.cy, sc = 0;
+      try { sc = frame.contentWindow.scrollY; } catch (x) { sc = 0; }
+      rememberView(true);
+      setZoom(next, { animate: true, anchor: { x: (sx - fr.left) / z, y: sc + (sy - fr.top) / z, sx: sx, sy: sy } });
+    }, wait);
   }
   stage.addEventListener("wheel", onZoomWheel, { passive: false });
 
@@ -6748,8 +6886,8 @@ function selectField(label, value, options, onChange, opts) {
   // Pourquoi c'était lourd : chaque changement de zoom recalculait la mise en page de la page entière, puis relisait les mesures plusieurs fois de suite
   // (règles, informations, barre d'actions), le tout sans transition. Désormais : mesures lues d'abord, styles écrits ensuite, UNE seule mise en page ;
   // la transition elle-même n'est qu'une transformation (échelle) jouée par le processeur graphique, sans nouvelle mise en page à chaque image.
-  var MAX_ZOOM = 4, MIN_ZOOM = 0.25; // 25 % à 400 %
-  var ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+  var MAX_ZOOM = 4, MIN_ZOOM = 0.1; // 10 % à 400 %
+  var ZOOM_LEVELS = [0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4];
   function zoomStep(dir) {   // niveau usuel suivant (dir > 0) ou précédent (dir < 0) à partir du zoom actuel, valeurs intermédiaires comprises
     var z = Math.round(zoom * 1000) / 1000, i;
     if (dir > 0) { for (i = 0; i < ZOOM_LEVELS.length; i++) if (ZOOM_LEVELS[i] > z + 0.004) return ZOOM_LEVELS[i]; return MAX_ZOOM; }
@@ -6773,19 +6911,24 @@ function selectField(label, value, options, onChange, opts) {
     wrap.classList.remove("is-zooming");
     if (!cancel) { zoomDecor(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
   }
-  function playZoom(from, to, dx) {
+  function playZoom(from, to, dx, dy) {
     endZoomAnim(true);
     wrap.classList.add("is-zooming");   // couche graphique seulement pendant le geste (will-change), barre d'actions masquée
     var dur = Math.round(130 + Math.min(70, Math.abs(Math.log(to / from)) * 140));   // 130 à 200 ms : plus le saut est grand, plus il est long
-    var anim = wrap.animate([{ transform: "translate3d(" + dx + "px,0,0) scale(" + from + ")" }, { transform: "translate3d(0,0,0) scale(" + to + ")" }], { duration: dur, easing: "cubic-bezier(.22,.8,.24,1)" });
+    var anim = wrap.animate([{ transform: "translate3d(" + dx + "px," + (dy || 0) + "px,0) scale(" + from + ")" }, { transform: "translate3d(0,0,0) scale(" + to + ")" }], { duration: dur, easing: "cubic-bezier(.22,.8,.24,1)" });
     zoomAnim = anim;
     anim.onfinish = function () { if (zoomAnim === anim) endZoomAnim(false); };
     anim.oncancel = function () { if (zoomAnim === anim) { zoomAnim = null; wrap.classList.remove("is-zooming"); zoomDecor(); } };
   }
+  // opts : animate (transition), from (échelle affichée avant), anchor {x, y, sx, sy} = point du DOCUMENT qui doit rester sous le point d'ÉCRAN (sx, sy),
+  // center {x, y} = point du DOCUMENT à amener au centre de la zone de travail. Sans l'un ni l'autre : comportement historique.
   function applyZoom(opts) {
-    // 1. LECTURES (aucune écriture avant : une seule mise en page)
+    // 1. LECTURES (aucune écriture avant : une seule mise en page). Les mesures de départ se prennent AVANT d'annuler une transition en cours.
     var animate = Boolean(opts && opts.animate) && !reducedMotion.matches && Boolean(wrap.animate) && mode === "visual";
-    var from = animate ? (opts.from !== undefined ? opts.from : shownScale()) : zoom, oldLeft = animate ? (wrap.getBoundingClientRect().left) : 0;
+    var win = frame.contentWindow, r0 = null, sy0 = 0;
+    var from = animate ? (opts.from !== undefined ? opts.from : shownScale()) : zoom;
+    if (animate) { r0 = wrap.getBoundingClientRect(); try { sy0 = win.scrollY; } catch (e) { sy0 = 0; } }
+    endZoomAnim(true);
     var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
     var w = frameWidth(avail);
     shownWidth = w;
@@ -6803,13 +6946,23 @@ function selectField(label, value, options, onChange, opts) {
     if (!zoomBtns) zoomBtns = $$("[data-pb-zoom]");
     zoomLabelEl.textContent = Math.round(zoom * 100) + " %";
     zoomBtns.forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= MIN_ZOOM) || (v === "+" && zoom >= MAX_ZOOM); });
-    if (animate && Math.abs(from - zoom) > 0.004) {
-      // départ = l'image déjà affichée : même échelle, même bord gauche (aucun saut), arrivée = la disposition finale
-      var dx = oldLeft - wrap.getBoundingClientRect().left;
-      playZoom(from, zoom, Math.round(dx * 100) / 100);
+    // 3. Ancrage / centrage : on place le point voulu, puis on mesure UNE fois la disposition finale
+    if (opts && (opts.anchor || opts.center)) {
+      var sr = stage.getBoundingClientRect(), tx, ty, X, Y;
+      if (opts.anchor) { tx = opts.anchor.sx; ty = opts.anchor.sy; X = opts.anchor.x; Y = opts.anchor.y; }
+      else { tx = sr.left + stage.clientWidth / 2; ty = sr.top + stage.clientHeight / 2; X = opts.center.x; Y = opts.center.y; }
+      var g = wrap.getBoundingClientRect(), cy = 0;
+      try { cy = win.scrollY; } catch (e) { cy = 0; }
+      try { win.scrollTo(0, Math.max(0, cy + (g.top + (Y - cy) * zoom - ty) / zoom)); } catch (e) { /* cadre pas prêt */ }
+      stage.scrollLeft = stage.scrollLeft + (g.left + X * zoom - tx);
+    }
+    if (animate && Math.abs(from - zoom) > 0.004 && r0) {
+      // départ = l'image déjà affichée : même échelle, mêmes bords (aucun saut), arrivée = la disposition finale
+      var r1 = wrap.getBoundingClientRect(), sy1 = 0;
+      try { sy1 = win.scrollY; } catch (e) { sy1 = 0; }
+      playZoom(from, zoom, Math.round((r0.left - r1.left) * 100) / 100, Math.round(((r0.top - r1.top) + (sy1 - sy0) * from) * 100) / 100);
       return;
     }
-    endZoomAnim(true);
     zoomDecor();
   }
   // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
@@ -6830,7 +6983,7 @@ function selectField(label, value, options, onChange, opts) {
   // opts.animate : transition courte (gestes de l'utilisateur) ; sans option : immédiat (programme, tests, chargement)
   function setZoom(z, opts) {
     var prev = opts && opts.animate ? shownScale() : zoom;   // l'échelle AFFICHÉE avant le changement (départ de la transition)
-    if (opts && opts.animate) opts = { animate: true, from: prev };
+    if (opts && opts.animate) opts = { animate: true, from: prev, anchor: opts.anchor, center: opts.center };
     zoomFit = z === "fit";
     if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
     applyZoom(opts);
@@ -7321,9 +7474,18 @@ function selectField(label, value, options, onChange, opts) {
   cornerEl.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); var r = cornerEl.getBoundingClientRect(); unitMenu(r.left, r.bottom + 4); } });
   // Niveaux de zoom usuels
   var zoomValueEl = $("[data-pb-zoom-value]");
-  function zoomMenu() {
-    var r = zoomValueEl.getBoundingClientRect();
-    showSimpleMenu([["Ajuster à la fenêtre", function () { setZoom("fit"); }, false, "Maj 1"]].concat([0.5, 0.64, 0.75, 1, 1.25, 1.5, 2, 3, 4].map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { setZoom(z); }, false]; })), r.left, r.bottom + 4);
+  function zoomMenu(rr) {
+    var r = rr && typeof rr.left === "number" ? rr : zoomValueEl.getBoundingClientRect(), anim = { animate: true };
+    var fits = [
+      ["Ajuster à l'écran", function () { rememberView(false); setZoom("fit", anim); }, false, "Maj 1"],
+      ["Ajuster à la largeur", fitWidthFill, false],
+      ["Ajuster à la hauteur (section)", fitHeightSection, false],
+      ["Page entière", function () { rememberView(false); showWholePage(); }, false],
+      ["Zoom sur la sélection", zoomToSelection, !selection.length],
+      ["Centrer le document", centerDocument, false],
+      ["Zoom personnalisé…", function () { ask("Zoom personnalisé", [["zoom", "number", "Pourcentage (" + Math.round(MIN_ZOOM * 100) + " à " + Math.round(MAX_ZOOM * 100) + ")"]], function (v) { var n = parseFloat(String(v.zoom).replace(",", ".")); if (!isFinite(n)) return; rememberView(false); setZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(n) / 100)), anim); }); }, false]
+    ];
+    showSimpleMenu(fits.concat(ZOOM_LEVELS.map(function (z) { return [(!zoomFit && Math.abs(zoom - z) < 0.005 ? "✓ " : "") + Math.round(z * 100) + " %", function () { rememberView(false); setZoom(z, anim); }, false]; })), r.left, r.bottom + 4);
   }
   zoomValueEl.setAttribute("role", "button"); zoomValueEl.setAttribute("tabindex", "0"); zoomValueEl.setAttribute("title", "Niveaux de zoom");
   zoomValueEl.addEventListener("click", zoomMenu);
@@ -9641,6 +9803,7 @@ function selectField(label, value, options, onChange, opts) {
     if (!mod && !e.altKey && !e.shiftKey) {
       if (k === "v") setTool("select");
       else if (k === "h") setTool("hand");
+      else if (k === "z") setTool("zoomarea");
       else if (k === "t") addElement("text");
       else if (k === "i") addElement("image");
       else if (k === "b") addElement("button");
