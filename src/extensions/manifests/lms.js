@@ -7,11 +7,11 @@ module.exports = {
   permissions: ["lms.manage"],
   migrations: ["core", "119_cours_par_site.sql"],
   entry: { service: "src/services/lmsSites.js", admin: "src/routes/instructor.js", public: "src/routes/courses.js" },
-  adminRoutes: [],
+  adminRoutes: ["^\\/formations(?:\\/|$)", "^\\/site-web\\/formations(?:\\/|$)"],
   // Pages publiques et administration (/formateur) : sur le domaine d'un site sans l'extension, elles répondent « introuvable ». Le domaine, jamais la requête, désigne le site.
   publicRoutes: ["^\\/formateur(?:\\/|$)", "^\\/catalogue(?:\\/|$)", "^\\/categorie\\/", "^\\/cours\\/", "^\\/apprendre\\/", "^\\/certificat(?:\\/|$)", "^\\/mes-certificats(?:\\/|$)", "^\\/mes-cours(?:\\/|$)", "^\\/verifier-certificat(?:\\/|$)", "^\\/panier(?:\\/|$)", "^\\/commande(?:\\/|$)", "^\\/favoris\\/"],
   menus: [{ key: "formation", label: "Formation", icon: "graduation", items: [
-    { key: "formation", label: "Mes formations", href: "/formateur", permission: "lms.manage", external: true },
+    { key: "formation", label: "Mes formations", href: "/marketing/site-web/formations", permission: "lms.manage", primary: { label: "Nouvelle formation", href: "/formateur/cours/nouveau", permission: "lms.manage" } },
   ] }],
   settings: [], events: ["lms.enrollment.created", "lms.certificate.issued"], hooks: [], tasks: [], resources: {}, docs: "docs/KOLAKISA_LMS_UNIVERSEL.md",
 };

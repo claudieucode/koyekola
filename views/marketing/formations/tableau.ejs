@@ -1,0 +1,35 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Tableau de bord" }) %>
+<% const max = Math.max(1, ...days.map((d) => d.n)); const total30 = days.reduce((a, d) => a + d.n, 0); %>
+<section class="bq-stats-section" aria-labelledby="lm-stats-h">
+  <h2 id="lm-stats-h">Vue d'ensemble</h2>
+  <% const groups = [
+    ["Formations", [["Formations", ov.courses], ["Publiées", ov.published], ["Brouillons", ov.drafts], ["Payantes", ov.paidCourses]]],
+    ["Étudiants", [["Étudiants", ov.students], ["Inscriptions", ov.enrollments], ["Nouvelles (30 jours)", ov.recent], ["En cours", ov.inProgress]]],
+    ["Résultats", [["Formations terminées", ov.completed], ["Progression moyenne", ov.avgProgress === null ? "—" : ov.avgProgress + " %"], ["Commandes", ov.orders], ["Revenus", amount(ov.revenueCents)]]],
+  ]; %>
+  <% groups.forEach(([group, items]) => { %><div class="bq-stat-group" role="group" aria-label="<%= group %>"><p class="bq-stat-group-title"><%= group %></p>
+    <dl class="bq-stats"><% items.forEach(([l, v]) => { %><div class="bq-stat"><dt><%= l %></dt><dd><%= v %></dd></div><% }) %></dl></div><% }) %>
+</section>
+<section class="mk-panel">
+  <h2>Inscriptions des 30 derniers jours</h2>
+  <% if (!total30) { %><p class="mk-sub">Aucune inscription sur cette période.</p><% } else { %>
+  <svg class="lm-spark" role="img" aria-label="Inscriptions par jour : <%= total30 %> au total" viewBox="0 0 <%= days.length * 12 %> 100" preserveAspectRatio="none">
+    <% days.forEach((d, i) => { const h = Math.round((d.n / max) * 92); %><rect x="<%= i * 12 + 2 %>" y="<%= 98 - h %>" width="8" height="<%= Math.max(h, d.n ? 2 : 0) %>" rx="1.5"><title><%= d.day.split("-").reverse().join("/") %> : <%= d.n %></title></rect><% }) %>
+  </svg><% } %>
+</section>
+<div class="lm-cols">
+  <section class="mk-panel"><h2>Dernières inscriptions</h2>
+    <% if (!recent.length) { %><p class="mk-sub">Aucune inscription pour l'instant.</p><% } else { %>
+    <ul class="lm-list"><% recent.forEach((r) => { %><li><span><strong><%= r.username %></strong><span class="mk-sub"><%= r.title %></span></span><span class="lm-meter" title="<%= r.progress %> % terminé"><span style="width:<%= r.progress %>%"></span></span></li><% }) %></ul><% } %>
+    <p class="lm-more"><a href="<%= base %>/etudiants">Voir tous les étudiants</a></p></section>
+  <section class="mk-panel"><h2>Formations les plus suivies</h2>
+    <% if (!top.length) { %><p class="mk-sub">Aucune formation pour l'instant.</p><% } else { %>
+    <ul class="lm-list"><% top.forEach((c) => { %><li><span><strong><%= c.title %></strong><span class="mk-sub"><%= c.published ? "En ligne" : "Brouillon" %></span></span><span class="mk-num"><%= c.students %> étudiant<%= c.students > 1 ? "s" : "" %></span></li><% }) %></ul><% } %>
+    <p class="lm-more"><a href="<%= base %>/liste">Toutes les formations</a></p></section>
+</div>
+<section class="mk-panel"><h2>Modifiées récemment</h2>
+  <% if (!edited.length) { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez votre première formation : elle apparaîtra ici et dans le catalogue du site une fois publiée.", action: canWrite ? { href: "/formateur/cours/nouveau", label: "Nouvelle formation" } : null }) %>
+  <% } else { %><ul class="lm-list"><% edited.forEach((c) => { %><li><span><strong><%= c.title %></strong><span class="mk-sub"><%= c.published ? "En ligne" : "Brouillon" %></span></span><span class="mk-sub"><%= String(c.updated_at).slice(0, 10).split("-").reverse().join("/") %></span></li><% }) %></ul><% } %>
+</section>
+<%- include("../partials/bottom") %>

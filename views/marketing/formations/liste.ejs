@@ -1,0 +1,35 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Formations" }) %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" role="search" aria-label="Filtrer les formations">
+    <div class="field-group"><label for="f-q">Rechercher</label><input type="search" id="f-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Titre ou catégorie"></div>
+    <div class="field-group"><label for="f-st">Statut</label><select id="f-st" name="statut"><option value="">Tous</option><% [["published","En ligne"],["draft","Brouillon"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= query.statut === v ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+    <div class="field-group"><label for="f-so">Trier par</label><select id="f-so" name="tri"><% [["recent","Modification récente"],["title","Titre"],["students","Étudiants"],["price","Prix"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= (query.tri || "recent") === v ? " selected" : "" %>><%= l %></option><% }) %></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+  </form>
+  <% if (!list.items.length) { %>
+    <% if (query.q || query.statut) { %><%- include("_vide", { titre: "Aucune formation ne correspond", texte: "Essayez un autre titre ou retirez le filtre de statut.", action: { href: base + "/liste", label: "Voir toutes les formations" } }) %>
+    <% } else { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez une formation pour la proposer à vos étudiants.", action: canWrite ? { href: "/formateur/cours/nouveau", label: "Nouvelle formation" } : null }) %><% } %>
+  <% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table">
+    <caption class="sr-only">Formations du site</caption>
+    <thead><tr><th scope="col">Formation</th><th scope="col">Prix</th><th scope="col">Étudiants</th><th scope="col">Statut</th><th scope="col">Modifiée</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+    <tbody>
+    <% list.items.forEach((c) => { %>
+      <tr>
+        <th scope="row"><span class="lm-title"><% if (c.thumbnail_path) { %><img src="<%= c.thumbnail_path %>" alt="" loading="lazy" width="48" height="32"><% } else { %><span class="lm-thumb" aria-hidden="true"><%- icon("graduation", { size: 16 }) %></span><% } %><span><% if (c.published) { %><a href="/cours/<%= c.slug %>" target="_blank" rel="noopener" title="Voir la page publique"><%= c.title %></a><% } else { %><%= c.title %><% } %><span class="mk-sub"><%= c.category %> · <%= c.lessons %> leçon<%= c.lessons > 1 ? "s" : "" %></span></span></span></th>
+        <td class="mk-num"><%= price(c.price_cents) %></td>
+        <td class="mk-num"><%= c.students %></td>
+        <td><span class="<%= c.published ? "mk-status mk-status-ok" : "mk-status mk-status-warn" %>"><%= c.published ? "En ligne" : "Brouillon" %></span></td>
+        <td class="mk-num"><%= String(c.updated_at).slice(2, 10).split("-").reverse().join("/") %></td>
+        <td class="lm-actions"><div class="lm-act">
+          <% if (canWrite) { %><a class="btn btn-ghost btn-sm" href="/formateur/cours/<%= c.id %>/modifier">Modifier</a>
+          <form method="post" action="<%= base %>/<%= c.id %>/<%= c.published ? "depublier" : "publier" %>" class="mk-inline"><button class="btn btn-outline btn-sm" type="submit"><%= c.published ? "Dépublier" : "Publier" %></button></form><% } %>
+        </div></td>
+      </tr>
+    <% }) %>
+    </tbody></table></div>
+  <%- include("_pager", { list, nom: "formations" }) %>
+  <% } %>
+</section>
+<%- include("../partials/bottom") %>

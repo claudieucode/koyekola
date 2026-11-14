@@ -69,6 +69,7 @@
   <% if (typeof extUi !== "undefined" && extUi) { %><link rel="stylesheet" href="<%= asset('/css/extensions.css') %>"><script src="<%= asset('/js/extensions.js') %>" defer></script><% } %>
   <% if (typeof cmComments !== "undefined" && cmComments) { %><link rel="stylesheet" href="<%= asset('/css/cms-comments.css') %>"><% } %>
   <% if (typeof shopAdmin !== "undefined" && shopAdmin) { %><link rel="stylesheet" href="<%= asset('/css/shop-admin.css') %>"><script src="<%= asset('/js/shop-admin.js') %>" defer></script><% } %>
+  <% if (typeof lmsAdmin !== "undefined" && lmsAdmin) { %><link rel="stylesheet" href="<%= asset('/css/lms-admin.css') %>"><% } %>
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %><%= typeof shopAdmin !== "undefined" && shopAdmin ? ' mk-shop' : '' %>" data-kb-module="<%= kbModule %>">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="vx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vx-a)"/><stop offset="1" style="stop-color:var(--vx-b)"/></linearGradient></defs></svg>
