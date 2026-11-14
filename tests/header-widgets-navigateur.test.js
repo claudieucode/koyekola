@@ -148,4 +148,17 @@ describe("Header Builder : style individuel de chaque lien du menu (navigateur)"
     await context.close();
     assert.deepEqual(env.errors, []);
   });
+  test("hamburger : taille, épaisseur, durée et animation de l'icône réglées ; l'icône tourne à l'ouverture", async () => {
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", mobileToggle: true, burgerAnim: "spin", burgerSize: 30, burgerThickness: 4, burgerSpeed: 100 }));
+    const { context, page } = await env.visit({ viewport: { width: 390, height: 800 } });
+    const ico = page.locator(".lp-site-header .kw-menu-burger > span[aria-hidden]").first();
+    const st = () => ico.evaluate((e) => { const c = getComputedStyle(e); return { w: c.width, bt: c.borderTopWidth, tr: c.transform }; });
+    const a = await st();
+    assert.equal(a.w, "30px"); assert.equal(a.bt, "4px");
+    await page.locator(".lp-site-header .kw-menu-burger").first().click();
+    await page.waitForTimeout(400);
+    assert.notEqual((await st()).tr, a.tr, "l'icône a tourné");
+    await context.close();
+    assert.deepEqual(env.errors, []);
+  });
 });

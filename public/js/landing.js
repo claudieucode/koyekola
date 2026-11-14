@@ -270,6 +270,8 @@
     var kind = nav.getAttribute("data-kw-burger") || "lines", shape = nav.getAttribute("data-kw-burger-shape") || "box";
     var txt = nav.hasAttribute("data-kw-burger-text") ? nav.getAttribute("data-kw-burger-text") : "Menu";
     b.classList.add("is-" + kind, "is-" + shape);
+    var banim = nav.getAttribute("data-kw-burger-anim"); if (banim) b.classList.add("is-anim-" + banim);
+    [["size", "--kw-bg-size", "px"], ["thick", "--kw-bg-thick", "px"], ["speed", "--kw-bg-speed", "ms"]].forEach(function (d) { var v = nav.getAttribute("data-kw-burger-" + d[0]); if (v !== null && /^\d+$/.test(v)) b.style.setProperty(d[1], v + d[2]); });
     if (kind !== "text") { var ico = document.createElement("span"); ico.setAttribute("aria-hidden", "true"); b.appendChild(ico); }
     if (txt || kind === "text") { var lab = document.createElement("span"); lab.className = "kw-menu-burger-label"; lab.textContent = txt || "Menu"; b.appendChild(lab); }
     if (!txt) b.setAttribute("aria-label", "Menu");

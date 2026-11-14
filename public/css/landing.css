@@ -1947,3 +1947,14 @@ html.kw-pgal-lock { overflow: hidden; }
 .kw-menu.kw-mm-lh-shrink > .kw-menu-list > .kw-menu-item > .kw-menu-link:hover { transform: scale(calc(1 - var(--kw-mm-lh, 3px) / 100)); }
 .kw-menu.kw-mm-lh-tilt > .kw-menu-list > .kw-menu-item > .kw-menu-link:hover { transform: rotate(calc(var(--kw-mm-lh, 3px) * -0.5deg)); }
 @media (prefers-reduced-motion: reduce) { .kw-menu.kw-mm *, .kw-menu.kw-mm { transition-duration: .01ms !important; transition-delay: 0s !important; animation: none !important; } }
+
+/* Bouton hamburger : taille, épaisseur, durée et animation de l'icône (réglages facultatifs ; sans réglage, rendu d'origine) */
+.kw-menu-burger > span[aria-hidden] { transition: transform var(--kw-bg-speed, 200ms) ease; }
+.kw-menu-burger[style*="--kw-bg-size"] > span[aria-hidden] { width: var(--kw-bg-size); }
+.kw-menu-burger[style*="--kw-bg-thick"] > span[aria-hidden] { border-top-width: var(--kw-bg-thick); border-bottom-width: var(--kw-bg-thick); }
+.kw-menu-burger[style*="--kw-bg-thick"] > span[aria-hidden]::before, .kw-menu-burger[style*="--kw-bg-thick"] > span[aria-hidden]::after { border-top-width: var(--kw-bg-thick); }
+.kw-menu-burger.is-anim-spin[aria-expanded="true"] > span[aria-hidden] { transform: rotate(180deg); }
+.kw-menu-burger.is-anim-none[aria-expanded="true"] > span[aria-hidden] { border-top-color: currentColor; border-bottom-color: currentColor; }
+.kw-menu-burger.is-anim-none[aria-expanded="true"] > span[aria-hidden]::before { display: none; }
+.kw-menu-burger.is-anim-none[aria-expanded="true"] > span[aria-hidden]::after { transform: none; }
+@media (prefers-reduced-motion: reduce) { .kw-menu-burger > span[aria-hidden] { transition: none; } }

@@ -627,6 +627,11 @@ const NODE_TYPES = {
       if (["lines2", "dots", "text"].includes(p.burger)) out.burger = p.burger;
       if (typeof p.burgerText === "string") out.burgerText = line(p.burgerText, 20);
       if (["round", "plain"].includes(p.burgerShape)) out.burgerShape = p.burgerShape;
+      // Icône : animation à l'ouverture (croix par défaut, rotation, aucune), taille, épaisseur des traits, durée
+      if (["spin", "none"].includes(p.burgerAnim)) out.burgerAnim = p.burgerAnim;
+      const bn = (v, lo, hi) => { const x = Math.round(Number(v)); return Number.isFinite(x) && x >= lo && x <= hi ? x : null; };
+      const bs = bn(p.burgerSize, 12, 40), bt = bn(p.burgerThickness, 1, 6), bd = bn(p.burgerSpeed, 0, 1000);
+      if (bs !== null) out.burgerSize = bs; if (bt !== null) out.burgerThickness = bt; if (bd !== null) out.burgerSpeed = bd;
     }
     // Pointeur des liens du menu (survol / page courante) : trait dessous, dessus, double trait, cadre ou fond ; animation et couleur facultatives
     if (["underline", "overline", "double", "framed", "background"].includes(p.pointer)) {

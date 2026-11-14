@@ -2397,6 +2397,12 @@ function selectField(label, value, options, onChange, opts) {
           box.appendChild(selectField("Ouverture du menu sur mobile", p.mobileMode === "drawer" ? "drawer" : "inline", [["inline", "Déplié sous le bouton"], ["drawer", "Tiroir latéral"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "drawer") { x.mobileMode = "drawer"; } else { delete x.mobileMode; delete x.drawerSide; } }); }, { disabled: disabled }));
           if (p.mobileMode === "drawer") box.appendChild(selectField("Côté du tiroir", p.drawerSide === "left" ? "left" : "right", [["right", "À droite"], ["left", "À gauche"]], function (v) { change(function () { byId(it.id).props.drawerSide = v; }); }, { disabled: disabled }));
         }
+        if (p.mobileToggle) {
+          box.appendChild(selectField("Animation de l'icône à l'ouverture", p.burgerAnim || "x", [["x", "Se transforme en croix"], ["spin", "Tourne d'un demi-tour"], ["none", "Aucune"]], function (v) { change(function () { var x = byId(it.id).props; if (v === "x") delete x.burgerAnim; else x.burgerAnim = v; }); }, { disabled: disabled }));
+          [["burgerSize", "Largeur de l'icône (px)", 12, 40, 18], ["burgerThickness", "Épaisseur des traits (px)", 1, 6, 2], ["burgerSpeed", "Durée de l'animation (ms)", 0, 1000, 200]].forEach(function (f) {
+            box.appendChild(numberField(f[1], p[f[0]] === undefined ? f[4] : p[f[0]], { min: f[2], max: f[3], step: 1, integer: true, disabled: disabled }, function (n) { if (n === null) return false; change(function () { byId(it.id).props[f[0]] = n; }, { key: it.id + ":" + f[0], light: true }); }));
+          });
+        }
         if (isHeaderDoc() && p.source && p.source !== "manual") { if (grp) box = grp("Méga-menu"); megaSection(box, it, p, disabled); }
         break;
       case "carousel":
