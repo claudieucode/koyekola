@@ -20,7 +20,7 @@
   // Colonnes triables : un clic trie dans un sens, le suivant dans l'autre
   const ORD = { auteur: ["auteur", "auteur-desc"], article: ["contenu", "contenu-desc"], date: ["ancien", "recent"] };
   const esc = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const sortTh = (k, label) => { const on = f.tri === ORD[k][0] ? "asc" : f.tri === ORD[k][1] ? "desc" : ""; const href = tabHref(sub) + keep({ tri: "", orderby: k, order: on === "asc" ? "desc" : "asc", page: "" }); return `<th scope="col" aria-sort="${on === "asc" ? "ascending" : on === "desc" ? "descending" : "none"}"><a class="mk-cm-sort" href="${esc(href)}">${label} <span aria-hidden="true">${on === "asc" ? "▲" : on === "desc" ? "▼" : "↕"}</span></a></th>`; };
+  const sortTh = (k, label) => { const on = f.tri === ORD[k][0] ? "asc" : f.tri === ORD[k][1] ? "desc" : ""; const href = tabHref(sub) + keep({ tri: "", orderby: k, order: on === "asc" ? "desc" : "asc", page: "" }); return `<th scope="col" class="cmx-th-${k}" aria-sort="${on === "asc" ? "ascending" : on === "desc" ? "descending" : "none"}"><a class="mk-cm-sort" href="${esc(href)}">${label} <span aria-hidden="true">${on === "asc" ? "▲" : on === "desc" ? "▼" : "↕"}</span></a></th>`; };
   const bulkSelect = (id) => `<label class="sr-only" for="${id}">Action groupée</label><select id="${id}" name="${id === "cm-bulk-action" ? "action" : "action2"}" form="cm-bulk" data-cms-bulk-select disabled><option value="">Actions groupées</option>${bulkKeys.map((k) => `<option value="${k}">${act[k]}</option>`).join("")}</select> <button type="submit" form="cm-bulk" class="btn btn-outline btn-sm" data-cms-bulk-apply disabled>Appliquer</button>`;
   const headRow = `<tr>${canModerate ? '<td class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner (cette page)"></td>' : ""}${sortTh("auteur", "Auteur/autrice")}<th scope="col">Commentaire</th>${sortTh("article", "En réponse à")}${sortTh("date", "Envoyé le")}</tr>`;
 %>
@@ -35,89 +35,98 @@
       </form></details><% } %>
     <% if (focus) { %><p class="mk-sub">Commentaires de <a href="<%= focus.url %>" target="_blank" rel="noopener">« <%= focus.title %> »</a> · <a href="<%= tabHref(sub) + keep({ contenu: "" }) %>">Voir tous les articles</a></p><% } %>
 
-    <div class="mk-cm-topbar">
-      <nav class="mk-cm-states" aria-label="Filtrer les commentaires par statut"><% tabs.forEach(([k, name, ck], i) => { %><%- i ? '<span aria-hidden="true">|</span> ' : "" %><a href="<%= tabHref(k) + keep() %>"<%- sub === k ? ' aria-current="page" class="is-current"' : "" %>><%= name %></a> <span class="mk-tab-count">(<%= counts[ck] %>)</span> <% }) %></nav>
-      <form class="mk-cm-search" method="get" action="<%= tabHref(sub) %>" role="search"><%- siteField %>
+<%
+  // Date en deux lignes (jour, puis heure) pour éviter les retours à la ligne au milieu d'une date
+  const fparts = (v) => (v ? [String(v).slice(0, 10).split("-").reverse().join("/"), String(v).slice(11, 16).replace(":", "h") + " UTC"] : ["—", ""]);
+  const TAB_NAMES = tabs;
+%>
+    <div class="cmx-top">
+      <nav class="mk-tabs cmx-tabs" aria-label="Filtrer les commentaires par statut"><% tabs.forEach(([k, name, ck]) => { %><a class="mk-tab" href="<%= tabHref(k) + keep() %>"<%- sub === k ? ' aria-current="page"' : "" %>><span><%= name %></span><span class="mk-tab-count" aria-label="<%= counts[ck] %> commentaire<%= counts[ck] > 1 ? "s" : "" %>"><%= counts[ck] %></span></a><% }) %></nav>
+      <form class="cmx-search" method="get" action="<%= tabHref(sub) %>" role="search"><%- siteField %>
         <% if (f.type) { %><input type="hidden" name="type" value="<%= f.type %>"><% } %><% if (f.contenu) { %><input type="hidden" name="contenu" value="<%= f.contenu %>"><% } %>
-        <label class="sr-only" for="cm-q">Rechercher des commentaires (texte, auteur, article<%= canEmail ? ", e-mail" : "" %>)</label><input id="cm-q" type="search" name="q" value="<%= f.q %>" maxlength="100">
-        <button type="submit" class="btn btn-outline btn-sm">Rechercher des commentaires</button></form>
+        <label class="sr-only" for="cm-q">Rechercher des commentaires (texte, auteur, article<%= canEmail ? ", e-mail" : "" %>)</label><span class="cmx-search-field"><%- icon("search", { size: 16 }) %><input id="cm-q" type="search" name="q" value="<%= f.q %>" maxlength="100" placeholder="Rechercher un commentaire"></span>
+        <button type="submit" class="btn btn-outline btn-sm">Rechercher</button></form>
     </div>
 
-    <% if (canModerate) { %><form id="cm-bulk" class="sr-only-form" action="<%= BASE %>/actions" method="post"><%- siteField %><input type="hidden" name="retour" value="<%= here %>"></form><% } %>
-    <div class="mk-cm-toolbar">
-      <% if (canModerate) { %><span class="mk-cm-bulkbar"><%- bulkSelect("cm-bulk-action") %></span><% } %>
-      <form class="mk-cm-filters" method="get" action="<%= tabHref(sub) %>" aria-label="Filtrer les commentaires"><%- siteField %>
+    <section class="cmx-panel" aria-label="Liste des commentaires">
+    <div class="cmx-toolbar">
+    <% if (canModerate) { %><form id="cm-bulk" class="cmx-bulkform" action="<%= BASE %>/actions" method="post"><%- siteField %><input type="hidden" name="retour" value="<%= here %>">
+      <div class="cmx-bulkbar"><%- bulkSelect("cm-bulk-action") %></div></form><% } %>
+      <form class="cmx-filters" method="get" action="<%= tabHref(sub) %>" aria-label="Filtrer les commentaires"><%- siteField %>
         <% if (f.q) { %><input type="hidden" name="q" value="<%= f.q %>"><% } %>
         <label class="sr-only" for="cm-type">Type de commentaire</label>
         <select id="cm-type" name="type"><option value="">Tous les types de commentaires</option><% Object.entries(TYPES).forEach(([k, name]) => { %><option value="<%= k %>"<%= f.type === k ? " selected" : "" %>><%= name %></option><% }) %></select>
         <% if (contents.length) { %><label class="sr-only" for="cm-contenu">Article</label>
         <select id="cm-contenu" name="contenu"><option value="">Tous les articles</option><% contents.forEach((c) => { %><option value="<%= c.value %>"<%= c.value === f.contenu ? " selected" : "" %>><%= c.label %></option><% }) %></select><% } %>
-        <label class="sr-only" for="cm-auteur">Auteur</label><input id="cm-auteur" type="text" name="auteur" value="<%= f.auteur %>" placeholder="Auteur" maxlength="60" class="mk-cms-narrow">
+        <label class="sr-only" for="cm-auteur">Auteur</label><input id="cm-auteur" type="text" name="auteur" value="<%= f.auteur %>" placeholder="Auteur" maxlength="60" class="cmx-author-input">
         <label class="sr-only" for="cm-periode">Période</label>
         <select id="cm-periode" name="periode"><option value="">Toutes les dates</option><% [["7", "7 derniers jours"], ["30", "30 derniers jours"], ["90", "90 derniers jours"], ["365", "12 derniers mois"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.periode === k ? " selected" : "" %>><%= name %></option><% }) %></select>
         <button type="submit" class="btn btn-outline btn-sm">Filtrer</button><% if (filtered || f.tri !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + siteQ %>">Réinitialiser</a><% } %>
       </form>
-      <span class="mk-sub mk-cm-total" aria-live="polite"><span data-cms-bulk-count></span> <%= result.total %> élément<%= result.total > 1 ? "s" : "" %></span>
+      <p class="cmx-total" aria-live="polite"><span class="cmx-picked" data-cms-bulk-count></span><button type="button" class="cmx-clear" data-cms-clear hidden>Désélectionner</button><span class="cmx-count"><%= result.total %> élément<%= result.total > 1 ? "s" : "" %></span></p>
     </div>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- illu("inbox", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun commentaire trouvé" : empties[key] %></h2>
-        <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : key === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : "" %></p></div>
+      <div class="cmx-empty"><%- illu("inbox", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun commentaire trouvé" : empties[key] %></h2>
+        <p><%= filtered ? "Aucun commentaire ne correspond à ces critères." : key === "" ? "Les commentaires laissés sous vos articles apparaîtront ici." : key === "pending" ? "Tout est à jour : rien ne attend votre validation." : "Rien à afficher dans cette rubrique pour le moment." %></p>
+        <% if (filtered || f.tri !== "recent") { %><a class="btn btn-outline btn-sm" href="<%= tabHref(sub) + siteQ %>">Réinitialiser les filtres</a><% } %></div>
     <% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-cm-table">
+      <table class="cmx-table">
         <caption class="sr-only">Commentaires</caption>
-        <thead><%- headRow %></thead>
+        <thead><tr><% if (canModerate) { %><th scope="col" class="cmx-th-check"><input type="checkbox" class="cmx-check" data-cms-select-all aria-label="Tout sélectionner (cette page)"><span class="cmx-th-all">Tout sélectionner</span></th><% } %><%- sortTh("auteur", "Auteur/autrice") %><th scope="col" class="cmx-th-comment">Commentaire</th><%- sortTh("article", "En réponse à") %><%- sortTh("date", "Envoyé le") %></tr></thead>
         <tbody><% rows.forEach((c) => {
-          const link = (path, label, cls) => `<form method="post" action="${BASE}/${c.id}/${path}" class="mk-cm-form"><input type="hidden" name="retour" value="${esc(here)}">${siteField}<button type="submit" class="mk-cm-link ${cls || ""}">${label}</button></form>`;
-          const ops = [];
+          const link = (path, label, cls, ic) => `<form method="post" action="${BASE}/${c.id}/${path}" class="cmx-form"><input type="hidden" name="retour" value="${esc(here)}">${siteField}<button type="submit" class="cmx-act ${cls || ""}">${ic ? icon(ic, { size: 15 }) : ""}<span>${label}</span></button></form>`;
+          const item = (path, label, cls) => `<form method="post" action="${BASE}/${c.id}/${path}" class="cmx-form"><input type="hidden" name="retour" value="${esc(here)}">${siteField}<button type="submit" role="menuitem" class="cmx-item ${cls || ""}">${label}</button></form>`;
+          const main = [], more = [];
           if (canModerate) {
-            if (c.status === "pending" || c.status === "spam") ops.push(link("approuver", "Approuver", "is-ok"));
-            if (c.status === "approved") ops.push(link("desapprouver", "Désapprouver", "is-warn"));
-            if (c.status !== "trash") ops.push(`<a class="mk-cm-link" href="#reply-${c.id}" data-cm-open="reply-${c.id}">Répondre</a>`, `<a class="mk-cm-link" href="#quick-${c.id}" data-cm-open="quick-${c.id}">Modification rapide</a>`, `<a class="mk-cm-link" href="${BASE}/${c.id}/modifier${siteQ}">Modifier</a>`);
-            if (c.status === "spam") ops.push(link("restaurer", "Pas indésirable"));
-            if (c.status === "pending" || c.status === "approved") ops.push(link("indesirable", "Indésirable", "is-bad"));
-            if (c.status !== "trash") ops.push(link("corbeille", "Corbeille", "is-bad"));
-            if (c.status === "trash") { ops.push(link("restaurer", "Restaurer", "is-ok")); if (canDelete) ops.push(link("supprimer", "Supprimer définitivement", "is-bad")); }
+            if (c.status === "pending" || c.status === "spam") main.push(link("approuver", "Approuver", "is-ok", "check"));
+            if (c.status === "approved") main.push(link("desapprouver", "Désapprouver", "is-warn", "undo"));
+            if (c.status !== "trash") { main.push(`<a class="cmx-act" href="#reply-${c.id}" data-cm-open="reply-${c.id}">${icon("messageSquare", { size: 15 })}<span>Répondre</span></a>`, `<a class="cmx-act" href="#quick-${c.id}" data-cm-open="quick-${c.id}">${icon("edit", { size: 15 })}<span>Modification rapide</span></a>`); more.push(`<a role="menuitem" class="cmx-item" href="${BASE}/${c.id}/modifier${siteQ}">Modifier</a>`); }
+            if (c.status === "spam") more.push(item("restaurer", "Pas indésirable"));
+            if (c.status === "pending" || c.status === "approved") more.push(item("indesirable", "Indésirable", "is-bad"));
+            if (c.status !== "trash") more.push(item("corbeille", "Corbeille", "is-bad"));
+            if (c.status === "trash") { main.push(link("restaurer", "Restaurer", "is-ok", "undo")); if (canDelete) more.push(item("supprimer", "Supprimer définitivement", "is-bad")); }
           }
+          const [dd, dt] = fparts(c.created_at);
         %>
-          <tr id="cm-<%= c.id %>" class="mk-cm-row is-<%= c.status %>"><% if (canModerate) { %><th scope="row" class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" name="ids" value="<%= c.id %>" form="cm-bulk" data-cms-row aria-label="Sélectionner le commentaire de <%= c.author %>"></th><% } %>
-            <td data-label="Auteur/autrice" class="mk-cm-author"><span class="mk-cm-avatar" aria-hidden="true"><% if (c.avatar_path && String(c.avatar_path).charAt(0) === "/") { %><img src="<%= c.avatar_path %>" alt="" width="32" height="32" loading="lazy"><% } else { %><%= initials(c.author) %><% } %></span>
-              <span class="mk-tx-name"><strong><%= c.author %></strong><span class="mk-sub"><%= c.user_id ? "Membre" : "Invité" %><% if (c.status !== "approved") { %> · <span class="mk-status mk-status-<%= { pending: "warn", spam: "err", trash: "off" }[c.status] %>"><%= STATUS_LABELS[c.status] %></span><% } %></span><% if (canEmail && c.email) { %><a class="mk-sub" href="mailto:<%= c.email %>"><%= c.email %></a><% } %></span></td>
-            <td data-label="Commentaire">
-              <% if (c.parent_id) { %><p class="mk-sub mk-cm-parent">En réponse à <a href="<%= tabHref("") + keep({ contenu: c.content_type + ":" + c.content_id, page: "" }) %>#cm-<%= c.parent_id %>">un commentaire de <%= c.parent_author || "—" %></a></p><% } %>
-              <div class="mk-cm-body"><%= c.body.length > 220 ? c.body.slice(0, 220) + "…" : c.body %></div>
-              <% if (c.body.length > 220) { %><details class="mk-cm-more"><summary>Lire la suite</summary><div class="mk-cm-body"><%= c.body %></div></details><% } %>
-              <% if (ops.length) { %><div class="mk-cm-ops" role="group" aria-label="Actions sur le commentaire de <%= c.author %>"><%- ops.join('<span aria-hidden="true"> | </span>') %></div><% } %>
+          <tr id="cm-<%= c.id %>" class="mk-cm-row cmx-row is-<%= c.status %>"><% if (canModerate) { %><td class="cmx-check-col" data-label="Sélection"><input type="checkbox" class="cmx-check" name="ids" value="<%= c.id %>" form="cm-bulk" data-cms-row aria-label="Sélectionner le commentaire de <%= c.author %>"></td><% } %>
+            <td data-label="Auteur/autrice" class="cmx-author"><div class="cmx-author-in"><span class="cmx-avatar" aria-hidden="true"><% if (c.avatar_path && String(c.avatar_path).charAt(0) === "/") { %><img src="<%= c.avatar_path %>" alt="" width="36" height="36" loading="lazy"><% } else { %><%= initials(c.author) %><% } %></span>
+              <span class="cmx-who"><strong><%= c.author %></strong><span class="mk-sub"><%= c.user_id ? "Membre" : "Invité" %><% if (c.status !== "approved") { %> · <span class="mk-status mk-status-<%= { pending: "warn", spam: "err", trash: "off" }[c.status] %>"><%= STATUS_LABELS[c.status] %></span><% } %></span><% if (canEmail && c.email) { %><a class="cmx-mail" href="mailto:<%= c.email %>" title="<%= c.email %>"><%= c.email %></a><% } %></span></div></td>
+            <td data-label="Commentaire" class="cmx-comment">
+              <% if (c.parent_id) { %><p class="cmx-parent">En réponse à <a href="<%= tabHref("") + keep({ contenu: c.content_type + ":" + c.content_id, page: "" }) %>#cm-<%= c.parent_id %>">un commentaire de <%= c.parent_author || "—" %></a></p><% } %>
+              <div class="cmx-text"><div class="cmx-body cmx-body-short"><%= c.body.length > 220 ? c.body.slice(0, 220) + "…" : c.body %></div>
+              <% if (c.body.length > 220) { %><details class="cmx-expand"><summary><span class="cmx-open">Lire la suite</span><span class="cmx-close">Réduire</span></summary><div class="cmx-body cmx-body-full"><%= c.body %></div></details><% } %></div>
+              <% if (main.length || more.length) { %><div class="cmx-ops" role="group" aria-label="Actions sur le commentaire de <%= c.author %>"><%- main.join("") %><% if (more.length) { %><details class="cmx-menu"><summary class="cmx-act cmx-more" aria-haspopup="menu" aria-label="Plus d'actions pour le commentaire de <%= c.author %>"><%- icon("moreHorizontal", { size: 16 }) %><span class="sr-only">Plus d'actions</span></summary><div class="cmx-menu-list" role="menu"><%- more.join("") %></div></details><% } %></div><% } %>
               <% if (canModerate && c.status !== "trash") { %>
-              <div class="mk-cm-panel" id="reply-<%= c.id %>" hidden><form method="post" action="<%= BASE %>/<%= c.id %>/repondre" data-cm-once><input type="hidden" name="retour" value="<%= here %>"><%- siteField %>
+              <div class="cmx-drawer" id="reply-<%= c.id %>" hidden><form method="post" action="<%= BASE %>/<%= c.id %>/repondre" data-cm-once><input type="hidden" name="retour" value="<%= here %>"><%- siteField %>
                 <label for="cm-r-<%= c.id %>"><strong>Répondre à <%= c.author %></strong></label><textarea id="cm-r-<%= c.id %>" name="body" rows="3" maxlength="2000" required></textarea>
                 <span class="field-hint">Publiée tout de suite sous votre nom<%= c.status !== "approved" ? " ; ce commentaire est approuvé en même temps" : "" %>.</span>
-                <span class="mk-cm-panel-actions"><button type="submit" class="btn btn-primary btn-sm">Répondre</button><button type="button" class="btn btn-ghost btn-sm" data-cm-close>Annuler</button></span></form></div>
-              <div class="mk-cm-panel" id="quick-<%= c.id %>" hidden><form method="post" action="<%= BASE %>/<%= c.id %>/modifier" data-cm-once><input type="hidden" name="retour" value="<%= here %>"><input type="hidden" name="mode" value="rapide"><%- siteField %>
+                <span class="cmx-drawer-actions"><button type="submit" class="btn btn-primary btn-sm">Répondre</button><button type="button" class="btn btn-ghost btn-sm" data-cm-close>Annuler</button></span></form></div>
+              <div class="cmx-drawer" id="quick-<%= c.id %>" hidden><form method="post" action="<%= BASE %>/<%= c.id %>/modifier" data-cm-once><input type="hidden" name="retour" value="<%= here %>"><input type="hidden" name="mode" value="rapide"><%- siteField %>
                 <strong>Modification rapide</strong>
                 <% if (!c.user_id) { %><label for="cm-qn-<%= c.id %>">Nom</label><input id="cm-qn-<%= c.id %>" type="text" name="author_name" value="<%= c.author_name %>" maxlength="60" required>
                 <% if (canEmail) { %><label for="cm-qe-<%= c.id %>">E-mail</label><input id="cm-qe-<%= c.id %>" type="email" name="author_email" value="<%= c.guest_email %>" maxlength="120" required><% } %><% } %>
                 <label for="cm-q-<%= c.id %>">Commentaire</label><textarea id="cm-q-<%= c.id %>" name="body" rows="4" maxlength="2000" required><%= c.body %></textarea>
                 <label for="cm-qs-<%= c.id %>">Statut</label><select id="cm-qs-<%= c.id %>" name="status"><% [["pending", "En attente"], ["approved", "Approuvé"], ["spam", "Indésirable"]].forEach(([v, n]) => { %><option value="<%= v %>"<%= c.status === v ? " selected" : "" %>><%= n %></option><% }) %></select>
-                <span class="mk-cm-panel-actions"><button type="submit" class="btn btn-primary btn-sm">Mettre à jour</button><button type="button" class="btn btn-ghost btn-sm" data-cm-close>Annuler</button></span></form></div>
+                <span class="cmx-drawer-actions"><button type="submit" class="btn btn-primary btn-sm">Mettre à jour</button><button type="button" class="btn btn-ghost btn-sm" data-cm-close>Annuler</button></span></form></div>
               <% } %></td>
-            <td data-label="En réponse à" class="mk-cm-on"><% if (c.content_title) { %>
-              <% if (c.content_type === "post") { %><a href="/formateur/blog/<%= c.content_id %>/modifier<%= siteQ %>"><strong><%= c.content_title %></strong></a><% } else { %><strong><%= c.content_title %></strong><% } %>
-              <% if (c.content_published) { %><a class="mk-sub" href="/blog/<%= c.content_slug %>#commentaire-<%= c.id %>" target="_blank" rel="noopener">Voir l'article</a><% } else { %><span class="mk-sub">Article non publié</span><% } %>
-              <a class="mk-cm-bubble" href="<%= tabHref(sub) + keep({ contenu: c.content_type + ":" + c.content_id, page: "" }) %>" title="<%= c.thread_total %> approuvé<%= c.thread_total > 1 ? "s" : "" %>, <%= c.thread_pending %> en attente"><span class="sr-only"><%= c.thread_total %> commentaire<%= c.thread_total > 1 ? "s approuvés" : " approuvé" %>, <%= c.thread_pending %> en attente. Voir les commentaires de cet article.</span><span aria-hidden="true"><%= c.thread_total %></span></a>
+            <td data-label="En réponse à" class="cmx-on"><% if (c.content_title) { %>
+              <% if (c.content_type === "post") { %><a class="cmx-on-title" href="/formateur/blog/<%= c.content_id %>/modifier<%= siteQ %>"><strong><%= c.content_title %></strong></a><% } else { %><strong class="cmx-on-title"><%= c.content_title %></strong><% } %>
+              <span class="cmx-on-meta"><% if (c.content_published) { %><a class="mk-sub" href="/blog/<%= c.content_slug %>#commentaire-<%= c.id %>" target="_blank" rel="noopener">Voir l'article</a><% } else { %><span class="mk-sub">Article non publié</span><% } %>
+              <a class="mk-cm-bubble cmx-bubble" href="<%= tabHref(sub) + keep({ contenu: c.content_type + ":" + c.content_id, page: "" }) %>" title="<%= c.thread_total %> approuvé<%= c.thread_total > 1 ? "s" : "" %>, <%= c.thread_pending %> en attente"><%- icon("messageSquare", { size: 13 }) %><span class="sr-only"><%= c.thread_total %> commentaire<%= c.thread_total > 1 ? "s approuvés" : " approuvé" %>, <%= c.thread_pending %> en attente. Voir les commentaires de cet article.</span><span aria-hidden="true"><%= c.thread_total %></span></a></span>
               <% } else { %><span class="mk-sub">Contenu supprimé ou introuvable</span><% } %></td>
-            <td data-label="Envoyé le"><%= fdt(c.created_at) %><% if (c.status === "approved" && c.approver) { %><span class="mk-sub">Approuvé par <%= c.approver %></span><% } %><% if (c.updated_at && c.updated_at !== c.created_at && c.status !== "pending") { %><span class="mk-sub">Modifié le <%= fdt(c.updated_at) %></span><% } %></td></tr>
+            <td data-label="Envoyé le" class="cmx-date"><time datetime="<%= c.created_at %>"><strong><%= dd %></strong><span><%= dt %></span></time><% if (c.status === "approved" && c.approver) { %><span class="mk-sub">Approuvé par <%= c.approver %></span><% } %><% if (c.updated_at && c.updated_at !== c.created_at && c.status !== "pending") { %><span class="mk-sub">Modifié le <%= fparts(c.updated_at)[0] %></span><% } %></td></tr>
         <% }) %></tbody>
-        <tfoot><%- headRow %></tfoot>
-      </table></div>
-      <div class="mk-cm-toolbar"><% if (canModerate) { %><span class="mk-cm-bulkbar"><%- bulkSelect("cm-bulk-action2") %></span><% } %></div>
-      <nav class="mk-cms-pager" aria-label="Pagination">
+      </table>
+      <% if (canModerate) { %><div class="cmx-bar cmx-bar-bottom"><div class="cmx-bulkbar"><%- bulkSelect("cm-bulk-action2") %></div></div><% } %>
+      <nav class="cmx-pager" aria-label="Pagination">
         <span><%= result.total %> commentaire<%= result.total > 1 ? "s" : "" %> · <%= rows.length %> affiché<%= rows.length > 1 ? "s" : "" %> sur cette page (30 par page)</span>
-        <% if (result.pages > 1) { %><span class="mk-cms-pager-nav">
-          <% if (result.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
+        <% if (result.pages > 1) { %><span class="cmx-pager-nav">
+          <% if (result.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= tabHref(sub) + keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
           <span>Page <%= result.page %> sur <%= result.pages %></span>
-          <% if (result.page < result.pages) { %><a class="btn btn-ghost btn-sm" href="<%= tabHref(sub) + keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %>
+          <% if (result.page < result.pages) { %><a class="btn btn-outline btn-sm" href="<%= tabHref(sub) + keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %>
       </nav>
     <% } %>
+    </section>
 <script src="/js/cms-comments.js" defer></script>
 <%- include("partials/bottom") %>

@@ -172,7 +172,7 @@ describe("modération (CMS → Commentaires)", () => {
     }
     const all = (await boss.get(ADMIN)).text;
     const n = one("SELECT COUNT(*) n FROM blog_comments WHERE status <> 'trash'").n;
-    assert.match(all, new RegExp(`Tous</a> <span class="mk-tab-count">\\(${n}\\)</span>`));
+    assert.match(all, new RegExp(`<span>Tous</span><span class="mk-tab-count"[^>]*>${n}</span>`));
   });
   test("actions : indésirable, restauration, corbeille, suppression définitive — statuts réels et exclusion du public", async () => {
     await setSettings({ guests_allowed: "1", moderation: "all" });

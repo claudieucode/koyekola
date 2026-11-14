@@ -9,16 +9,20 @@
   var selects = $("[data-cms-bulk-select]");
   var applies = $("[data-cms-bulk-apply]");
   var count = $("[data-cms-bulk-count]")[0];
+  var clears = $("[data-cms-clear]");
   function picked() { return rows.filter(function (r) { return r.checked; }).length; }
   function refresh() {
     var n = picked();
     selects.forEach(function (s) { s.disabled = n === 0; });
     applies.forEach(function (b, i) { b.disabled = n === 0 || !selects[i].value; });
-    if (count) count.textContent = n ? n + " sélectionné" + (n > 1 ? "s" : "") + " ·" : "";
+    if (count) count.textContent = n ? n + " sélectionné" + (n > 1 ? "s" : "") : "";
+    clears.forEach(function (c) { c.hidden = n === 0; });
+    rows.forEach(function (r) { var tr = r.closest("tr"); if (tr) tr.classList.toggle("is-selected", r.checked); });
     alls.forEach(function (a) { a.checked = n > 0 && n === rows.length; a.indeterminate = n > 0 && n < rows.length; });
   }
   alls.forEach(function (a) { a.addEventListener("change", function () { rows.forEach(function (r) { r.checked = a.checked; }); refresh(); }); });
   rows.forEach(function (r) { r.addEventListener("change", refresh); });
+  clears.forEach(function (c) { c.addEventListener("click", function () { rows.forEach(function (r) { r.checked = false; }); refresh(); }); });
   selects.forEach(function (s) { s.addEventListener("change", function () { selects.forEach(function (o) { o.value = s.value; }); refresh(); }); });
   var confirmed = false;
   if (form) form.addEventListener("submit", function (e) {
@@ -41,14 +45,14 @@
   $("[data-cm-open]").forEach(function (a) {
     a.addEventListener("click", function (e) {
       e.preventDefault();
-      $(".mk-cm-panel").forEach(function (p) { p.hidden = true; });
+      $(".cmx-drawer").forEach(function (p) { p.hidden = true; });
       var p = document.getElementById(a.getAttribute("data-cm-open"));
       if (!p) return;
       p.hidden = false;
       var f = p.querySelector("textarea"); if (f) f.focus();
     });
   });
-  $(".mk-cm-panel").forEach(function (p) {
+  $(".cmx-drawer").forEach(function (p) {
     p.addEventListener("keydown", function (e) { if (e.key === "Escape") { e.preventDefault(); closePanel(p); } });
     var c = p.querySelector("[data-cm-close]"); if (c) c.addEventListener("click", function () { closePanel(p); });
   });
@@ -60,5 +64,12 @@
       $("button[type=submit]", f).forEach(function (b) { b.disabled = true; b.textContent = "Envoi…"; });
     });
   });
+  // Menu « Plus » : un seul ouvert à la fois, fermé par un clic ailleurs ou Échap
+  var menus = $("details.cmx-menu");
+  menus.forEach(function (m) { m.addEventListener("toggle", function () { if (m.open) menus.forEach(function (o) { if (o !== m) o.open = false; }); }); });
+  document.addEventListener("click", function (e) { menus.forEach(function (m) { if (m.open && !m.contains(e.target)) m.open = false; }); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") menus.forEach(function (m) { if (m.open) { m.open = false; var sm = m.querySelector("summary"); if (sm) sm.focus(); } }); });
+  // Retour visuel : le bouton « Appliquer » passe en cours d'envoi
+  if (form) form.addEventListener("submit", function () { if (confirmed) applies.forEach(function (b) { b.setAttribute("aria-busy", "true"); }); });
   refresh();
 })();

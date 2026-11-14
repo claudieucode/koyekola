@@ -69,7 +69,7 @@ describe("COMMENTAIRES-01 : modération des commentaires", () => {
     });
     test("les six états existent avec leurs effectifs réels, la corbeille n'est pas comptée dans « Tous »", async () => {
       const html = (await boss.get(`${ADMIN}?site=${A}`)).text;
-      const n = (label) => Number((html.match(new RegExp(`>${label}</a> <span class="mk-tab-count">\\((\\d+)\\)`)) || [])[1]);
+      const n = (label) => Number((html.match(new RegExp(`<span>${label}</span><span class="mk-tab-count"[^>]*>(\\d+)</span>`)) || [])[1]);
       assert.equal(n("Tous"), 5, "approuvé + en attente + indésirable + mien + réponse = 5, corbeille exclue");
       assert.equal(n("Les miens"), 1);
       assert.equal(n("En attente"), 1);
@@ -329,7 +329,7 @@ describe("COMMENTAIRES-01 : modération des commentaires", () => {
       const t = (await adminA.get(`${ADMIN}?site=${A}`)).text;
       assert.match(t, /Iso Alpha/); assert.doesNotMatch(t, /Iso Beta|Iso Principal|Soirée Beta|beatrice|tom@b\.fr/);
       assert.equal((await adminA.get(`${ADMIN}?site=${B}`)).status, 403);
-      const total = Number((t.match(/>Tous<\/a> <span class="mk-tab-count">\((\d+)\)/) || [])[1]);
+      const total = Number((t.match(/<span>Tous<\/span><span class="mk-tab-count"[^>]*>(\d+)<\/span>/) || [])[1]);
       assert.equal(total, db.prepare("SELECT COUNT(*) n FROM blog_comments c WHERE c.status <> 'trash' AND c.content_id IN (SELECT content_id FROM mk_content_sites WHERE content_type = 'post' AND site_id = ?)").get(A).n, "effectifs bornés au site");
       assert.doesNotMatch((await adminA.get(`${ADMIN}?site=${A}&contenu=post:${pB}`)).text, /Iso Beta/, "le filtre par article d'un autre site ne montre rien");
     });
