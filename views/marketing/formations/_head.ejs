@@ -17,4 +17,4 @@
 </aside>
 <div class="mk-head"><div class="mk-head-main"><h1><%= heading %></h1>
   <p class="mk-head-sub">Formations de « <%= space.name %> » : cours, étudiants et certificats propres à ce site.</p></div>
-  <% if (canWrite) { %><div class="mk-head-actions"><a class="btn btn-primary btn-sm" href="/formateur/cours/nouveau"><%- icon("plus", { size: 16 }) %> Nouvelle formation</a></div><% } %></div>
+  <% if (canWrite) { %><div class="mk-head-actions"><a class="btn btn-primary btn-sm" href="<%= base %>/nouvelle"><%- icon("plus", { size: 16 }) %> Nouvelle formation</a></div><% } %></div>

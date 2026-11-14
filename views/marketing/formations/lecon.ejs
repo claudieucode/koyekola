@@ -1,0 +1,22 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: lesson.title }) %>
+<p class="lm-crumb"><a href="<%= base %>/<%= course.id %>">← <%= course.title %></a></p>
+<section class="mk-panel lm-lesson">
+  <h2>Leçon</h2>
+  <form method="post" action="<%= base %>/lecons/<%= lesson.id %>" class="mk-form">
+    <div class="field-group"><label for="l-title">Titre</label><input id="l-title" name="title" required maxlength="120" value="<%= lesson.title %>"></div>
+    <div class="lm-row">
+      <div class="field-group"><label for="l-sec">Chapitre</label><select id="l-sec" name="section_id"><% sections.forEach((s) => { %><option value="<%= s.id %>"<%= s.id === lesson.section_id ? " selected" : "" %>><%= s.title %></option><% }) %></select></div>
+      <div class="field-group"><label for="l-dur">Durée (minutes)</label><input id="l-dur" name="duration_minutes" type="number" min="0" max="10000" value="<%= lesson.duration_minutes || 0 %>"></div>
+    </div>
+    <div class="field-group"><label for="l-vid">Lien vidéo</label><input id="l-vid" name="video_url" value="<%= lesson.video_url || "" %>" placeholder="https://… (YouTube, Vimeo, .mp4) ou identifiant Bunny Stream">
+      <% if (lesson.video_path) { %><span class="mk-sub">Une vidéo envoyée existe déjà. Un nouveau lien la remplace.</span><% } %></div>
+    <% if (lesson.video_url || lesson.video_path) { %><label class="lm-check"><input type="checkbox" name="remove_video" value="1"> Retirer la vidéo</label><% } %>
+    <div class="field-group"><label for="l-desc">Contenu de la leçon</label><textarea id="l-desc" name="description" rows="14" maxlength="50000"><%= lesson.description %></textarea></div>
+    <label class="lm-check"><input type="checkbox" name="is_preview" value="1"<%= lesson.is_preview ? " checked" : "" %>> Aperçu gratuit (visible avant l'inscription)</label>
+    <% if (canWrite) { %><div class="lm-bar"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><a class="btn btn-ghost btn-sm" href="<%= base %>/<%= course.id %>">Retour au programme</a></div><% } %>
+  </form>
+  <% if (canWrite) { %><div class="lm-danger"><form method="post" action="<%= base %>/lecons/<%= lesson.id %>/supprimer"><button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="La leçon sera supprimée définitivement." data-mk-confirm-title="Supprimer cette leçon ?" data-mk-confirm-ok="Supprimer">Supprimer la leçon</button></form></div><% } %>
+  <p class="mk-sub lm-adv">Pièces jointes et quiz : <a href="/formateur/cours/<%= course.id %>/curriculum?lecon=<%= lesson.id %>">éditeur avancé</a> (réservé au compte créateur de la plateforme pour l'instant).</p>
+</section>
+<%- include("../partials/bottom") %>
