@@ -46,3 +46,9 @@ Sélectionnez le menu dans l'en-tête, ouvrez « Style d'un lien (individuel) »
 
 ## 6. Prochains lots (non faits)
 Timeline libre d'animation (plusieurs propriétés) ; constructeur de méga-menu par lien avec contenu dynamique ; écrans personnalisés ; copier uniquement typo/couleurs ; audit lecteur d'écran ; étude détaillée source par source des six logiciels.
+
+## Lot 3 (14 novembre 2026) : hamburger et copier-coller partiel
+* Icône du hamburger : animation à l'ouverture (croix par défaut, demi-tour, aucune), largeur 12-40 px, épaisseur des traits 1-6 px, durée 0-1000 ms. Stockage : `props.burgerAnim`, `burgerSize`, `burgerThickness`, `burgerSpeed` (valeurs hors limites ignorées). Rendu : attributs `data-kw-burger-*` lus par `public/js/landing.js`, règles dans `public/css/landing.css` ; `prefers-reduced-motion` coupe la transition.
+* Style d'un lien : boutons « Coller seulement la typographie » et « Coller seulement les couleurs » (toutes tailles d'écran et tous états conservés).
+* Tests : `tests/menu-hamburger-icone.test.js` (3), Chrome `header-widgets-navigateur` (+1), Chrome `header-menu-inspecteur-navigateur` (copier-coller partiel).
+* Reste à faire : éditeur d'animation libre (ligne de temps), points d'arrêt personnalisés, visibilité/ordre par écran, méga-menu à contenu dynamique par lien, audits lecteur d'écran et performance, relecture des six outils de référence à la source.

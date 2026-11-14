@@ -2101,6 +2101,22 @@ function selectField(label, value, options, onChange, opts) {
     box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || !(isPanel ? p.panelStyles : entries[sel.key]), onclick: function () { change(function () { var x = byId(it.id).props; if (isPanel) { delete x.panelStyles; } else if (x.itemStyles) { delete x.itemStyles[sel.key]; prune(x); } }); toast("Réglages réinitialisés."); } }, isPanel ? "Réinitialiser le panneau" : "Réinitialiser ce lien"));
     box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || isPanel || !entries[sel.key], onclick: function () { LINK_STYLE_CLIP = JSON.parse(JSON.stringify(entries[sel.key])); toast("Style du lien copié."); } }, "Copier le style de ce lien"));
     box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || isPanel || !LINK_STYLE_CLIP, onclick: function () { change(function () { var x = byId(it.id).props; x.itemStyles = x.itemStyles || {}; x.itemStyles[sel.key] = JSON.parse(JSON.stringify(LINK_STYLE_CLIP)); }); toast("Style collé sur ce lien."); } }, "Coller le style copié"));
+    // Coller une partie seulement du style copié : typographie ou couleurs (toutes tailles d'écran et tous états conservés)
+    var KIND = { typo: ["fontSize", "fontWeight", "letterSpacing", "textTransform", "fontFamily", "lineHeight"], color: ["color", "backgroundColor", "borderColor", "opacity"] };
+    var pasteKind = function (kind, label) {
+      box.appendChild(h("button", { type: "button", class: "btn btn-ghost btn-sm", disabled: disabled || isPanel || !LINK_STYLE_CLIP, onclick: function () {
+        var keep = KIND[kind], clip = JSON.parse(JSON.stringify(LINK_STYLE_CLIP));
+        var pick = function (o) { var r = {}; Object.keys(o || {}).forEach(function (k) { if (keep.indexOf(k) >= 0) r[k] = o[k]; }); return r; };
+        var mix = function (dst, src) { Object.keys(src || {}).forEach(function (b) { var v = pick(src[b]); if (Object.keys(v).length) dst[b] = Object.assign(dst[b] || {}, v); }); };
+        change(function () {
+          var x = byId(it.id).props; x.itemStyles = x.itemStyles || {};
+          var cur = x.itemStyles[sel.key] = x.itemStyles[sel.key] || {};
+          Object.keys(clip).forEach(function (part) { var c = clip[part], d = cur[part] = cur[part] || {}; ["styles", "states", "current"].forEach(function (g) { if (c[g]) { d[g] = d[g] || {}; mix(d[g], c[g]); if (!Object.keys(d[g]).length) delete d[g]; } }); });
+        });
+        toast(label + " collée sur ce lien.");
+      } }, label === "Typographie" ? "Coller seulement la typographie" : "Coller seulement les couleurs"));
+    };
+    pasteKind("typo", "Typographie"); pasteKind("color", "Couleurs");
   }
   var LINK_STYLE_CLIP = null;
   function checkField(label, value, onChange, opts) {
