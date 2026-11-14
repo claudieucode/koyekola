@@ -1,0 +1,196 @@
+/*
+  Administration de la boutique (Site web → Boutique) — complète le socle Kolakisa (kola-ui, kola-brand, kola-stable) ; docs/KOLAKISA_DESIGN_CHARTE.md.
+  Chargée seulement sur les écrans de la boutique (body.mk-shop) ; aucune couleur nouvelle : jetons --kb-*, --mk-*, --accent.
+  Les transitions des boutons, onglets et lignes de tableau viennent de kola-brand (120 / 180 ms, une courbe) : rien n'est redéclaré ici.
+
+  Ce que cette feuille corrige :
+  - champs de 180 px de haut : « .mk-inline-form input { flex: 1 1 180px } » (style.css) devient une HAUTEUR quand le champ est dans une colonne
+    (.field-group) ; corrigé ici pour la boutique seulement (la règle d'origine est partagée par d'autres modules : voir le rapport de la refonte) ;
+  - champs sans attribut type (ignorés par les styles du CMS) ;
+  - formulaires en pile pleine largeur → grille adaptative ; champs courts jamais étirés ;
+  - onglets de la boutique : défilement horizontal maîtrisé, onglet actif visible, groupes séparés.
+*/
+.mk-shop { --bq-ctl: var(--kx-ctl-h, 36px); --bq-gap: 16px; }
+
+/* ---------- Navigation secondaire ---------- */
+.mk-shop .bq-tabs { display: flex; flex-wrap: nowrap; align-items: stretch; gap: 2px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; scroll-snap-type: x proximity; }
+.mk-shop .bq-tabs::-webkit-scrollbar { display: none; }
+.mk-shop .bq-tabs .mk-tab { flex: 0 0 auto; display: inline-flex; align-items: center; white-space: nowrap; text-decoration: none; scroll-snap-align: center; }
+.mk-shop .bq-tabs .mk-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 6px; }
+.mk-shop .bq-sep { flex: 0 0 1px; align-self: center; height: 18px; margin: 0 8px; background: var(--kb-rule, var(--mk-border-strong)); }
+/* Bords estompés quand des onglets restent hors de vue (classes posées par shop-admin.js) */
+.mk-shop .bq-tabs.has-more-end { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+.mk-shop .bq-tabs.has-more-start { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+.mk-shop .bq-tabs.has-more-start.has-more-end { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+/* Filtres d'une liste (Tous / À relire / Publiés…) */
+.mk-shop .bq-subtabs { display: flex; flex-wrap: wrap; margin: 0 0 14px; padding: 0; background: none; }
+
+/* ---------- Avis d'état (module, ouverture) : une ligne, discrets ---------- */
+.mk-shop .bq-notices { display: grid; gap: 8px; margin: 0 0 16px; }
+.mk-shop .bq-notice { display: flex; align-items: center; gap: 10px; margin: 0; padding: 9px 14px; font-size: .875rem; line-height: 1.45; }
+.mk-shop .bq-notice svg, .mk-shop .bq-notice .icon { flex: 0 0 auto; color: var(--k-info-fg, var(--accent-dark)); }
+.mk-shop .mk-callout-warn.bq-notice svg, .mk-shop .mk-callout-warn.bq-notice .icon { color: var(--k-warn-fg, var(--warning-text)); }
+
+/* ---------- Panneaux : filet 1 px, rayon 12, pas d'ombre ---------- */
+.mk-shop .mk-panel { display: block; margin: 0 0 var(--bq-gap); padding: 20px 24px; background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); box-shadow: none; }
+.mk-shop .mk-panel > h2:first-child { margin: 0 0 6px; font-size: 1.05rem; font-weight: 650; color: var(--mk-text); }
+.mk-shop .mk-panel > h2:first-child small { font-size: .8rem; font-weight: 600; color: var(--muted); }
+.mk-shop .mk-panel .field-hint, .mk-shop .mk-panel .mk-sub { max-width: 62ch; margin: 0 0 14px; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+.mk-shop .mk-panel h3 { margin: 18px 0 10px; font-size: .95rem; font-weight: 650; color: var(--mk-text); }
+
+/* ---------- Contrôles : une échelle (36 px), rayon 8 ---------- */
+.mk-shop :is(input:not([type]), input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="time"], input[type="url"], input[type="tel"], input[type="search"], input[type="password"], input[type="datetime-local"], select, textarea) {
+  box-sizing: border-box; min-height: var(--bq-ctl); padding: 6px 12px; border: 1px solid var(--field-border); border-radius: var(--kb-r-ctl, 8px); background-color: var(--mk-surface); color: var(--mk-text); font: inherit; font-size: .9rem; line-height: 1.4;
+}
+.mk-shop :is(input:not([type]), input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="time"], input[type="url"], input[type="tel"], input[type="search"], input[type="password"], select, textarea):focus-visible { outline: none; border-color: var(--accent); box-shadow: var(--mk-focus, 0 0 0 3px rgba(2, 119, 182, .22)); }
+.mk-shop :is(input, select, textarea):disabled { background: var(--mk-surface-2); color: var(--muted); cursor: not-allowed; }
+.mk-shop :is(input, select, textarea):user-invalid { border-color: var(--danger); }
+.mk-shop textarea { min-height: 84px; resize: vertical; }
+.mk-shop select { padding-right: 34px; }
+.mk-shop select[multiple] { min-height: 120px; padding: 6px; }
+.mk-shop input[type="checkbox"], .mk-shop input[type="radio"] { flex: 0 0 auto; width: 18px; height: 18px; margin: 0; accent-color: var(--accent); }
+.mk-shop :is(input[type="number"], input[inputmode="decimal"], input[inputmode="numeric"]) { font-variant-numeric: tabular-nums; }
+.mk-shop label { font-size: .82rem; font-weight: 650; color: var(--mk-text); }
+.mk-body.mk-shop .field-group { display: flex; flex-direction: column; gap: 5px; margin: 0; min-width: 0; }
+.mk-shop .field-group > :is(input, select, textarea) { flex: 0 0 auto; width: 100%; max-width: none; }
+.mk-shop .field-group > .field-hint { margin: 0; font-size: .78rem; }
+/* Case à cocher : ligne cliquable */
+.mk-shop .field-group > label:has(> input[type="checkbox"]), .mk-shop .field-group > label:has(> input[type="radio"]), .mk-shop label.mk-check, .mk-shop fieldset > label:has(> input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); font-weight: 500; line-height: 1.4; cursor: pointer; }
+.mk-shop .field-group > label:has(> input:checked), .mk-shop label.mk-check:has(> input:checked), .mk-shop fieldset > label:has(> input:checked) { border-color: var(--accent); background: var(--accent-light); }
+.mk-shop fieldset { min-width: 0; margin: 0; padding: 12px 16px 16px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); }
+.mk-shop fieldset > legend { padding: 0 8px; font-size: .82rem; font-weight: 650; }
+.mk-shop fieldset .field-group + .field-group { margin-top: 10px; }
+.mk-shop fieldset:has(> label > input[type="checkbox"]) { display: flex; flex-wrap: wrap; gap: 8px; }
+.mk-shop fieldset:has(> label > input[type="checkbox"]) > legend { flex: 0 0 100%; }
+
+/* ---------- Formulaires : grille adaptative ---------- */
+.mk-shop form.mk-form:not(.mk-inline-form) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; max-width: none; }
+.mk-shop form.mk-form.mk-panel { align-items: start; }
+.mk-shop form.mk-form:not(.mk-inline-form) > :is(h2, h3, h4, fieldset, .field-hint, .mk-sub, .mk-callout, p, .bq-wide, .bq-actions, .mk-list, .mk-table-wrap) { grid-column: 1 / -1; }
+.mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> textarea), .mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> select[multiple]), .mk-shop form.mk-form:not(.mk-inline-form) > .field-group:has(> label > input[type="checkbox"]) { grid-column: 1 / -1; }
+.mk-shop form.mk-form:not(.mk-inline-form) > :is(button, .btn) { justify-self: start; }
+.mk-shop .bq-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--kb-rule, var(--mk-border)); }
+
+/* Longs formulaires (fiche produit…) : chaque section est séparée par un filet */
+.mk-shop form.mk-form:not(.mk-inline-form) > h2:not(:first-child), .mk-shop form.mk-form:not(.mk-inline-form) > h3:not(:first-child) { margin: 10px 0 0; padding-top: 18px; border-top: 1px solid var(--kb-rule, var(--mk-border)); font-size: 1rem; font-weight: 650; }
+/* Étiquettes qui enveloppent leur champ (« <label>Nom<input></label> ») : étiquette au-dessus, champ pleine largeur */
+.mk-shop form.mk-form > label:not(:has(> input[type="checkbox"])):not(:has(> input[type="radio"])) { display: flex; flex-direction: column; gap: 5px; }
+.mk-shop form.mk-form > label > :is(input:not([type="checkbox"]):not([type="radio"]), select, textarea) { width: 100%; font-weight: 400; }
+.mk-shop form.mk-form > label:has(> input[type="checkbox"]) { display: flex; align-items: flex-start; gap: 10px; padding: 8px 12px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); font-weight: 500; }
+.mk-shop form.mk-form > label:has(> textarea), .mk-shop form.mk-form > label:has(> input[type="checkbox"]) { grid-column: 1 / -1; }
+.mk-shop .bq-zone > form.mk-form + form.mk-inline-form { margin-top: 10px; }
+/* Plusieurs champs dans un même groupe (dimensions L / l / h) : côte à côte sous une seule étiquette */
+.mk-shop .field-group:has(> input ~ input:not([type="hidden"])) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px 8px; }
+.mk-shop .field-group:has(> input ~ input:not([type="hidden"])) > label, .mk-shop .field-group:has(> input ~ input:not([type="hidden"])) > .field-hint { grid-column: 1 / -1; }
+/* Fieldsets : leurs champs se rangent en grille ; les lignes « article + quantité » restent sur une ligne */
+.mk-shop fieldset:has(> .field-group:not(.mk-inline-form)) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; }
+.mk-shop fieldset:has(> .field-group:not(.mk-inline-form)) > legend { grid-column: 1 / -1; }
+.mk-shop fieldset:has(> .field-group:not(.mk-inline-form)) > .field-group { margin: 0; }
+.mk-shop fieldset:has(> .field-group.mk-inline-form) { display: grid; gap: 8px; }
+.mk-shop .field-group.mk-inline-form { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; align-items: center; }
+.mk-shop .field-group.mk-inline-form :is(select, input:not([type="checkbox"]):not([type="radio"])) { width: 100%; height: var(--bq-ctl); }
+
+/* Groupes de champs d'une carte de réglages (formulaire unique à plusieurs cartes) */
+.mk-shop .bq-settings { display: block; }
+.mk-shop .bq-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 14px 18px; align-items: end; }
+.mk-shop .bq-fields > .bq-wide, .mk-shop .bq-wide { grid-column: 1 / -1; }
+.mk-shop .bq-fields.bq-checks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); align-items: start; }
+.mk-shop .bq-fields > .field-group:has(> .field-hint) > label:has(> input) { margin-bottom: 0; }
+.mk-shop .bq-settings .field-group.bq-wide { margin-top: 14px; }
+.mk-shop .bq-settings .bq-fields .field-group.bq-wide { margin-top: 0; }
+.mk-shop .bq-savebar { display: flex; justify-content: flex-end; gap: 10px; padding: 10px 14px; background: var(--mk-surface); border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); }
+.mk-shop .bq-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: start; }
+.mk-shop .bq-grid-2 > .mk-panel { margin-bottom: 0; }
+.mk-shop .bq-grid-2 + .mk-panel { margin-top: var(--bq-gap); }
+.mk-shop ul.mk-list:empty { display: none; }
+.mk-shop .bq-method { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 8px 0; border-top: 1px dashed var(--mk-border-strong); font-size: .9rem; }
+
+/* Formulaires en ligne (filtres, ajout rapide) : une rangée, étiquette au-dessus, largeurs maîtrisées */
+.mk-shop form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: flex-start; gap: 12px 14px; max-width: none; }
+.mk-shop form.mk-inline-form .field-group { flex: 0 1 220px; min-width: 150px; }
+.mk-shop form.mk-inline-form .field-group:has(input[name="q"]) { flex: 1 1 260px; max-width: 420px; }
+.mk-shop form.mk-inline-form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 0 0 auto; width: 100%; height: var(--bq-ctl); min-height: var(--bq-ctl); }
+.mk-shop form.mk-inline-form > :is(button, .btn) { flex: 0 0 auto; }
+.mk-shop form.mk-inline-form > .btn-primary:last-child:not(:only-child) { margin-left: auto; }
+/* Petits formulaires dans une cellule ou une ligne (Publier, Retirer…) */
+.mk-shop :is(td, li) form.mk-inline-form { display: inline-flex; flex-wrap: nowrap; align-items: center; gap: 6px; margin: 0; }
+.mk-shop :is(td, li) form.mk-inline-form :is(input:not([type="checkbox"]):not([type="radio"]), select) { width: auto; }
+.mk-shop :is(td, li) form.mk-inline-form label { font-size: .84rem; font-weight: 500; }
+.mk-shop td form.mk-inline-form + form.mk-inline-form { margin-left: 4px; }
+/* Barre d'actions groupées sous un tableau */
+.mk-shop p.mk-inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 14px; }
+.mk-shop p.mk-inline-form :is(select, input:not([type="checkbox"]):not([type="radio"])) { width: auto; min-width: 180px; }
+
+/* ---------- Tableaux (filets, survol et transitions : kola-brand) ---------- */
+.mk-shop .mk-table-wrap { margin: 0 0 14px; overflow-x: auto; }
+.mk-shop .mk-table { width: 100%; margin: 0; }
+.mk-shop .mk-table th, .mk-shop .mk-table td { vertical-align: middle; font-size: .9rem; }
+.mk-shop .mk-table .mk-sub { display: block; margin: 0; font-size: .78rem; font-weight: 400; color: var(--muted); }
+.mk-shop .mk-table code { padding: 1px 6px; border-radius: 6px; background: var(--mk-hover); font-size: .8rem; }
+.mk-shop .mk-table td:last-child:has(form) { white-space: nowrap; }
+.mk-shop ul.mk-list { display: grid; gap: 8px; margin: 0 0 14px; padding: 0; list-style: none; }
+.mk-shop ul.mk-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; padding: 10px 14px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); font-size: .9rem; }
+.mk-shop .bq-pager { margin: 10px 0 0; color: var(--muted); font-size: .86rem; }
+.mk-shop .bq-pager .btn { min-width: var(--bq-ctl); }
+
+/* ---------- Fiche (client, commande) : listes de définitions en grille ---------- */
+.mk-shop .mk-panel dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 14px 24px; margin: 0 0 14px; }
+.mk-shop .mk-panel dl > div { min-width: 0; }
+.mk-shop .mk-panel dt { margin: 0 0 2px; color: var(--muted); font-size: .78rem; font-weight: 650; }
+.mk-shop .mk-panel dd { margin: 0; font-size: .92rem; overflow-wrap: anywhere; }
+
+/* ---------- États vides ---------- */
+.mk-shop .bq-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 36px 24px 40px; text-align: center; background: var(--mk-surface-2); border: 1px dashed var(--mk-border-strong); border-radius: var(--kb-r-ctl, 8px); box-shadow: none; }
+.mk-shop .bq-empty .kx-empty-ill { width: 150px; max-width: 60%; height: auto; margin-bottom: 4px; }
+.mk-shop .bq-empty h3 { margin: 0; font-size: 1rem; font-weight: 650; color: var(--mk-text); }
+.mk-shop .bq-empty p { max-width: 50ch; margin: 0 0 8px; color: var(--muted); font-size: .88rem; }
+.mk-shop p.mk-empty { padding: 20px; text-align: center; background: var(--mk-surface-2); border: 1px dashed var(--mk-border-strong); border-radius: var(--kb-r-ctl, 8px); color: var(--muted); font-size: .9rem; }
+
+/* ---------- Zones de livraison, fournisseurs de paiement ---------- */
+.mk-shop .bq-card-list { display: grid; gap: 14px; margin: 0 0 16px; }
+.mk-shop .bq-zone { padding: 16px 18px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); }
+.mk-shop .bq-zone-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; margin: 0 0 10px; }
+.mk-shop .bq-zone-head strong { font-size: 1rem; }
+.mk-shop .bq-zone-countries { color: var(--muted); font-size: .84rem; }
+.mk-shop .bq-chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; background: var(--accent-light); color: var(--accent-dark); font-size: .78rem; font-weight: 650; }
+.mk-shop .bq-chip.is-ok { background: var(--success-light); color: var(--success-dark); }
+.mk-shop .bq-chip.is-warn { background: var(--warning-bg); color: var(--warning-text); }
+.mk-shop .bq-chip.is-off { background: var(--mk-hover); color: var(--mk-text-soft); }
+.mk-shop details.bq-more { margin: 12px 0 0; padding-top: 10px; border-top: 1px dashed var(--mk-border-strong); }
+.mk-shop details.bq-more > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 4px; border-radius: 6px; color: var(--accent-dark); font-size: .88rem; font-weight: 650; cursor: pointer; list-style: none; }
+.mk-shop details.bq-more > summary::-webkit-details-marker { display: none; }
+.mk-shop details.bq-more > summary::before { content: "+"; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent-light); font-weight: 700; line-height: 1; }
+.mk-shop details.bq-more[open] > summary::before { content: "−"; }
+.mk-shop details.bq-more > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mk-shop details.bq-more[open] > :not(summary) { animation: bq-open var(--kb-dur, 180ms) var(--kb-ease, ease) both; }
+@keyframes bq-open { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.mk-shop .bq-providers { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; }
+.mk-shop .bq-providers > .mk-panel { margin: 0; }
+.mk-shop .bq-provider-head { display: flex; align-items: center; gap: 12px; margin: 0 0 10px; }
+.mk-shop .bq-provider-head h2 { margin: 0; font-size: 1.05rem; font-weight: 650; }
+.mk-shop .bq-mark { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--accent-light); color: var(--accent-dark); }
+.mk-shop .bq-provider-head .bq-chip { margin-left: auto; }
+.mk-shop .bq-hook { display: block; padding: 8px 10px; border-radius: 6px; background: var(--mk-hover); font-size: .8rem; word-break: break-all; }
+
+/* ---------- Retour d'envoi : bouton occupé ---------- */
+.mk-shop .btn.is-busy { pointer-events: none; opacity: .75; }
+.mk-shop .btn.is-busy::after { content: ""; display: inline-block; width: 12px; height: 12px; margin-left: 8px; vertical-align: -2px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: bq-spin .7s linear infinite; }
+@keyframes bq-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Petits écrans (≤ 720 px, comme .mk-datatable) ---------- */
+@media (max-width: 720px) {
+  .mk-shop .mk-panel { padding: 16px 14px; }
+  .mk-shop form.mk-form:not(.mk-inline-form) { grid-template-columns: 1fr; }
+  .mk-shop form.mk-inline-form .field-group, .mk-shop form.mk-inline-form .field-group:has(input[name="q"]) { flex: 1 1 100%; max-width: none; }
+  .mk-shop form.mk-inline-form > :is(button, .btn) { flex: 1 1 auto; }
+  .mk-shop form.mk-inline-form > .btn-primary:last-child:not(:only-child) { margin-left: 0; }
+  .mk-shop .mk-datatable { border: 0; }
+  .mk-shop .mk-datatable th[scope="row"] { display: block; padding: 8px 12px 2px; font-size: .98rem; }
+  .mk-shop .mk-table-wrap:has(.mk-datatable) { overflow: visible; border: 0; background: none; }
+  .mk-shop .bq-zone { padding: 14px; }
+}
+@media (pointer: coarse) { .mk-shop details.bq-more > summary { min-height: 44px; } .mk-shop { --bq-ctl: 44px; } .mk-shop :is(input, select, textarea) { font-size: 16px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-shop details.bq-more[open] > :not(summary), .mk-shop .btn.is-busy::after { animation: none !important; }
+}

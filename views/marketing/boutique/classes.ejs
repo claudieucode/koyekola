@@ -1,36 +1,38 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: "Taxes et expédition" }) %>
+<div class="bq-grid-2">
 <section class="mk-panel"><h2>Classes de taxe</h2>
   <p class="field-hint">Ex. « Taux réduit », « Exonéré ». Un produit sans classe suit la règle standard ; chaque classe a ses propres règles ci-dessous.</p>
-  <% if (taxClasses.length) { %><ul><% taxClasses.forEach((c) => { %><li><%= c.name %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/classes/tax/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer cette classe et ses règles ? Les produits repassent en classe standard." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune classe de taxe.</p><% } %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/classes/tax"><div class="field-group"><label for="tc-n">Nouvelle classe de taxe</label><input id="tc-n" name="name" required maxlength="60"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+  <% if (taxClasses.length) { %><ul class="mk-list"><% taxClasses.forEach((c) => { %><li><%= c.name %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/classes/tax/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer cette classe et ses règles ? Les produits repassent en classe standard." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune classe de taxe pour l'instant.</p><% } %>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/classes/tax"><div class="field-group"><label for="tc-n">Nouvelle classe de taxe</label><input type="text" id="tc-n" name="name" required maxlength="60"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
 </section>
+<section class="mk-panel"><h2>Classes d'expédition</h2>
+  <p class="field-hint">Ex. « Encombrant », « Fragile ». Chaque méthode de livraison peut ajouter un supplément (une fois par classe présente dans le panier).</p>
+  <% if (shipClasses.length) { %><ul class="mk-list"><% shipClasses.forEach((c) => { %><li><%= c.name %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/classes/shipping/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer cette classe ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune classe d'expédition pour l'instant.</p><% } %>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/classes/shipping"><div class="field-group"><label for="sc-n">Nouvelle classe d'expédition</label><input type="text" id="sc-n" name="name" required maxlength="60"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+</section>
+</div>
 <section class="mk-panel"><h2>Règles de taxe</h2>
-  <% if (taxRules.length) { %><ul><% taxRules.forEach((r) => { const cn = (taxClasses.find((c) => c.id === r.tax_class_id) || {}).name; %><li><strong><%= r.name %></strong> — <%= r.country %><%= r.region ? " / " + r.region : "" %><%= r.postcode ? " / codes postaux " + r.postcode : "" %> : <%= (r.rate_bp / 100).toFixed(2) %> % — classe : <%= cn || "standard" %><%= r.applies_to_shipping ? " (livraison comprise)" : "" %>
+  <% if (taxRules.length) { %><ul class="mk-list"><% taxRules.forEach((r) => { const cn = (taxClasses.find((c) => c.id === r.tax_class_id) || {}).name; %><li><strong><%= r.name %></strong> — <%= r.country %><%= r.region ? " / " + r.region : "" %><%= r.postcode ? " / codes postaux " + r.postcode : "" %> : <%= (r.rate_bp / 100).toFixed(2) %> % — classe : <%= cn || "standard" %><%= r.applies_to_shipping ? " (livraison comprise)" : "" %>
     <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/taxes/<%= r.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune règle : aucune taxe n'est appliquée. Activez les taxes dans Réglages.</p><% } %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/taxes"><input type="hidden" name="back" value="classes">
-    <div class="field-group"><label for="tr-n">Nom</label><input id="tr-n" name="name" required maxlength="60" placeholder="TVA réduite"></div>
-    <div class="field-group"><label for="tr-c">Pays (code ou *)</label><input id="tr-c" name="country" required maxlength="2"></div>
-    <div class="field-group"><label for="tr-r">Région (facultatif)</label><input id="tr-r" name="region" maxlength="60"></div>
-    <div class="field-group"><label for="tr-p">Codes postaux (facultatif)</label><input id="tr-p" name="postcode" maxlength="200" placeholder="75*, 13000-13999"></div>
+  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/taxes"><input type="hidden" name="back" value="classes">
+    <div class="field-group"><label for="tr-n">Nom</label><input type="text" id="tr-n" name="name" required maxlength="60" placeholder="TVA réduite"></div>
+    <div class="field-group"><label for="tr-c">Pays (code ou *)</label><input type="text" id="tr-c" name="country" required maxlength="2"></div>
+    <div class="field-group"><label for="tr-r">Région (facultatif)</label><input type="text" id="tr-r" name="region" maxlength="60"></div>
+    <div class="field-group"><label for="tr-p">Codes postaux (facultatif)</label><input type="text" id="tr-p" name="postcode" maxlength="200" placeholder="75*, 13000-13999"></div>
     <div class="field-group"><label for="tr-k">Classe de taxe</label><select id="tr-k" name="tax_class_id"><option value="">Standard</option><% taxClasses.forEach((c) => { %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
-    <div class="field-group"><label for="tr-t">Taux (%)</label><input id="tr-t" name="rate" inputmode="decimal" required></div>
+    <div class="field-group"><label for="tr-t">Taux (%)</label><input type="text" id="tr-t" name="rate" inputmode="decimal" required></div>
     <div class="field-group"><label><input type="checkbox" name="applies_to_shipping" value="1"> S'applique à la livraison</label></div>
     <button class="btn btn-primary btn-sm" type="submit">Ajouter la règle</button>
   </form><% } %>
 </section>
-<section class="mk-panel"><h2>Classes d'expédition</h2>
-  <p class="field-hint">Ex. « Encombrant », « Fragile ». Chaque méthode de livraison peut ajouter un supplément (une fois par classe présente dans le panier).</p>
-  <% if (shipClasses.length) { %><ul><% shipClasses.forEach((c) => { %><li><%= c.name %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/classes/shipping/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer cette classe ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune classe d'expédition.</p><% } %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/classes/shipping"><div class="field-group"><label for="sc-n">Nouvelle classe d'expédition</label><input id="sc-n" name="name" required maxlength="60"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
-</section>
 <section class="mk-panel"><h2>Zones : codes postaux et suppléments par classe</h2>
   <% if (!zones.length) { %><p class="mk-empty">Aucune zone de livraison : créez-en dans Réglages.</p><% } %>
-  <% zones.forEach((z) => { %>
-  <h3><%= z.name %> <small>(<%= z.countries.length ? z.countries.join(", ") : "tous pays" %>)</small></h3>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/postcodes"><div class="field-group"><label for="zp-<%= z.id %>">Codes postaux de la zone (vide = tous)</label><input id="zp-<%= z.id %>" name="postcodes" maxlength="400" value="<%= z.postcodes %>" placeholder="20*, 2A000-2B999"></div><button class="btn btn-outline btn-sm" type="submit">Enregistrer</button></form><% } else if (z.postcodes) { %><p>Codes postaux : <%= z.postcodes %></p><% } %>
-  <% z.methods.forEach((m) => { %><div><strong><%= m.name %></strong> (<%= m.kind %>, <%= money(m.cost_cents) %>) :
-    <% shipClasses.forEach((c) => { %><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/classes"><input type="hidden" name="class_id" value="<%= c.id %>"><label for="cc-<%= m.id %>-<%= c.id %>"><%= c.name %> +</label> <input id="cc-<%= m.id %>-<%= c.id %>" name="cost" inputmode="decimal" size="6" value="<%= m.class_costs[c.id] != null ? (m.class_costs[c.id] / 100).toFixed(2).replace(".", ",") : "" %>" placeholder="0,00"> <button class="btn btn-ghost btn-sm" type="submit">OK</button></form><% } else if (m.class_costs[c.id] != null) { %><%= c.name %> + <%= money(m.class_costs[c.id]) %> <% } %><% }) %></div><% }) %>
-  <% }) %>
+  <div class="bq-card-list"><% zones.forEach((z) => { %>
+  <div class="bq-zone"><div class="bq-zone-head"><strong><%= z.name %></strong> <span class="bq-zone-countries"><%= z.countries.length ? z.countries.join(", ") : "tous pays" %></span></div>
+  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/postcodes"><div class="field-group"><label for="zp-<%= z.id %>">Codes postaux de la zone (vide = tous)</label><input type="text" id="zp-<%= z.id %>" name="postcodes" maxlength="400" value="<%= z.postcodes %>" placeholder="20*, 2A000-2B999"></div><button class="btn btn-outline btn-sm" type="submit">Enregistrer</button></form><% } else if (z.postcodes) { %><p>Codes postaux : <%= z.postcodes %></p><% } %>
+  <% z.methods.forEach((m) => { %><div class="bq-method"><strong><%= m.name %></strong> <span class="bq-zone-countries">(<%= m.kind %>, <%= money(m.cost_cents) %>)</span> :
+    <% shipClasses.forEach((c) => { %><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/classes"><input type="hidden" name="class_id" value="<%= c.id %>"><label for="cc-<%= m.id %>-<%= c.id %>"><%= c.name %> +</label> <input type="text" id="cc-<%= m.id %>-<%= c.id %>" name="cost" inputmode="decimal" size="6" value="<%= m.class_costs[c.id] != null ? (m.class_costs[c.id] / 100).toFixed(2).replace(".", ",") : "" %>" placeholder="0,00"> <button class="btn btn-ghost btn-sm" type="submit">OK</button></form><% } else if (m.class_costs[c.id] != null) { %><%= c.name %> + <%= money(m.class_costs[c.id]) %> <% } %><% }) %></div><% }) %></div>
+  <% }) %></div>
 </section>
 <%- include("../partials/bottom") %>

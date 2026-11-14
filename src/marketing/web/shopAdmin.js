@@ -68,11 +68,13 @@ module.exports = () => {
       });
     }
   }
+  // Menu latéral du site : seules quatre entrées « Boutique » existent ; les autres écrans se rattachent à la plus proche (la navigation secondaire de la page garde l'onglet exact : « tab »).
+  const MENU_ACTIVE = { "boutique/avis": "boutique", "boutique/abonnements": "boutique/commandes", "boutique/rendez-vous": "boutique/commandes", "boutique/listes-cadeaux": "boutique/commandes", "boutique/rapports": "boutique/reglages", "boutique/factures": "boutique/reglages", "boutique/acces": "boutique/reglages", "boutique/classes": "boutique/reglages", "boutique/paiements": "boutique/reglages" };
   const render = (req, res, tpl, title, active, extra = {}) => {
     const s = { db: req.mk.ctx.db, organizationId: req.mk.ctx.organizationId, siteId: req.shopSpace.principal ? null : req.shopSpace.siteId };
     const settings = store.getSettings(s);
     const moduleOn = siteModules.isEnabled(s.db, s.organizationId, s.siteId, "commerce");
-    res.render(`marketing/boutique/${tpl}`, { title, active, space: req.shopSpace, base: `${req.shopSpace.base}/boutique`, shopSettings: settings, moduleOn, canWrite: req.mk.can("shop.write") && writable(req.shopSpace), canOrders: req.mk.can("shop.orders") && writable(req.shopSpace),
+    res.render(`marketing/boutique/${tpl}`, { shopAdmin: true, title, active: MENU_ACTIVE[active] || active, tab: active, space: req.shopSpace, base: `${req.shopSpace.base}/boutique`, shopSettings: settings, moduleOn, canWrite: req.mk.can("shop.write") && writable(req.shopSpace), canOrders: req.mk.can("shop.orders") && writable(req.shopSpace),
       canPay: req.mk.can("shop.payments") && writable(req.shopSpace), money: (c) => view.money(c, settings.currency), query: req.query, ...extra });
   };
   const int = (v) => (v === undefined || v === "" ? undefined : Number(v));

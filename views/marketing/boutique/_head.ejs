@@ -1,21 +1,21 @@
-<%# En-tête commun des écrans de la boutique : onglets + alertes d'état réelles (module, ouverture, paiement). %>
+<%#
+  En-tête commun des écrans de la boutique : titre, navigation secondaire (onglets) et alertes d'état réelles (module, ouverture).
+  Paramètres : heading (titre), tab (facultatif : onglet actif quand il diffère de « active »).
+%><%
+  const bqTab = typeof tab !== "undefined" && tab ? tab : active;
+  const bqGroups = [
+    [["boutique", "", "Produits"], ["boutique/categories", "/categories", "Catégories"], ["boutique/avis", "/avis", "Avis"]],
+    [["boutique/commandes", "/commandes", "Commandes"], ["boutique/clients", "/clients", "Clients"], ["boutique/abonnements", "/abonnements", "Abonnements"], ["boutique/rendez-vous", "/rendez-vous", "Rendez-vous"], ["boutique/listes-cadeaux", "/listes-cadeaux", "Listes cadeaux"]],
+    [["boutique/rapports", "/rapports", "Rapports"], ["boutique/factures", "/factures", "Factures"], ["boutique/acces", "/acces", "Accès membre"]],
+    [["boutique/classes", "/classes", "Taxes et expédition"], ["boutique/paiements", "/paiements", "Paiements"], ["boutique/reglages", "/reglages", "Réglages"]],
+  ];
+%>
 <div class="mk-head"><div class="mk-head-main"><h1><%= heading %></h1>
   <p class="mk-head-sub">Boutique de « <%= space.name %> » — produits, commandes et clients propres à ce site.</p></div></div>
-<nav class="mk-tabs" aria-label="Boutique">
-  <a href="<%= base %>"<%= active === "boutique" ? ' aria-current="page"' : "" %>>Produits</a>
-  <a href="<%= base %>/categories">Catégories</a>
-  <a href="<%= base %>/avis"<%= active === "boutique/avis" ? ' aria-current="page"' : "" %>>Avis</a>
-  <a href="<%= base %>/rendez-vous"<%= active === "boutique/rendez-vous" ? ' aria-current="page"' : "" %>>Rendez-vous</a>
-  <a href="<%= base %>/listes-cadeaux"<%= active === "boutique/listes-cadeaux" ? ' aria-current="page"' : "" %>>Listes cadeaux</a>
-  <a href="<%= base %>/abonnements"<%= active === "boutique/abonnements" ? ' aria-current="page"' : "" %>>Abonnements</a>
-  <a href="<%= base %>/commandes"<%= active === "boutique/commandes" ? ' aria-current="page"' : "" %>>Commandes</a>
-  <a href="<%= base %>/rapports"<%= active === "boutique/rapports" ? ' aria-current="page"' : "" %>>Rapports</a>
-  <a href="<%= base %>/factures"<%= active === "boutique/factures" ? ' aria-current="page"' : "" %>>Factures</a>
-  <a href="<%= base %>/acces"<%= active === "boutique/acces" ? ' aria-current="page"' : "" %>>Accès membre</a>
-  <a href="<%= base %>/clients"<%= active === "boutique/clients" ? ' aria-current="page"' : "" %>>Clients</a>
-  <a href="<%= base %>/classes"<%= active === "boutique/classes" ? ' aria-current="page"' : "" %>>Taxes et expédition</a>
-  <a href="<%= base %>/paiements"<%= active === "boutique/paiements" ? ' aria-current="page"' : "" %>>Paiements</a>
-  <a href="<%= base %>/reglages"<%= active === "boutique/reglages" ? ' aria-current="page"' : "" %>>Réglages</a>
+<nav class="mk-tabs bq-tabs" aria-label="Boutique" data-bq-tabs>
+  <% bqGroups.forEach((group, gi) => { %><% if (gi) { %><span class="bq-sep" aria-hidden="true"></span><% } %><% group.forEach(([key, path, label]) => { %><a class="mk-tab" href="<%= base %><%= path %>"<%- bqTab === key ? ' aria-current="page"' : "" %>><%= label %></a><% }) %><% }) %>
 </nav>
-<% if (!moduleOn) { %><p class="mk-callout mk-callout-warn"><span>Le module « Commerce » n'est pas activé pour ce site : la boutique publique reste fermée. L'équipe de l'organisation l'active dans les réglages du site.</span></p><% } %>
-<% if (!shopSettings.enabled) { %><p class="mk-callout"><span>La boutique n'est pas ouverte au public. Ouvrez-la dans <a href="<%= base %>/reglages">Réglages</a> une fois les produits, la livraison et le paiement prêts.</span></p><% } %>
+<% if (!moduleOn || !shopSettings.enabled) { %><div class="bq-notices">
+<% if (!moduleOn) { %><p class="mk-callout mk-callout-warn bq-notice" role="status"><%- icon("info", { size: 16 }) %><span>Le module « Commerce » n'est pas activé pour ce site : la boutique publique reste fermée. L'équipe de l'organisation l'active dans les réglages du site.</span></p><% } %>
+<% if (!shopSettings.enabled) { %><p class="mk-callout bq-notice" role="status"><%- icon("info", { size: 16 }) %><span>La boutique n'est pas ouverte au public. Ouvrez-la dans <a href="<%= base %>/reglages">Réglages</a> une fois les produits, la livraison et le paiement prêts.</span></p><% } %>
+</div><% } %>

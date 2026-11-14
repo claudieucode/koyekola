@@ -124,6 +124,7 @@ Source : `scripts/audit-interface.js` (géométrie, 1920/1440/820/390 px) et `sc
 | `/marketing/tests-ab` | 1920 / 1440 / 820 / 390 | light + dark | Vérifié | — |
 | `/marketing/tunnels` | 1920 / 1440 / 820 / 390 | light + dark | Vérifié | — |
 | `/marketing/webhooks` | 1920 / 1440 / 820 / 390 | light + dark | Vérifié | — |
+| `/marketing/site-web/boutique` (+ 20 sous-écrans : produits, catégories, avis, rendez-vous, listes cadeaux, abonnements, commandes, rapports, factures, accès membre, clients, taxes et expédition, paiements, réglages) | 1920 / 1440 / 820 / 390 (320 en responsive) | light + dark | Refait puis vérifié (novembre 2026) | voir `docs/boutique/REFONTE_INTERFACE.md` ; `tests/boutique-admin-refonte.test.js`, `tests/boutique-admin-navigateur.test.js` |
 
 ## Familles de composants
 | Famille | Statut | Preuve |

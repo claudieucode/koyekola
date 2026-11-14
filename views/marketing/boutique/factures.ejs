@@ -4,23 +4,23 @@
   <p class="mk-sub">Ces informations figurent sur chaque facture et chaque avoir émis à partir de maintenant. Les documents déjà émis ne changent jamais.</p>
   <% if (!company.legal_name) { %><p class="mk-callout mk-callout-warn"><span>Renseignez la raison sociale et l'adresse : sans elles, les factures n'ont pas d'émetteur.</span></p><% } %>
   <form class="mk-form" method="post" action="<%= base %>/factures/vendeur">
-    <div class="field-group"><label for="c-n">Raison sociale</label><input id="c-n" name="legal_name" maxlength="150" value="<%= company.legal_name %>"></div>
+    <div class="field-group"><label for="c-n">Raison sociale</label><input type="text" id="c-n" name="legal_name" maxlength="150" value="<%= company.legal_name %>"></div>
     <div class="field-group"><label for="c-a">Adresse</label><textarea id="c-a" name="address" rows="3" maxlength="500"><%= company.address %></textarea></div>
-    <div class="field-group"><label for="c-v">Numéro de TVA</label><input id="c-v" name="vat_number" maxlength="40" value="<%= company.vat_number %>"></div>
-    <div class="field-group"><label for="c-r">Immatriculation (SIRET, RCCM…)</label><input id="c-r" name="registration_number" maxlength="40" value="<%= company.registration_number %>"></div>
-    <div class="field-group"><label for="c-e">E-mail</label><input id="c-e" name="email" maxlength="150" value="<%= company.email %>"></div>
-    <div class="field-group"><label for="c-t">Téléphone</label><input id="c-t" name="phone" maxlength="40" value="<%= company.phone %>"></div>
-    <div class="field-group"><label for="c-p">Préfixe des numéros (lettres et chiffres, 8 max)</label><input id="c-p" name="invoice_prefix" maxlength="8" value="<%= company.invoice_prefix %>" placeholder="F"></div>
+    <div class="field-group"><label for="c-v">Numéro de TVA</label><input type="text" id="c-v" name="vat_number" maxlength="40" value="<%= company.vat_number %>"></div>
+    <div class="field-group"><label for="c-r">Immatriculation (SIRET, RCCM…)</label><input type="text" id="c-r" name="registration_number" maxlength="40" value="<%= company.registration_number %>"></div>
+    <div class="field-group"><label for="c-e">E-mail</label><input type="text" id="c-e" name="email" maxlength="150" value="<%= company.email %>"></div>
+    <div class="field-group"><label for="c-t">Téléphone</label><input type="text" id="c-t" name="phone" maxlength="40" value="<%= company.phone %>"></div>
+    <div class="field-group"><label for="c-p">Préfixe des numéros (lettres et chiffres, 8 max)</label><input type="text" id="c-p" name="invoice_prefix" maxlength="8" value="<%= company.invoice_prefix %>" placeholder="F"></div>
     <div class="field-group"><label for="c-f">Mentions légales en bas de facture</label><textarea id="c-f" name="footer" rows="3" maxlength="500"><%= company.footer %></textarea></div>
     <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
   </form>
 </section>
 <section class="mk-panel"><h2>Journal des factures et avoirs</h2>
-  <% if (!list.items.length) { %><p class="mk-sub">Aucune facture pour le moment : une facture est émise automatiquement dès qu'une commande est payée.</p><% } else { %>
+  <% if (!list.items.length) { %><%- include("_vide", { titre: "Aucune facture pour le moment", texte: "Une facture est émise automatiquement dès qu'une commande est payée.", action: null }) %><% } else { %>
   <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Factures et avoirs</caption><thead><tr><th scope="col">Numéro</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col">Commande</th><th scope="col">Client</th><th scope="col">Montant</th></tr></thead><tbody>
-    <% list.items.forEach((d) => { %><tr><th scope="row"><a href="<%= base %>/commandes/<%= d.order_id %>/factures/<%= d.id %>" target="_blank" rel="noopener"><%= d.number %></a></th><td><%= d.kind === "invoice" ? "Facture" : "Avoir" %></td><td><%= String(d.issued_at).slice(0, 10) %></td><td><a href="<%= base %>/commandes/<%= d.order_id %>"><%= d.order_number %></a></td><td><%= d.email %></td><td><%= d.kind === "invoice" ? "" : "− " %><%= money(d.total_cents) %></td></tr><% }) %>
+    <% list.items.forEach((d) => { %><tr><th scope="row"><a href="<%= base %>/commandes/<%= d.order_id %>/factures/<%= d.id %>" target="_blank" rel="noopener"><%= d.number %></a></th><td><span class="mk-status <%= d.kind === "invoice" ? "mk-status-info" : "mk-status-warn" %>"><%= d.kind === "invoice" ? "Facture" : "Avoir" %></span></td><td><%= String(d.issued_at).slice(0, 10) %></td><td><a href="<%= base %>/commandes/<%= d.order_id %>"><%= d.order_number %></a></td><td><%= d.email %></td><td><%= d.kind === "invoice" ? "" : "− " %><%= money(d.total_cents) %></td></tr><% }) %>
   </tbody></table></div>
-  <% if (list.total > 25) { %><p class="mk-sub"><%= list.total %> documents — pages : <% for (let i = 1; i <= Math.ceil(list.total / 25); i++) { %><a href="?page=<%= i %>"><%= i %></a> <% } %></p><% } %>
+  <%- include("_pager", { list: { page: list.page || 1, pages: Math.ceil(list.total / 25), total: list.total }, nom: "documents" }) %>
   <% } %>
 </section>
 <%- include("../partials/bottom") %>

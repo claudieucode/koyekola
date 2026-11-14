@@ -18,8 +18,8 @@
     <% if (!sensitive || canPay) { %>
     <form class="mk-form mk-inline-form" method="post" action="<%= base %>/commandes/<%= order.id %>/statut">
       <input type="hidden" name="statut" value="<%= t %>">
-      <% if (t === "shipped") { %><div class="field-group"><label for="t-<%= t %>">Numéro de suivi</label><input id="t-<%= t %>" name="tracking" maxlength="80"></div><% } %>
-      <div class="field-group"><label for="n-<%= t %>">Note (facultatif)</label><input id="n-<%= t %>" name="note" maxlength="300"></div>
+      <% if (t === "shipped") { %><div class="field-group"><label for="t-<%= t %>">Numéro de suivi</label><input type="text" id="t-<%= t %>" name="tracking" maxlength="80"></div><% } %>
+      <div class="field-group"><label for="n-<%= t %>">Note (facultatif)</label><input type="text" id="n-<%= t %>" name="note" maxlength="300"></div>
       <button class="btn <%= t === "cancelled" || t === "refunded" ? "btn-outline" : "btn-primary" %> btn-sm" type="submit"<% if (t === "paid") { %> data-mk-confirm="Confirmez-vous avoir reçu le paiement de <%= money(order.total_cents) %> ?" data-mk-confirm-title="Confirmer le paiement" data-mk-confirm-ok="Confirmer"<% } else if (t === "refunded") { %> data-mk-confirm="Cela enregistre le remboursement ; il doit être effectué chez le fournisseur de paiement." data-mk-confirm-ok="Enregistrer"<% } %>><%= { paid: "Confirmer le paiement reçu", processing: "Mettre en préparation", shipped: "Marquer comme expédiée", completed: "Marquer comme terminée", cancelled: "Annuler la commande", refunded: "Enregistrer un remboursement" }[t] %></button>
     </form>
     <% } %>
@@ -29,7 +29,7 @@
 <% const refundedCents = (order.refunds || []).filter((r) => r.status === "succeeded" || r.status === "pending").reduce((n, r) => n + r.amount_cents, 0); const refundable = ["paid", "processing", "shipped", "completed"].includes(order.status) && order.payment_status === "paid"; const left = order.total_cents - refundedCents; %>
 <% if (refundedCents > 0 || (refundable && canPay)) { %>
 <% if (docs && docs.length) { %><section class="mk-panel"><h2>Factures et avoirs</h2><ul><% docs.forEach((d) => { %><li><a href="<%= base %>/commandes/<%= order.id %>/factures/<%= d.id %>" target="_blank" rel="noopener"><%= d.kind === "invoice" ? "Facture" : "Avoir" %> <%= d.number %></a> — <%= money(d.total_cents) %>, émis le <%= String(d.issued_at).slice(0, 10) %></li><% }) %></ul></section><% } %>
-<% if (canOrders) { %><section class="mk-panel"><h2>Ajouter une note</h2><form class="mk-form mk-inline-form" method="post" action="<%= base %>/commandes/<%= order.id %>/note"><div class="field-group"><label for="note-t">Note interne (visible dans l'historique, jamais par le client)</label><input id="note-t" name="note" maxlength="500" required></div><button class="btn btn-outline btn-sm" type="submit">Ajouter</button></form></section><% } %>
+<% if (canOrders) { %><section class="mk-panel"><h2>Ajouter une note</h2><form class="mk-form mk-inline-form" method="post" action="<%= base %>/commandes/<%= order.id %>/note"><div class="field-group"><label for="note-t">Note interne (visible dans l'historique, jamais par le client)</label><input type="text" id="note-t" name="note" maxlength="500" required></div><button class="btn btn-outline btn-sm" type="submit">Ajouter</button></form></section><% } %>
 <section class="mk-panel" id="remboursement"><h2>Remboursements</h2>
   <p>Remboursé : <strong><%= money(refundedCents) %></strong> sur <%= money(order.total_cents) %><% if (left > 0 && refundedCents > 0) { %> · reste <%= money(left) %><% } %></p>
   <% if ((order.refunds || []).length) { %><ul class="mk-list"><% order.refunds.forEach((r) => { %><li><%= String(r.created_at).slice(0, 16) %> — <%= money(r.amount_cents) %> · <%= r.provider === "stripe" ? "Stripe" : "hors plateforme" %> · <%= { pending: "en cours", succeeded: "effectué", failed: "refusé" }[r.status] %><%= r.restock ? " · remis en stock" : "" %><%= r.reason ? " — " + r.reason : "" %></li><% }) %></ul><% } %>
@@ -40,10 +40,10 @@
     <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Articles à rembourser</caption><thead><tr><th scope="col">Article</th><th scope="col">Quantité à rembourser</th></tr></thead><tbody>
     <% order.items.forEach((i) => { %><tr><th scope="row"><%= i.name %> (commandé : <%= i.quantity %>)</th><td><input type="number" min="0" max="<%= i.quantity %>" name="qty_<%= i.id %>" value="0" aria-label="Quantité à rembourser : <%= i.name %>"></td></tr><% }) %>
     </tbody></table></div>
-    <div class="field-group"><label for="rf-amount">Montant à rembourser (facultatif)</label><input id="rf-amount" name="amount" inputmode="decimal" placeholder="<%= (left / 100).toFixed(2) %>"></div>
+    <div class="field-group"><label for="rf-amount">Montant à rembourser (facultatif)</label><input type="text" id="rf-amount" name="amount" inputmode="decimal" placeholder="<%= (left / 100).toFixed(2) %>"></div>
     <div class="field-group"><label><input type="checkbox" name="shipping" value="1"> Rembourser aussi la livraison (<%= money(order.shipping_cents) %>) avec les articles</label></div>
     <div class="field-group"><label><input type="checkbox" name="restock" value="1"> Remettre les articles remboursés en stock</label></div>
-    <div class="field-group"><label for="rf-reason">Motif (facultatif)</label><input id="rf-reason" name="reason" maxlength="300"></div>
+    <div class="field-group"><label for="rf-reason">Motif (facultatif)</label><input type="text" id="rf-reason" name="reason" maxlength="300"></div>
     <button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="Le remboursement sera effectué chez le fournisseur de paiement et ne peut pas être annulé." data-mk-confirm-title="Rembourser" data-mk-confirm-ok="Rembourser">Rembourser</button>
   </form>
   <% } %>

@@ -24,10 +24,10 @@
     <td><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/acces/codes/<%= i.id %>/etat"><input type="hidden" name="actif" value="<%= i.active ? "0" : "1" %>"><button class="btn btn-ghost btn-sm" type="submit"><%= i.active ? "Désactiver" : "Réactiver" %></button></form><% } %></td></tr><% }) %>
   </tbody></table></div><% } %>
   <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/acces/codes">
-    <div class="field-group"><label for="ac-code">Code (laissez vide pour en générer un)</label><input id="ac-code" name="code" maxlength="32" autocomplete="off"></div>
+    <div class="field-group"><label for="ac-code">Code (laissez vide pour en générer un)</label><input type="text" id="ac-code" name="code" maxlength="32" autocomplete="off"></div>
     <div class="field-group"><label for="ac-max">Utilisations maximum</label><input id="ac-max" type="number" name="max_uses" value="1" min="1" max="100000" required></div>
     <div class="field-group"><label for="ac-exp">Expiration (UTC, facultatif)</label><input id="ac-exp" type="datetime-local" name="expires_at"></div>
-    <div class="field-group"><label for="ac-note">Note interne (facultatif)</label><input id="ac-note" name="note" maxlength="120"></div>
+    <div class="field-group"><label for="ac-note">Note interne (facultatif)</label><input type="text" id="ac-note" name="note" maxlength="120"></div>
     <button class="btn btn-primary btn-sm" type="submit">Créer le code</button></form><% } %>
 </section>
 
@@ -62,7 +62,7 @@
     <% } %></td></tr><% }) %>
   </tbody></table></div><% } %>
   <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/acces/ventes">
-    <div class="field-group"><label for="av-n">Nom de la vente</label><input id="av-n" name="name" required maxlength="80"></div>
+    <div class="field-group"><label for="av-n">Nom de la vente</label><input type="text" id="av-n" name="name" required maxlength="80"></div>
     <div class="field-group"><label for="av-s">Début (UTC)</label><input id="av-s" type="datetime-local" name="starts_at" required></div>
     <div class="field-group"><label for="av-e">Fin (UTC)</label><input id="av-e" type="datetime-local" name="ends_at" required></div>
     <div class="field-group"><label for="av-p">Produits (Ctrl/Cmd pour en choisir plusieurs)</label><select id="av-p" name="product_ids" multiple size="6"><% productChoices.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>

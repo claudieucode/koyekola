@@ -64,8 +64,9 @@
   <link rel="stylesheet" href="<%= asset('/css/kola-brand.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-soft.css') %>">
+  <% if (typeof shopAdmin !== "undefined" && shopAdmin) { %><link rel="stylesheet" href="<%= asset('/css/shop-admin.css') %>"><script src="<%= asset('/js/shop-admin.js') %>" defer></script><% } %>
 </head>
-<body class="mk-body<%= cms ? ' is-cms' : '' %>" data-kb-module="<%= kbModule %>">
+<body class="mk-body<%= cms ? ' is-cms' : '' %><%= typeof shopAdmin !== "undefined" && shopAdmin ? ' mk-shop' : '' %>" data-kb-module="<%= kbModule %>">
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><linearGradient id="vx-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" style="stop-color:var(--vx-a)"/><stop offset="1" style="stop-color:var(--vx-b)"/></linearGradient></defs></svg>
   <a class="skip-link" href="#main">Aller au contenu principal</a>
   <%# CMS : barre d'administration (niveau 1) puis fil d'Ariane (niveau 2), tous deux au niveau global de la coque, AVANT menu et contenu ; hors CMS, le fil d'Ariane reste dans la colonne du contenu %>

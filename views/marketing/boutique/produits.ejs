@@ -1,33 +1,36 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: "Produits" }) %>
 <section class="mk-panel">
-  <form method="get" class="mk-form mk-inline-form" role="search">
-    <div class="field-group"><label for="p-q">Rechercher</label><input id="p-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Nom ou SKU"></div>
+  <form method="get" class="mk-form mk-inline-form" role="search" aria-label="Filtrer les produits">
+    <div class="field-group"><label for="p-q">Rechercher</label><input type="search" id="p-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Nom ou référence (SKU)"></div>
     <div class="field-group"><label for="p-st">Statut</label><select id="p-st" name="statut"><option value="">Tous</option><% [["published","En ligne"],["draft","Brouillon"],["archived","Archivé"]].forEach(([v,l]) => { %><option value="<%= v %>"<%= query.statut === v ? " selected" : "" %>><%= l %></option><% }) %></select></div>
     <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
     <% if (canWrite) { %><a class="btn btn-primary btn-sm" href="<%= base %>/produits/nouveau">Nouveau produit</a><% } %>
   </form>
-  <% if (!list.items.length) { %><div class="mk-empty"><%- illu("boutique", { className: "kx-empty-ill" }) %><p>Aucun produit pour l'instant.</p></div><% } else { %>
+  <% if (!list.items.length) { %>
+    <% if (query.q || query.statut) { %><%- include("_vide", { titre: "Aucun produit ne correspond", texte: "Essayez un autre nom ou retirez le filtre de statut.", action: { href: base, label: "Voir tous les produits" } }) %>
+    <% } else { %><%- include("_vide", { titre: "Aucun produit pour l'instant", texte: "Ajoutez votre premier produit pour commencer à vendre.", action: canWrite ? { href: base + "/produits/nouveau", label: "Nouveau produit" } : null }) %><% } %>
+  <% } else { %>
   <form method="post" action="<%= base %>/produits/lot" id="bulk-p">
   <div class="mk-table-wrap"><table class="mk-table">
     <caption class="sr-only">Produits de la boutique</caption>
     <thead><tr><% if (canWrite) { %><th scope="col"><span class="sr-only">Sélection</span></th><% } %><th scope="col">Produit</th><th scope="col">Type</th><th scope="col">Prix</th><th scope="col">Stock</th><th scope="col">Statut</th></tr></thead>
     <tbody>
-    <% const ST = { published: "En ligne", draft: "Brouillon", archived: "Archivé" }; const TY = { simple: "Simple", variable: "Variable", digital: "Numérique" }; %>
+    <% const ST = { published: "En ligne", draft: "Brouillon", archived: "Archivé" }; const STC = { published: "mk-status mk-status-ok", draft: "mk-status mk-status-warn", archived: "mk-status" }; const TY = { simple: "Simple", variable: "Variable", digital: "Numérique" }; %>
     <% list.items.forEach((p) => { const low = p.manage_stock && p.type !== "variable" && p.stock_qty <= shopSettings.low_stock_threshold; %>
       <tr>
         <% if (canWrite) { %><td><input type="checkbox" name="ids" value="<%= p.id %>" aria-label="Sélectionner <%= p.name %>"></td><% } %>
-        <th scope="row"><a href="<%= base %>/produits/<%= p.id %>"><%= p.name %></a><% if (p.sku) { %> <span class="mk-sub">· <%= p.sku %></span><% } %></th>
+        <th scope="row"><a href="<%= base %>/produits/<%= p.id %>"><%= p.name %></a><% if (p.sku) { %><span class="mk-sub"><%= p.sku %></span><% } %></th>
         <td><%= TY[p.type] || p.type %></td>
-        <td><%= p.onSale ? money(p.priceFromCents) + " (promo)" : money(p.priceFromCents) %><%= p.isVariable ? " et +" : "" %></td>
-        <td><% if (p.type === "variable") { %><%= p.variants.reduce((a, v) => a + (v.manage_stock ? v.stock_qty : 0), 0) %> (<%= p.variants.length %> variantes)<% } else if (p.manage_stock) { %><span class="<%= low ? "mk-status mk-status-warn" : "" %>"><%= p.stock_qty %><%= low ? " — stock bas" : "" %></span><% } else { %>Illimité<% } %></td>
-        <td><span class="mk-status"><%= ST[p.status] %></span></td>
+        <td class="mk-num"><%= p.onSale ? money(p.priceFromCents) + " (promo)" : money(p.priceFromCents) %><%= p.isVariable ? " et +" : "" %></td>
+        <td class="mk-num"><% if (p.type === "variable") { %><%= p.variants.reduce((a, v) => a + (v.manage_stock ? v.stock_qty : 0), 0) %> <span class="mk-sub"><%= p.variants.length %> variantes</span><% } else if (p.manage_stock) { %><span class="<%= low ? "mk-status mk-status-warn" : "" %>"><%= p.stock_qty %><%= low ? " — stock bas" : "" %></span><% } else { %>Illimité<% } %></td>
+        <td><span class="<%= STC[p.status] || "mk-status" %>"><%= ST[p.status] %></span></td>
       </tr>
     <% }) %>
     </tbody></table></div>
   <% if (canWrite) { %><p class="mk-inline-form"><label for="bulk-a">Pour les produits cochés :</label> <select id="bulk-a" name="action"><option value="published">Publier</option><option value="draft">Passer en brouillon</option><option value="archived">Archiver</option><option value="delete">Supprimer</option></select> <button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="Appliquer cette action aux produits cochés ?" data-mk-confirm-ok="Appliquer">Appliquer</button></p><% } %>
   </form>
-  <% if (list.pages > 1) { %><p class="mk-sub">Page <%= list.page %> sur <%= list.pages %> — <% if (list.page > 1) { %><a href="?page=<%= list.page - 1 %>">précédente</a> <% } %><% if (list.page < list.pages) { %><a href="?page=<%= list.page + 1 %>">suivante</a><% } %></p><% } %>
+  <%- include("_pager", { list, nom: "produits" }) %>
   <% } %>
 </section>
 <%- include("../partials/bottom") %>

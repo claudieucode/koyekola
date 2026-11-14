@@ -1,19 +1,21 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: "Abonnements" }) %>
+<section class="mk-panel">
 <p class="field-hint">Les abonnements sont facturés par Stripe ; chaque facture payée crée une commande de réassort (une seule par facture). Les formules se règlent sur la fiche de chaque produit. Arrêter un abonnement ici l'arrête tout de suite chez Stripe et prévient le client par e-mail.</p>
-<form class="mk-inline-form" method="get" action="<%= base %>/abonnements"><label for="st">Statut</label>
-  <select id="st" name="statut"><option value="">Tous</option><% Object.entries(STATUS_LABELS).forEach(([k, v]) => { if (k !== "incomplete") { %><option value="<%= k %>"<%= query.statut === k ? " selected" : "" %>><%= v %></option><% } }) %></select>
+<form class="mk-form mk-inline-form" method="get" action="<%= base %>/abonnements" role="search" aria-label="Filtrer les abonnements"><div class="field-group"><label for="st">Statut</label>
+  <select id="st" name="statut"><option value="">Tous</option><% Object.entries(STATUS_LABELS).forEach(([k, v]) => { if (k !== "incomplete") { %><option value="<%= k %>"<%= query.statut === k ? " selected" : "" %>><%= v %></option><% } }) %></select></div>
   <button class="btn btn-outline btn-sm" type="submit">Filtrer</button></form>
-<% if (!list.items.length) { %><p class="mk-empty">Aucun abonnement pour le moment.</p><% } else { %>
+<% if (!list.items.length) { %><%- include("_vide", { titre: "Aucun abonnement pour le moment", texte: query.statut ? "Aucun abonnement avec ce statut." : "Quand un client souscrit à une formule d'abonnement, il apparaît ici.", action: query.statut ? { href: base + "/abonnements", label: "Voir tous les abonnements" } : null }) %><% } else { %>
 <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Abonnements</caption>
 <thead><tr><th scope="col">Client</th><th scope="col">Produit et formule</th><th scope="col">Statut</th><th scope="col">Prochaine échéance</th><th scope="col">Commandes générées</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
 <% list.items.forEach((x) => { %>
-<tr><th scope="row"><%= x.email %><br><small>depuis le <%= String(x.created_at).slice(0, 10) %></small></th>
-<td><%= x.product_name %><%= x.variant_label ? " (" + x.variant_label + ")" : "" %><br><small><%= x.plan_label %> — <%= money(x.price_cents) %> <%= cadence(x) %></small></td>
-<td><%= statusLabel(x) %></td>
+<tr><th scope="row"><%= x.email %><span class="mk-sub">depuis le <%= String(x.created_at).slice(0, 10) %></span></th>
+<td><%= x.product_name %><%= x.variant_label ? " (" + x.variant_label + ")" : "" %><span class="mk-sub"><%= x.plan_label %> — <%= money(x.price_cents) %> <%= cadence(x) %></span></td>
+<td><span class="mk-status <%= x.status === "active" ? "mk-status-ok" : x.status === "cancelled" ? "" : "mk-status-warn" %>"><%= statusLabel(x) %></span></td>
 <td><%= x.status === "cancelled" || x.status === "paused" ? "—" : (x.current_period_end ? frDate(x.current_period_end) : "—") %></td>
 <td><% if (!x.orders.length) { %>aucune<% } else { x.orders.forEach((o, i) => { %><a href="<%= base %>/commandes/<%= o.id %>"><%= o.number %></a><%= i < x.orders.length - 1 ? ", " : "" %><% }) } %></td>
-<td><% if (canOrders && x.status !== "cancelled") { %><form method="post" action="<%= base %>/abonnements/<%= x.id %>/annuler"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Arrêter cet abonnement tout de suite ? Plus aucun prélèvement n'aura lieu et le client est prévenu." data-mk-confirm-ok="Arrêter l'abonnement">Arrêter</button></form><% } %></td></tr>
+<td><% if (canOrders && x.status !== "cancelled") { %><form class="mk-inline-form" method="post" action="<%= base %>/abonnements/<%= x.id %>/annuler"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Arrêter cet abonnement tout de suite ? Plus aucun prélèvement n'aura lieu et le client est prévenu." data-mk-confirm-ok="Arrêter l'abonnement">Arrêter</button></form><% } %></td></tr>
 <% }) %></tbody></table></div>
 <% } %>
+</section>
 <%- include("../partials/bottom") %>

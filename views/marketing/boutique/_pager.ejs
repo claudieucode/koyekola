@@ -1,0 +1,13 @@
+<%# Pagination commune (même composant que les autres listes du CMS). Paramètres : list = { page, pages, total }, nom (« produits », « commandes »…). %><%
+  if (list.pages > 1) {
+    const q = Object.assign({}, typeof query !== "undefined" ? query : {}); delete q.page;
+    const href = (n) => "?" + new URLSearchParams(Object.assign({}, q, { page: String(n) })).toString();
+    const around = []; for (let i = 1; i <= list.pages; i++) if (i === 1 || i === list.pages || Math.abs(i - list.page) <= 2) around.push(i);
+%>
+<div class="mk-pager bq-pager"><span>Page <%= list.page %> sur <%= list.pages %> · <%= list.total %> <%= nom %></span>
+  <nav class="mk-pager-links" aria-label="Pagination">
+    <% if (list.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= href(list.page - 1) %>" rel="prev">Précédente</a><% } %>
+    <% around.forEach((n, i) => { %><% if (i && n - around[i - 1] > 1) { %><span class="bq-gap" aria-hidden="true">…</span><% } %><a class="btn btn-sm <%= n === list.page ? "btn-primary" : "btn-ghost" %>" href="<%= href(n) %>"<%- n === list.page ? ' aria-current="page"' : "" %>><%= n %></a><% }) %>
+    <% if (list.page < list.pages) { %><a class="btn btn-ghost btn-sm" href="<%= href(list.page + 1) %>" rel="next">Suivante</a><% } %>
+  </nav></div>
+<% } %>

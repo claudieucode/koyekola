@@ -1,72 +1,89 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: "Réglages de la boutique" }) %>
 <% const st = shopSettings; const dis = canWrite ? "" : " disabled"; %>
-<form class="mk-form mk-panel" method="post" action="<%= base %>/reglages"><h2>Boutique et paiement</h2>
-  <div class="field-group"><label><input type="checkbox" name="enabled" value="1"<%= st.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> Boutique ouverte au public</label><% if (!canPay) { %><p class="field-hint">Réservé aux personnes autorisées à gérer les paiements.</p><% } %></div>
-  <div class="field-group"><label for="r-cur">Devise (code)</label><input id="r-cur" name="currency" value="<%= st.currency %>" maxlength="3"<%= dis %>></div>
-  <div class="field-group"><label for="r-cty">Pays par défaut (code ISO)</label><input id="r-cty" name="default_country" value="<%= st.default_country || "" %>" maxlength="2"<%= dis %>></div>
-  <div class="field-group"><label for="r-pre">Préfixe des numéros de commande</label><input id="r-pre" name="order_prefix" value="<%= st.order_prefix %>" maxlength="8"<%= dis %>></div>
-  <div class="field-group"><label for="r-mail">Adresse notifiée à chaque nouvelle commande</label><input id="r-mail" name="notify_email" type="email" value="<%= st.notify_email || "" %>"<%= dis %>></div>
-  <div class="field-group"><label for="r-low">Seuil de stock bas</label><input id="r-low" name="low_stock_threshold" type="number" min="0" value="<%= st.low_stock_threshold %>"<%= dis %>></div>
-  <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
-  <div class="field-group"><label><input type="checkbox" name="reviews_enabled" value="1"<%= st.reviews_enabled ? " checked" : "" %><%= dis %>> Autoriser les avis des clients ayant acheté le produit</label></div>
-  <div class="field-group"><label><input type="checkbox" name="reviews_auto_publish" value="1"<%= st.reviews_auto_publish ? " checked" : "" %><%= dis %>> Publier les avis sans relecture (sinon vous les validez dans l'onglet Avis)</label></div>
-  <div class="field-group"><label><input type="checkbox" name="tax_enabled" value="1"<%= st.tax_enabled ? " checked" : "" %><%= dis %>> Appliquer les taxes configurées ci-dessous</label></div>
-  <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
-  <fieldset><legend>Moyens de paiement</legend>
-    <% providers.forEach((p) => { %><div class="field-group"><label><input type="checkbox" name="payment_methods" value="<%= p.key %>"<%= p.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> <%= p.label %></label>
-      <% if (!p.configured) { %><p class="field-hint">Identifiants à saisir dans l’onglet Paiements. Tant qu'elles manquent, ce moyen n'est pas proposé aux clients.</p><% } %></div><% }) %>
-    <div class="field-group"><label for="r-man">Instructions du paiement manuel (virement, à la livraison…)</label><textarea id="r-man" name="manual_instructions" rows="3" maxlength="2000"<%= canPay ? "" : " disabled" %>><%= st.manual_instructions || "" %></textarea></div>
-  </fieldset>
-  <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
+<form class="bq-settings" method="post" action="<%= base %>/reglages">
+  <section class="mk-panel" id="general"><h2>Boutique</h2>
+    <p class="field-hint">Ouverture au public et réglages de base de la boutique de ce site.</p>
+    <div class="bq-fields">
+      <div class="field-group bq-wide"><label><input type="checkbox" name="enabled" value="1"<%= st.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> Boutique ouverte au public</label><% if (!canPay) { %><p class="field-hint">Réservé aux personnes autorisées à gérer les paiements.</p><% } %></div>
+      <div class="field-group"><label for="r-cur">Devise (code)</label><input type="text" id="r-cur" name="currency" value="<%= st.currency %>" maxlength="3" placeholder="eur"<%= dis %>></div>
+      <div class="field-group"><label for="r-cty">Pays par défaut (code ISO)</label><input type="text" id="r-cty" name="default_country" value="<%= st.default_country || "" %>" maxlength="2" placeholder="FR"<%= dis %>></div>
+      <div class="field-group"><label for="r-pre">Préfixe des numéros de commande</label><input type="text" id="r-pre" name="order_prefix" value="<%= st.order_prefix %>" maxlength="8"<%= dis %>></div>
+      <div class="field-group"><label for="r-low">Seuil de stock bas</label><input id="r-low" name="low_stock_threshold" type="number" min="0" value="<%= st.low_stock_threshold %>"<%= dis %>></div>
+      <div class="field-group bq-wide"><label for="r-mail">Adresse notifiée à chaque nouvelle commande</label><input id="r-mail" name="notify_email" type="email" value="<%= st.notify_email || "" %>" placeholder="commandes@exemple.fr"<%= dis %>></div>
+    </div>
+  </section>
+  <section class="mk-panel" id="commandes-avis"><h2>Commandes et avis</h2>
+    <div class="bq-fields bq-checks">
+      <div class="field-group"><label><input type="checkbox" name="guest_checkout" value="1"<%= st.guest_checkout ? " checked" : "" %><%= dis %>> Autoriser la commande sans compte</label></div>
+      <div class="field-group"><label><input type="checkbox" name="reviews_enabled" value="1"<%= st.reviews_enabled ? " checked" : "" %><%= dis %>> Autoriser les avis des clients ayant acheté le produit</label></div>
+      <div class="field-group"><label><input type="checkbox" name="reviews_auto_publish" value="1"<%= st.reviews_auto_publish ? " checked" : "" %><%= dis %>> Publier les avis sans relecture (sinon vous les validez dans l'onglet Avis)</label></div>
+    </div>
+  </section>
+  <section class="mk-panel" id="taxes-reglage"><h2>Taxes</h2>
+    <p class="field-hint">Les règles de taxe se définissent plus bas et dans « Taxes et expédition ».</p>
+    <div class="bq-fields bq-checks">
+      <div class="field-group"><label><input type="checkbox" name="tax_enabled" value="1"<%= st.tax_enabled ? " checked" : "" %><%= dis %>> Appliquer les taxes configurées ci-dessous</label></div>
+      <div class="field-group"><label><input type="checkbox" name="prices_include_tax" value="1"<%= st.prices_include_tax ? " checked" : "" %><%= dis %>> Les prix saisis incluent les taxes</label></div>
+    </div>
+  </section>
+  <section class="mk-panel" id="moyens-paiement"><h2>Moyens de paiement</h2>
+    <p class="field-hint">Cochez les moyens proposés aux clients. Les identifiants de chaque fournisseur se saisissent dans l'onglet <a href="<%= base %>/paiements">Paiements</a>.</p>
+    <div class="bq-fields bq-checks">
+      <% providers.forEach((p) => { %><div class="field-group"><label><input type="checkbox" name="payment_methods" value="<%= p.key %>"<%= p.enabled ? " checked" : "" %><%= canPay ? "" : " disabled" %>> <%= p.label %></label>
+        <% if (!p.configured) { %><p class="field-hint">Identifiants à saisir dans l’onglet Paiements. Tant qu'elles manquent, ce moyen n'est pas proposé aux clients.</p><% } %></div><% }) %>
+    </div>
+    <div class="field-group bq-wide"><label for="r-man">Instructions du paiement manuel (virement, à la livraison…)</label><textarea id="r-man" name="manual_instructions" rows="3" maxlength="2000" placeholder="Ex. : virement sur le compte … en indiquant le numéro de commande."<%= canPay ? "" : " disabled" %>><%= st.manual_instructions || "" %></textarea></div>
+  </section>
+  <% if (canWrite) { %><div class="bq-savebar"><button class="btn btn-primary" type="submit">Enregistrer les réglages</button></div><% } %>
 </form>
 
 <% if (typeof slots !== "undefined") { %>
 <section class="mk-panel" id="creneaux"><h2>Créneaux de livraison</h2>
   <p class="field-hint">Créneaux récurrents proposés au client quand la méthode de livraison choisie exige un créneau (cochez « Exige un créneau » sur la méthode, dans la section Livraison). Seuls les créneaux ayant encore de la place, après le délai minimum et dans l'horizon, sont proposés. Les heures sont celles du serveur.</p>
-  <% if (!slots.length) { %><p>Aucun créneau défini.</p><% } else { %><ul class="mk-list"><% slots.forEach((c) => { %><li><strong><%= c.label || "Créneau" %></strong> — <%= c.weekdays.map((d) => ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"][d]).join(", ") %>, <%= c.start_time %>–<%= c.end_time %> · <%= c.capacity %> commande(s) max · délai <%= c.min_notice_hours %> h · horizon <%= c.horizon_days %> j<%= c.excluded.length ? " · exclus : " + c.excluded.join(", ") : "" %> · <%= c.active ? "actif" : "en pause" %>
+  <% if (!slots.length) { %><p class="mk-empty">Aucun créneau défini pour l'instant.</p><% } else { %><ul class="mk-list"><% slots.forEach((c) => { %><li><strong><%= c.label || "Créneau" %></strong> — <%= c.weekdays.map((d) => ["", "lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"][d]).join(", ") %>, <%= c.start_time %>–<%= c.end_time %> · <%= c.capacity %> commande(s) max · délai <%= c.min_notice_hours %> h · horizon <%= c.horizon_days %> j<%= c.excluded.length ? " · exclus : " + c.excluded.join(", ") : "" %> · <%= c.active ? "actif" : "en pause" %>
     <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/creneaux/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Mettre en pause" : "Réactiver" %></button></form>
     <form class="mk-inline-form" method="post" action="<%= base %>/creneaux/<%= c.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer ce créneau ? Les commandes déjà passées gardent leur créneau." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } %>
-  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/creneaux">
-    <div class="field-group"><label for="cs-l">Nom (facultatif)</label><input id="cs-l" name="label" maxlength="60" placeholder="Livraison réfrigérée"></div>
+  <% if (canWrite) { %><details class="bq-more"<%= slots.length ? "" : " open" %>><summary>Ajouter un créneau</summary><form class="mk-form" method="post" action="<%= base %>/creneaux">
+    <div class="field-group"><label for="cs-l">Nom (facultatif)</label><input type="text" id="cs-l" name="label" maxlength="60" placeholder="Livraison réfrigérée"></div>
     <fieldset><legend>Jours</legend><% ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"].forEach((d, i) => { %><label class="mk-check"><input type="checkbox" name="weekdays" value="<%= i + 1 %>"> <%= d %></label> <% }) %></fieldset>
     <div class="field-group"><label for="cs-s">De</label><input id="cs-s" name="start_time" type="time" required></div>
     <div class="field-group"><label for="cs-e">À</label><input id="cs-e" name="end_time" type="time" required></div>
     <div class="field-group"><label for="cs-c">Commandes max par créneau</label><input id="cs-c" name="capacity" type="number" min="1" max="1000" required></div>
     <div class="field-group"><label for="cs-n">Délai minimum (heures)</label><input id="cs-n" name="min_notice_hours" type="number" min="0" max="720" value="24"></div>
     <div class="field-group"><label for="cs-h">Horizon (jours)</label><input id="cs-h" name="horizon_days" type="number" min="1" max="90" value="14"></div>
-    <div class="field-group"><label for="cs-x">Jours exclus (AAAA-MM-JJ, séparés par des virgules)</label><input id="cs-x" name="excluded_dates" placeholder="2026-12-25, 2027-01-01"></div>
-    <button class="btn btn-primary btn-sm" type="submit">Ajouter le créneau</button></form><% } %>
+    <div class="field-group"><label for="cs-x">Jours exclus (AAAA-MM-JJ, séparés par des virgules)</label><input type="text" id="cs-x" name="excluded_dates" placeholder="2026-12-25, 2027-01-01"></div>
+    <button class="btn btn-primary btn-sm" type="submit">Ajouter le créneau</button></form></details><% } %>
 </section>
 <% } %>
 <section class="mk-panel" id="livraison"><h2>Livraison</h2>
   <p class="field-hint">Une zone liste des pays (codes ISO, ex. « FR, BE ») ; une zone sans pays vaut « tous les pays ». Sans zone correspondante, la livraison est refusée pour ce pays.</p>
-  <% zones.forEach((z) => { %><div class="mk-callout"><span><strong><%= z.name %></strong> — <%= z.countries.length ? z.countries.join(", ") : "tous les pays" %>
-    <ul><% z.methods.forEach((m) => { %><li><%= m.name %> — <%= { flat: "forfait", free_over: "gratuite dès", weight: "selon le poids" }[m.kind] %> <%= m.kind === "free_over" ? money(m.min_subtotal_cents) : money(m.cost_cents) %><% if (m.min_weight_grams != null || m.max_weight_grams != null) { %> (<%= m.min_weight_grams ?? 0 %>–<%= m.max_weight_grams ?? "∞" %> g)<% } %><%= m.requires_slot ? " — exige un créneau" : "" %>
+  <% if (!zones.length) { %><p class="mk-empty">Aucune zone de livraison : créez la première ci-dessous.</p><% } %>
+  <div class="bq-card-list"><% zones.forEach((z) => { %><div class="bq-zone"><div class="bq-zone-head"><span><strong><%= z.name %></strong> <span class="bq-zone-countries">— <%= z.countries.length ? z.countries.join(", ") : "tous les pays" %></span></span><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer la zone et ses méthodes ?" data-mk-confirm-ok="Supprimer">Supprimer la zone</button></form><% } %></div>
+    <% if (!z.methods.length) { %><p class="mk-empty">Aucune méthode de livraison dans cette zone.</p><% } %><ul class="mk-list"><% z.methods.forEach((m) => { %><li><%= m.name %> — <%= { flat: "forfait", free_over: "gratuite dès", weight: "selon le poids" }[m.kind] %> <%= m.kind === "free_over" ? money(m.min_subtotal_cents) : money(m.cost_cents) %><% if (m.min_weight_grams != null || m.max_weight_grams != null) { %> (<%= m.min_weight_grams ?? 0 %>–<%= m.max_weight_grams ?? "∞" %> g)<% } %><%= m.requires_slot ? " — exige un créneau" : "" %>
       <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/creneau"><label><input type="checkbox" name="requires_slot" value="1"<%= m.requires_slot ? " checked" : "" %>> Exige un créneau</label> <button class="btn btn-ghost btn-sm" type="submit">Appliquer</button></form><% } %>
       <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/livraison/methodes/<%= m.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul>
-    <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/methodes">
-      <div class="field-group"><label for="m-n<%= z.id %>">Nom</label><input id="m-n<%= z.id %>" name="name" required></div>
+    <% if (canWrite) { %><details class="bq-more"><summary>Ajouter une méthode de livraison</summary><form class="mk-form" method="post" action="<%= base %>/livraison/zones/<%= z.id %>/methodes">
+      <div class="field-group"><label for="m-n<%= z.id %>">Nom</label><input type="text" id="m-n<%= z.id %>" name="name" required></div>
       <div class="field-group"><label for="m-k<%= z.id %>">Type</label><select id="m-k<%= z.id %>" name="kind"><option value="flat">Forfait</option><option value="free_over">Gratuite dès un montant</option><option value="weight">Selon le poids</option></select></div>
-      <div class="field-group"><label for="m-c<%= z.id %>">Coût</label><input id="m-c<%= z.id %>" name="cost" inputmode="decimal"></div>
-      <div class="field-group"><label for="m-m<%= z.id %>">Montant minimal</label><input id="m-m<%= z.id %>" name="min_subtotal" inputmode="decimal"></div>
+      <div class="field-group"><label for="m-c<%= z.id %>">Coût</label><input type="text" id="m-c<%= z.id %>" name="cost" inputmode="decimal"></div>
+      <div class="field-group"><label for="m-m<%= z.id %>">Montant minimal</label><input type="text" id="m-m<%= z.id %>" name="min_subtotal" inputmode="decimal"></div>
       <div class="field-group"><label for="m-w1<%= z.id %>">Poids min (g)</label><input id="m-w1<%= z.id %>" name="min_weight_grams" type="number" min="0"></div>
       <div class="field-group"><label for="m-w2<%= z.id %>">Poids max (g)</label><input id="m-w2<%= z.id %>" name="max_weight_grams" type="number" min="0"></div>
       <div class="field-group"><label><input type="checkbox" name="requires_slot" value="1"> Exige un créneau de livraison (ex. livraison réfrigérée)</label></div>
-      <button class="btn btn-outline btn-sm" type="submit">Ajouter la méthode</button></form>
-    <form method="post" action="<%= base %>/livraison/zones/<%= z.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer la zone et ses méthodes ?" data-mk-confirm-ok="Supprimer">Supprimer la zone</button></form><% } %></span></div><% }) %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones"><div class="field-group"><label for="z-n">Nouvelle zone</label><input id="z-n" name="name" required placeholder="France"></div><div class="field-group"><label for="z-c">Pays (codes)</label><input id="z-c" name="countries" placeholder="FR, BE"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
+      <button class="btn btn-outline btn-sm" type="submit">Ajouter la méthode</button></form></details><% } %></div><% }) %></div>
+  <% if (canWrite) { %><h3>Nouvelle zone</h3><form class="mk-form mk-inline-form" method="post" action="<%= base %>/livraison/zones"><div class="field-group"><label for="z-n">Nom de la zone</label><input type="text" id="z-n" name="name" required placeholder="France"></div><div class="field-group"><label for="z-c">Pays (codes)</label><input type="text" id="z-c" name="countries" placeholder="FR, BE"></div><button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
 </section>
 
 <section class="mk-panel" id="taxes"><h2>Taxes</h2>
   <p class="mk-callout mk-callout-warn"><span>Aucun taux n'est prérempli : saisissez les taux applicables à votre situation fiscale. Kolakisa applique ces règles mais ne garantit pas la conformité fiscale ; faites-les valider par un professionnel.</span></p>
   <% if (taxRules.length) { %><ul class="mk-list"><% taxRules.forEach((t) => { %><li><%= t.name %> — <%= t.country %><%= t.region ? " / " + t.region : "" %> : <%= (t.rate_bp / 100).toFixed(2) %> %<%= t.applies_to_shipping ? " (livraison comprise)" : "" %>
     <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/taxes/<%= t.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit">Retirer</button></form><% } %></li><% }) %></ul><% } else { %><p class="mk-empty">Aucune règle de taxe.</p><% } %>
-  <% if (canWrite) { %><form class="mk-form mk-inline-form" method="post" action="<%= base %>/taxes">
-    <div class="field-group"><label for="t-n">Nom</label><input id="t-n" name="name" required></div>
-    <div class="field-group"><label for="t-c">Pays (code ou *)</label><input id="t-c" name="country" required maxlength="2"></div>
-    <div class="field-group"><label for="t-r">Région (facultatif)</label><input id="t-r" name="region"></div>
-    <div class="field-group"><label for="t-t">Taux (%)</label><input id="t-t" name="rate" inputmode="decimal" required></div>
+  <% if (canWrite) { %><h3>Nouvelle règle de taxe</h3><form class="mk-form" method="post" action="<%= base %>/taxes">
+    <div class="field-group"><label for="t-n">Nom</label><input type="text" id="t-n" name="name" required></div>
+    <div class="field-group"><label for="t-c">Pays (code ou *)</label><input type="text" id="t-c" name="country" required maxlength="2"></div>
+    <div class="field-group"><label for="t-r">Région (facultatif)</label><input type="text" id="t-r" name="region"></div>
+    <div class="field-group"><label for="t-t">Taux (%)</label><input type="text" id="t-t" name="rate" inputmode="decimal" required></div>
     <div class="field-group"><label><input type="checkbox" name="applies_to_shipping" value="1"> S'applique à la livraison</label></div>
     <button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form><% } %>
 </section>
@@ -74,20 +91,20 @@
 <section class="mk-panel" id="coupons"><h2>Coupons</h2>
   <% if (coupons.length) { %><div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Coupons</caption><thead><tr><th scope="col">Code</th><th scope="col">Réduction</th><th scope="col">Utilisations</th><th scope="col">Validité</th><th scope="col">État</th></tr></thead><tbody>
   <% coupons.forEach((c) => { %><tr><th scope="row"><a href="<%= base %>/coupons/<%= c.id %>"><%= c.code %></a><%= c.auto_apply ? " (automatique)" : "" %></th><td><%= c.shipping_only ? "Livraison offerte" : (c.kind === "percent" ? c.value + " %" : money(c.value)) + (c.free_shipping ? " + livraison offerte" : "") %></td><td><%= c.used_count %><%= c.max_uses != null ? " / " + c.max_uses : "" %></td><td><%= c.starts_at ? String(c.starts_at).slice(0, 10) : "…" %> → <%= c.ends_at ? String(c.ends_at).slice(0, 10) : "…" %></td>
-    <td><%= c.active ? "Actif" : "Inactif" %> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/coupons/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Désactiver" : "Activer" %></button></form><% } %></td></tr><% }) %></tbody></table></div><% } else { %><p class="mk-empty">Aucun coupon.</p><% } %>
-  <% if (canWrite) { %><form class="mk-form" method="post" action="<%= base %>/coupons"><h3>Nouveau coupon</h3>
-    <div class="field-group"><label for="k-c">Code</label><input id="k-c" name="code" required maxlength="40"></div>
+    <td><span class="mk-status <%= c.active ? "mk-status-ok" : "" %>"><%= c.active ? "Actif" : "Inactif" %></span> <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/coupons/<%= c.id %>/etat"><% if (!c.active) { %><input type="hidden" name="actif" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.active ? "Désactiver" : "Activer" %></button></form><% } %></td></tr><% }) %></tbody></table></div><% } else { %><p class="mk-empty">Aucun coupon.</p><% } %>
+  <% if (canWrite) { %><details class="bq-more"<%= coupons.length ? "" : " open" %>><summary>Nouveau coupon</summary><form class="mk-form" method="post" action="<%= base %>/coupons">
+    <div class="field-group"><label for="k-c">Code</label><input type="text" id="k-c" name="code" required maxlength="40"></div>
     <div class="field-group"><label for="k-k">Type</label><select id="k-k" name="kind"><option value="percent">Pourcentage</option><option value="fixed">Montant fixe</option></select></div>
-    <div class="field-group"><label for="k-v">Valeur (% ou montant)</label><input id="k-v" name="value" inputmode="decimal"></div>
-    <div class="field-group"><label for="k-m">Panier minimum</label><input id="k-m" name="min_subtotal" inputmode="decimal"></div>
-    <div class="field-group"><label for="k-s">Début</label><input id="k-s" name="starts_at" placeholder="AAAA-MM-JJ"></div>
-    <div class="field-group"><label for="k-e">Fin</label><input id="k-e" name="ends_at" placeholder="AAAA-MM-JJ"></div>
+    <div class="field-group"><label for="k-v">Valeur (% ou montant)</label><input type="text" id="k-v" name="value" inputmode="decimal"></div>
+    <div class="field-group"><label for="k-m">Panier minimum</label><input type="text" id="k-m" name="min_subtotal" inputmode="decimal"></div>
+    <div class="field-group"><label for="k-s">Début</label><input type="text" id="k-s" name="starts_at" placeholder="AAAA-MM-JJ"></div>
+    <div class="field-group"><label for="k-e">Fin</label><input type="text" id="k-e" name="ends_at" placeholder="AAAA-MM-JJ"></div>
     <div class="field-group"><label for="k-u">Utilisations maximales</label><input id="k-u" name="max_uses" type="number" min="1"></div>
     <div class="field-group"><label for="k-pc">Limite par client</label><input id="k-pc" name="per_customer_limit" type="number" min="1"></div>
     <div class="field-group"><label for="k-p">Limiter à certains produits</label><select id="k-p" name="product_ids" multiple size="4"><% products.forEach((p) => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %></select></div>
     <div class="field-group"><label><input type="checkbox" name="free_shipping" value="1"> Livraison offerte avec cette remise</label></div>
     <div class="field-group"><label><input type="checkbox" name="shipping_only" value="1"> Livraison offerte seulement (aucune remise sur les articles)</label></div>
     <div class="field-group"><label><input type="checkbox" name="auto_apply" value="1"> Promotion automatique (appliquée sans saisir le code quand les conditions sont remplies)</label></div>
-    <button class="btn btn-primary btn-sm" type="submit">Créer</button></form><% } %>
+    <button class="btn btn-primary btn-sm" type="submit">Créer le coupon</button></form></details><% } %>
 </section>
 <%- include("../partials/bottom") %>

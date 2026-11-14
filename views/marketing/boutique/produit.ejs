@@ -3,20 +3,20 @@
 <% const v = product ? { name: product.name, type: product.type, status: product.status, sku: product.sku, short_description: product.short_description, description: product.description, price: (product.price_cents / 100).toFixed(2), sale_price: product.sale_price_cents != null ? (product.sale_price_cents / 100).toFixed(2) : "", sale_starts_at: product.sale_starts_at, sale_ends_at: product.sale_ends_at, manage_stock: product.manage_stock, stock_qty: product.stock_qty, weight_grams: product.weight_grams, length_mm: product.length_mm, width_mm: product.width_mm, height_mm: product.height_mm, requires_shipping: product.requires_shipping, image_url: product.image_url, gallery: product.gallery.join("\n"), tags: product.tags.join(", "), is_featured: product.is_featured, seo_title: product.seo_title, seo_description: product.seo_description, attributes: product.attributes.map((a) => a.name + ": " + a.values.join(", ")).join("\n") } : values; const sel = product ? product.categories.map((c) => c.id) : [].concat(values.category_ids || []).map(Number); const dis = canWrite ? "" : " disabled"; %>
 <form class="mk-form mk-panel" method="post" action="<%= base %>/produits<%= product ? "/" + product.id : "" %>">
   <h2>Informations</h2>
-  <div class="field-group"><label for="f-name">Nom</label><input id="f-name" name="name" value="<%= v.name || "" %>" required maxlength="200"<%= dis %>></div>
+  <div class="field-group"><label for="f-name">Nom</label><input type="text" id="f-name" name="name" value="<%= v.name || "" %>" required maxlength="200"<%= dis %>></div>
   <div class="field-group"><label for="f-type">Type de produit</label>
     <select id="f-type" name="type"<%= dis %>><option value="simple"<%= (v.type || "simple") === "simple" ? " selected" : "" %>>Simple (physique)</option><option value="variable"<%= v.type === "variable" ? " selected" : "" %>>Variable (avec variantes)</option><option value="digital"<%= v.type === "digital" ? " selected" : "" %>>Numérique (sans livraison)</option></select>
     <p class="field-hint">Les types « téléchargeable » et « groupé » ne sont pas encore pris en charge.</p></div>
   <div class="field-group"><label for="f-status">Statut</label><select id="f-status" name="status"<%= dis %>><% [["draft","Brouillon"],["published","En ligne"],["archived","Archivé"]].forEach(([k,l]) => { %><option value="<%= k %>"<%= (v.status || "draft") === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
-  <div class="field-group"><label for="f-short">Description courte</label><input id="f-short" name="short_description" value="<%= v.short_description || "" %>" maxlength="600"<%= dis %>></div>
+  <div class="field-group"><label for="f-short">Description courte</label><input type="text" id="f-short" name="short_description" value="<%= v.short_description || "" %>" maxlength="600"<%= dis %>></div>
   <div class="field-group"><label for="f-desc">Description complète</label><textarea id="f-desc" name="description" rows="6" maxlength="20000"<%= dis %>><%= v.description || "" %></textarea></div>
   <h2>Prix</h2>
-  <div class="field-group"><label for="f-price">Prix normal (<%= shopSettings.currency.toUpperCase() %>)</label><input id="f-price" name="price" inputmode="decimal" value="<%= v.price || "" %>" required<%= dis %>></div>
-  <div class="field-group"><label for="f-sale">Prix promotionnel</label><input id="f-sale" name="sale_price" inputmode="decimal" value="<%= v.sale_price || "" %>"<%= dis %>><p class="field-hint">Doit être inférieur au prix normal. Laissez vide pour aucune promotion.</p></div>
-  <div class="field-group"><label for="f-s1">Début de la promotion</label><input id="f-s1" name="sale_starts_at" value="<%= v.sale_starts_at || "" %>" placeholder="AAAA-MM-JJ"<%= dis %>></div>
-  <div class="field-group"><label for="f-s2">Fin de la promotion</label><input id="f-s2" name="sale_ends_at" value="<%= v.sale_ends_at || "" %>" placeholder="AAAA-MM-JJ"<%= dis %>></div>
+  <div class="field-group"><label for="f-price">Prix normal (<%= shopSettings.currency.toUpperCase() %>)</label><input type="text" id="f-price" name="price" inputmode="decimal" value="<%= v.price || "" %>" required<%= dis %>></div>
+  <div class="field-group"><label for="f-sale">Prix promotionnel</label><input type="text" id="f-sale" name="sale_price" inputmode="decimal" value="<%= v.sale_price || "" %>"<%= dis %>><p class="field-hint">Doit être inférieur au prix normal. Laissez vide pour aucune promotion.</p></div>
+  <div class="field-group"><label for="f-s1">Début de la promotion</label><input type="text" id="f-s1" name="sale_starts_at" value="<%= v.sale_starts_at || "" %>" placeholder="AAAA-MM-JJ"<%= dis %>></div>
+  <div class="field-group"><label for="f-s2">Fin de la promotion</label><input type="text" id="f-s2" name="sale_ends_at" value="<%= v.sale_ends_at || "" %>" placeholder="AAAA-MM-JJ"<%= dis %>></div>
   <h2>Stock et expédition</h2>
-  <div class="field-group"><label for="f-sku">Référence (SKU)</label><input id="f-sku" name="sku" value="<%= v.sku || "" %>" maxlength="80"<%= dis %>></div>
+  <div class="field-group"><label for="f-sku">Référence (SKU)</label><input type="text" id="f-sku" name="sku" value="<%= v.sku || "" %>" maxlength="80"<%= dis %>></div>
   <div class="field-group"><label><input type="checkbox" name="manage_stock" value="1"<%= v.manage_stock ? " checked" : "" %><%= dis %>> Gérer le stock (produit simple ou numérique)</label></div>
   <div class="field-group"><label for="f-stock">Quantité en stock</label><input id="f-stock" name="stock_qty" type="number" min="0" value="<%= v.stock_qty ?? 0 %>"<%= dis %>></div>
   <div class="field-group"><label><input type="checkbox" name="requires_shipping" value="1"<%= (product ? v.requires_shipping : (v.requires_shipping !== undefined ? v.requires_shipping : 1)) ? " checked" : "" %><%= dis %>> Produit à livrer</label></div>
@@ -24,14 +24,14 @@
   <div class="field-group"><label for="f-l">Dimensions (mm) : longueur / largeur / hauteur</label><input id="f-l" name="length_mm" type="number" min="0" value="<%= v.length_mm ?? "" %>"<%= dis %>> <input name="width_mm" type="number" min="0" value="<%= v.width_mm ?? "" %>" aria-label="Largeur"<%= dis %>> <input name="height_mm" type="number" min="0" value="<%= v.height_mm ?? "" %>" aria-label="Hauteur"<%= dis %>></div>
   <h2>Classement et images</h2>
   <div class="field-group"><label for="f-cat">Catégories</label><select id="f-cat" name="category_ids" multiple size="5"<%= dis %>><% categories.forEach((c) => { %><option value="<%= c.id %>"<%= sel.includes(c.id) ? " selected" : "" %>><%= c.name %></option><% }) %></select></div>
-  <div class="field-group"><label for="f-tags">Étiquettes (séparées par des virgules)</label><input id="f-tags" name="tags" value="<%= v.tags || "" %>"<%= dis %>></div>
-  <div class="field-group"><label for="f-img">Image principale (adresse de la médiathèque)</label><input id="f-img" name="image_url" value="<%= v.image_url || "" %>" placeholder="/uploads/…"<%= dis %>></div>
+  <div class="field-group"><label for="f-tags">Étiquettes (séparées par des virgules)</label><input type="text" id="f-tags" name="tags" value="<%= v.tags || "" %>"<%= dis %>></div>
+  <div class="field-group"><label for="f-img">Image principale (adresse de la médiathèque)</label><input type="text" id="f-img" name="image_url" value="<%= v.image_url || "" %>" placeholder="/uploads/…"<%= dis %>></div>
   <div class="field-group"><label for="f-gal">Galerie (une adresse par ligne)</label><textarea id="f-gal" name="gallery" rows="3"<%= dis %>><%= v.gallery || "" %></textarea></div>
   <div class="field-group"><label><input type="checkbox" name="is_featured" value="1"<%= v.is_featured ? " checked" : "" %><%= dis %>> Produit mis en avant</label></div>
   <div class="field-group"><label for="f-attr">Attributs (produit variable) — un par ligne : « Taille: S, M, L »</label><textarea id="f-attr" name="attributes" rows="3"<%= dis %>><%= v.attributes || "" %></textarea></div>
   <h2>Référencement</h2>
-  <div class="field-group"><label for="f-st">Titre SEO</label><input id="f-st" name="seo_title" value="<%= v.seo_title || "" %>" maxlength="160"<%= dis %>></div>
-  <div class="field-group"><label for="f-sd">Description SEO</label><input id="f-sd" name="seo_description" value="<%= v.seo_description || "" %>" maxlength="320"<%= dis %>></div>
+  <div class="field-group"><label for="f-st">Titre SEO</label><input type="text" id="f-st" name="seo_title" value="<%= v.seo_title || "" %>" maxlength="160"<%= dis %>></div>
+  <div class="field-group"><label for="f-sd">Description SEO</label><input type="text" id="f-sd" name="seo_description" value="<%= v.seo_description || "" %>" maxlength="320"<%= dis %>></div>
   <% if (canWrite) { %><button class="btn btn-primary" type="submit">Enregistrer</button><% } %>
 </form>
 <% if (product) { const pz = typeof personalization !== "undefined" ? personalization : null; %>
@@ -39,8 +39,8 @@
   <p class="field-hint">Le client saisit un court texte avant d'ajouter au panier ; il apparaît sur la commande et dans l'e-mail. Le prix ne change pas.</p>
   <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/personnalisation">
     <div class="field-group"><label><input type="checkbox" name="enabled" value="1"<%= pz ? " checked" : "" %><%= canWrite ? "" : " disabled" %>> Proposer une personnalisation sur ce produit</label></div>
-    <div class="field-group"><label for="pz-l">Ce que le client personnalise</label><input id="pz-l" name="label" maxlength="60" value="<%= pz ? pz.label : "Texte à graver" %>"<%= canWrite ? "" : " disabled" %>></div>
-    <div class="field-group"><label for="pz-h2">Aide affichée dans le champ (facultatif)</label><input id="pz-h2" name="hint" maxlength="160" value="<%= pz ? pz.hint : "" %>"<%= canWrite ? "" : " disabled" %>></div>
+    <div class="field-group"><label for="pz-l">Ce que le client personnalise</label><input type="text" id="pz-l" name="label" maxlength="60" value="<%= pz ? pz.label : "Texte à graver" %>"<%= canWrite ? "" : " disabled" %>></div>
+    <div class="field-group"><label for="pz-h2">Aide affichée dans le champ (facultatif)</label><input type="text" id="pz-h2" name="hint" maxlength="160" value="<%= pz ? pz.hint : "" %>"<%= canWrite ? "" : " disabled" %>></div>
     <div class="field-group"><label for="pz-m">Nombre de caractères maximum</label><input id="pz-m" name="max_length" type="number" min="1" max="200" value="<%= pz ? pz.maxLength : 20 %>"<%= canWrite ? "" : " disabled" %>></div>
     <div class="field-group"><label><input type="checkbox" name="required" value="1"<%= pz && pz.required ? " checked" : "" %><%= canWrite ? "" : " disabled" %>> Champ obligatoire</label></div>
     <% if (canWrite) { %><button class="btn btn-primary btn-sm" type="submit">Enregistrer la personnalisation</button><% } %>
@@ -64,10 +64,10 @@
   <% } else { %><p class="mk-empty">Aucune formule : ce produit ne s'achète qu'à l'unité.</p><% } %>
   <% if (canWrite) { %>
   <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/formules">
-    <div class="field-group"><label for="ab-l">Nom de la formule</label><input id="ab-l" name="label" maxlength="60" required placeholder="Chaque mois"></div>
+    <div class="field-group"><label for="ab-l">Nom de la formule</label><input type="text" id="ab-l" name="label" maxlength="60" required placeholder="Chaque mois"></div>
     <div class="field-group"><label for="ab-c">Tous les</label><input id="ab-c" name="interval_count" type="number" min="1" max="12" value="1" required></div>
     <div class="field-group"><label for="ab-u">Unité</label><select id="ab-u" name="interval_unit"><option value="week">semaine(s)</option><option value="month" selected>mois</option></select></div>
-    <div class="field-group"><label for="ab-p">Prix tout compris à chaque échéance (€)</label><input id="ab-p" name="price" inputmode="decimal" placeholder="29,90"></div>
+    <div class="field-group"><label for="ab-p">Prix tout compris à chaque échéance (€)</label><input type="text" id="ab-p" name="price" inputmode="decimal" placeholder="29,90"></div>
     <div class="field-group"><label for="ab-d">Remise annoncée en % (facultatif, laissez vide si aucune)</label><input id="ab-d" name="discount_percent" type="number" min="0" max="90"></div>
     <button class="btn btn-primary btn-sm" type="submit">Ajouter la formule</button>
   </form>
@@ -92,13 +92,13 @@
     <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/produits/<%= product.id %>/fichiers/<%= f.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Supprimer ce fichier ? Les acheteurs ne pourront plus le télécharger." data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %></li><% }) %></ul><% } %>
   <% if (canWrite) { %>
   <form class="mk-form" method="post" enctype="multipart/form-data" action="<%= base %>/produits/<%= product.id %>/fichiers">
-    <div class="field-group"><label for="dl-l">Nom affiché à l'acheteur</label><input id="dl-l" name="label" maxlength="120"></div>
+    <div class="field-group"><label for="dl-l">Nom affiché à l'acheteur</label><input type="text" id="dl-l" name="label" maxlength="120"></div>
     <div class="field-group"><label for="dl-f">Fichier</label><input id="dl-f" name="file" type="file" required></div>
     <button class="btn btn-primary btn-sm" type="submit">Ajouter le fichier</button>
   </form>
   <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/telechargement">
-    <div class="field-group"><label for="dl-n">Téléchargements autorisés par achat</label><input id="dl-n" name="download_limit" inputmode="numeric" value="<%= dl.download_limit == null ? "" : dl.download_limit %>" placeholder="5 (0 = illimité)"></div>
-    <div class="field-group"><label for="dl-d">Durée du lien, en jours</label><input id="dl-d" name="download_days" inputmode="numeric" value="<%= dl.download_days == null ? "" : dl.download_days %>" placeholder="30 (0 = sans limite)"></div>
+    <div class="field-group"><label for="dl-n">Téléchargements autorisés par achat</label><input type="text" id="dl-n" name="download_limit" inputmode="numeric" value="<%= dl.download_limit == null ? "" : dl.download_limit %>" placeholder="5 (0 = illimité)"></div>
+    <div class="field-group"><label for="dl-d">Durée du lien, en jours</label><input type="text" id="dl-d" name="download_days" inputmode="numeric" value="<%= dl.download_days == null ? "" : dl.download_days %>" placeholder="30 (0 = sans limite)"></div>
     <button class="btn btn-outline btn-sm" type="submit">Enregistrer les règles</button>
   </form>
   <% } %>
@@ -127,8 +127,8 @@
   <% if (canWrite) { %>
   <form class="mk-form" method="post" action="<%= base %>/produits/<%= product.id %>/variantes"><h3>Ajouter une variante</h3>
     <% product.attributes.forEach((a) => { %><div class="field-group"><label for="o-<%= a.name %>"><%= a.name %></label><select id="o-<%= a.name %>" name="opt_<%= a.name %>" required><% a.values.forEach((val) => { %><option><%= val %></option><% }) %></select></div><% }) %>
-    <div class="field-group"><label for="v-sku">SKU</label><input id="v-sku" name="sku"></div>
-    <div class="field-group"><label for="v-price">Prix (vide = prix du produit)</label><input id="v-price" name="price" inputmode="decimal"></div>
+    <div class="field-group"><label for="v-sku">SKU</label><input type="text" id="v-sku" name="sku"></div>
+    <div class="field-group"><label for="v-price">Prix (vide = prix du produit)</label><input type="text" id="v-price" name="price" inputmode="decimal"></div>
     <div class="field-group"><label for="v-stock">Stock</label><input id="v-stock" name="stock_qty" type="number" min="0" value="0"></div>
     <button class="btn btn-primary btn-sm" type="submit">Ajouter</button></form>
   <% } %><% } %>

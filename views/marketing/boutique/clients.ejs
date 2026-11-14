@@ -1,14 +1,16 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head", { heading: "Clients" }) %>
 <section class="mk-panel">
-  <form method="get" class="mk-form mk-inline-form" role="search"><div class="field-group"><label for="cl-q">Rechercher</label><input id="cl-q" name="q" value="<%= query.q || "" %>" maxlength="80"></div><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
-  <% if (!list.items.length) { %><div class="mk-empty"><%- illu("boutique", { className: "kx-empty-ill" }) %><p>Aucun client.</p></div><% } else { %>
-  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Clients</caption><thead><tr><th scope="col">Client</th><th scope="col">Compte</th><th scope="col">Commandes</th><th scope="col">Dépensé</th><th scope="col">Statut</th></tr></thead><tbody>
-  <% list.items.forEach((c) => { %><tr><th scope="row"><a href="<%= base %>/clients/<%= c.id %>"><%= c.name || c.email %></a><br><span class="mk-sub"><%= c.email %></span></th><td><%= c.has_account ? "Oui" : "Invité" %></td><td><%= c.orders %></td><td><%= money(c.spent_cents) %></td>
-    <td><%= c.status === "active" ? "Actif" : "Désactivé" %><% if (canWrite) { %> <form class="mk-inline-form" method="post" action="<%= base %>/clients/<%= c.id %>/statut"><input type="hidden" name="statut" value="<%= c.status === "active" ? "disabled" : "active" %>"><button class="btn btn-ghost btn-sm" type="submit"><%= c.status === "active" ? "Désactiver" : "Réactiver" %></button></form><% } %>
+  <form method="get" class="mk-form mk-inline-form" role="search"><div class="field-group"><label for="cl-q">Rechercher</label><input type="search" id="cl-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Nom ou e-mail"></div><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
+  <% if (!list.items.length) { %><%- include("_vide", { titre: query.q ? "Aucun client ne correspond" : "Aucun client", texte: query.q ? "Essayez un autre nom ou une autre adresse e-mail." : "Les clients apparaissent ici dès leur première commande, avec ou sans compte.", action: query.q ? { href: base + "/clients", label: "Voir tous les clients" } : null }) %><% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Clients</caption><thead><tr><th scope="col">Client</th><th scope="col">Compte</th><th scope="col">Commandes</th><th scope="col">Dépensé</th><th scope="col">Statut</th><th scope="col">Actions</th></tr></thead><tbody>
+  <% list.items.forEach((c) => { %><tr><th scope="row"><a href="<%= base %>/clients/<%= c.id %>"><%= c.name || c.email %></a><br><span class="mk-sub"><%= c.email %></span></th><td><%= c.has_account ? "Oui" : "Invité" %></td><td class="mk-num"><%= c.orders %></td><td class="mk-num"><%= money(c.spent_cents) %></td>
+    <td><span class="mk-status <%= c.status === "active" ? "mk-status-ok" : "" %>"><%= c.status === "active" ? "Actif" : "Désactivé" %></span></td>
+    <td><% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/clients/<%= c.id %>/statut"><input type="hidden" name="statut" value="<%= c.status === "active" ? "disabled" : "active" %>"><button class="btn btn-ghost btn-sm" type="submit"><%= c.status === "active" ? "Désactiver" : "Réactiver" %></button></form><% } %>
       <% if (canWrite && c.has_account) { %><form class="mk-inline-form" method="post" action="<%= base %>/clients/<%= c.id %>/exoneration"><% if (!c.tax_exempt) { %><input type="hidden" name="exempt" value="1"><% } %><button class="btn btn-ghost btn-sm" type="submit"><%= c.tax_exempt ? "Retirer l'exonération de taxe" : "Exonérer de taxe" %></button></form><% } else if (c.tax_exempt) { %><small>exonéré de taxe</small><% } %>
       <a class="btn btn-ghost btn-sm" href="<%= base %>/clients/<%= c.id %>/donnees">Exporter</a>
       <% if (canWrite) { %><form class="mk-inline-form" method="post" action="<%= base %>/clients/<%= c.id %>/effacer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Effacer définitivement les données personnelles de ce client ? Ses commandes et factures sont conservées." data-mk-confirm-ok="Effacer">Effacer</button></form><% } %></td></tr><% }) %>
-  </tbody></table></div><% } %>
+  </tbody></table></div>
+  <%- include("_pager", { list, nom: "clients" }) %><% } %>
 </section>
 <%- include("../partials/bottom") %>

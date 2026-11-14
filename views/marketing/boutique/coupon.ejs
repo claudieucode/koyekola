@@ -4,12 +4,12 @@
 <section class="mk-panel">
   <p class="mk-sub">Le code ne se modifie pas (les commandes passées y renvoient). Utilisé <strong><%= coupon.used_count %></strong> fois<%= coupon.max_uses != null ? " sur " + coupon.max_uses : "" %>.</p>
   <form class="mk-form" method="post" action="<%= base %>/coupons/<%= coupon.id %>">
-    <div class="field-group"><label for="c-l">Nom interne (facultatif)</label><input id="c-l" name="label" maxlength="80" value="<%= coupon.label || "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-l">Nom interne (facultatif)</label><input type="text" id="c-l" name="label" maxlength="80" value="<%= coupon.label || "" %>"<%= dis %>></div>
     <div class="field-group"><label for="c-k">Type</label><select id="c-k" name="kind"<%= dis %>><option value="percent"<%= coupon.kind === "percent" ? " selected" : "" %>>Pourcentage</option><option value="fixed"<%= coupon.kind === "fixed" ? " selected" : "" %>>Montant fixe</option></select></div>
-    <div class="field-group"><label for="c-v">Valeur (% ou montant)</label><input id="c-v" name="value" inputmode="decimal" value="<%= coupon.kind === "fixed" ? (coupon.value / 100).toFixed(2).replace(".", ",") : coupon.value %>"<%= dis %>></div>
-    <div class="field-group"><label for="c-m">Panier minimum</label><input id="c-m" name="min_subtotal" inputmode="decimal" value="<%= coupon.min_subtotal_cents != null ? (coupon.min_subtotal_cents / 100).toFixed(2).replace(".", ",") : "" %>"<%= dis %>></div>
-    <div class="field-group"><label for="c-s">Début</label><input id="c-s" name="starts_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.starts_at) %>"<%= dis %>></div>
-    <div class="field-group"><label for="c-e">Fin</label><input id="c-e" name="ends_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.ends_at) %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-v">Valeur (% ou montant)</label><input type="text" id="c-v" name="value" inputmode="decimal" value="<%= coupon.kind === "fixed" ? (coupon.value / 100).toFixed(2).replace(".", ",") : coupon.value %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-m">Panier minimum</label><input type="text" id="c-m" name="min_subtotal" inputmode="decimal" value="<%= coupon.min_subtotal_cents != null ? (coupon.min_subtotal_cents / 100).toFixed(2).replace(".", ",") : "" %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-s">Début</label><input type="text" id="c-s" name="starts_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.starts_at) %>"<%= dis %>></div>
+    <div class="field-group"><label for="c-e">Fin</label><input type="text" id="c-e" name="ends_at" placeholder="AAAA-MM-JJ" value="<%= d10(coupon.ends_at) %>"<%= dis %>></div>
     <div class="field-group"><label for="c-u">Utilisations maximales</label><input id="c-u" name="max_uses" type="number" min="1" value="<%= coupon.max_uses != null ? coupon.max_uses : "" %>"<%= dis %>></div>
     <div class="field-group"><label for="c-pc">Limite par client</label><input id="c-pc" name="per_customer_limit" type="number" min="1" value="<%= coupon.per_customer_limit != null ? coupon.per_customer_limit : "" %>"<%= dis %>></div>
     <div class="field-group"><label for="c-p">Limiter à certains produits</label><select id="c-p" name="product_ids" multiple size="5"<%= dis %>><% products.forEach((p) => { %><option value="<%= p.id %>"<%= coupon.product_ids.includes(p.id) ? " selected" : "" %>><%= p.name %></option><% }) %></select></div>
