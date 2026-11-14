@@ -39,7 +39,7 @@
    --kg-gutter : marge entre le bord de la fenêtre et les barres (barre d'administration, fil d'Ariane) ;
    --kg-pad    : marge latérale du contenu ; --kg-max : largeur maximale d'une page de données (le contenu est CENTRÉ dans la zone de travail, après le menu) ;
    --kg-max-form : largeur maximale d'un formulaire / de réglages (classe .mk-content--form). Valeurs adaptées par largeur d'écran, jamais nulles. */
-:root { --kg-gutter: 20px; --kg-pad: 24px; --kg-max: 2400px; --kg-max-form: 1280px; }
+:root { --kg-gutter: 20px; --kg-pad: 24px; --kg-max: 2400px; --kg-max-form: 1680px; }
 @media (max-width: 1180px) { :root { --kg-gutter: 20px; --kg-pad: 20px; } }
 @media (max-width: 860px) { :root { --kg-gutter: 16px; --kg-pad: 16px; } }
 @media (max-width: 480px) { :root { --kg-gutter: 12px; --kg-pad: 12px; } }
