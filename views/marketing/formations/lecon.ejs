@@ -17,6 +17,40 @@
     <% if (canWrite) { %><div class="lm-bar"><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button><a class="btn btn-ghost btn-sm" href="<%= base %>/<%= course.id %>">Retour au programme</a></div><% } %>
   </form>
   <% if (canWrite) { %><div class="lm-danger"><form method="post" action="<%= base %>/lecons/<%= lesson.id %>/supprimer"><button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="La leçon sera supprimée définitivement." data-mk-confirm-title="Supprimer cette leçon ?" data-mk-confirm-ok="Supprimer">Supprimer la leçon</button></form></div><% } %>
-  <p class="mk-sub lm-adv">Pièces jointes et quiz : <a href="/formateur/cours/<%= course.id %>/curriculum?lecon=<%= lesson.id %>">éditeur avancé</a> (réservé au compte créateur de la plateforme pour l'instant).</p>
+  <p class="mk-sub lm-adv">Pièces jointes et téléversement de fichiers : <a href="/formateur/cours/<%= course.id %>/curriculum?lecon=<%= lesson.id %>">éditeur avancé</a> (réservé au compte créateur de la plateforme pour l'instant).</p>
+</section>
+<section class="mk-panel lm-quiz" id="quiz">
+  <h2>Quiz</h2>
+  <% if (!quiz) { %>
+    <p class="mk-sub">Aucun quiz sur cette leçon. Un quiz évalue l'étudiant avec des questions à choix unique.</p>
+    <% if (canWrite) { %><form method="post" action="<%= base %>/lecons/<%= lesson.id %>/quiz"><button class="btn btn-outline btn-sm" type="submit">Ajouter un quiz</button></form><% } %>
+  <% } else { %>
+    <form method="post" action="<%= base %>/quiz/<%= quiz.id %>" class="mk-form">
+      <div class="lm-row">
+        <div class="field-group"><label for="q-title">Titre</label><input id="q-title" name="title" maxlength="120" value="<%= quiz.title %>"></div>
+        <div class="field-group"><label for="q-pass">Seuil de réussite (%)</label><input id="q-pass" name="pass_percentage" type="number" min="0" max="100" value="<%= quiz.pass_percentage %>"></div>
+        <div class="field-group"><label for="q-max">Tentatives maximales</label><input id="q-max" name="max_attempts" type="number" min="1" max="100" value="<%= quiz.max_attempts || "" %>" placeholder="Illimité"></div>
+      </div>
+      <% if (canWrite) { %><div class="lm-bar"><button class="btn btn-primary btn-sm" type="submit">Enregistrer le quiz</button></div><% } %>
+    </form>
+    <p class="mk-sub"><%= quiz.stats.attempts %> tentative<%= quiz.stats.attempts > 1 ? "s" : "" %><% if (quiz.stats.attempts) { %> · <%= quiz.stats.passed %> réussie<%= quiz.stats.passed > 1 ? "s" : "" %> · score moyen <%= quiz.stats.avg %> %<% } %></p>
+    <ol class="lm-questions">
+    <% quiz.questions.forEach((q) => { %>
+      <li><div class="lm-qhead"><strong><%= q.question %></strong><% if (canWrite) { %><form method="post" action="<%= base %>/questions/<%= q.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="La question et ses réponses seront supprimées." data-mk-confirm-title="Supprimer cette question ?" data-mk-confirm-ok="Supprimer" aria-label="Supprimer la question"><%- icon("trash", { size: 16 }) %></button></form><% } %></div>
+        <ul class="lm-options"><% q.options.forEach((o) => { %><li class="<%= o.is_correct ? "is-correct" : "" %>"><%= o.option_text %><% if (o.is_correct) { %> <span class="mk-status mk-status-ok">Bonne réponse</span><% } %></li><% }) %></ul></li>
+    <% }) %>
+    </ol>
+    <% if (!quiz.questions.length) { %><p class="mk-sub">Aucune question pour l'instant.</p><% } %>
+    <% if (canWrite) { %>
+    <form method="post" action="<%= base %>/quiz/<%= quiz.id %>/questions" class="mk-form lm-newq">
+      <h3>Nouvelle question</h3>
+      <div class="field-group"><label for="nq-q">Question</label><input id="nq-q" name="question" maxlength="500" required></div>
+      <% [1, 2, 3, 4].forEach((i) => { %><div class="field-group lm-opt"><label for="nq-<%= i %>">Réponse <%= i %></label><input id="nq-<%= i %>" name="option_<%= i %>" maxlength="300" <%= i < 3 ? "required" : "" %>></div><% }) %>
+      <div class="field-group"><label for="nq-c">Bonne réponse</label><select id="nq-c" name="correct"><% [1, 2, 3, 4].forEach((i) => { %><option value="<%= i %>">Réponse <%= i %></option><% }) %></select></div>
+      <div class="lm-bar"><button class="btn btn-outline btn-sm" type="submit">Ajouter la question</button>
+        <button class="btn btn-ghost btn-sm" type="submit" formaction="<%= base %>/quiz/<%= quiz.id %>/supprimer" formnovalidate data-mk-confirm="Le quiz, ses questions et les résultats associés seront supprimés." data-mk-confirm-title="Supprimer ce quiz ?" data-mk-confirm-ok="Supprimer">Supprimer le quiz</button></div>
+    </form>
+    <% } %>
+  <% } %>
 </section>
 <%- include("../partials/bottom") %>

@@ -4,7 +4,7 @@
 %><%
   const lmGroups = [
     [["", "", "Tableau de bord", "barChart"], ["liste", "/liste", "Formations", "graduation"]],
-    [["etudiants", "/etudiants", "Étudiants", "users"], ["certificats", "/certificats", "Certificats", "trophy"]],
+    [["etudiants", "/etudiants", "Étudiants", "users"], ["certificats", "/certificats", "Certificats", "trophy"], ["parametres", "/parametres", "Publication", "settings"]],
   ];
   const lmCurrent = lmGroups.flat().find((e) => e[0] === (tab || "")) || lmGroups[0][0];
 %>

@@ -95,3 +95,26 @@ describe("duplication et suppression", () => {
     assert.equal(db.prepare("SELECT COUNT(*) n FROM mk_course_sites WHERE course_id = ?").get(ids.copy).n, 0);
   });
 });
+
+describe("quiz d'une leçon", () => {
+  let lesson, quiz;
+  before(() => {
+    db.exec("CREATE TABLE quizzes (id INTEGER PRIMARY KEY AUTOINCREMENT, lesson_id INTEGER NOT NULL UNIQUE REFERENCES lessons(id) ON DELETE CASCADE, title TEXT NOT NULL DEFAULT 'Quiz', pass_percentage INTEGER NOT NULL DEFAULT 70, max_attempts INTEGER);\n" +
+      "CREATE TABLE quiz_questions (id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_id INTEGER NOT NULL REFERENCES quizzes(id) ON DELETE CASCADE, question TEXT NOT NULL, position INTEGER NOT NULL DEFAULT 0);\n" +
+      "CREATE TABLE quiz_options (id INTEGER PRIMARY KEY AUTOINCREMENT, question_id INTEGER NOT NULL REFERENCES quiz_questions(id) ON DELETE CASCADE, option_text TEXT NOT NULL, is_correct INTEGER NOT NULL DEFAULT 0, position INTEGER NOT NULL DEFAULT 0);");
+    lesson = ids.l1;
+  });
+  test("création, réglages bornés, question valide, suppression ; un autre site n'y touche pas", () => {
+    assert.ok(b.createQuiz(db, ids.A, lesson)); quiz = b.quizOfLesson(db, ids.A, lesson); assert.equal(quiz.pass_percentage, 70);
+    assert.equal(b.createQuiz(db, ids.B, lesson), null); assert.equal(b.quizOfLesson(db, ids.B, lesson), null);
+    b.updateQuiz(db, ids.A, quiz.id, { title: " Test ", pass_percentage: "250", max_attempts: "3" });
+    const q = db.prepare("SELECT * FROM quizzes WHERE id = ?").get(quiz.id); assert.equal(q.title, "Test"); assert.equal(q.pass_percentage, 100); assert.equal(q.max_attempts, 3);
+    assert.throws(() => b.addQuestion(db, ids.A, quiz.id, { question: "Q ?", option_1: "a", correct: "1" }), /au moins deux/);
+    assert.throws(() => b.addQuestion(db, ids.A, quiz.id, { question: "Q ?", option_1: "a", option_2: "b", correct: "3" }), /bonne réponse/);
+    b.addQuestion(db, ids.A, quiz.id, { question: "Q ?", option_1: "a", option_2: "b", correct: "2" });
+    const full = b.quizOfLesson(db, ids.A, lesson); assert.equal(full.questions.length, 1); assert.deepEqual(full.questions[0].options.map((o) => o.is_correct), [0, 1]);
+    assert.equal(b.addQuestion(db, ids.B, quiz.id, { question: "x", option_1: "a", option_2: "b", correct: "1" }), null);
+    assert.equal(b.deleteQuestion(db, ids.B, full.questions[0].id), null); assert.ok(b.deleteQuestion(db, ids.A, full.questions[0].id));
+    assert.equal(b.deleteQuiz(db, ids.B, quiz.id), null); assert.ok(b.deleteQuiz(db, ids.A, quiz.id)); assert.equal(b.quizOfLesson(db, ids.A, lesson), null);
+  });
+});

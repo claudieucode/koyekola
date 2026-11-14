@@ -49,3 +49,23 @@
 .mk-shop .lm-adv { margin: 16px 0 0; }
 .mk-shop .lm-rename .btn, .mk-shop .lm-add .btn { flex: none; white-space: nowrap; }
 .mk-shop .lm-ltitle { font-size: .92rem; }
+
+/* Quiz */
+.mk-shop .lm-quiz { margin-top: 16px; }
+.mk-shop .lm-questions { display: grid; gap: 10px; margin: 12px 0; padding: 0; list-style: none; }
+.mk-shop .lm-questions > li { padding: 10px 12px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); background: var(--mk-surface); }
+.mk-shop .lm-qhead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.mk-shop .lm-qhead form { margin: 0; }
+.mk-shop .lm-options { margin: 6px 0 0; padding-left: 18px; }
+.mk-shop .lm-options .is-correct { font-weight: 600; }
+.mk-shop .lm-newq { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--kb-rule, var(--mk-border)); }
+
+/* Publication et paiement */
+.mk-shop .lm-facts { display: block; margin: 0 0 12px; }
+.mk-shop .lm-fact { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--kb-rule, var(--mk-border)); }
+.mk-shop .lm-fact:first-child { border-top: 0; }
+.mk-shop .lm-k { color: var(--muted); font-size: .9rem; }
+.mk-shop .lm-v { overflow-wrap: anywhere; }
+@media (max-width: 560px) { .mk-shop .lm-fact { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+/* Formulaires du constructeur : une colonne (les rangées .lm-row gèrent les champs côte à côte) */
+.mk-shop :is(.lm-settings, .lm-lesson, .lm-quiz) form.mk-form:not(.mk-inline-form) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
