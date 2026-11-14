@@ -14,23 +14,34 @@
       <% } %>
     </section>
     <% if (canEdit) { %>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-add"><h2 id="ps-add">Ajouter une mesure</h2>
-      <form method="post" action="<%= space.base %>/seo/positions" class="mk-form" data-busy-form>
-        <div class="field-group"><label for="ps-kw">Mot-clé</label><input id="ps-kw" name="keyword" maxlength="120" required></div>
-        <div class="field-group"><label for="ps-pos">Position (1 à 1000)</label><input id="ps-pos" name="position" inputmode="decimal" required></div>
-        <div class="field-group"><label for="ps-url">Page (facultatif)</label><input id="ps-url" name="url" maxlength="500" placeholder="/ma-page"></div>
-        <div class="field-group"><label for="ps-date">Date de la mesure (vide = aujourd'hui)</label><input id="ps-date" type="date" name="date"></div>
-        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+    <div class="rk-pair">
+    <section class="mk-panel rk-panel mk-seo-appear" aria-labelledby="ps-add">
+      <header class="rk-head"><h2 id="ps-add">Ajouter une mesure</h2><p>Relevez la position d'un mot-clé à une date donnée.</p></header>
+      <form method="post" action="<%= space.base %>/seo/positions" class="rk-form" data-busy-form>
+        <div class="rk-grid">
+          <div class="rk-f rk-c8"><label for="ps-kw">Mot-clé</label><input id="ps-kw" name="keyword" maxlength="120" required autocomplete="off" aria-describedby="ps-kw-h"><p class="rk-h" id="ps-kw-h">Expression exacte suivie, jusqu'à 120 caractères.</p></div>
+          <div class="rk-f rk-c4"><label for="ps-pos">Position</label><input id="ps-pos" name="position" inputmode="decimal" required autocomplete="off" class="rk-num" aria-describedby="ps-pos-h"><p class="rk-h" id="ps-pos-h">De 1 à 1000.</p></div>
+          <div class="rk-f rk-c8"><label for="ps-url">Page <span class="rk-opt">facultatif</span></label><input id="ps-url" name="url" maxlength="500" placeholder="/ma-page" autocomplete="off" aria-describedby="ps-url-h"><p class="rk-h" id="ps-url-h">Adresse ou chemin de la page qui se positionne.</p></div>
+          <div class="rk-f rk-c4"><label for="ps-date">Date de la mesure</label><input id="ps-date" type="date" name="date" aria-describedby="ps-date-h"><p class="rk-h" id="ps-date-h">Vide : aujourd'hui.</p></div>
+        </div>
+        <footer class="rk-foot"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
       </form>
     </section>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-imp"><h2 id="ps-imp">Importer un export Search Console</h2>
-      <form method="post" action="<%= space.base %>/seo/positions/import" class="mk-form" data-busy-form>
-        <div class="field-group"><label for="ps-csv">Contenu du fichier « Requêtes.csv »</label><textarea id="ps-csv" name="csv" rows="5" spellcheck="false" maxlength="400000"></textarea></div>
-        <div class="field-group"><label for="ps-idate">Date de fin de la période exportée (vide = aujourd'hui)</label><input id="ps-idate" type="date" name="date"></div>
-        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Importer</button></div>
+    <section class="mk-panel rk-panel mk-seo-appear" aria-labelledby="ps-imp">
+      <header class="rk-head rk-head-row"><div><h2 id="ps-imp">Importer depuis Search Console</h2><p>Collez l'export « Requêtes » de Google Search Console.</p></div>
+        <% const gs = { connected: "ok", error: "err", not_connected: "off", config_required: "warn", not_verified: "warn", available: "ok" }[gsc.state] || "off"; %>
+        <a class="rk-gsc is-<%= gs %>" href="<%= space.base %>/seo/connexions" title="Gérer la connexion Google"><span class="rk-dot" aria-hidden="true"></span><span><strong>API Search Console</strong> <%= gsc.label %></span></a>
+      </header>
+      <form method="post" action="<%= space.base %>/seo/positions/import" class="rk-form" data-busy-form>
+        <div class="rk-grid">
+          <div class="rk-f rk-c12"><label for="ps-csv">Contenu du fichier « Requêtes.csv »</label><textarea id="ps-csv" name="csv" rows="7" spellcheck="false" wrap="off" maxlength="400000" class="rk-csv" placeholder="Requêtes les plus fréquentes,Clics,Impressions,CTR,Position" aria-describedby="ps-csv-h"></textarea><p class="rk-h" id="ps-csv-h">Ouvrez le fichier dans un éditeur de texte, copiez tout son contenu et collez-le ici.</p></div>
+          <div class="rk-f rk-c4"><label for="ps-idate">Fin de la période exportée</label><input id="ps-idate" type="date" name="date" aria-describedby="ps-idate-h"><p class="rk-h" id="ps-idate-h">Vide : aujourd'hui.</p></div>
+        </div>
+        <footer class="rk-foot"><button type="submit" class="btn btn-primary">Importer</button></footer>
       </form>
-      <% if (gsc.state === "connected") { %><form method="post" action="<%= space.base %>/seo/positions/api" data-busy-form><div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Relever les requêtes depuis l'API Search Console (28 derniers jours)</button></div></form>
-      <% } else { %><p class="field-hint">API Search Console : <%= gsc.label %>.</p><% } %>
+      <% if (gsc.state === "connected") { %><form method="post" action="<%= space.base %>/seo/positions/api" class="rk-api" data-busy-form><p>Connexion active : relevez directement vos requêtes des 28 derniers jours.</p><button type="submit" class="btn btn-outline">Relever depuis l'API Search Console</button></form>
+      <% } else if (gsc.detail) { %><p class="rk-api-note"><%= gsc.detail %></p><% } %>
     </section>
+    </div>
     <% } %>
 <%- include("../partials/bottom") %>
