@@ -20,18 +20,29 @@ describe("SEO › Google : cartes (navigateur)", { skip: SKIP }, () => {
   after(async () => { if (ctx) await ctx.close(); if (env) await env.close(); });
   const card = (b) => page.locator(`[data-gx-card="${b}"]`);
 
-  test("deux cartes, état « Non connecté » venu du serveur, champs larges, aucune coquille &quot; dans le texte d'aide", async () => {
+  test("deux cartes empilées, état « Non connecté » venu du serveur, zone JSON de taille raisonnable, aucune coquille &quot;", async () => {
     await page.goto(url);
     for (const b of ["search_console", "analytics"]) {
       assert.match(await card(b).locator("[data-gx-pill]").innerText(), /Non connecté/);
-      const w = await card(b).locator("textarea").evaluate((e) => e.getBoundingClientRect().width), cw = await card(b).evaluate((e) => e.getBoundingClientRect().width);
-      assert.ok(w > cw * 0.85, `zone JSON large (${w}/${cw})`);
-      assert.ok((await card(b).locator("textarea").evaluate((e) => e.getBoundingClientRect().height)) >= 180, "zone JSON haute");
+      const h = await card(b).locator("textarea").evaluate((e) => e.getBoundingClientRect().height);
+      assert.ok(h >= 90 && h <= 200, `zone JSON compacte (${h}px)`);
       assert.ok(!(await card(b).locator("textarea").getAttribute("placeholder")).includes("&quot;"));
+      assert.ok((await card(b).locator("h2").evaluate((e) => parseFloat(getComputedStyle(e).fontSize))) <= 18, "titre de carte de taille raisonnable");
+      assert.ok((await card(b).locator(".sx-ico").evaluate((e) => e.getBoundingClientRect().width)) <= 40, "icône compacte");
     }
-    const boxes = await page.locator("[data-gx-card]").evaluateAll((l) => l.map((e) => e.getBoundingClientRect().left));
-    assert.ok(Math.abs(boxes[0] - boxes[1]) > 300, "deux cartes côte à côte sur ordinateur");
-    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/gx-desktop.png" });
+    const tops = await page.locator("[data-gx-card]").evaluateAll((l) => l.map((e) => e.getBoundingClientRect().top));
+    assert.ok(tops[1] > tops[0] + 200, "cartes l'une sous l'autre");
+    assert.ok(await page.locator(".mk-seo-tabs").evaluate((e) => getComputedStyle(e).flexWrap === "nowrap"), "onglets sur une seule ligne");
+    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/gx-desktop.png", fullPage: true });
+  });
+
+  test("fichier .json choisi : lu dans la zone de saisie, validé avec l'e-mail du compte", async () => {
+    const c = card("analytics");
+    await c.locator('input[type=file]').setInputFiles({ name: "cle.json", mimeType: "application/json", buffer: Buffer.from(key) });
+    await page.waitForTimeout(300);
+    assert.match(await c.locator("[data-sx-drop-name]").innerText(), /cle\.json/);
+    assert.match(await c.locator("[data-gx-json-state]").innerText(), /JSON valide.*svc@projet/s);
+    await c.locator("textarea").fill("");
   });
 
   test("JSON : invalide signalé, valide confirmé avec l'e-mail du compte ; un envoi invalide est bloqué", async () => {
@@ -66,6 +77,52 @@ describe("SEO › Google : cartes (navigateur)", { skip: SKIP }, () => {
     const lefts = await page.locator("[data-gx-card]").evaluateAll((l) => l.map((e) => Math.round(e.getBoundingClientRect().left)));
     assert.equal(lefts[0], lefts[1], "une seule colonne");
     if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/gx-mobile.png", fullPage: true });
+    assert.deepEqual(env.errors, []);
+  });
+});
+
+describe("SEO › Positions et Export / import : mise en page (navigateur)", { skip: SKIP }, () => {
+  let env, ctx, page, base;
+  before(async () => {
+    env = await setup({ siteName: "Site positions" });
+    ctx = await env.browser.newContext({ viewport: { width: 1500, height: 1000 } });
+    await ctx.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
+    page = await ctx.newPage(); page.on("pageerror", (e) => env.errors.push(e.message)); base = `${env.srv.base}/marketing/site-web/sites/${env.site}/seo`;
+  });
+  after(async () => { if (ctx) await ctx.close(); if (env) await env.close(); });
+
+  test("positions : formulaire en grille (champs de même hauteur), mesure enregistrée, tableau, import par fichier", async () => {
+    await page.goto(base + "/positions");
+    const hs = await page.locator("form[action$='/seo/positions'] input").evaluateAll((l) => l.map((e) => Math.round(e.getBoundingClientRect().height)));
+    assert.equal(new Set(hs).size, 1, "champs de même hauteur : " + hs);
+    const kw = await page.locator("#ps-kw").evaluate((e) => e.getBoundingClientRect().width), pos = await page.locator("#ps-pos").evaluate((e) => e.getBoundingClientRect().width);
+    assert.ok(kw > pos * 1.5, `mot-clé plus large que la position (${kw}/${pos})`);
+    await page.fill("#ps-kw", "chaussures test"); await page.fill("#ps-pos", "12"); await page.fill("#ps-url", "/chaussures");
+    await Promise.all([page.waitForNavigation(), page.getByRole("button", { name: "Enregistrer la mesure" }).click()]);
+    assert.ok(await page.locator(".sx-table tbody tr", { hasText: "chaussures test" }).count() === 1);
+    assert.equal(await page.locator(".sx-table .sx-pos").first().innerText(), "12");
+    const csv = "Requêtes les plus fréquentes,Clics,Impressions,CTR,Position\nrandonnée alpes,10,200,5%,8.4\n";
+    await page.locator("[data-sx-drop] input[type=file]").setInputFiles({ name: "Requetes.csv", mimeType: "text/csv", buffer: Buffer.from(csv) });
+    await page.waitForTimeout(300);
+    assert.match(await page.locator("#ps-csv").inputValue(), /randonnée alpes/);
+    await Promise.all([page.waitForNavigation(), page.getByRole("button", { name: "Importer", exact: true }).click()]);
+    assert.ok(await page.locator(".sx-table tbody tr", { hasText: "randonnée alpes" }).count() === 1, "l'import est confirmé par le serveur : la ligne est dans le tableau");
+    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/px-positions.png", fullPage: true });
+  });
+
+  test("export / import : export et import séparés, aperçu d'un import, aucun débordement sur mobile", async () => {
+    await page.goto(base + "/transfert");
+    assert.ok(await page.locator("#tr-export").count() === 1 && await page.locator("#tr-import").count() === 1);
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: /Télécharger/ }).click()]);
+    assert.match(dl.suggestedFilename(), /\.json$/);
+    await page.fill("#tr-json", '{"format":"kolakisa-seo","version":1,"settings":{},"redirects":[]}');
+    await page.getByRole("button", { name: "Vérifier / importer" }).first().click(); await page.waitForLoadState("load");
+    assert.ok(await page.locator('[role="status"], [role="alert"]').count() >= 1, "un résultat ou une erreur du serveur s'affiche (aucun succès inventé)");
+    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/px-transfert.png", fullPage: true });
+    for (const t of ["transfert", "positions", "connexions"]) {
+      await page.setViewportSize({ width: 390, height: 900 }); await page.goto(`${base}/${t}`); await page.waitForTimeout(150);
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), `${t} : pas de défilement horizontal sur mobile`);
+    }
     assert.deepEqual(env.errors, []);
   });
 });

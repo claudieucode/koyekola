@@ -2,44 +2,48 @@
 <%- include("_head") %>
 <%
   // Deux intégrations, un même système visuel. Les états viennent uniquement du serveur (integrations.status) : jamais « Connecté » sans une vérification réussie auprès de Google.
-  const PILL = { connected: ["ok", "Connecté"], error: ["bad", "Connexion impossible"], not_verified: ["warn", "Non vérifié"], not_connected: ["off", "Non connecté"], config_required: ["warn", "Configuration incomplète"] };
+  const PILL = { connected: ["is-ok", "Connecté"], error: ["is-bad", "Connexion impossible"], not_verified: ["is-warn", "Non vérifié"], not_connected: ["", "Non connecté"], config_required: ["is-warn", "Configuration incomplète"] };
   const CARDS = [
-    { base: "search_console", field: "property", label: "Adresse de la propriété", ph: "sc-domain:exemple.com ou https://www.exemple.com/", hint: "Propriété de type domaine (sc-domain:…) ou adresse complète en https://.", mode: "url",
-      desc: "Requêtes, clics et positions de votre site dans les résultats Google.",
-      perm: "Dans Search Console : Paramètres › Utilisateurs et autorisations › ajoutez l'adresse e-mail du compte de service comme utilisateur de la propriété (lecture seule)." },
-    { base: "analytics", field: "propertyId", label: "Identifiant de propriété GA4", ph: "123456789", hint: "Des chiffres uniquement : Admin › Détails de la propriété.", mode: "numeric",
-      desc: "Visites et comportement des visiteurs, lus dans votre propriété Google Analytics 4.",
-      perm: "Dans Analytics : Admin › Gestion des accès à la propriété › ajoutez l'adresse e-mail du compte de service avec le rôle Lecteur. L'API Google Analytics Data doit être activée dans son projet Google Cloud." },
+    { base: "search_console", field: "property", label: "Adresse de la propriété", ph: "sc-domain:exemple.com ou https://www.exemple.com/", hint: "Propriété de type domaine (sc-domain:…) ou adresse complète en https://.",
+      desc: "Requêtes, clics et positions de votre site dans Google.",
+      steps: ["Créez un compte de service dans Google Cloud et téléchargez sa clé au format JSON.", "Dans Search Console : Paramètres › Utilisateurs et autorisations.", "Ajoutez l'adresse e-mail du compte de service comme utilisateur (lecture seule)."] },
+    { base: "analytics", field: "propertyId", label: "Identifiant de propriété GA4", ph: "123456789", hint: "Des chiffres uniquement : Admin › Détails de la propriété.", numeric: true,
+      desc: "Visites et comportement des visiteurs de votre propriété GA4.",
+      steps: ["Créez un compte de service dans Google Cloud et téléchargez sa clé au format JSON.", "Activez l'API Google Analytics Data dans son projet Google Cloud.", "Dans Analytics : Admin › Gestion des accès à la propriété › ajoutez son e-mail avec le rôle Lecteur."] },
   ];
 %>
-    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Chaque site a SA propre connexion Google : sa propriété Search Console ou GA4 et sa clé de compte de service, stockée chiffrée et jamais réaffichée. Sans configuration, l'état reste « Non connecté » : rien n'est affiché qui ne vienne de Google.</p></div>
-    <div class="gx-grid">
-    <% CARDS.forEach((c) => { const base = c.base, stt = st[base], pill = PILL[stt.state] || ["off", stt.label], saved = stt.state === "connected" || stt.state === "not_verified" || stt.state === "error"; %>
-    <section class="gx-card mk-seo-appear" aria-labelledby="cx-<%= base %>" data-gx-card="<%= base %>">
-      <header class="gx-head">
-        <span class="gx-logo gx-logo-<%= base %>" aria-hidden="true">
-          <% if (base === "search_console") { %><svg viewBox="0 0 32 32" width="28" height="28"><rect x="3" y="3" width="26" height="26" rx="7" fill="#4285f4"/><circle cx="14" cy="14" r="5.2" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M18 18l5.5 5.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
-          <% } else { %><svg viewBox="0 0 32 32" width="28" height="28"><rect x="3" y="3" width="26" height="26" rx="7" fill="#fff4e0"/><rect x="19" y="7" width="6" height="18" rx="3" fill="#f9ab00"/><rect x="12" y="13" width="6" height="12" rx="3" fill="#e37400"/><circle cx="8" cy="22.5" r="3" fill="#e37400"/></svg><% } %>
+    <div class="sx-note" role="note"><%- icon("info", { size: 16 }) %><p>Chaque site a sa propre connexion Google. La clé du compte de service est stockée chiffrée et n'est jamais réaffichée ; sans configuration, l'état reste « Non connecté » et rien n'est affiché qui ne vienne de Google.</p></div>
+    <div class="sx-stack">
+    <% CARDS.forEach((c) => { const base = c.base, stt = st[base], pill = PILL[stt.state] || ["", stt.label], saved = stt.state === "connected" || stt.state === "not_verified" || stt.state === "error"; %>
+    <section class="sx-card sx-appear" aria-labelledby="cx-<%= base %>" data-gx-card="<%= base %>">
+      <header class="sx-card-head">
+        <span class="sx-ico" aria-hidden="true">
+          <% if (base === "search_console") { %><svg viewBox="0 0 32 32"><rect x="3" y="3" width="26" height="26" rx="7" fill="#4285f4"/><circle cx="14" cy="14" r="5.2" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M18 18l5.5 5.5" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <% } else { %><svg viewBox="0 0 32 32"><rect x="3" y="3" width="26" height="26" rx="7" fill="#fff4e0"/><rect x="19" y="7" width="6" height="18" rx="3" fill="#f9ab00"/><rect x="12" y="13" width="6" height="12" rx="3" fill="#e37400"/><circle cx="8" cy="22.5" r="3" fill="#e37400"/></svg><% } %>
         </span>
-        <div class="gx-title"><h2 id="cx-<%= base %>"><%= names[base] %></h2><p><%= c.desc %></p></div>
-        <span class="gx-pill gx-pill-<%= pill[0] %>" data-gx-pill role="status"><span class="gx-dot" aria-hidden="true"></span><span data-gx-pill-text><%= pill[1] %></span></span>
+        <div class="sx-title"><h2 id="cx-<%= base %>"><%= names[base] %></h2><p><%= c.desc %></p></div>
+        <span class="sx-badge <%= pill[0] %>" data-gx-pill role="status"><span data-gx-pill-text><%= pill[1] %></span></span>
       </header>
-      <% if (stt.detail) { %><p class="gx-detail gx-detail-<%= pill[0] %>"><%= stt.detail %></p><% } %>
+      <div class="sx-body">
+      <% if (stt.detail) { %><p class="sx-detail <%= pill[0] %>"><%= stt.detail %></p><% } %>
       <% if (canEdit) { %>
-      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="gx-form" data-busy-form data-gx-form autocomplete="off">
-        <div class="gx-field"><label for="cx-<%= base %>-p"><%= c.label %></label>
-          <input id="cx-<%= base %>-p" name="<%= c.field %>" value="<%= config[base][c.field] || "" %>" maxlength="300" placeholder="<%= c.ph %>" required<%- c.mode === "numeric" ? ' inputmode="numeric" pattern="\\d{3,20}" title="Des chiffres uniquement"' : ' inputmode="url"' %> spellcheck="false">
-          <small><%= c.hint %></small></div>
-        <div class="gx-field"><label for="cx-<%= base %>-k">Clé du compte de service (contenu du fichier JSON)</label>
-          <textarea id="cx-<%= base %>-k" name="service_account" rows="9" spellcheck="false" autocomplete="off" autocapitalize="off" data-gx-json data-gx-saved="<%= saved ? "1" : "0" %>" placeholder="<%= saved ? "Laisser vide pour conserver la clé enregistrée" : '{ "type": "service_account", "client_email": "…", "private_key": "…" }' %>"></textarea>
-          <p class="gx-json-state" data-gx-json-state aria-live="polite"><%= saved ? "Une clé chiffrée est déjà enregistrée : elle n'est jamais réaffichée. Collez un nouveau fichier seulement pour la remplacer." : "Collez le contenu complet du fichier .json téléchargé depuis Google Cloud." %></p></div>
-        <p class="gx-perm"><%- icon("info", { size: 16 }) %><span><%= c.perm %></span></p>
-        <div class="gx-actions"><button type="submit" class="btn btn-primary btn-sm" data-gx-save>Enregistrer et vérifier</button>
-          <% if (stt.state !== "not_connected" && stt.state !== "config_required") { %><button type="submit" name="action" value="tester" class="btn btn-outline btn-sm" formnovalidate data-gx-test>Vérifier la connexion</button><button type="submit" name="action" value="deconnecter" class="btn btn-outline btn-sm gx-danger" formnovalidate data-confirm="Déconnecter ce site de Google ?">Déconnecter</button><% } %></div>
+      <div class="sx-split">
+      <form method="post" action="<%= space.base %>/seo/connexions/<%= base %>" class="sx-grid" data-busy-form data-gx-form autocomplete="off">
+        <div class="sx-field sx-col-12"><label for="cx-<%= base %>-p"><%= c.label %></label>
+          <input id="cx-<%= base %>-p" name="<%= c.field %>" value="<%= config[base][c.field] || "" %>" maxlength="300" placeholder="<%= c.ph %>" required<%- c.numeric ? ' inputmode="numeric" pattern="\\d{3,20}" title="Des chiffres uniquement"' : ' inputmode="url"' %> spellcheck="false">
+          <p class="sx-hint"><%= c.hint %></p></div>
+        <div class="sx-field sx-col-12"><label for="cx-<%= base %>-k">Clé du compte de service (fichier JSON)</label>
+          <textarea id="cx-<%= base %>-k" name="service_account" rows="5" spellcheck="false" autocomplete="off" autocapitalize="off" class="sx-code" data-gx-json data-gx-saved="<%= saved ? "1" : "0" %>" placeholder="<%= saved ? "Laisser vide pour conserver la clé enregistrée" : '{ "type": "service_account", "client_email": "…", "private_key": "…" }' %>"></textarea>
+          <label class="sx-drop" data-sx-drop data-target="cx-<%= base %>-k"><%- icon("upload", { size: 20 }) %><span><strong>Choisir le fichier .json</strong> ou le déposer ici</span><span class="sx-drop-name" data-sx-drop-name></span><input type="file" accept=".json,application/json"></label>
+          <p class="sx-state" data-gx-json-state aria-live="polite"><%= saved ? "Une clé chiffrée est déjà enregistrée : elle n'est jamais réaffichée. Fournissez un nouveau fichier seulement pour la remplacer." : "Collez le contenu du fichier ou choisissez-le : il est vérifié ici avant l'envoi." %></p></div>
+        <div class="sx-col-12 sx-actions"><button type="submit" class="btn btn-primary btn-sm" data-gx-save>Enregistrer et vérifier</button>
+          <% if (stt.state !== "not_connected" && stt.state !== "config_required") { %><button type="submit" name="action" value="tester" class="btn btn-outline btn-sm" formnovalidate data-gx-test>Vérifier la connexion</button><button type="submit" name="action" value="deconnecter" class="btn btn-outline btn-sm sx-danger sx-grow" formnovalidate data-confirm="Déconnecter ce site de Google ?">Déconnecter</button><% } %></div>
       </form>
-      <% } %>
+      <aside class="sx-aside" aria-label="Instructions de configuration"><h3>Configuration côté Google</h3><ol><% c.steps.forEach((x) => { %><li><%= x %></li><% }) %></ol><p>Permission nécessaire : lecture seule.</p></aside>
+      </div>
+      <% } else { %><aside class="sx-aside"><h3>Configuration côté Google</h3><ol><% c.steps.forEach((x) => { %><li><%= x %></li><% }) %></ol></aside><% } %>
+      </div>
     </section>
     <% }) %>
     </div>
-    <script src="<%= asset('/js/seo-google.js') %>" defer></script>
 <%- include("../partials/bottom") %>

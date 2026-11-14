@@ -10,3 +10,10 @@
 
 **Tests.** `tests/seo-principal-quatre-pages.test.js` (9) : titre propre à chaque écran, entrée de menu seule active, pas de vue générale, mesure du principal invisible dans un site, clé jamais réaffichée, export central/site, autres rubriques inchangées. Avant correction : 0/9 ; après : 9/9.
 **À noter.** « Positions », « Liens internes » du principal n'affichent des données que si le principal a des pages publiées / des mesures saisies ou importées : rien n'est inventé.
+
+## Refonte UI des écrans Google, Positions, Export / import (14 novembre 2026)
+* Feuille dédiée `public/css/seo-tools.css` (chargée par `views/marketing/site-seo/_head.ejs`) : cartes compactes, grille de formulaire à 12 colonnes (champs de 38 px), badges d'état, zone de dépôt de fichier, interrupteurs, tableau compact. **Elle remplace le bloc `gx-*` de `cms.css`, qui avait été écrasé deux fois par la fusion d'autres branches** : un fichier dédié évite cette collision.
+* Google : deux cartes empilées ; zone JSON de 5 lignes redimensionnable avec choix du fichier .json (lu dans le navigateur, validé avant envoi) ; instructions Google dans un bloc latéral discret ; état venu du serveur.
+* Positions : formulaire en grille ; tableau compact avec écart (seulement s'il existe), badge de source, suppression ; indicateurs = comptages réels ; import CSV par fichier ou collage, confirmé par le serveur.
+* Export / import : exportation et importations séparées en cartes ; interrupteur « Enregistrer réellement » (désactivé = aperçu).
+* Aucune route, API, validation ni règle d'isolation modifiée ; mêmes noms de champs. Test Chrome : `tests/seo-google-cartes-navigateur.test.js` (7).

@@ -6,7 +6,8 @@
   const here = mode === "overview" ? "seo" : mode;
   const fmt = (v) => (v ? String(v).slice(0, 16).replace("T", " ") : "—");
 %>
-    <div class="mk-head">
+    <link rel="stylesheet" href="<%= asset('/css/seo-tools.css') %>"><script src="<%= asset('/js/seo-google.js') %>" defer></script>
+    <div class="mk-head sx-head">
       <div class="mk-head-main"><h1><%= title %></h1><p class="mk-head-sub">Site « <%= space.name %> » : tout ce qui est affiché et enregistré ici ne concerne que ce site.</p></div>
     </div>
     <nav class="mk-tabs mk-cms-tabs mk-seo-tabs" aria-label="Rubriques SEO du site">

@@ -1,36 +1,52 @@
 <%- include("../partials/top", { title, active }) %>
 <%- include("_head") %>
-    <div class="mk-cms-soon" role="note"><%- icon("info", { size: 18 }) %><p>Aucune position n'est inventée. Les mesures viennent de ce que vous saisissez, d'un export « Requêtes » de Search Console, ou de l'API Search Console de ce site si elle est connectée (<a href="<%= space.base %>/seo/connexions">Connexions</a>). La position de Search Console est une <strong>moyenne</strong> sur la période, pas un rang exact. Un écart négatif est une amélioration.</p></div>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-main"><h2 id="ps-main">Mots-clés suivis (<%= v.total %>)</h2>
-      <form method="get" class="mk-form"><div class="field-group"><label for="ps-q">Rechercher</label><input id="ps-q" type="search" name="q" value="<%= search %>" maxlength="100"></div></form>
-      <% if (!v.keywords.length) { %><div class="mk-empty"><%- icon("trendingUp", { size: 32 }) %><p>Aucune mesure pour le moment.</p></div><% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table"><caption class="sr-only">Positions par mot-clé</caption><thead><tr><th scope="col">Mot-clé</th><th scope="col">Position</th><th scope="col">Écart</th><th scope="col">Mesurée le</th><th scope="col">Source</th><th scope="col">Historique</th></tr></thead>
-        <tbody><% v.keywords.forEach((k) => { %><tr><td data-label="Mot-clé"><%= k.keyword %><% if (k.latest.page_url) { %><span class="mk-sub"><code><%= k.latest.page_url %></code></span><% } %></td>
-          <td data-label="Position"><%= k.latest.position %></td>
-          <td data-label="Écart"><%= k.delta === null ? "—" : (k.delta > 0 ? "+" : "") + k.delta %><% if (k.delta !== null && k.delta !== 0) { %> <span class="mk-sub"><%= k.delta < 0 ? "amélioration" : "recul" %></span><% } %></td>
-          <td data-label="Mesurée le"><%= k.latest.measured_on %></td><td data-label="Source"><%= sources[k.latest.source] || k.latest.source %></td>
-          <td data-label="Historique"><%= k.history.map((h) => h.position).join(" → ") %>
-            <% if (canEdit) { %><form method="post" action="<%= space.base %>/seo/positions/<%= k.latest.id %>/supprimer" data-confirm="Supprimer la dernière mesure de ce mot-clé ?"><button type="submit" class="btn btn-outline btn-sm">Supprimer la dernière</button></form><% } %></td></tr><% }) %></tbody></table></div>
+<%
+  // Indicateurs : uniquement des comptages réels des mesures affichées (écart = dernière mesure − précédente ; négatif = amélioration)
+  const up = v.keywords.filter((k) => k.delta !== null && k.delta < 0).length, down = v.keywords.filter((k) => k.delta !== null && k.delta > 0).length;
+%>
+    <div class="sx-note" role="note"><%- icon("info", { size: 16 }) %><p>Aucune position n'est inventée : les mesures viennent de votre saisie, d'un export « Requêtes » de Search Console ou de l'API Search Console de ce site (<a href="<%= space.base %>/seo/connexions">connexion Google</a>). Celle de Search Console est une <strong>moyenne</strong> sur la période, pas un rang exact ; un écart négatif est une amélioration.</p></div>
+    <div class="sx-stack">
+    <% if (canEdit) { %>
+    <section class="sx-card sx-appear" aria-labelledby="ps-add">
+      <header class="sx-card-head"><span class="sx-ico" aria-hidden="true"><%- icon("plus", { size: 20 }) %></span><div class="sx-title"><h2 id="ps-add">Ajouter une mesure</h2><p>Saisissez la position d'un mot-clé relevée à une date donnée.</p></div></header>
+      <form method="post" action="<%= space.base %>/seo/positions" class="sx-body sx-grid" data-busy-form>
+        <div class="sx-field sx-col-4"><label for="ps-kw">Mot-clé</label><input id="ps-kw" name="keyword" maxlength="120" required placeholder="ex. chaussures de randonnée"></div>
+        <div class="sx-field sx-col-2"><label for="ps-pos">Position</label><input id="ps-pos" name="position" inputmode="decimal" required placeholder="1 à 1000" pattern="\d{1,4}([.,]\d{1,2})?" title="Un nombre entre 1 et 1000"></div>
+        <div class="sx-field sx-col-3"><label for="ps-url">Page (facultatif)</label><input id="ps-url" name="url" maxlength="500" placeholder="/ma-page"></div>
+        <div class="sx-field sx-col-3"><label for="ps-date">Date de la mesure</label><input id="ps-date" type="date" name="date"><p class="sx-hint">Vide = aujourd'hui.</p></div>
+        <div class="sx-col-12 sx-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer la mesure</button></div>
+      </form>
+    </section>
+    <% } %>
+    <section class="sx-card sx-appear" aria-labelledby="ps-main">
+      <header class="sx-card-head"><span class="sx-ico" aria-hidden="true"><%- icon("trendingUp", { size: 20 }) %></span>
+        <div class="sx-title"><h2 id="ps-main">Mots-clés suivis</h2><p><%= v.total %> mot<%= v.total > 1 ? "s" : "" %>-clé<%= v.total > 1 ? "s" : "" %><%= v.total ? " · dernière mesure de chacun" : "" %></p></div>
+        <form method="get" class="sx-head-tools" role="search"><label class="sx-search"><span class="sr-only">Rechercher un mot-clé</span><input id="ps-q" type="search" name="q" value="<%= search %>" maxlength="100" placeholder="Rechercher un mot-clé"></label></form></header>
+      <% if (!v.keywords.length) { %><div class="sx-empty"><%- icon("trendingUp", { size: 28 }) %><p><strong><%= search ? "Aucun mot-clé ne correspond." : "Aucune mesure pour le moment." %></strong></p><% if (!search) { %><p>Ajoutez une mesure ci-dessus ou importez un export Search Console ci-dessous.</p><% } %></div>
+      <% } else { %>
+      <% if (up || down) { %><div class="sx-body" style="padding-bottom:0"><div class="sx-kpis"><span class="sx-kpi"><b><%= up %></b> en amélioration</span><span class="sx-kpi"><b><%= down %></b> en recul</span><span class="sx-kpi"><b><%= v.keywords.length - up - down %></b> stable(s) ou sans comparaison</span></div></div><% } %>
+      <div class="sx-table-wrap"><table class="sx-table"><caption class="sr-only">Positions par mot-clé</caption><thead><tr><th scope="col">Mot-clé</th><th scope="col" class="sx-num">Position</th><th scope="col" class="sx-num">Écart</th><th scope="col">Mesurée le</th><th scope="col">Source</th><th scope="col">Historique</th><% if (canEdit) { %><th scope="col"><span class="sr-only">Actions</span></th><% } %></tr></thead>
+        <tbody><% v.keywords.forEach((k) => { %><tr><td class="sx-kw"><%= k.keyword %><% if (k.latest.page_url) { %><small><%= k.latest.page_url %></small><% } %></td>
+          <td class="sx-num"><span class="sx-pos"><%= k.latest.position %></span></td>
+          <td class="sx-num"><% if (k.delta === null) { %><span class="sx-delta is-flat">—</span><% } else if (k.delta === 0) { %><span class="sx-delta is-flat">0</span><% } else { %><span class="sx-delta <%= k.delta < 0 ? "is-up" : "is-down" %>" title="<%= k.delta < 0 ? "Amélioration" : "Recul" %>"><%= k.delta < 0 ? "▲" : "▼" %> <%= (k.delta > 0 ? "+" : "") + k.delta %></span><% } %></td>
+          <td><%= k.latest.measured_on %></td><td><span class="sx-badge is-plain"><%= sources[k.latest.source] || k.latest.source %></span></td>
+          <td class="sx-hist"><%= k.history.map((h) => h.position).join(" → ") %></td>
+          <% if (canEdit) { %><td><form method="post" action="<%= space.base %>/seo/positions/<%= k.latest.id %>/supprimer" data-confirm="Supprimer la dernière mesure de ce mot-clé ?"><button type="submit" class="btn btn-outline btn-sm" title="Supprimer la dernière mesure" aria-label="Supprimer la dernière mesure de <%= k.keyword %>"><%- icon("trash", { size: 14 }) %></button></form></td><% } %></tr><% }) %></tbody></table></div>
       <% } %>
     </section>
     <% if (canEdit) { %>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-add"><h2 id="ps-add">Ajouter une mesure</h2>
-      <form method="post" action="<%= space.base %>/seo/positions" class="mk-form" data-busy-form>
-        <div class="field-group"><label for="ps-kw">Mot-clé</label><input id="ps-kw" name="keyword" maxlength="120" required></div>
-        <div class="field-group"><label for="ps-pos">Position (1 à 1000)</label><input id="ps-pos" name="position" inputmode="decimal" required></div>
-        <div class="field-group"><label for="ps-url">Page (facultatif)</label><input id="ps-url" name="url" maxlength="500" placeholder="/ma-page"></div>
-        <div class="field-group"><label for="ps-date">Date de la mesure (vide = aujourd'hui)</label><input id="ps-date" type="date" name="date"></div>
-        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div>
+    <section class="sx-card sx-appear" aria-labelledby="ps-imp">
+      <header class="sx-card-head"><span class="sx-ico" aria-hidden="true"><%- icon("upload", { size: 20 }) %></span><div class="sx-title"><h2 id="ps-imp">Importer un export Search Console</h2><p>Fichier « Requêtes.csv » téléchargé depuis le rapport Performances.</p></div>
+        <span class="sx-badge <%= gsc.state === "connected" ? "is-ok" : gsc.state === "error" ? "is-bad" : "" %>" title="État de l'API Search Console de ce site">API : <%= gsc.label %></span></header>
+      <form method="post" action="<%= space.base %>/seo/positions/import" class="sx-body sx-grid" data-busy-form>
+        <div class="sx-field sx-col-12"><label for="ps-csv">Contenu du fichier</label>
+          <label class="sx-drop" data-sx-drop data-target="ps-csv"><%- icon("upload", { size: 20 }) %><span><strong>Choisir le fichier .csv</strong> ou le déposer ici</span><span class="sx-drop-name" data-sx-drop-name></span><input type="file" accept=".csv,text/csv,text/plain"></label>
+          <textarea id="ps-csv" name="csv" rows="4" spellcheck="false" maxlength="400000" class="sx-code" placeholder="Ou collez ici le contenu du fichier (première ligne : en-têtes)"></textarea></div>
+        <div class="sx-field sx-col-4"><label for="ps-idate">Fin de la période exportée</label><input id="ps-idate" type="date" name="date"><p class="sx-hint">Vide = aujourd'hui.</p></div>
+        <div class="sx-col-12 sx-actions"><button type="submit" class="btn btn-primary btn-sm">Importer</button></div>
       </form>
-    </section>
-    <section class="mk-panel mk-seo-appear" aria-labelledby="ps-imp"><h2 id="ps-imp">Importer un export Search Console</h2>
-      <form method="post" action="<%= space.base %>/seo/positions/import" class="mk-form" data-busy-form>
-        <div class="field-group"><label for="ps-csv">Contenu du fichier « Requêtes.csv »</label><textarea id="ps-csv" name="csv" rows="5" spellcheck="false" maxlength="400000"></textarea></div>
-        <div class="field-group"><label for="ps-idate">Date de fin de la période exportée (vide = aujourd'hui)</label><input id="ps-idate" type="date" name="date"></div>
-        <div class="mk-actions"><button type="submit" class="btn btn-primary btn-sm">Importer</button></div>
-      </form>
-      <% if (gsc.state === "connected") { %><form method="post" action="<%= space.base %>/seo/positions/api" data-busy-form><div class="mk-actions"><button type="submit" class="btn btn-outline btn-sm">Relever les requêtes depuis l'API Search Console (28 derniers jours)</button></div></form>
-      <% } else { %><p class="field-hint">API Search Console : <%= gsc.label %>.</p><% } %>
+      <% if (gsc.state === "connected") { %><form method="post" action="<%= space.base %>/seo/positions/api" data-busy-form class="sx-body" style="padding-top:0;border-top:1px solid var(--mk-border,#e3eaef);margin-top:4px"><div class="sx-actions"><button type="submit" class="btn btn-outline btn-sm">Relever les requêtes depuis l'API (28 derniers jours)</button></div></form><% } %>
     </section>
     <% } %>
+    </div>
 <%- include("../partials/bottom") %>
