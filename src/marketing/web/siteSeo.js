@@ -266,7 +266,7 @@ module.exports = () => {
   router.get(`${P}/redirections`, need("redirects.view"), (req, res) => {
     const space = req.seoSpace;
     const q = redirects.queryForSite(space.siteId, { q: String(req.query.q || ""), page: Number(req.query.page) || 1, perPage: 25 });
-    res.render("marketing/site-seo", { active: "redirections", title: "Redirections du site", mode: "redirects", space, note: note(space), q, search: String(req.query.q || ""),
+    res.render("marketing/site-seo", { active: "redirections", title: "Redirections du site", mode: "redirects", rdJs: true, space, note: note(space), q, search: String(req.query.q || ""),
       can: { create: req.mk.can("redirects.create") && writable(space), edit: req.mk.can("redirects.edit") && writable(space), delete: req.mk.can("redirects.delete") && writable(space), external: req.mk.can("redirects.external") },
       prefill: String(req.query.source || "").slice(0, 300), query: req.query });
   });

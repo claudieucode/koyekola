@@ -38,33 +38,48 @@
     </tbody></table></div><% } %>
 
 <% } else { %>
+<div class="rd-stack">
     <% if (can.create) { %>
-    <form id="nouvelle" method="post" action="<%= space.base %>/redirections" class="mk-form mk-cms-create">
-      <div class="field-group"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
-      <div class="field-group"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" placeholder="/nouvelle-page (vide pour un 410)"></div>
-      <div class="field-group"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="303">303 — temporaire, vers une consultation (GET)</option><option value="410">410 — supprimée</option><option value="451">451 — indisponible (légal)</option></select></div>
-      <div class="field-group"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="contains">Contient un texte</option><option value="endswith">Se termine par un texte</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
-      <div class="field-group"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200"></div>
-      <button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button>
-    </form>
+    <section class="rd-panel"><form id="nouvelle" method="post" action="<%= space.base %>/redirections">
+      <div class="rd-panel-head"><div><h2>Ajouter une redirection</h2><p>Envoie les visiteurs et les moteurs de recherche d'une ancienne adresse vers la nouvelle. Laissez la nouvelle adresse vide pour indiquer que la page est supprimée (410).</p></div></div>
+      <div class="rd-panel-body"><div class="rd-grid">
+        <div class="field-group rd-c6"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
+        <div class="field-group rd-c6"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" placeholder="/nouvelle-page (vide pour un 410)"></div>
+        <div class="field-group rd-c4"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="303">303 — temporaire, vers une consultation (GET)</option><option value="410">410 — supprimée</option><option value="451">451 — indisponible (légal)</option></select></div>
+        <div class="field-group rd-c4"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="contains">Contient un texte</option><option value="endswith">Se termine par un texte</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
+        <div class="field-group rd-c4"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200" placeholder="Facultatif"></div>
+      </div></div>
+      <div class="rd-panel-foot"><button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button></div></form></section>
     <% } %>
-    <form method="get" class="dash-search" role="search"><label class="sr-only" for="rd-q">Rechercher</label><input type="search" id="rd-q" name="q" value="<%= search %>" placeholder="Rechercher"><button class="btn btn-outline btn-sm" type="submit">Rechercher</button></form>
-    <% if (!q.rows.length) { %><div class="mk-cms-soon"><p>Ce site n'a aucune redirection.</p></div><% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table" id="seo-redirects-table"><thead><tr><th>Ancienne adresse</th><th>Nouvelle adresse</th><th>Type</th><th>État</th><th>Visites</th><th></th></tr></thead><tbody>
-      <% q.rows.forEach((r) => { %><tr data-redirect="<%= r.id %>"><td><code><%= r.source_path %></code></td><td><code><%= r.target %></code></td><td><%= r.status %><% if (r.match_type && r.match_type !== "exact") { %> <small><%= r.match_type === "prefix" ? "préfixe" : "expression" %></small><% } %></td><td><%= r.enabled ? "Active" : "Désactivée" %></td><td><%= r.hits %></td>
-        <td><% if (can.edit) { %><details><summary>Modifier</summary>
-            <form method="post" action="<%= space.base %>/redirections/<%= r.id %>" class="mk-form">
-              <input type="text" name="source" value="<%= r.source_path %>" maxlength="300" required aria-label="Ancienne adresse"><input type="text" name="target" value="<%= r.target %>" maxlength="500" aria-label="Nouvelle adresse">
-              <select name="status" aria-label="Type"><option value="301" <%= r.status === 301 ? "selected" : "" %>>301</option><option value="302" <%= r.status === 302 ? "selected" : "" %>>302</option><option value="307" <%= r.status === 307 ? "selected" : "" %>>307</option><option value="308" <%= r.status === 308 ? "selected" : "" %>>308</option><option value="303" <%= r.status === 303 ? "selected" : "" %>>303</option><option value="410" <%= r.status === 410 ? "selected" : "" %>>410</option><option value="451" <%= r.status === 451 ? "selected" : "" %>>451</option></select>
-              <label><input type="checkbox" name="enabled" value="1" <%= r.enabled ? "checked" : "" %>> Active</label><input type="text" name="note" value="<%= r.note %>" maxlength="200" aria-label="Note">
-              <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></form></details><% } %>
-          <% if (can.delete) { %><form method="post" action="<%= space.base %>/redirections/<%= r.id %>/supprimer" data-confirm="Supprimer cette redirection ?"><button type="submit" class="btn btn-outline btn-sm">Supprimer</button></form><% } %></td></tr><% }) %>
+    <section class="rd-panel">
+      <div class="rd-panel-head"><div><h2>Redirections du site</h2><p><%= q.total %> redirection<%= q.total > 1 ? "s" : "" %> : seules les règles de ce site sont affichées.</p></div>
+        <div class="rd-panel-tools"><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/export.csv"><%- icon("download", { size: 15 }) %> Exporter (CSV)</a></div></div>
+      <form method="get" class="rd-panel-body rd-filters" role="search"><label class="sr-only" for="rd-q">Rechercher</label><input type="search" id="rd-q" name="q" value="<%= search %>" placeholder="Rechercher une adresse ou une note"><button class="btn btn-outline btn-sm" type="submit">Rechercher</button><% if (search) { %><a class="btn btn-ghost btn-sm" href="<%= space.base %>/redirections">Réinitialiser</a><% } %></form>
+    <% if (!q.rows.length) { %><div class="rd-empty"><strong><%= search ? "Aucun résultat" : "Aucune redirection" %></strong><p><%= search ? "Aucune redirection ne correspond à cette recherche." : "Ce site n'a aucune redirection." %><%= !search && can.create ? " Ajoutez-en une avec le formulaire ci-dessus." : "" %></p></div><% } else { %>
+    <div class="mk-table-wrap"><table class="mk-table mk-cms-table" id="seo-redirects-table"><caption class="sr-only">Redirections du site</caption><thead><tr><th scope="col">Ancienne adresse</th><th scope="col">Nouvelle adresse</th><th scope="col">Type</th><th scope="col">État</th><th scope="col" class="mk-num">Visites</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
+      <% q.rows.forEach((r) => { %><tr data-redirect="<%= r.id %>"><th scope="row"><code><%= r.source_path %></code></th><td><code><%= r.target || "—" %></code></td><td><%= r.status %><% if (r.match_type && r.match_type !== "exact") { %><span class="mk-sub"><%= r.match_type === "prefix" ? "préfixe" : "expression" %></span><% } %></td><td><span class="rd-chip <%= r.enabled ? "is-ok" : "" %>"><%= r.enabled ? "Active" : "Désactivée" %></span></td><td class="mk-num"><%= r.hits %></td>
+        <td class="mk-row-actions"><div class="mk-cms-rowbtns"><% if (can.edit) { %><details class="rd-edit"><summary class="btn btn-outline btn-sm">Modifier</summary>
+            <form method="post" action="<%= space.base %>/redirections/<%= r.id %>" class="rd-edit-form">
+              <div class="rd-panel-head"><div><h2>Modifier la redirection</h2><p><code><%= r.source_path %></code></p></div><button type="button" class="mk-dialog-close" data-rd-closedetails aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></div>
+              <div class="rd-panel-body"><div class="rd-grid">
+                <div class="field-group rd-c6"><label for="rd-e-s-<%= r.id %>">Ancienne adresse</label><input id="rd-e-s-<%= r.id %>" type="text" name="source" value="<%= r.source_path %>" maxlength="300" required></div>
+                <div class="field-group rd-c6"><label for="rd-e-t-<%= r.id %>">Nouvelle adresse</label><input id="rd-e-t-<%= r.id %>" type="text" name="target" value="<%= r.target %>" maxlength="500"></div>
+                <div class="field-group rd-c4"><label for="rd-e-y-<%= r.id %>">Type</label><select id="rd-e-y-<%= r.id %>" name="status"><option value="301" <%= r.status === 301 ? "selected" : "" %>>301</option><option value="302" <%= r.status === 302 ? "selected" : "" %>>302</option><option value="307" <%= r.status === 307 ? "selected" : "" %>>307</option><option value="308" <%= r.status === 308 ? "selected" : "" %>>308</option><option value="303" <%= r.status === 303 ? "selected" : "" %>>303</option><option value="410" <%= r.status === 410 ? "selected" : "" %>>410</option><option value="451" <%= r.status === 451 ? "selected" : "" %>>451</option></select></div>
+                <div class="field-group rd-c8"><label for="rd-e-n-<%= r.id %>">Note</label><input id="rd-e-n-<%= r.id %>" type="text" name="note" value="<%= r.note %>" maxlength="200"></div>
+                <label class="rd-confirm rd-c12"><input type="checkbox" name="enabled" value="1" <%= r.enabled ? "checked" : "" %>> Redirection active</label>
+              </div></div>
+              <div class="rd-panel-foot"><button type="button" class="btn btn-outline btn-sm" data-rd-closedetails>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Enregistrer</button></div></form></details><% } %>
+          <% if (can.delete) { %><form method="post" action="<%= space.base %>/redirections/<%= r.id %>/supprimer" data-confirm="Supprimer cette redirection ?"><button type="submit" class="btn btn-ghost btn-sm">Supprimer</button></form><% } %></div></td></tr><% }) %>
     </tbody></table></div>
-    <p class="mk-lead">Page <%= q.page %> / <%= q.pages %> · <%= q.total %> redirection(s).</p>
+    <nav class="mk-cms-pager" aria-label="Pagination"><span>Page <%= q.page %> / <%= q.pages %> · <%= q.total %> redirection(s).</span><% if (q.pages > 1) { %><span class="mk-cms-pager-nav"><% if (q.page > 1) { %><a class="btn btn-ghost btn-sm" href="?<%= search ? "q=" + encodeURIComponent(search) + "&" : "" %>page=<%= q.page - 1 %>">Précédent</a><% } %><% if (q.page < q.pages) { %><a class="btn btn-ghost btn-sm" href="?<%= search ? "q=" + encodeURIComponent(search) + "&" : "" %>page=<%= q.page + 1 %>">Suivant</a><% } %></span><% } %></nav>
     <% } %>
-    <p><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/export.csv">Exporter (CSV)</a></p>
+    </section>
     <% if (can.create) { %>
-    <form method="post" action="<%= space.base %>/redirections/import" class="mk-form"><div class="field-group"><label for="rd-csv">Importer (CSV : source, destination, type, note)</label><textarea id="rd-csv" name="csv" rows="4" maxlength="400000"></textarea></div><button type="submit" class="btn btn-outline btn-sm">Importer</button></form>
+    <section class="rd-panel"><form method="post" action="<%= space.base %>/redirections/import">
+      <div class="rd-panel-head"><div><h2>Importer des redirections</h2><p>Collez des lignes au format CSV : source, destination, type, note. Pour des fichiers (Rank Math, Yoast…) et un aperçu avant import, utilisez l'onglet « Importer / Exporter ».</p></div><div class="rd-panel-tools"><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/import-export">Aperçu avant import</a></div></div>
+      <div class="rd-panel-body"><div class="field-group"><label for="rd-csv">Importer (CSV : source, destination, type, note)</label><textarea id="rd-csv" class="rd-mono" name="csv" rows="5" maxlength="400000" placeholder="/ancienne-page,/nouvelle-page,301,Ma note"></textarea></div></div>
+      <div class="rd-panel-foot"><button type="submit" class="btn btn-primary btn-sm">Importer</button></div></form></section>
     <% } %>
+</div>
 <% } %>
 <%- include("partials/bottom") %>
