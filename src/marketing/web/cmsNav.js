@@ -70,11 +70,11 @@ const SECTIONS = [
     ],
   },
   {
-    key: "boutique", label: "Boutique", icon: "cart", items: [
+    key: "boutique", label: "Boutique", icon: "cart", single: true, items: [ // single : une seule entrée dans le menu principal ; les rubriques (commandes, clients, réglages…) sont dans la navigation secondaire de l'espace Boutique, leurs routes et droits restent résolvables (hidden)
       leaf("boutique", "Produits", `${BASE}/boutique`, { permission: "shop.read", primary: { label: "Nouveau produit", href: `${BASE}/boutique/produits/nouveau`, permission: "shop.write" } }),
-      leaf("boutique/commandes", "Commandes", `${BASE}/boutique/commandes`, { permission: "shop.read" }),
-      leaf("boutique/clients", "Clients", `${BASE}/boutique/clients`, { permission: "shop.read" }),
-      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/boutique/reglages`, { permission: "shop.read" }),
+      leaf("boutique/commandes", "Commandes", `${BASE}/boutique/commandes`, { permission: "shop.read", hidden: true }),
+      leaf("boutique/clients", "Clients", `${BASE}/boutique/clients`, { permission: "shop.read", hidden: true }),
+      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/boutique/reglages`, { permission: "shop.read", hidden: true }),
     ],
   },
   {
@@ -429,7 +429,7 @@ function marketingGroup(space) {
 
 // Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
 function projectItem(item, group, space) {
-  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
+  const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.hidden ? { hidden: true } : {}), ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
   // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
   if (space.principal && item.key === "apparence/theme-builder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };
@@ -457,7 +457,7 @@ function projectSections(space) {
     const items = s.items.map((i) => projectItem(i, s, space)).filter(Boolean);
     // « Composants » n'est plus affiché dans le menu (hidden) mais reste une entrée résolvable : sa route, son fil d'Ariane et ses droits sont inchangés ; « Pages » reste un groupe déployable même avec une seule entrée
     if (s.key === "pages") items.push({ ...siteModule(space, "composants"), section: "pages", hidden: true });
-    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items, ...(s.group ? { group: true } : {}) });
+    if (items.length) out.push({ key: s.key, label: s.label, icon: s.icon, items, ...(s.group ? { group: true } : {}), ...(s.single ? { single: true } : {}) });
   }
   return out;
 }
@@ -477,8 +477,10 @@ function buildSiteNav({ can, active, space }) {
   if (!current) return null;
   const sections = [];
   for (const sec of all) {
-    const items = sec.items.filter((i) => !i.hidden).filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
+    let items = sec.items.filter((i) => !i.hidden).filter((i) => (i.anyOf ? i.anyOf.some((p) => can(p)) : can(i.permission))).map((i) => ({ key: i.key, label: i.label, href: i.href, status: i.status, current: i.key === current.key, ...(i.disabled ? { disabled: true, phase: i.phase } : {}) }));
     if (!items.length) continue;
+    // Entrée unique (Boutique) : un seul lien, au libellé de la rubrique, actif sur tous ses écrans (y compris ceux masqués du menu)
+    if (sec.single) items = [{ ...items[0], label: sec.label, current: sec.items.some((i) => i.key === current.key) }];
     sections.push({ key: sec.key, label: sec.label, icon: sec.icon, items, flat: items.length === 1 && !sec.group, open: items.some((i) => i.current) || sec.items.some((i) => i.hidden && i.key === current.key), soon: items.length === 1 && items[0].status === "preview" });
   }
   const sec = all.find((x) => x.key === current.section);
