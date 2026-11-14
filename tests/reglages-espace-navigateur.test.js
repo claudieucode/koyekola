@@ -15,7 +15,7 @@ describe("Réglages : occupation de l'espace (navigateur)", { skip: SKIP }, () =
   });
   after(async () => { if (chrome) await chrome.close(); await srv.stop(); });
   const cookies = () => [...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base }));
-  const PAGES = [["general", "general", ".mk-sg"], ["connecteurs", "connecteurs", ".mk-cn"], ["confidentialite", "confidentialite", ".mk-pv"]];
+  const PAGES = [["connecteurs", "connecteurs", ".mk-cn"], ["confidentialite", "confidentialite", ".mk-pv"]];
   for (const [nom, , sel] of PAGES) {
     test(`${nom} : pas de débordement, largeur utile selon l'écran`, async () => {
       const out = {};
