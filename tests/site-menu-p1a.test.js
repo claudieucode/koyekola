@@ -37,6 +37,7 @@ before(async () => {
   db = srv.db();
   orgId = one("SELECT id FROM mk_organizations").id;
   A = mkSite("Site Alpha"); B = mkSite("Site Beta"); C = mkSite("Site Charlie", "archived");
+  db.prepare("INSERT INTO mk_site_modules (site_id, organization_id, module, enabled) VALUES (?, 1, 'commerce', 1)").run(A); // le menu « Boutique » d'un site vient de l'extension Commerce, activée pour ce site
   for (const [k, id] of Object.entries({ A, B, null: null })) {
     const tag = k === "null" ? "Principal" : k === "A" ? "Alpha" : "Beta";
     lists[k] = mkList(id, `Liste ${tag}`); ids[`seg${k}`] = mkSegment(id, `Segment ${tag}`); ids[`tpl${k}`] = mkTemplate(id, `Modele ${tag}`);
@@ -56,7 +57,7 @@ describe("1 — le menu d'un site est la projection du registre", () => {
     const labels = topLabels(html);
     const expected = ["Tableau de bord", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Marketing du site", "Outils", "Paramètres"];
     assert.deepEqual(labels, expected);
-    assert.equal(nav.SECTIONS.length, 15, "le registre compte 15 groupes (dont « Mes sites », gestionnaire central, et « Extensions », fonction centrale)");
+    assert.equal(nav.SECTIONS.length, 16, "le registre compte 16 groupes (dont « Mes sites », gestionnaire central, « Extensions », fonction centrale, et « Formation », menu de l'extension LMS absent d'un site où elle n'est pas activée)");
   });
   test("C1 : une entrée pas encore ouverte est visible, grisée « Bientôt », SANS lien ; son ancienne adresse n'affiche ni donnée ni action", async () => {
     const html = (await boss.get(`${SP}/${A}/tableau-de-bord`)).text;

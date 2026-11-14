@@ -26,8 +26,8 @@ describe("rendu public", () => {
     const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${site}/reglages.json`)).text);
     await boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${H}` } } } });
     const base = `/marketing/site-web/sites/${site}/boutique`;
-    await boss.post(`${base}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "W" });
     await boss.post(`/marketing/site-web/sites/${site}/modules/commerce`, { etat: "activer" });
+    await boss.post(`${base}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "W" });
     await boss.post(`${base}/produits`, { name: "Vase <b>bleu</b>", type: "simple", status: "published", price: "30,00", sale_price: "24,00", sku: "VASE-1", short_description: "Court & joli", description: "Ligne 1\n\nLigne <script>2</script>", requires_shipping: "0" });
   });
   after(async () => { db.close(); await srv.stop(); });

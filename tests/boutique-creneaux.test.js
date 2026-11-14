@@ -29,6 +29,7 @@ before(async () => {
   const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${siteId}/reglages.json`)).text);
   assert.equal((await boss.request(`/marketing/site-web/sites/${siteId}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${HOST}` } } } })).status, 200);
   SA = `/marketing/site-web/sites/${siteId}/boutique`;
+  assert.equal((await boss.post(`/marketing/site-web/sites/${siteId}/modules/commerce`, { etat: "activer" })).status, 302);
   assert.equal((await boss.post(`${SA}/livraison/zones`, { name: "France", countries: "FR" })).status, 302);
   const zid = one("SELECT id FROM mk_shop_shipping_zones WHERE site_id = ?", siteId).id;
   assert.equal((await boss.post(`${SA}/livraison/zones/${zid}/methodes`, { name: "Colis standard", kind: "flat", cost: "5,90" })).status, 302);
@@ -38,7 +39,6 @@ before(async () => {
   assert.equal(one("SELECT requires_slot FROM mk_shop_shipping_methods WHERE id = ?", coldId).requires_slot, 1);
   assert.equal(one("SELECT requires_slot FROM mk_shop_shipping_methods WHERE id = ?", plainId).requires_slot, 0);
   assert.equal((await boss.post(`${SA}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "CRN", manual_instructions: "Virement" })).status, 302);
-  assert.equal((await boss.post(`/marketing/site-web/sites/${siteId}/modules/commerce`, { etat: "activer" })).status, 302);
   assert.equal((await boss.post(`${SA}/produits`, { name: "Saumon fumé", type: "simple", status: "published", price: "30,00", manage_stock: "1", stock_qty: "100", requires_shipping: "1" })).status, 302);
   product = one("SELECT id, slug FROM mk_shop_products WHERE site_id = ? AND name = ?", siteId, "Saumon fumé");
   s = { db, organizationId: one("SELECT organization_id AS o FROM mk_shop_shipping_zones WHERE site_id = ?", siteId).o, siteId };

@@ -10,7 +10,7 @@ const nav = require("../src/marketing/web/cmsNav");
 describe("entrées fermées du menu d'un site : preuves", () => {
   let srv, boss, adminA, A, db;
   const SP = "/marketing/site-web/sites";
-  const space = () => ({ siteId: A, principal: false, base: `${SP}/${A}`, name: "S", listHref: `${nav.BASE}/sites`, limited: false });
+  const space = () => ({ siteId: A, principal: false, base: `${SP}/${A}`, name: "S", listHref: `${nav.BASE}/sites`, limited: false, extensions: new Set(["commerce", "lms"]) });
   const closed = () => nav.projectSections(space()).flatMap((g) => g.items.map((i) => ({ group: g.label, ...i }))).filter((i) => i.disabled && nav.ALL.some((r) => r.key === i.key));
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
@@ -24,7 +24,7 @@ describe("entrées fermées du menu d'un site : preuves", () => {
     const list = closed(); const by = {}; for (const i of list) by[i.group] = (by[i.group] || 0) + 1;
     assert.equal(list.length, 2);
     assert.deepEqual(by, { Redirections: 2 });
-    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 82); // 75 + 4 écrans SEO du lot 2 + écrans ajoutés depuis ; En-tête et Pied de page ne sont plus dans le menu d'un site (Theme Builder)
+    assert.equal(nav.projectSections(space()).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key)).length, 83); // 82 + « Mes formations » (extension LMS) ; 75 + 4 écrans SEO du lot 2 + écrans ajoutés depuis ; En-tête et Pied de page ne sont plus dans le menu d'un site (Theme Builder)
   });
   test("chaque entrée fermée : grisée « Bientôt » sans lien dans le menu rendu (équipe et administrateur du site), avec la permission du registre ; aucune adresse directe ne prétend fonctionner", async () => {
     const inventory = [];

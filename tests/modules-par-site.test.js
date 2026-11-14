@@ -164,7 +164,7 @@ describe("de bout en bout (serveur réel) : activation réservée à l'équipe, 
 
   test("l'équipe (Super administrateur, administrateur d'organisation) ouvre l'écran, active et désactive ; les six modules apparaissent désactivés par défaut", async () => {
     const page = await boss.get(M(A)); assert.equal(page.status, 200);
-    for (const l of ["SMS", "Intelligence artificielle", "Réseaux sociaux", "Score des contacts", "Commerce", "Formations"]) assert.match(page.text, new RegExp(l));
+    for (const l of ["SMS", "Intelligence artificielle", "Réseaux sociaux", "Score des contacts", "Kolakisa Commerce", "Kolakisa LMS"]) assert.match(page.text, new RegExp(l));
     assert.equal((page.text.match(/Désactivé/g) || []).length >= 6, true);
     assert.equal((await boss.post(`${M(A)}/sms`, { etat: "activer" })).status, 302); assert.equal(enabledNow(A, "sms"), true);
     assert.equal((await orgAdmin.get(M(A))).status, 200, "administrateur d'organisation : permission sites.modules");
