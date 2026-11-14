@@ -218,4 +218,63 @@ function deleteLesson(db, siteId, id) {
   files.forEach((f) => removeUploadedFile(f, "leçon supprimée (CMS)")); touch(db, l.course_id); return l.course_id;
 }
 
-module.exports = { scope, courseOf, sectionOf, lessonOf, curriculum, createCourse, updateCourse, duplicateCourse, deleteCourse, addSection, renameSection, moveSection, deleteSection, addLesson, updateLesson, moveLesson, deleteLesson, cleanTitle, LEVELS };
+// ---------- Quiz d'une leçon (un quiz par leçon, QCM à une bonne réponse) ----------
+const hasQuizCols = (db) => { try { return db.prepare("PRAGMA table_info(quizzes)").all().some((c) => c.name === "max_attempts"); } catch { return false; } };
+function quizOfLesson(db, siteId, lessonId) {
+  const l = lessonOf(db, siteId, lessonId); if (!l || !tableExists(db, "quizzes")) return null;
+  const quiz = db.prepare("SELECT * FROM quizzes WHERE lesson_id = ?").get(lessonId); if (!quiz) return null;
+  const questions = db.prepare("SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY position, id").all(quiz.id);
+  const opts = db.prepare("SELECT * FROM quiz_options WHERE question_id = ? ORDER BY position, id");
+  for (const q of questions) q.options = opts.all(q.id);
+  let stats = { attempts: 0, passed: 0, avg: null };
+  try { const r = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(passed), 0) p, AVG(score_percentage) a FROM quiz_attempts WHERE quiz_id = ?").get(quiz.id); stats = { attempts: r.n, passed: r.p, avg: r.a === null ? null : Math.round(r.a) }; } catch { /* pas de tentatives */ }
+  return { ...quiz, questions, stats };
+}
+function quizById(db, siteId, quizId) {
+  if (!Number.isInteger(quizId) || !tableExists(db, "quizzes")) return null;
+  const sc = scope(db, siteId);
+  return db.prepare(`SELECT quizzes.*, sections.course_id FROM quizzes JOIN lessons ON lessons.id = quizzes.lesson_id JOIN sections ON sections.id = lessons.section_id JOIN courses ON courses.id = sections.course_id WHERE quizzes.id = ? AND ${sc.sql}`).get(quizId, ...sc.params) || null;
+}
+function createQuiz(db, siteId, lessonId) {
+  const l = lessonOf(db, siteId, lessonId); if (!l) return null;
+  if (!db.prepare("SELECT 1 FROM quizzes WHERE lesson_id = ?").get(lessonId)) db.prepare("INSERT INTO quizzes (lesson_id, title, pass_percentage) VALUES (?, 'Quiz', 70)").run(lessonId);
+  touch(db, l.course_id); return l;
+}
+function updateQuiz(db, siteId, quizId, input) {
+  const q = quizById(db, siteId, quizId); if (!q) return null;
+  const pass = Math.min(100, Math.max(0, parseInt(input.pass_percentage, 10) || 70));
+  const title = cleanTitle(input.title) || "Quiz";
+  if (hasQuizCols(db)) {
+    const raw = String(input.max_attempts || "").trim(), max = /^\d{1,3}$/.test(raw) && Number(raw) >= 1 && Number(raw) <= 100 ? Number(raw) : null;
+    db.prepare("UPDATE quizzes SET title = ?, pass_percentage = ?, max_attempts = ? WHERE id = ?").run(title, pass, max, quizId);
+  } else db.prepare("UPDATE quizzes SET title = ?, pass_percentage = ? WHERE id = ?").run(title, pass, quizId);
+  touch(db, q.course_id); return q;
+}
+function deleteQuiz(db, siteId, quizId) {
+  const q = quizById(db, siteId, quizId); if (!q) return null;
+  db.prepare("DELETE FROM quizzes WHERE id = ?").run(quizId); touch(db, q.course_id); return q;
+}
+// Question à 2 à 4 réponses dont une seule est correcte (la numéro `correct`, de 1 à 4, doit être renseignée).
+function addQuestion(db, siteId, quizId, input) {
+  const q = quizById(db, siteId, quizId); if (!q) return null;
+  const question = text(input.question, 500).trim();
+  const options = [1, 2, 3, 4].map((i) => text(input[`option_${i}`], 300).trim());
+  const correct = parseInt(input.correct, 10);
+  if (!question) throw err("La question est obligatoire.");
+  if (options.filter(Boolean).length < 2) throw err("Renseignez au moins deux réponses.");
+  if (!(correct >= 1 && correct <= 4) || !options[correct - 1]) throw err("Indiquez la bonne réponse parmi les réponses renseignées.");
+  tx(db, () => {
+    const pos = db.prepare("SELECT COALESCE(MAX(position), -1) m FROM quiz_questions WHERE quiz_id = ?").get(quizId).m + 1;
+    const qid = Number(db.prepare("INSERT INTO quiz_questions (quiz_id, question, position) VALUES (?, ?, ?)").run(quizId, question, pos).lastInsertRowid);
+    options.forEach((t, i) => { if (t) db.prepare("INSERT INTO quiz_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)").run(qid, t, i + 1 === correct ? 1 : 0, i); });
+  });
+  touch(db, q.course_id); return q;
+}
+function deleteQuestion(db, siteId, questionId) {
+  if (!Number.isInteger(questionId) || !tableExists(db, "quiz_questions")) return null;
+  const row = db.prepare("SELECT quiz_id FROM quiz_questions WHERE id = ?").get(questionId); if (!row) return null;
+  const q = quizById(db, siteId, row.quiz_id); if (!q) return null;
+  db.prepare("DELETE FROM quiz_questions WHERE id = ?").run(questionId); touch(db, q.course_id); return q;
+}
+
+module.exports = { quizOfLesson, quizById, createQuiz, updateQuiz, deleteQuiz, addQuestion, deleteQuestion, scope, courseOf, sectionOf, lessonOf, curriculum, createCourse, updateCourse, duplicateCourse, deleteCourse, addSection, renameSection, moveSection, deleteSection, addLesson, updateLesson, moveLesson, deleteLesson, cleanTitle, LEVELS };

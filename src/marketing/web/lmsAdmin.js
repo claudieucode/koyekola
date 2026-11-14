@@ -9,6 +9,8 @@ const siteModules = require("../siteModules");
 const data = require("../../services/lmsAdminData");
 const builder = require("../../services/lmsBuilderData");
 const { formatPrice, formatAmount } = require("../../utils/format");
+const { paidCheckoutOpen } = require("../../services/payment");
+const { stripeEnabled } = require("../../services/payments");
 
 module.exports = () => {
   const router = express.Router({ mergeParams: true });
@@ -66,6 +68,11 @@ module.exports = () => {
     const courseId = req.query.formation ? Number.parseInt(req.query.formation, 10) : undefined;
     const list = data.listStudents(s.db, s.siteId, { q: req.query.q, courseId, page: req.query.page });
     render(req, res, "etudiants", "Étudiants", "etudiants", { list, choices: data.siteCourseChoices(s.db, s.siteId), courseId });
+  });
+  // Publication et paiement : état RÉEL (aucun réglage factice) — l'ouverture du paiement dépend de la plateforme, pas du site.
+  route("get", "/parametres", (req, res, s) => {
+    const ov = data.overview(s.db, s.siteId);
+    render(req, res, "parametres", "Publication et paiement", "parametres", { ov, checkoutOpen: paidCheckoutOpen(), stripeOn: stripeEnabled(), version: require("../../extensions/manifests/lms").version });
   });
   route("get", "/certificats", (req, res, s) => {
     render(req, res, "certificats", "Certificats", "certificats", { list: data.listCertificates(s.db, s.siteId, { q: req.query.q, page: req.query.page }) });
@@ -132,7 +139,7 @@ module.exports = () => {
   route("get", "/:cid(\\d+)/lecons/:lid(\\d+)", (req, res, s) => {
     const course = builder.courseOf(s.db, s.siteId, Number(req.params.cid)), lesson = builder.lessonOf(s.db, s.siteId, Number(req.params.lid));
     if (!course || !lesson || lesson.course_id !== course.id) return notFound(req, res);
-    render(req, res, "lecon", lesson.title, "liste", { course, sections: builder.curriculum(s.db, course.id), lesson });
+    render(req, res, "lecon", lesson.title, "liste", { course, sections: builder.curriculum(s.db, course.id), lesson, quiz: builder.quizOfLesson(s.db, s.siteId, lesson.id) });
   });
   route("post", "/lecons/:lid(\\d+)", (req, res, s) => {
     const id = Number(req.params.lid), c = builder.updateLesson(s.db, s.siteId, id, req.body); if (!c) return notFound(req, res);
@@ -140,6 +147,20 @@ module.exports = () => {
   }, WR);
   route("post", "/lecons/:lid(\\d+)/deplacer", (req, res, s) => { const c = builder.moveLesson(s.db, s.siteId, Number(req.params.lid), req.body.direction); return c ? done(req, res, c) : notFound(req, res); }, WR);
   route("post", "/lecons/:lid(\\d+)/supprimer", (req, res, s) => { const c = builder.deleteLesson(s.db, s.siteId, Number(req.params.lid)); return c ? done(req, res, c, "Leçon supprimée.") : notFound(req, res); }, WR);
+
+  // quiz de la leçon
+  const lessonUrl = (req, q) => `${req.lmsSpace.base}/formations/${q.course_id}/lecons/${q.lesson_id}`;
+  route("post", "/lecons/:lid(\\d+)/quiz", (req, res, s) => {
+    const l = builder.createQuiz(s.db, s.siteId, Number(req.params.lid)); if (!l) return notFound(req, res);
+    flashOk(req, "Quiz créé. Ajoutez vos questions."); res.redirect(`${req.lmsSpace.base}/formations/${l.course_id}/lecons/${l.id}#quiz`);
+  }, WR);
+  route("post", "/quiz/:qid(\\d+)", (req, res, s) => { const q = builder.updateQuiz(s.db, s.siteId, Number(req.params.qid), req.body); if (!q) return notFound(req, res); flashOk(req, "Réglages du quiz enregistrés."); res.redirect(lessonUrl(req, q) + "#quiz"); }, WR);
+  route("post", "/quiz/:qid(\\d+)/supprimer", (req, res, s) => { const q = builder.deleteQuiz(s.db, s.siteId, Number(req.params.qid)); if (!q) return notFound(req, res); flashOk(req, "Quiz supprimé."); res.redirect(lessonUrl(req, q)); }, WR);
+  route("post", "/quiz/:qid(\\d+)/questions", (req, res, s) => {
+    const q = builder.addQuestion(s.db, s.siteId, Number(req.params.qid), req.body); if (!q) return notFound(req, res);
+    flashOk(req, "Question ajoutée."); res.redirect(lessonUrl(req, q) + "#quiz");
+  }, WR);
+  route("post", "/questions/:id(\\d+)/supprimer", (req, res, s) => { const q = builder.deleteQuestion(s.db, s.siteId, Number(req.params.id)); if (!q) return notFound(req, res); flashOk(req, "Question supprimée."); res.redirect(lessonUrl(req, q) + "#quiz"); }, WR);
 
   return router;
 };
