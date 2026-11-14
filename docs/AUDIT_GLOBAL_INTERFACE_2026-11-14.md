@@ -28,3 +28,11 @@ Suivi honnête : ce qui est corrigé (avec preuve), ce qui reste à faire. Les c
 ## Préexistant (non causé par ce lot)
 
 - `cms-01-navigation`, `site-menu-c1`, `site-menu-p1a`, `menu-site-inventaire`, `extensions-performance` (temps de chargement) et plusieurs tests navigateur de Confidentialité échouent par saturation de la machine de test, sur `main` aussi.
+
+## Complément (même jour)
+
+- Panneaux `.mk-panel` : marge intérieure 20/24 px (au lieu de 16/18) — `kola-ui.css`.
+- Boutons d'enregistrement : marge de 16/24 px avant le bouton qui suit un champ ou un panneau ; formulaires en ligne d'un panneau alignés à gauche, champ large (320–560 px), bouton à hauteur de champ (ex. « Nouvelle campagne SMS », « Envoyer le test »).
+- Domaines : bouton « Ajouter » aligné sur le champ (marge basse du groupe de champ neutralisée).
+- Vérifié en capture : Réglages d'envoi (le fuseau horaire a déjà sa propre section, avec titre, description, champ et bouton), Domaines, Conformité.
+- Redirections : détection de boucles/chaînes déjà couverte par `src/seo/rules.js` et ses tests (non modifiée).
