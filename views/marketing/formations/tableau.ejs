@@ -29,7 +29,7 @@
     <p class="lm-more"><a href="<%= base %>/liste">Toutes les formations</a></p></section>
 </div>
 <section class="mk-panel"><h2>Modifiées récemment</h2>
-  <% if (!edited.length) { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez votre première formation : elle apparaîtra ici et dans le catalogue du site une fois publiée.", action: canWrite ? { href: "/formateur/cours/nouveau", label: "Nouvelle formation" } : null }) %>
+  <% if (!edited.length) { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez votre première formation : elle apparaîtra ici et dans le catalogue du site une fois publiée.", action: canWrite ? { href: base + "/nouvelle", label: "Nouvelle formation" } : null }) %>
   <% } else { %><ul class="lm-list"><% edited.forEach((c) => { %><li><span><strong><%= c.title %></strong><span class="mk-sub"><%= c.published ? "En ligne" : "Brouillon" %></span></span><span class="mk-sub"><%= String(c.updated_at).slice(0, 10).split("-").reverse().join("/") %></span></li><% }) %></ul><% } %>
 </section>
 <%- include("../partials/bottom") %>

@@ -9,7 +9,7 @@
   </form>
   <% if (!list.items.length) { %>
     <% if (query.q || query.statut) { %><%- include("_vide", { titre: "Aucune formation ne correspond", texte: "Essayez un autre titre ou retirez le filtre de statut.", action: { href: base + "/liste", label: "Voir toutes les formations" } }) %>
-    <% } else { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez une formation pour la proposer à vos étudiants.", action: canWrite ? { href: "/formateur/cours/nouveau", label: "Nouvelle formation" } : null }) %><% } %>
+    <% } else { %><%- include("_vide", { titre: "Aucune formation sur ce site", texte: "Créez une formation pour la proposer à vos étudiants.", action: canWrite ? { href: base + "/nouvelle", label: "Nouvelle formation" } : null }) %><% } %>
   <% } else { %>
   <div class="mk-table-wrap"><table class="mk-table">
     <caption class="sr-only">Formations du site</caption>
@@ -23,7 +23,7 @@
         <td><span class="<%= c.published ? "mk-status mk-status-ok" : "mk-status mk-status-warn" %>"><%= c.published ? "En ligne" : "Brouillon" %></span></td>
         <td class="mk-num"><%= String(c.updated_at).slice(2, 10).split("-").reverse().join("/") %></td>
         <td class="lm-actions"><div class="lm-act">
-          <% if (canWrite) { %><a class="btn btn-ghost btn-sm" href="/formateur/cours/<%= c.id %>/modifier">Modifier</a>
+          <% if (canWrite) { %><a class="btn btn-ghost btn-sm" href="<%= base %>/<%= c.id %>">Modifier</a>
           <form method="post" action="<%= base %>/<%= c.id %>/<%= c.published ? "depublier" : "publier" %>" class="mk-inline"><button class="btn btn-outline btn-sm" type="submit"><%= c.published ? "Dépublier" : "Publier" %></button></form><% } %>
         </div></td>
       </tr>
