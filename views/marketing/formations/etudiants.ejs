@@ -1,0 +1,30 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Étudiants" }) %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" role="search" aria-label="Filtrer les étudiants">
+    <div class="field-group"><label for="e-q">Rechercher</label><input type="search" id="e-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Nom ou e-mail"></div>
+    <div class="field-group"><label for="e-f">Formation</label><select id="e-f" name="formation"><option value="">Toutes</option><% choices.forEach((c) => { %><option value="<%= c.id %>"<%= courseId === c.id ? " selected" : "" %>><%= c.title %></option><% }) %></select></div>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+  </form>
+  <% if (!list.items.length) { %>
+    <%- include("_vide", { titre: (query.q || courseId) ? "Aucun étudiant ne correspond" : "Aucun étudiant inscrit", texte: (query.q || courseId) ? "Essayez une autre recherche ou retirez le filtre de formation." : "Les étudiants apparaissent ici dès leur première inscription à l'une de vos formations.", action: (query.q || courseId) ? { href: base + "/etudiants", label: "Voir tous les étudiants" } : null }) %>
+  <% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table">
+    <caption class="sr-only">Étudiants inscrits</caption>
+    <thead><tr><th scope="col">Étudiant</th><th scope="col">Formation</th><th scope="col">Inscrit le</th><th scope="col">Progression</th><th scope="col">Activité</th><th scope="col">Statut</th></tr></thead>
+    <tbody>
+    <% list.items.forEach((r) => { const done = r.lessons > 0 && r.done >= r.lessons; const state = done ? ["Terminée", "mk-status mk-status-ok"] : r.done > 0 ? ["En cours", "mk-status"] : ["À démarrer", "mk-status mk-status-warn"]; %>
+      <tr>
+        <th scope="row"><%= r.username %><span class="mk-sub"><%= r.email %></span></th>
+        <td><%= r.title %></td>
+        <td class="mk-num"><%= String(r.created_at).slice(0, 10).split("-").reverse().join("/") %></td>
+        <td><span class="lm-prog"><span class="lm-meter" title="<%= r.done %> sur <%= r.lessons %> leçons"><span style="width:<%= r.progress %>%"></span></span><span class="mk-num"><%= r.progress %> %</span></span></td>
+        <td class="mk-num"><%= r.last_activity ? String(r.last_activity).slice(0, 10).split("-").reverse().join("/") : "—" %></td>
+        <td><span class="<%= state[1] %>"><%= state[0] %></span></td>
+      </tr>
+    <% }) %>
+    </tbody></table></div>
+  <%- include("_pager", { list, nom: "inscriptions" }) %>
+  <% } %>
+</section>
+<%- include("../partials/bottom") %>

@@ -90,7 +90,8 @@ describe("service : désactivé par défaut, équipe seulement, données conserv
     const cases = { "/sms": "sms", "/sms/campagnes/3": "sms", "/sms/reglages": "sms", "/contacts/5/sms/consentement": "sms", "/reseaux": "social", "/reseaux/reglages": "social", "/score": "scoring", "/score/regles": "scoring", "/ia": "ai", "/ia/etat": "ai", "/revenus": "commerce" };
     for (const [p, m] of Object.entries(cases)) assert.equal(modules.moduleOfPath(p), m, p);
     for (const p of ["/s/abc", "/go/abc", "/contacts", "/contacts/5", "/formulaires", "/pages", "/sondages", "/smsx", "/revenusx", "/"]) assert.equal(modules.moduleOfPath(p), null, p);
-    assert.deepEqual(Object.keys(modules.ROUTES).sort(), ["ai", "commerce", "scoring", "sms", "social"], "lms : écrans hors de ce routeur, gardés par leurs propres routes");
+    assert.deepEqual(Object.keys(modules.ROUTES).sort(), ["ai", "commerce", "lms", "scoring", "sms", "social"], "lms : l'espace Formations intégré au CMS (lmsAdmin.js) déclare ses écrans d'administration ; le moteur public et /formateur restent gardés par leurs propres routes");
+    assert.equal(modules.moduleOfPath("/formations/liste"), "lms"); assert.equal(modules.moduleOfPath("/site-web/formations"), "lms"); assert.equal(modules.moduleOfPath("/formateur"), null);
   });
 });
 
