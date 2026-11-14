@@ -39,6 +39,7 @@ describe("Extensions : serveur réel, trois sites indépendants", () => {
     return boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: url } }, revision: cur.revision }, headers: ORIGIN() });
   };
   const space = (site) => `/marketing/site-web/sites/${site}`;
+  const mkLater = async () => Number((await boss.post("/marketing/site-web/sites", { name: "Site Delta" })).location.match(/sites\/(\d+)/)[1]);
 
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
@@ -153,6 +154,26 @@ describe("Extensions : serveur réel, trois sites indépendants", () => {
     const rows = onlyB.text.slice(onlyB.text.indexOf("<tbody>"), onlyB.text.indexOf("</tbody>")); assert.match(rows, /Site Bravo/); assert.doesNotMatch(rows, /Site Alpha/);
     assert.ok(one("SELECT COUNT(*) n FROM mk_extension_events WHERE action = 'enable' AND version = '1.0.0'").n >= 4);
     assert.throws(() => db.prepare("DELETE FROM mk_extension_events").run(), /lecture seule/);
+  });
+
+
+  test("Extensions est dans le menu de CHAQUE site (y compris créé plus tard), pour l'équipe ; l'écran du site ne montre et ne change que CE site ; accès limité refusé", async () => {
+    const D = await mkLater();
+    for (const site of [A, B, C, D]) {
+      const dash = (await boss.get(`${space(site)}/tableau-de-bord`)).text;
+      for (const slug of ["", "/activees", "/desactivees", "/gestion", "/historique"]) assert.ok(dash.includes(`href="${space(site)}/extensions${slug}"`), `site ${site} : rubrique ${slug || "Toutes"}`);
+    }
+    const page = await boss.get(`${space(D)}/extensions/gestion`); assert.equal(page.status, 200);
+    const main = page.text.slice(page.text.indexOf('class="mk-head"')); assert.doesNotMatch(main, /name="site"/, "aucun sélecteur de site dans l'écran"); assert.doesNotMatch(main, /Site Alpha|Site Bravo/, "seul ce site est concerné");
+    assert.equal((await boss.post(`${X}/sites/${D}/sms/activer`, { espace: "1" })).location, `${space(D)}/extensions/gestion?extension=sms`, "retour dans l'espace du site");
+    assert.equal(on(D, "sms"), true); assert.equal(on(A, "sms"), false); assert.equal(on(B, "sms"), false);
+    const act = await boss.get(`${space(D)}/extensions/activees`); assert.match(act.text, /<strong>SMS<\/strong>/);
+    assert.equal((await boss.get(`${space(A)}/extensions/activees`)).text.includes("<strong>SMS</strong>"), false, "A n'a pas SMS");
+    assert.equal((await boss.get(`${space(99999)}/extensions`)).status, 404);
+    const limited = await adminA.get(`${space(A)}/extensions`); assert.ok([302, 403].includes(limited.status), String(limited.status));
+    assert.doesNotMatch((await adminA.get(`${space(A)}/tableau-de-bord`)).text, /\/extensions/, "pas dans le menu d'une personne limitée au site");
+    const hist = await boss.get(`${space(D)}/extensions/historique`); const rows = hist.text.slice(hist.text.indexOf("<tbody>"), hist.text.indexOf("</tbody>"));
+    assert.match(rows, /Site Delta/); assert.doesNotMatch(rows, /Site Alpha|Site Bravo/, "historique limité à ce site");
   });
 
   test("ancien écran « Modules du site » : toujours fonctionnel, mêmes règles (même moteur)", async () => {

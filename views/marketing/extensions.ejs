@@ -19,7 +19,7 @@
 <% if (tab === "") { %>
   <div class="mk-table-wrap"><table class="mk-table mk-datatable">
     <caption class="sr-only">Catalogue des extensions disponibles</caption>
-    <thead><tr><th scope="col">Extension</th><th scope="col">Catégorie</th><th scope="col">Version</th><th scope="col">Éditeur</th><th scope="col" class="num">Sites actifs</th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
+    <thead><tr><th scope="col">Extension</th><th scope="col">Catégorie</th><th scope="col">Version</th><th scope="col">Éditeur</th><th scope="col" class="num"><%= inSite ? "Ce site" : "Sites actifs" %></th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
     <tbody>
       <% items.forEach((m) => { %>
         <tr>
@@ -27,7 +27,7 @@
           <td data-label="Catégorie"><%= m.categoryLabel %></td>
           <td data-label="Version"><%= m.version %></td>
           <td data-label="Éditeur"><%= m.publisher %></td>
-          <td class="num" data-label="Sites actifs"><%= m.activeSites %> / <%= totalSites %></td>
+          <td class="num" data-label="<%= inSite ? "Ce site" : "Sites actifs" %>"><% if (inSite) { %><%- stateChip(m) %><% } else { %><%= m.activeSites %> / <%= totalSites %><% } %></td>
           <td data-label="État"><%= [avail[m.availability], maint[m.maintenance]].filter(Boolean).join(" · ") || "Disponible" %></td>
           <td data-label="Action"><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Gérer</a></td>
         </tr>
@@ -35,7 +35,7 @@
     </tbody>
   </table></div>
 <% } else if (tab === "activees" || tab === "desactivees") { %>
-  <%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %>
+  <% if (!inSite) { %><%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %><% } %>
   <% const list = items.filter((m) => (tab === "activees") === m.enabled); %>
   <% if (!site) { %>
     <div class="mk-empty" role="status"><p><strong>Aucun site</strong></p><p class="mk-sub">Créez un site pour pouvoir y activer des extensions.</p><a class="btn btn-primary btn-sm" href="/marketing/site-web/sites#nouveau">Créer un site</a></div>
@@ -54,7 +54,7 @@
     </table></div>
   <% } %>
 <% } else if (tab === "gestion") { %>
-  <%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %>
+  <% if (!inSite) { %><%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %><% } %>
   <% if (!site) { %>
     <div class="mk-empty" role="status"><p><strong>Aucun site</strong></p><p class="mk-sub">Créez un site pour pouvoir y gérer des extensions.</p></div>
   <% } else { %>
@@ -67,8 +67,8 @@
           <ul><% confirmPlan.blockers.forEach((b) => { %><li><%= b.message %></li><% }) %></ul>
           <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: cm.id }) %>">Retour</a>
         <% } else { %>
-          <form method="post" action="<%= BASE %>/sites/<%= site.id %>/<%= cm.id %>/<%= enabling ? 'activer' : 'desactiver' %>" class="mk-inline">
-            <input type="hidden" name="confirmer" value="1">
+          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= cm.id %>/<%= enabling ? 'activer' : 'desactiver' %>" class="mk-inline">
+            <input type="hidden" name="confirmer" value="1"><% if (inSite) { %><input type="hidden" name="espace" value="1"><% } %>
             <button class="btn <%= enabling ? 'btn-primary' : 'btn-outline' %> btn-sm" type="submit"><%= enabling ? "Confirmer l'activation" : "Confirmer la désactivation" %></button>
             <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: cm.id }) %>">Annuler</a>
           </form>
@@ -109,7 +109,7 @@
         </dl>
         <% if (settings.length) { %>
           <h3>Paramètres pour « <%= site.name %> »</h3>
-          <form method="post" action="<%= BASE %>/sites/<%= site.id %>/<%= d.id %>/parametres">
+          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= d.id %>/parametres">
             <% settings.forEach((s) => { %>
               <p><label><%= s.label %>
                 <% if (s.type === "boolean") { %><input type="checkbox" name="<%= s.key %>" value="1" <%= s.value ? "checked" : "" %>>
