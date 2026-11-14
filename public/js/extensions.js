@@ -15,7 +15,8 @@
   const grid = root.querySelector("[data-xc-grid]");
   const items = [...grid.querySelectorAll("[data-xc-item]")];
   const q = root.querySelector("[data-xc-search]"), cat = root.querySelector("[data-xc-cat]"), st = root.querySelector("[data-xc-state]"), so = root.querySelector("[data-xc-sort]");
-  const count = root.querySelector("[data-xc-count]"), empty = root.querySelector("[data-xc-empty]");
+  const count = root.querySelector("[data-xc-count]"), emptyTpl = root.querySelector("[data-xc-empty-tpl]");
+  let empty = null;
   const preset = root.dataset.preset;
   const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* facultatif */ } } };
   const semver = (v) => v.split(".").map(Number);
@@ -40,11 +41,14 @@
       grid.appendChild(li);
     }
     count.textContent = `${shown} extension${shown > 1 ? "s" : ""} sur ${items.length}`;
-    empty.hidden = shown !== 0; grid.hidden = shown === 0;
+    // « Aucun résultat » : créé seulement quand le filtrage ne laisse aucune carte, retiré dès qu'il y en a au moins une
+    if (shown === 0 && !empty) { empty = emptyTpl.content.firstElementChild.cloneNode(true); empty.querySelector("[data-xc-reset]").addEventListener("click", reset); grid.after(empty); }
+    if (shown > 0 && empty) { empty.remove(); empty = null; }
+    grid.hidden = shown === 0;
   }
   root.querySelectorAll("[data-xc-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.xcView, true)));
   [q, cat, st, so].filter(Boolean).forEach((el) => el.addEventListener(el === q ? "input" : "change", apply));
-  root.querySelector("[data-xc-reset]")?.addEventListener("click", () => { q.value = ""; cat.value = ""; if (st) st.value = ""; so.value = "name"; apply(); });
+  function reset() { q.value = ""; cat.value = ""; if (st) st.value = ""; so.value = "name"; apply(); }
   setView(store.get("kxExtView"), false);
   apply();
 })();

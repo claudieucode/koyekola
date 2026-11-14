@@ -1,6 +1,7 @@
 <%#
   Catalogue des extensions : UNE seule liste de données, deux présentations (Galerie / Liste) qui ne diffèrent que par le CSS ; recherche, filtres et tri se font dans la page (public/js/extensions.js), sans rechargement.
-  Paramètres : items, site, inSite, sites, totalSites, BASE, POSTBASE, preset ("", "on", "off"), CATEGORY.
+  Le bloc « Aucun résultat » n'existe PAS dans cette page : il est cloné depuis le <template> uniquement quand le filtrage laisse zéro carte, et retiré dès qu'il y en a (jamais masqué par CSS).
+  Paramètres : items (liste déjà limitée à l'onglet), site, inSite, sites, totalSites, BASE, POSTBASE, preset ("", "on", "off"), CATEGORY, query.
 %><%
   const here = (extra) => { const p = new URLSearchParams(); if (site && !inSite) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
   const cats = [...new Set(items.map((m) => m.category))];
@@ -9,11 +10,12 @@
   const fresh = (m) => fresh0(m) && !freshAll; // si tout est récent, le badge n'apprend rien
   const detailUrl = (m) => `${BASE}/detail/${m.id}${here()}`;
   const unavailable = (m) => m.availability === "unavailable" || m.maintenance !== "stable";
+  const justChanged = typeof query !== "undefined" && query ? query.maj : "";
 %>
-<%- include("extensions-site-bar", { sites, site, inSite, BASE, tab: preset === "on" ? "activees" : preset === "off" ? "desactivees" : "" }) %>
 <section class="xc" data-xc data-preset="<%= preset || '' %>" aria-label="Catalogue des extensions">
   <div class="xc-bar">
-    <label class="xc-search"><span class="sr-only">Rechercher une extension</span><%- icon("search", { size: 16 }) %><input type="search" data-xc-search placeholder="Rechercher…" autocomplete="off"></label>
+    <% if (!inSite && sites.length) { %><form method="get" action="<%= BASE %><%= preset === 'on' ? '/activees' : preset === 'off' ? '/desactivees' : '' %>" class="xc-sel xc-site"><span>Site</span><select name="site" data-xc-site><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select><noscript><button class="btn btn-outline btn-sm" type="submit">Afficher</button></noscript></form><% } %>
+    <label class="xc-search"><span class="sr-only">Rechercher une extension</span><%- icon("search", { size: 16 }) %><input type="search" data-xc-search placeholder="Rechercher" autocomplete="off"></label>
     <label class="xc-sel"><span>Catégorie</span><select data-xc-cat><option value="">Toutes</option><% cats.forEach((c) => { %><option value="<%= c %>"><%= CATEGORY[c] || c %></option><% }) %></select></label>
     <% if (!preset) { %><label class="xc-sel"><span>État</span><select data-xc-state><option value="">Tous</option><option value="on">Activées</option><option value="off">Désactivées</option></select></label><% } %>
     <label class="xc-sel"><span>Tri</span><select data-xc-sort><option value="name">Nom (A → Z)</option><option value="added">Récemment ajoutées</option><option value="version">Version (récente d'abord)</option></select></label>
@@ -22,24 +24,24 @@
       <button type="button" class="xc-view-btn" data-xc-view="list" aria-pressed="false" title="Liste"><%- icon("list", { size: 16 }) %><span class="sr-only">Liste</span></button>
     </div>
   </div>
-  <p class="xc-count" role="status" aria-live="polite" data-xc-count></p>
+  <p class="xc-count" role="status" aria-live="polite" data-xc-count><%= items.length %> extension<%= items.length > 1 ? "s" : "" %></p>
 
   <ul class="xc-grid" data-xc-grid data-view="gallery">
-    <li class="xc-row xc-head" aria-hidden="true"><span></span><span>Extension</span><span>Catégorie</span><span>Version</span><span>Éditeur</span><span>Disponibilité</span><span><%= inSite || site ? "Sur ce site" : "Sites" %></span><span></span></li>
-    <% items.forEach((m) => { const on = Boolean(site) && m.enabled; %>
-      <li class="xc-card xc-row" data-xc-item data-name="<%= m.name.toLowerCase() %>" data-cat="<%= m.category %>" data-state="<%= site ? (on ? 'on' : 'off') : '' %>" data-version="<%= m.version %>" data-added="<%= m.added || '' %>" data-text="<%= (m.name + ' ' + m.description + ' ' + (CATEGORY[m.category] || '') + ' ' + m.publisher).toLowerCase() %>" style="--xc-accent: <%= m.accent || 'var(--accent)' %>">
-        <a class="xc-logo" href="<%= detailUrl(m) %>" tabindex="-1" aria-hidden="true"><% if (m.logo) { %><img src="<%= m.logo %>" alt="" width="56" height="56" loading="lazy" decoding="async"><% } else { %><span class="xc-initial"><%= m.name.charAt(0) %></span><% } %></a>
+    <li class="xc-row xc-head" aria-hidden="true"><span></span><span>Extension</span><span>Catégorie</span><span>Version</span><span>Éditeur</span><span>Disponibilité</span><span><%= site ? "Sur ce site" : "Sites" %></span><span></span></li>
+    <% items.forEach((m, i) => { const on = Boolean(site) && m.enabled; %>
+      <li class="xc-card xc-row<%= justChanged === m.id ? ' is-changed' : '' %>" data-xc-item data-name="<%= m.name.toLowerCase() %>" data-cat="<%= m.category %>" data-state="<%= site ? (on ? 'on' : 'off') : '' %>" data-version="<%= m.version %>" data-added="<%= m.added || '' %>" data-text="<%= (m.name + ' ' + m.description + ' ' + (CATEGORY[m.category] || '') + ' ' + m.publisher).toLowerCase() %>" style="--xc-accent: <%= m.accent || 'var(--accent)' %>; --xc-i: <%= Math.min(i, 8) %>">
+        <a class="xc-logo" href="<%= detailUrl(m) %>" tabindex="-1" aria-hidden="true"><% if (m.logo) { %><img src="<%= m.logo %>" alt="" width="20" height="20" loading="lazy" decoding="async"><% } else { %><span class="xc-initial"><%= m.name.charAt(0) %></span><% } %></a>
         <div class="xc-main">
-          <h3 class="xc-name"><a href="<%= detailUrl(m) %>"><%= m.name %></a><% if (fresh(m)) { %> <span class="xc-new">Nouveau</span><% } %></h3>
+          <h3 class="xc-name"><a class="xc-name-link" href="<%= detailUrl(m) %>"><%= m.name %></a><% if (fresh(m)) { %> <span class="xc-new">Nouveau</span><% } %></h3>
           <p class="xc-desc"><%= m.description %></p>
         </div>
         <div class="xc-meta">
-        <p class="xc-cat"><span class="xc-chip"><%= m.categoryLabel %></span></p>
-        <p class="xc-ver"><span class="xc-k">Version</span> <%= m.version %></p>
-        <p class="xc-pub"><span class="xc-k">Par</span> <%= m.publisher %></p>
-        <p class="xc-avail"><%= m.availability === "beta" ? "Bêta" : m.availability === "unavailable" ? "Non disponible" : m.maintenance === "maintenance" ? "En maintenance" : m.maintenance === "deprecated" ? "Obsolète" : "Disponible" %></p>
+          <p class="xc-cat"><%= m.categoryLabel %></p>
+          <p class="xc-ver"><span class="xc-k">Version </span><%= m.version %></p>
+          <p class="xc-pub"><span class="xc-k">Par </span><%= m.publisher %></p>
+          <p class="xc-avail"><%= m.availability === "beta" ? "Bêta" : m.availability === "unavailable" ? "Non disponible" : m.maintenance === "maintenance" ? "En maintenance" : m.maintenance === "deprecated" ? "Obsolète" : "Disponible" %></p>
         </div>
-        <p class="xc-state"><% if (site) { %><span class="xc-dot <%= on ? 'is-on' : '' %>"></span><span><%= on ? "Activée" : "Désactivée" %></span><% } else { %><span class="xc-k">Aucun site</span><% } %><% if (!inSite) { %><small><%= m.activeSites %> / <%= totalSites %> site<%= totalSites > 1 ? "s" : "" %></small><% } %></p>
+        <p class="xc-state"><% if (site) { %><span class="xc-pill <%= on ? 'is-on' : '' %>"><span class="xc-dot"></span><%= on ? "Activée" : "Désactivée" %></span><% } else { %><span class="xc-k">Aucun site</span><% } %><% if (!inSite) { %><small><%= m.activeSites %> / <%= totalSites %> site<%= totalSites > 1 ? "s" : "" %></small><% } %></p>
         <div class="xc-actions">
           <% if (site && !on && !unavailable(m)) { %>
             <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= m.id %>/activer"><input type="hidden" name="retour" value="catalogue"><% if (inSite) { %><input type="hidden" name="espace" value="1"><% } %><button class="btn btn-primary btn-sm" type="submit">Activer</button></form>
@@ -51,5 +53,7 @@
       </li>
     <% }) %>
   </ul>
-  <div class="mk-empty" data-xc-empty hidden role="status"><p><strong>Aucune extension ne correspond</strong></p><p class="mk-sub">Modifiez la recherche ou les filtres.</p><button type="button" class="btn btn-outline btn-sm" data-xc-reset>Réinitialiser</button></div>
+  <template data-xc-empty-tpl>
+    <div class="xc-empty" data-xc-empty role="status"><p class="xc-empty-t">Aucune extension ne correspond</p><p class="xc-empty-s">Modifiez la recherche ou les filtres pour élargir les résultats.</p><button type="button" class="btn btn-outline btn-sm" data-xc-reset>Réinitialiser</button></div>
+  </template>
 </section>

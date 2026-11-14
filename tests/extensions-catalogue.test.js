@@ -35,18 +35,20 @@ describe("Extensions : catalogue", () => {
     const r = await boss.get(`${X}?site=${A}`);
     assert.equal(r.status, 200);
     assert.match(r.text, /data-view="gallery"/);
+    assert.equal((r.text.replace(/<template[\s\S]*?<\/template>/g, "").match(/data-xc-empty[ >]/g) || []).length, 0, "aucun bloc « aucun résultat » dans le HTML : il n'est créé que lorsque le filtrage ne laisse aucune carte");
+    assert.match(r.text, /<template data-xc-empty-tpl>/);
     const cards = r.text.match(/data-xc-item/g) || [];
     assert.equal(cards.length, registry.load().list().length);
     for (const m of registry.load().list()) {
       assert.match(r.text, new RegExp(`/img/extensions/${m.id}\\.svg`)); assert.match(r.text, new RegExp(`${X}/detail/${m.id}\\?site=${A}`));
     }
-    assert.match(r.text, /Par<\/span> Kolakisa/); assert.match(r.text, /Version/); assert.match(r.text, /Activer/);
+    assert.match(r.text, /Par <\/span>Kolakisa/); assert.match(r.text, /Version/); assert.match(r.text, /Activer/);
     assert.match(r.text, /data-xc-view="list"/); assert.match(r.text, /data-xc-sort/);
   });
 
   test("activation depuis le catalogue : seul le site choisi change, retour au catalogue, état conservé après actualisation", async () => {
     const r = await boss.post(`${X}/sites/${A}/commerce/activer`, { retour: "catalogue" });
-    assert.equal(r.status, 302); assert.equal(r.location, `${X}?site=${A}`);
+    assert.equal(r.status, 302); assert.equal(r.location, `${X}?site=${A}&maj=commerce`);
     assert.equal(on(A, "commerce"), true); assert.equal(on(B, "commerce"), false);
     const a = await boss.get(`${X}?site=${A}`), b = await boss.get(`${X}?site=${B}`);
     const stateOf = (html, id) => html.split("<li ").find((c) => c.includes("data-xc-item") && c.includes(`/${id}.svg`)).match(/data-state="(on|off)"/)[1];
@@ -60,7 +62,7 @@ describe("Extensions : catalogue", () => {
     assert.equal(r.status, 200);
     for (const re of [/Kolakisa Commerce/, /Fonctionnalités/, /Compatibilité/, /Dépendances/, /Permissions/, /shop\.read/, /commerce\.svg/, /Désactiver/, /Ouvrir/, /Activité sur ce site/]) assert.match(r.text, re);
     const off = await boss.get(`${X}/detail/lms?site=${A}`);
-    assert.match(off.text, /Activer pour ce site/); assert.doesNotMatch(off.text, />Ouvrir</);
+    assert.match(off.text, />Activer</); assert.doesNotMatch(off.text, />Ouvrir</);
     assert.equal((await boss.get(`${X}/detail/inconnue?site=${A}`)).status, 404);
     const back = await boss.post(`${X}/sites/${A}/lms/activer`, { retour: "detail" });
     assert.equal(back.location, `${X}/detail/lms?site=${A}`); assert.equal(on(B, "lms"), false);

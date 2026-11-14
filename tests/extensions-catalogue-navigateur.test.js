@@ -39,22 +39,44 @@ describe("extensions : catalogue dans le navigateur", { skip: SKIP }, () => {
     try {
       const all = await visible(page); assert.equal(all.length, 6);
       assert.deepEqual(all, [...all].sort((a, b) => a.localeCompare(b, "fr")), "tri alphabétique par défaut");
+      assert.equal(await page.locator("[data-xc-empty]").count(), 0, "aucun bloc « aucun résultat » alors que des cartes sont affichées");
       await page.fill("[data-xc-search]", "boutique");
+      assert.equal(await page.locator("[data-xc-empty]").count(), 0, "toujours absent avec un résultat");
       assert.deepEqual(await visible(page), ["kolakisa commerce"]);
       await page.click('[data-xc-view="list"]');
       assert.deepEqual(await visible(page), ["kolakisa commerce"], "recherche conservée en Liste");
       assert.match(await page.textContent("[data-xc-count]"), /1 extension sur 6/);
       await page.fill("[data-xc-search]", "zzzz");
+      assert.equal(await page.locator("[data-xc-empty]").count(), 1);
       assert.equal(await page.isVisible("[data-xc-empty]"), true);
+      assert.equal((await visible(page)).length, 0, "aucune carte quand le bloc est présent");
       await page.click("[data-xc-reset]");
       assert.equal((await visible(page)).length, 6);
+      assert.equal(await page.locator("[data-xc-empty]").count(), 0, "bloc retiré dès que des résultats reviennent");
       await page.selectOption("[data-xc-cat]", "formation");
       assert.deepEqual(await visible(page), ["kolakisa lms"]);
       await page.selectOption("[data-xc-cat]", "");
       await page.selectOption("[data-xc-state]", "on");
       assert.equal((await visible(page)).length, 0, "aucune extension activée sur un site neuf");
+      assert.equal(await page.locator("[data-xc-empty]").count(), 1);
       await page.selectOption("[data-xc-state]", "off");
       assert.equal((await visible(page)).length, 6);
+      assert.equal(await page.locator("[data-xc-empty]").count(), 0);
+    } finally { await context.close(); }
+  });
+
+  test("icônes discrètes : pastille de 32 px, glyphe de 20 px, nom sans soulignement bleu ; cartes de même hauteur par rangée", async () => {
+    const { context, page } = await open(1440);
+    try {
+      const m = await page.evaluate(() => {
+        const logo = document.querySelector(".xc-card .xc-logo").getBoundingClientRect();
+        const img = document.querySelector(".xc-card .xc-logo img").getBoundingClientRect();
+        const a = getComputedStyle(document.querySelector(".xc-name-link"));
+        const tops = {}; document.querySelectorAll(".xc-card").forEach((c) => { const r = c.getBoundingClientRect(); (tops[Math.round(r.top)] ||= []).push(Math.round(r.height)); });
+        return { logo: Math.round(logo.width), img: Math.round(img.width), deco: a.textDecorationLine, color: a.color, rows: Object.values(tops) };
+      });
+      assert.equal(m.logo, 32); assert.equal(m.img, 20); assert.equal(m.deco, "none");
+      for (const row of m.rows) assert.equal(new Set(row).size, 1, `hauteurs inégales dans une rangée : ${row}`);
     } finally { await context.close(); }
   });
 
@@ -109,7 +131,7 @@ describe("extensions : catalogue dans le navigateur", { skip: SKIP }, () => {
       await page.goto(`${env.srv.base}${X}/desactivees?site=${env.site}`); await page.waitForLoadState("networkidle");
       const card = page.locator('[data-xc-item][data-name="sms"]');
       await card.getByRole("button", { name: "Activer" }).dblclick();
-      await page.waitForLoadState("networkidle");
+      await page.waitForURL(/maj=sms/); await page.waitForLoadState("networkidle");
       const n = env.db.prepare("SELECT COUNT(*) n FROM mk_extension_events WHERE site_id = ? AND extension = 'sms' AND action = 'enable'").get(env.site).n;
       assert.equal(n, 1, "une seule activation enregistrée malgré le double clic");
     } finally { await context.close(); }

@@ -3,7 +3,8 @@
 %><%- include("partials/top", { title, active, extUi: true }) %>
 <%
   const here = (extra) => { const p = new URLSearchParams(); if (site && !inSite) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
-  const stateChip = (m) => m.enabled ? '<span class="mk-status mk-status-ok">Activée</span>' : '<span class="mk-status mk-status-off">Désactivée</span>';
+  const stateChip = (m) => `<span class="xc-pill${m.enabled ? " is-on" : ""}"><span class="xc-dot"></span>${m.enabled ? "Activée" : "Désactivée"}</span>`;
+  const opChip = (a) => `<span class="xc-pill ${a === "enable" ? "is-on" : a === "failed" || a === "refused" ? "is-warn" : ""}"><span class="xc-dot"></span>${ACTION[a] || a}</span>`;
   const fmt = (d) => { const t = String(d || "").replace("T", " "); return t ? t.slice(8, 10) + "/" + t.slice(5, 7) + "/" + t.slice(0, 4) + " " + t.slice(11, 16) : "—"; };
 %>
 <div class="mk-head">
@@ -30,7 +31,7 @@
         <a class="btn btn-primary btn-sm" href="<%= BASE %><%= tab === 'activees' ? '/desactivees' : '' %><%= here() %>"><%= tab === "activees" ? "Voir les extensions à activer" : "Voir toutes les extensions" %></a>
       </div>
     <% } else { %>
-      <%- include("partials/extensions-catalogue", { items: list, site, inSite, sites, totalSites, BASE, POSTBASE, CATEGORY, preset: tab === "activees" ? "on" : tab === "desactivees" ? "off" : "", tally }) %>
+      <%- include("partials/extensions-catalogue", { items: list, site, inSite, sites, totalSites, BASE, POSTBASE, CATEGORY, preset: tab === "activees" ? "on" : tab === "desactivees" ? "off" : "", tally, query }) %>
     <% } %>
   <% } %>
 <% } else if (tab === "gestion") { %>
@@ -61,7 +62,7 @@
       <tbody>
         <% items.forEach((m) => { const sel = detail && detail.id === m.id; const blocked = m.availability === "unavailable" || m.maintenance !== "stable"; %>
           <tr<%- sel ? ' aria-current="true"' : "" %> style="--xc-accent: <%= m.accent || 'var(--accent)' %>">
-            <td data-label="Extension"><div class="xg-ext"><span class="xc-logo xg-logo"><% if (m.logo) { %><img src="<%= m.logo %>" alt="" width="36" height="36" loading="lazy" decoding="async"><% } else { %><span class="xc-initial"><%= m.name.charAt(0) %></span><% } %></span><span><strong><%= m.name %></strong><span class="xg-desc"><%= m.description %></span></span></div></td>
+            <td data-label="Extension"><div class="xg-ext"><span class="xc-logo"><% if (m.logo) { %><img src="<%= m.logo %>" alt="" width="20" height="20" loading="lazy" decoding="async"><% } else { %><span class="xc-initial"><%= m.name.charAt(0) %></span><% } %></span><span><strong><%= m.name %></strong><span class="xg-desc"><%= m.description %></span></span></div></td>
             <td data-label="Catégorie" class="xg-hide-md"><span class="xc-chip"><%= m.categoryLabel %></span></td>
             <td data-label="Version"><%= m.version %></td>
             <td data-label="État"><%- stateChip(m) %></td>
@@ -129,7 +130,7 @@
             <td data-label="Site"><%= e.site_name %></td>
             <td data-label="Extension"><%= ex ? ex.name : e.extension %></td>
             <td data-label="Version"><%= e.version || "—" %></td>
-            <td data-label="Opération"><span class="mk-status <%= e.action === 'enable' ? 'mk-status-ok' : (e.action === 'disable' ? 'mk-status-off' : (e.action === 'settings' ? 'mk-status-off' : 'mk-status-warn')) %>"><%= ACTION[e.action] || e.action %></span></td>
+            <td data-label="Opération"><%- opChip(e.action) %></td>
             <td data-label="Utilisateur"><%= e.user_name || "—" %></td>
             <td data-label="Détails" class="mk-sub"><%= det || "—" %></td>
           </tr>

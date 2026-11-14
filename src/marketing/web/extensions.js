@@ -118,7 +118,8 @@ module.exports = () => {
     const siteId = Number(req.params.id);
     const inSpace = req.body.espace === "1";
     const root = inSpace ? `${space(siteId)}/extensions` : BASE;
-    const back = req.body.retour === "catalogue" ? (inSpace ? root : `${root}?site=${siteId}`)
+    const maj = encodeURIComponent(req.params.ext);
+    const back = req.body.retour === "catalogue" ? (inSpace ? `${root}?maj=${maj}` : `${root}?site=${siteId}&maj=${maj}`)
       : req.body.retour === "detail" ? `${root}/detail/${encodeURIComponent(req.params.ext)}${inSpace ? "" : `?site=${siteId}`}`
       : inSpace ? `${root}/gestion?extension=${encodeURIComponent(req.params.ext)}` : `${BASE}/gestion?site=${siteId}&extension=${encodeURIComponent(req.params.ext)}`;
     attempt(req, res, next, back, () => {
