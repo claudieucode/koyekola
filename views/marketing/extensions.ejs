@@ -17,19 +17,19 @@
 </nav>
 
 <% if (tab === "") { %>
-  <div class="mk-table-wrap"><table class="mk-table">
+  <div class="mk-table-wrap"><table class="mk-table mk-datatable">
     <caption class="sr-only">Catalogue des extensions disponibles</caption>
     <thead><tr><th scope="col">Extension</th><th scope="col">Catégorie</th><th scope="col">Version</th><th scope="col">Éditeur</th><th scope="col" class="num">Sites actifs</th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
     <tbody>
       <% items.forEach((m) => { %>
         <tr>
-          <td><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></td>
-          <td><%= m.categoryLabel %></td>
-          <td><%= m.version %></td>
-          <td><%= m.publisher %></td>
-          <td class="num"><%= m.activeSites %> / <%= totalSites %></td>
-          <td><%= [avail[m.availability], maint[m.maintenance]].filter(Boolean).join(" · ") || "Disponible" %></td>
-          <td><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Gérer</a></td>
+          <td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td>
+          <td data-label="Catégorie"><%= m.categoryLabel %></td>
+          <td data-label="Version"><%= m.version %></td>
+          <td data-label="Éditeur"><%= m.publisher %></td>
+          <td class="num" data-label="Sites actifs"><%= m.activeSites %> / <%= totalSites %></td>
+          <td data-label="État"><%= [avail[m.availability], maint[m.maintenance]].filter(Boolean).join(" · ") || "Disponible" %></td>
+          <td data-label="Action"><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Gérer</a></td>
         </tr>
       <% }) %>
     </tbody>
@@ -42,13 +42,13 @@
   <% } else if (!list.length) { %>
     <div class="mk-empty" role="status"><p><strong><%= tab === "activees" ? "Aucune extension activée" : "Toutes les extensions sont activées" %></strong></p><p class="mk-sub"><%= tab === "activees" ? "Ce site n'utilise encore aucune extension." : "Rien à activer pour ce site." %></p></div>
   <% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table">
+    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
       <caption class="sr-only"><%= title %> pour <%= site.name %></caption>
       <thead><tr><th scope="col">Extension</th><th scope="col">Version</th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
       <tbody>
         <% list.forEach((m) => { %>
-          <tr><td><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></td><td><%= m.version %></td><td><%- stateChip(m) %></td>
-            <td><a class="btn <%= m.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>"><%= m.enabled ? 'Gérer' : 'Activer…' %></a></td></tr>
+          <tr><td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td><td data-label="Version"><%= m.version %></td><td data-label="État"><%- stateChip(m) %></td>
+            <td data-label="Action"><a class="btn <%= m.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>"><%= m.enabled ? 'Gérer' : 'Activer…' %></a></td></tr>
         <% }) %>
       </tbody>
     </table></div>
@@ -75,17 +75,17 @@
         <% } %>
       </section>
     <% } %>
-    <div class="mk-table-wrap"><table class="mk-table">
+    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
       <caption class="sr-only">Extensions de <%= site.name %></caption>
       <thead><tr><th scope="col">Extension</th><th scope="col">Version</th><th scope="col">État</th><th scope="col">Dépendances</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
         <% items.forEach((m) => { %>
           <tr<%- detail && detail.id === m.id ? ' aria-current="true"' : "" %>>
-            <td><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></td>
-            <td><%= m.version %></td>
-            <td><%- stateChip(m) %></td>
-            <td><%= m.dependencies.length ? m.dependencies.map((d) => (registry.get(d.id) || { name: d.id }).name).join(", ") : "Aucune" %></td>
-            <td>
+            <td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td>
+            <td data-label="Version"><%= m.version %></td>
+            <td data-label="État"><%- stateChip(m) %></td>
+            <td data-label="Dépend de"><%= m.dependencies.length ? m.dependencies.map((d) => (registry.get(d.id) || { name: d.id }).name).join(", ") : "Aucune" %></td>
+            <td data-label="Actions">
               <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Détails</a>
               <a class="btn <%= m.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id, confirmer: m.id }) %>"><%= m.enabled ? "Désactiver" : "Activer" %></a>
             </td>
@@ -132,14 +132,14 @@
   <% if (!events.length) { %>
     <div class="mk-empty" role="status"><p><strong>Aucune activité</strong></p><p class="mk-sub">Chaque activation, désactivation, refus ou échec est consigné ici.</p></div>
   <% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table">
+    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
       <caption class="sr-only">Historique des extensions</caption>
       <thead><tr><th scope="col">Date</th><th scope="col">Site</th><th scope="col">Extension</th><th scope="col">Opération</th><th scope="col">Détail</th></tr></thead>
       <tbody>
         <% events.forEach((e) => { const ex = registry.get(e.extension); %>
-          <tr><td><%= String(e.created_at).replace("T", " ").slice(0, 16) %></td><td><%= e.site_name %></td><td><%= ex ? ex.name : e.extension %> <span class="mk-sub"><%= e.version || "" %></span></td>
-            <td><span class="mk-status <%= e.action === 'enable' ? 'mk-status-ok' : (e.action === 'disable' ? 'mk-status-off' : 'mk-status-warn') %>"><%= ACTION[e.action] || e.action %></span></td>
-            <td class="mk-sub"><%= e.detail.error || e.detail.code || e.detail.key || "" %></td></tr>
+          <tr><td data-label="Date"><%= String(e.created_at).replace("T", " ").slice(0, 16) %></td><td data-label="Site"><%= e.site_name %></td><td data-label="Extension"><%= ex ? ex.name : e.extension %> <span class="mk-sub"><%= e.version || "" %></span></td>
+            <td data-label="Opération"><span class="mk-status <%= e.action === 'enable' ? 'mk-status-ok' : (e.action === 'disable' ? 'mk-status-off' : 'mk-status-warn') %>"><%= ACTION[e.action] || e.action %></span></td>
+            <td class="mk-sub" data-label="Détail"><%= e.detail.error || e.detail.code || e.detail.key || "" %></td></tr>
         <% }) %>
       </tbody>
     </table></div>

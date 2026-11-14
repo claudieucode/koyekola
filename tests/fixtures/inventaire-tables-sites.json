@@ -340,6 +340,14 @@
    "siteId": true,
    "classe": "isolee"
   },
+  "mk_extension_events": {
+   "siteId": true,
+   "classe": "isolee"
+  },
+  "mk_extension_settings": {
+   "siteId": true,
+   "classe": "isolee"
+  },
   "mk_form_files": {
    "siteId": false,
    "classe": "a-isoler-B4"

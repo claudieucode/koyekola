@@ -1,16 +1,19 @@
 // État d'activation PAR SITE, lu dans mk_site_modules (déjà en production : aucune migration de données). Règles historiques conservées :
 // pas de ligne = désactivé ; site principal (null) = jamais soumis pour une extension « always_on_primary » ; une extension inconnue du registre est toujours refusée.
-// Cache : par connexion à la base, validé par PRAGMA data_version (change quand UN AUTRE processus ou une autre connexion écrit) et invalidé explicitement à chaque écriture de cette connexion.
+// Cache : par connexion à la base, validé par une estampille (PRAGMA data_version : écriture d'UN AUTRE processus ; total_changes() : écriture de cette connexion) et invalidé explicitement à chaque activation.
 // Aucune donnée d'un autre site n'est jamais lue pour répondre à un site : la clé de cache contient l'organisation ET le site.
 const registry = require("./registry");
 
 const caches = new WeakMap(); // db → { version, sites: Map("org:site" → Set(ids)) }
 const stats = { hits: 0, misses: 0, invalidations: 0 };
 
+// Estampille de la base : data_version (écritures d'UNE AUTRE connexion ou d'un autre processus) + total_changes() (écritures de CETTE connexion, y compris un UPDATE direct qui contournerait le moteur).
+function stampOf(db) {
+  try { return `${db.prepare("PRAGMA data_version").get().data_version}:${db.prepare("SELECT total_changes() AS c").get().c}`; } catch { return null; }
+}
 function cacheFor(db) {
   let c = caches.get(db);
-  let version = null;
-  try { version = db.prepare("PRAGMA data_version").get().data_version; } catch { version = null; }
+  const version = stampOf(db);
   if (!c || c.version !== version || version === null) { c = { version, sites: new Map() }; caches.set(db, c); }
   return c;
 }
@@ -19,7 +22,7 @@ function invalidate(db, organizationId, siteId) {
   stats.invalidations += 1;
   if (!c) return;
   if (siteId === undefined) c.sites.clear(); else c.sites.delete(`${organizationId}:${siteId}`);
-  try { c.version = db.prepare("PRAGMA data_version").get().data_version; } catch { caches.delete(db); }
+  c.version = stampOf(db); if (c.version === null) caches.delete(db);
 }
 
 // Ensemble des extensions activées pour un site (jamais pour le principal : voir isEnabled).

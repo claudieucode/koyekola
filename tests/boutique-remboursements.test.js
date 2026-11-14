@@ -22,11 +22,11 @@ async function mkSite(name, hostName) {
   const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${id}/reglages.json`)).text);
   assert.equal((await boss.request(`/marketing/site-web/sites/${id}/reglages.json`, { method: "PUT", json: { revision: cur.revision, tokens: cur.tokens, settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: `https://${hostName}` } } } })).status, 200);
   const base = `/marketing/site-web/sites/${id}/boutique`;
+  assert.equal((await boss.post(`/marketing/site-web/sites/${id}/modules/commerce`, { etat: "activer" })).status, 302);
   assert.equal((await boss.post(`${base}/livraison/zones`, { name: "France", countries: "FR" })).status, 302);
   const zid = one("SELECT id FROM mk_shop_shipping_zones WHERE site_id = ?", id).id;
   assert.equal((await boss.post(`${base}/livraison/zones/${zid}/methodes`, { name: "Colis", kind: "flat", cost: "5,90" })).status, 302);
   assert.equal((await boss.post(`${base}/reglages`, { currency: "eur", default_country: "FR", enabled: "1", payment_methods: ["manual"], guest_checkout: "1", order_prefix: "MB" + id, manual_instructions: "Virement" })).status, 302);
-  assert.equal((await boss.post(`/marketing/site-web/sites/${id}/modules/commerce`, { etat: "activer" })).status, 302);
   return { id, base };
 }
 const product = async (base, siteId, name) => {

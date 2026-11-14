@@ -10,7 +10,7 @@ const labels = (arr) => arr.map((s) => s.label);
 
 describe("registre : ordre des rubriques et absence de doublon", () => {
   test("ordre cible : Médias, Commentaires, Apparence, Extensions, Utilisateurs, …, Tests A/B, Outils, Paramètres (Navigation n'est plus une entrée : Apparence → Menus)", () => {
-    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
+    assert.deepEqual(labels(cmsNav.SECTIONS), ["Mes sites", "Site principal", "Pages", "Articles", "Médias", "Commentaires", "Apparence", "Extensions", "Comptes", "Boutique", "Formation", "SEO", "Redirections", "Tests A/B", "Outils", "Paramètres"]);
   });
   test("clés de rubrique et clés d'entrée uniques ; aucune adresse en double", () => {
     const sk = cmsNav.SECTIONS.map((s) => s.key); assert.equal(new Set(sk).size, sk.length);
@@ -35,7 +35,7 @@ describe("registre : ordre des rubriques et absence de doublon", () => {
   });
   test("chaque entrée du registre a une permission, un libellé, une icône de rubrique et une adresse sous /marketing", () => {
     for (const s of cmsNav.SECTIONS) assert.ok(s.icon && s.label, s.key);
-    for (const i of cmsNav.ALL) { assert.ok(i.permission || i.anyOf, i.key); assert.match(i.href, /^\/marketing\//, i.key); }
+    for (const i of cmsNav.ALL) { assert.ok(i.permission || i.anyOf, i.key); assert.match(i.href, i.external ? /^\/formateur$/ : /^\/marketing\//, i.key); } // entrée d'extension « external » : son propre espace (Formation → /formateur)
   });
 });
 
@@ -58,17 +58,19 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
     const r = await boss.get(EXT); assert.equal(r.status, 200);
     assert.match(r.text, /<aside class="mk-sidebar"/); assert.match(r.text, /Menu du CMS/); assert.match(r.text, /Site principal/);
     assert.match(r.text, /href="\/marketing\/site-web\/extensions"[^>]*aria-current="page"/);
-    for (const l of ["Site Alpha", "Site Bravo", "SMS", "Intelligence artificielle", "Commerce", "Formations"]) assert.match(r.text, new RegExp(l));
-    assert.match(r.text, new RegExp(`/marketing/site-web/sites/${A}/modules`));
+    for (const l of ["SMS", "Intelligence artificielle", "Kolakisa Commerce", "Kolakisa LMS"]) assert.match(r.text, new RegExp(l));
+    const manage = (await boss.get(`${EXT}/gestion`)).text;
+    for (const l of ["Site Alpha", "Site Bravo"]) assert.match(manage, new RegExp(l), "Gestion : le choix du site propose les sites de l'organisation");
+    for (const slug of ["", "/activees", "/desactivees", "/gestion", "/historique"]) assert.match((await boss.get(EXT + slug)).text, /Historique et activité/, "les cinq rubriques sont dans le menu");
     assert.doesNotMatch(r.text, /mk-cms-soon/, "aucune interface simulée");
   });
   test("l'état affiché est l'état réel et propre à chaque site : activer un module pour A ne l'affiche pas pour B", async () => {
-    const row = async (name) => ((await boss.get(EXT)).text.split("<tr").slice(1).find((x) => x.includes("<td") && x.includes(name))) || "";
-    assert.doesNotMatch(await row("Site Alpha"), /Activé/, "désactivé par défaut");
+    const enabledList = async (site) => { const t = (await boss.get(`${EXT}/activees?site=${site}`)).text; return t.slice(t.indexOf("<tbody>") >= 0 ? t.indexOf("<tbody>") : 0); };
+    assert.doesNotMatch(await enabledList(A), /<strong>SMS<\/strong>/, "désactivé par défaut");
     assert.equal((await boss.post(`/marketing/site-web/sites/${A}/modules/sms`, { etat: "activer" })).status, 302);
-    assert.match(await row("Site Alpha"), /Activé/); assert.doesNotMatch(await row("Site Bravo"), /Activé/);
+    assert.match(await enabledList(A), /<strong>SMS<\/strong>/); assert.doesNotMatch(await enabledList(B), /<strong>SMS<\/strong>/);
     await boss.post(`/marketing/site-web/sites/${A}/modules/sms`, { etat: "desactiver" });
-    assert.doesNotMatch(await row("Site Alpha"), /Activé/, "désactiver est répercuté");
+    assert.doesNotMatch(await enabledList(A), /<strong>SMS<\/strong>/, "désactiver est répercuté");
   });
   test("un administrateur d'organisation y accède ; une personne limitée à un site (même administrateur) est refusée côté serveur, quels que soient les paramètres", async () => {
     assert.equal((await orgAdmin.get(EXT)).status, 200);
@@ -79,7 +81,7 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
   test("un site créé n'a pas Extensions dans son menu ; le cadre d'un site n'est jamais plaqué sur l'écran central", async () => {
     const dash = await boss.get(`/marketing/site-web/sites/${A}/tableau-de-bord`); assert.equal(dash.status, 200);
     assert.doesNotMatch(dash.text, /site-web\/extensions/);
-    const ext = (await boss.get(EXT)).text; assert.match(ext, /<li><a href="\/marketing\/site-web\/principal\/tableau-de-bord">Site principal<\/a><\/li>\s*<li aria-current="page">Modules<\/li>/, "fil d'Ariane : Site principal › Modules"); assert.doesNotMatch(ext, new RegExp(`/sites/${A}/tableau-de-bord`.replace(/\//g, "\\/") + '"[^>]*aria-current'), "aucun site créé n'est l'espace courant");
+    const ext = (await boss.get(EXT)).text; assert.match(ext, /<li><a href="\/marketing\/site-web\/principal\/tableau-de-bord">Site principal<\/a><\/li>\s*<li>Extensions<\/li>\s*<li aria-current="page">Toutes les extensions<\/li>/, "fil d'Ariane : Site principal › Extensions › Toutes les extensions"); assert.doesNotMatch(ext, new RegExp(`/sites/${A}/tableau-de-bord`.replace(/\//g, "\\/") + '"[^>]*aria-current'), "aucun site créé n'est l'espace courant");
   });
   test("pied du panneau : « Retour au Marketing » puis commande « Replier le menu » accessible (bouton, libellé, état)", async () => {
     const html = (await boss.get(EXT)).text;
@@ -90,6 +92,7 @@ describe("de bout en bout : écran Extensions et pied de panneau", () => {
   });
   test("tous les écrans du registre s'ouvrent encore (200) avec leur entrée courante après le changement d'ordre", async () => {
     for (const item of cmsNav.ALL) {
+      if (item.external) continue; // entrée d'extension qui ouvre son propre espace (ex. /formateur) : hors cadre du CMS
       const r = await boss.get(item.href);
       if (item.fullscreen) { assert.equal(r.status, 200, item.key); assert.match(r.text, /id="kwc-boot"/, item.key); continue; } // écran plein cadre : hors coque du CMS
       // ARTICLES-02 : « Ajouter un article » ouvre directement l'éditeur (redirection), il n'a plus d'écran de cadre

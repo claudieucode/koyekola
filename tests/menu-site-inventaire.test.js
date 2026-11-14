@@ -13,10 +13,10 @@ const nav = require("../src/marketing/web/cmsNav");
 // ferme (motif) : « Bientôt » visible, grisé, sans lien — l'isolation ou l'écran du site n'existe pas encore
 const OUVERT = ["sitedash", "landing", "apparence", "apparence/themes", "apparence/fichiers", "apparence/widgets", "apparence/theme-builder", "apparence/styles", "apparence/patterns", "apparence/templates", "apparence/polices", "apparence/personnaliser", "redirections", "utilisateurs", "utilisateurs/profil", "pagetests", "outils", "corbeille", "utilisateurs/ajouter", "utilisateurs/nouveau", "utilisateurs/roles", "utilisateurs/permissions", "utilisateurs/invitations", "outils/importer", "outils/exporter", "outils/donnees", "outils/diagnostic", "outils/maintenance", "outils/cache", "outils/contenu", "outils/effacer-donnees", "outils/notes", "outils/disponibles", "parametres", "parametres/confidentialite", "parametres/connecteurs", "parametres/avance", "parametres/ecriture", "parametres/commentaires", "parametres/emailing", "parametres/indexation", "parametres/lecture", "parametres/medias", "parametres/permaliens", "parametres/seo", "parametres/tunnels",
   "articles", "articles/brouillons", "articles/programmes", "articles/publies", "articles/corbeille", "articles/categories", "articles/etiquettes", "articles/auteurs", "articles/ajouter", "mediatheque", "mediatheque/ajouter",
-  "boutique", "boutique/commandes", "boutique/clients", "boutique/reglages", // Programme 20.5 : boutique du site (écrans de l'espace, données de CE site)
+  "formation", "boutique", "boutique/commandes", "boutique/clients", "boutique/reglages", // Programme 20.5 : boutique du site (écrans de l'espace, données de CE site)
   "seo", "seo/404", "seo/analyse", "seo/meta", "seo/indexation", "seo/sitemap", "seo/schema", "seo/open-graph", "seo/robots", "seo/liens-internes", "seo/positions", "seo/connexions", "seo/transfert", "apparence/menus", "commentaires", "commentaires/en-attente", "commentaires/approuves", "commentaires/indesirables", "commentaires/corbeille"];
 const OUVERT_EQUIPE = []; // aucune entrée réservée à l'équipe pour l'instant
-const CENTRAL = ["sites", "extensions", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
+const CENTRAL = ["sites", "extensions", "extensions/activees", "extensions/desactivees", "extensions/gestion", "extensions/historique", "outils/sauvegardes", "outils/systeme", "outils/logs"]; // « Extensions » (CMS-01) : activation des modules par l'équipe, depuis le principal
 const MOTIFS = {
   
   // SEO : les neuf rubriques sont ouvertes (isolation démontrée, seo-par-site-espace et seo-site-outils)
@@ -31,7 +31,7 @@ const png = (() => {
 })();
 
 describe("inventaire : le menu réel = la table", () => {
-  const space = (limited) => ({ siteId: 5, principal: false, base: `${nav.BASE}/sites/5`, name: "S", listHref: `${nav.BASE}/sites`, limited });
+  const space = (limited) => ({ siteId: 5, principal: false, base: `${nav.BASE}/sites/5`, name: "S", listHref: `${nav.BASE}/sites`, limited, extensions: new Set(["commerce", "lms"]) }); // extensions activées : leurs menus (Boutique, Formation) font partie du menu
   const items = (limited) => nav.projectSections(space(limited)).flatMap((g) => g.items).filter((i) => nav.ALL.some((r) => r.key === i.key));
   test("chaque entrée du registre est classée une fois (ouverte, ouverte équipe, centrale ou fermée avec son motif) : une nouvelle entrée non classée fait échouer ce test", () => {
     const keys = nav.ALL.map((r) => r.key); const classed = [...OUVERT, ...OUVERT_EQUIPE, ...CENTRAL, ...Object.keys(MOTIFS)];
