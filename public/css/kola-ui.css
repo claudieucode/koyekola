@@ -302,7 +302,7 @@ html[data-kola-theme="dark"] .mk-theme-ico-dark { display: inline-flex; }
 /* Cartes et panneaux : un seul gabarit (bordure fine, rayon 12, ombre discrète) */
 .mk-body :is(.mk-panel, .mk-ap-card, .mk-ap-bar, .mk-nav-add, .mk-nav-structure, .mk-nav-slots, .mk-tx-add, .mk-ar-panel, .mk-us-group, .mk-ml-toolbar, .mk-ml-panel, .mk-cms-card, .mk-stat, .mk-empty, .mk-filterbar, .mk-callout) { border-radius: var(--k-r-card); }
 .mk-body :is(.mk-panel, .mk-ap-card, .mk-ap-bar, .mk-nav-add, .mk-nav-structure, .mk-nav-slots, .mk-tx-add, .mk-ar-panel, .mk-ml-toolbar, .mk-ml-panel, .mk-cms-card, .mk-stat, .mk-filterbar) { background: var(--mk-surface); border: 1px solid var(--mk-border); box-shadow: var(--k-shadow-xs); }
-.mk-body .mk-panel { padding: 16px 18px; }
+.mk-body .mk-panel { padding: 20px 24px; }
 .mk-body .mk-panel h2, .mk-body .mk-ap-card h2, .mk-body .mk-nav-add h2, .mk-body .mk-nav-structure h2, .mk-body .mk-tx-add h2 { font-size: 1rem; font-weight: 650; margin: 0 0 12px; }
 .mk-body .mk-ap-card { padding: 20px; }
 .mk-body :is(.mk-ap-form fieldset, .mk-us-group, .mk-tl-fieldset, .mk-fieldset) { background: var(--mk-surface); border: 1px solid var(--mk-border); border-radius: var(--k-r-card); padding: 16px 20px 18px; box-shadow: var(--k-shadow-xs); }

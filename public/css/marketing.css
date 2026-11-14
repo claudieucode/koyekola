@@ -2055,3 +2055,16 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-jp-stage.is-mobile { max-width: 375px; }
 .mk-jp-full { display: block; width: 100%; height: 520px; border: 0; background: #fff; }
 @media (prefers-reduced-motion: reduce) { .mk-jp-stage { transition: none; } }
+
+/* Boutons d'enregistrement et formulaires en ligne (audit global) : jamais collés aux champs ni aux panneaux qui les précèdent */
+.mk-body form.mk-form:not(.mk-dom-add):not(.mk-inline-form):not(.mk-form-row) > :is(button[type="submit"], .btn-primary):last-child { margin-top: 24px; }
+.mk-body .mk-panel form:not(.mk-inline-form) > .field-group + :is(button[type="submit"], .btn) { margin-top: 16px; }
+.mk-body .mk-panel > form:not(.mk-inline-form) > :is(button[type="submit"], .btn):last-child:not(:only-child) { margin-top: 16px; }
+.mk-body .mk-panel > form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; margin: 12px 0; }
+.mk-body .mk-panel > form.mk-inline-form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 1 1 320px; max-width: 560px; min-height: var(--mk-field-h, 40px); }
+.mk-body .mk-panel > form.mk-inline-form :is(.btn, button) { flex: none; min-height: var(--mk-field-h, 40px); }
+.mk-body .mk-panel > .field-hint { margin-top: 8px; }
+.mk-body .mk-dom-add .field-group { margin: 0; }
+.mk-body .mk-dom-add .field-group > input { margin-bottom: 0; }
+.mk-body .mk-dom-add > .btn { min-height: var(--mk-field-h, 40px); margin: 0; }
+.mk-body .mk-panel form.mk-dom-add .field-group { margin: 0; }

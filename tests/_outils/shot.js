@@ -10,5 +10,5 @@ const { startServer, loginInstructor } = require("../helpers");
   const ctx = await browser.newContext({ viewport: { width: Number(w || 1440), height: 900 } });
   await ctx.addCookies([...boss.cookies].map(([name, value]) => ({ name, value, url: srv.base })));
   const page = await ctx.newPage(); await page.goto(srv.base + path); await page.waitForTimeout(800);
-  await page.screenshot({ path: out }); await browser.close(); srv.db().close(); await srv.stop();
+  if (process.env.EVAL) console.log(JSON.stringify(await page.evaluate(process.env.EVAL))); await page.screenshot({ path: out }); await browser.close(); srv.db().close(); await srv.stop();
 })().catch((e) => { console.error(e); process.exit(1); });
