@@ -46,7 +46,7 @@ describe("règles, guides, grille et magnétisme (navigateur)", { skip: SKIP }, 
   const nodesOf = (list, out = []) => { for (const x of list || []) { out.push(x); nodesOf(x.children, out); } return out; };
   const saved = (check, what) => until(() => { const d = draft(); return check(d) ? d : null; }, { what: `enregistré : ${what}`, timeout: 12000 });
   const ready = () => page.waitForFunction(() => { const f = document.querySelector("[data-pb-frame]"); return f && f.contentDocument && f.contentDocument.body && f.contentDocument.body.classList.contains("lp-builder") && f.contentDocument.querySelector("[data-node-id]"); });
-  async function openEditor({ device = "desktop", zoom = 0.64, prefs = null } = {}) {
+  async function openEditor({ device = "desktop", zoom = 0.66, prefs = null } = {}) {
     n += 1;
     pageId = Number((await boss.post("/marketing/pages", { name: `Règles ${n}` })).location.match(/(\d+)$/)[1]);
     const revision = db().prepare("SELECT revision FROM mk_landing_pages WHERE id = ?").get(pageId).revision;
@@ -185,7 +185,7 @@ describe("règles, guides, grille et magnétisme (navigateur)", { skip: SKIP }, 
     await page.locator("[data-pb-rules] .pb-rules-add button").click();
     await panelClose();
     assert.deepEqual((await guidesInCanvas()).map((g) => g.pos), [240]);
-    for (const z of [0.5, 0.64, 0.75, 1, 1.25, 1.5, 2]) {
+    for (const z of [0.5, 0.66, 0.75, 1, 1.25, 1.5, 2]) {
       await setZoom(z);
       assert.ok(Math.abs((await zoomNow()) - z) < 0.006, `zoom ${z} appliqué`);
       const m = await page.evaluate(() => {
