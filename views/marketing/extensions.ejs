@@ -1,6 +1,6 @@
 <%#
   Menu « Extensions » (src/marketing/web/extensions.js) : cinq rubriques, une seule vue. Tout vient du registre central et de l'état réel des sites ; aucune action n'est simulée.
-%><%- include("partials/top", { title, active }) %>
+%><%- include("partials/top", { title, active, extUi: typeof extUi !== "undefined" ? extUi : false }) %>
 <%
   const here = (extra) => { const p = new URLSearchParams(); if (site) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
   const pageUrl = (slug) => BASE + (slug ? "/" + slug : "");
@@ -16,43 +16,11 @@
   <% tabs.forEach((t) => { %><a class="mk-tab" href="<%= t.href %><%= site && t.slug && t.slug !== 'historique' ? '?site=' + site.id : '' %>"<%- t.current ? ' aria-current="page"' : "" %>><%= t.label %></a><% }) %>
 </nav>
 
-<% if (tab === "") { %>
-  <div class="mk-table-wrap"><table class="mk-table mk-datatable">
-    <caption class="sr-only">Catalogue des extensions disponibles</caption>
-    <thead><tr><th scope="col">Extension</th><th scope="col">Catégorie</th><th scope="col">Version</th><th scope="col">Éditeur</th><th scope="col" class="num"><%= inSite ? "Ce site" : "Sites actifs" %></th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
-    <tbody>
-      <% items.forEach((m) => { %>
-        <tr>
-          <td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td>
-          <td data-label="Catégorie"><%= m.categoryLabel %></td>
-          <td data-label="Version"><%= m.version %></td>
-          <td data-label="Éditeur"><%= m.publisher %></td>
-          <td class="num" data-label="<%= inSite ? "Ce site" : "Sites actifs" %>"><% if (inSite) { %><%- stateChip(m) %><% } else { %><%= m.activeSites %> / <%= totalSites %><% } %></td>
-          <td data-label="État"><%= [avail[m.availability], maint[m.maintenance]].filter(Boolean).join(" · ") || "Disponible" %></td>
-          <td data-label="Action"><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Gérer</a></td>
-        </tr>
-      <% }) %>
-    </tbody>
-  </table></div>
-<% } else if (tab === "activees" || tab === "desactivees") { %>
-  <% if (!inSite) { %><%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %><% } %>
-  <% const list = items.filter((m) => (tab === "activees") === m.enabled); %>
+<% if (tab === "" || tab === "activees" || tab === "desactivees") { %>
   <% if (!site) { %>
     <div class="mk-empty" role="status"><p><strong>Aucun site</strong></p><p class="mk-sub">Créez un site pour pouvoir y activer des extensions.</p><a class="btn btn-primary btn-sm" href="/marketing/site-web/sites#nouveau">Créer un site</a></div>
-  <% } else if (!list.length) { %>
-    <div class="mk-empty" role="status"><p><strong><%= tab === "activees" ? "Aucune extension activée" : "Toutes les extensions sont activées" %></strong></p><p class="mk-sub"><%= tab === "activees" ? "Ce site n'utilise encore aucune extension." : "Rien à activer pour ce site." %></p></div>
-  <% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
-      <caption class="sr-only"><%= title %> pour <%= site.name %></caption>
-      <thead><tr><th scope="col">Extension</th><th scope="col">Version</th><th scope="col">État</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>
-      <tbody>
-        <% list.forEach((m) => { %>
-          <tr><td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td><td data-label="Version"><%= m.version %></td><td data-label="État"><%- stateChip(m) %></td>
-            <td data-label="Action"><a class="btn <%= m.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>"><%= m.enabled ? 'Gérer' : 'Activer…' %></a></td></tr>
-        <% }) %>
-      </tbody>
-    </table></div>
   <% } %>
+  <%- include("partials/extensions-catalogue", { items: tab === "" || !site ? items : items.filter((m) => m.enabled === (tab === "activees")), site, inSite, sites, totalSites, BASE, POSTBASE, CATEGORY, preset: tab === "activees" ? "on" : tab === "desactivees" ? "off" : "" }) %>
 <% } else if (tab === "gestion") { %>
   <% if (!inSite) { %><%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %><% } %>
   <% if (!site) { %>

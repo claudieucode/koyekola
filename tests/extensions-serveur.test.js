@@ -167,8 +167,8 @@ describe("Extensions : serveur réel, trois sites indépendants", () => {
     const main = page.text.slice(page.text.indexOf('class="mk-head"')); assert.doesNotMatch(main, /name="site"/, "aucun sélecteur de site dans l'écran"); assert.doesNotMatch(main, /Site Alpha|Site Bravo/, "seul ce site est concerné");
     assert.equal((await boss.post(`${X}/sites/${D}/sms/activer`, { espace: "1" })).location, `${space(D)}/extensions/gestion?extension=sms`, "retour dans l'espace du site");
     assert.equal(on(D, "sms"), true); assert.equal(on(A, "sms"), false); assert.equal(on(B, "sms"), false);
-    const act = await boss.get(`${space(D)}/extensions/activees`); assert.match(act.text, /<strong>SMS<\/strong>/);
-    assert.equal((await boss.get(`${space(A)}/extensions/activees`)).text.includes("<strong>SMS</strong>"), false, "A n'a pas SMS");
+    const act = await boss.get(`${space(D)}/extensions/activees`); assert.match(act.text, /data-name="sms"/);
+    assert.equal((await boss.get(`${space(A)}/extensions/activees`)).text.includes('data-name="sms"'), false, "A n'a pas SMS");
     assert.equal((await boss.get(`${space(99999)}/extensions`)).status, 404);
     const limited = await adminA.get(`${space(A)}/extensions`); assert.ok([302, 403].includes(limited.status), String(limited.status));
     assert.doesNotMatch((await adminA.get(`${space(A)}/tableau-de-bord`)).text, /\/extensions/, "pas dans le menu d'une personne limitée au site");

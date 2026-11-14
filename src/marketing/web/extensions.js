@@ -1,6 +1,8 @@
 // Menu « Extensions » : catalogue central, état par site, gestion, historique. Tout est branché sur le moteur (src/extensions) et la vraie base ; aucun interrupteur simulé.
 // Réservé à l'équipe de l'organisation (permission `sites.modules` + équipe) : une personne limitée à un site n'y entre jamais. Chaque action est revérifiée côté serveur par le moteur.
 const express = require("express");
+const fs = require("node:fs");
+const path = require("node:path");
 const primarySite = require("../../services/primarySite");
 const registry = require("../../extensions/registry");
 const state = require("../../extensions/state");
@@ -9,6 +11,9 @@ const { attempt, need } = require("./kit");
 const { MarketingError } = require("../errors");
 
 const BASE = "/marketing/site-web/extensions";
+// Logo propre à chaque extension : public/img/extensions/<id>.svg (aucun code à ajouter pour une nouvelle extension : déposer son SVG ; sans fichier, la carte affiche l'initiale sur sa couleur)
+const LOGO_DIR = path.join(__dirname, "..", "..", "..", "public", "img", "extensions");
+const logoOf = (id) => (fs.existsSync(path.join(LOGO_DIR, `${id}.svg`)) ? `/img/extensions/${id}.svg` : null);
 const TABS = [["", "Toutes les extensions"], ["activees", "Activées"], ["desactivees", "Désactivées"], ["gestion", "Gestion"], ["historique", "Historique et activité"]];
 const CATEGORY = { commerce: "Commerce", formation: "Formation", communication: "Communication", marketing: "Marketing", ia: "Intelligence artificielle", analyse: "Analyse", contenu: "Contenu", outils: "Outils" };
 const ACTION = { enable: "Activée", disable: "Désactivée", refused: "Refusée", failed: "Échec (annulé)", settings: "Paramètre modifié" };
@@ -30,7 +35,7 @@ module.exports = () => {
     const on = site ? new Set(state.enabledIds(ctx.db, ctx.organizationId, site.id)) : new Set();
     const counts = new Map(reg.ids.map((id) => [id, 0]));
     for (const s of sites) for (const id of state.enabledIds(ctx.db, ctx.organizationId, s.id)) counts.set(id, (counts.get(id) || 0) + 1);
-    const items = reg.list().map((m) => ({ ...m, categoryLabel: CATEGORY[m.category] || m.category, enabled: on.has(m.id), activeSites: counts.get(m.id) || 0 }));
+    const items = reg.list().map((m) => ({ ...m, logo: logoOf(m.id), categoryLabel: CATEGORY[m.category] || m.category, enabled: on.has(m.id), activeSites: counts.get(m.id) || 0 }));
     const confirmId = reg.has(req.query.confirmer) ? req.query.confirmer : null;
     const confirmPlan = site && confirmId ? activation.plan(ctx, site.id, confirmId, !on.has(confirmId)) : null;
     const root = fixed ? `${space(fixed)}/extensions` : BASE;
@@ -51,7 +56,7 @@ module.exports = () => {
     const page = (tab, title, extra) => (req, res) => {
       const f = fixedSite(req, res); if (!f.ok) return;
       const m = model(req, tab, f.fixed);
-      res.render("marketing/extensions", { title, active: tab ? `extensions/${tab}` : "extensions", query: req.query, ...m, ...(extra ? extra(req, m, f.fixed) : {}) });
+      res.render("marketing/extensions", { title, extUi: true, active: tab ? `extensions/${tab}` : "extensions", query: req.query, ...m, ...(extra ? extra(req, m, f.fixed) : {}) });
     };
     router.get(P, ...guard, page("", "Toutes les extensions"));
     router.get(`${P}/activees`, ...guard, page("activees", "Extensions activées"));
@@ -61,6 +66,16 @@ module.exports = () => {
       const settings = detail && m.site && detail.settings.length && state.isEnabled(req.mk.ctx.db, req.mk.ctx.organizationId, m.site.id, detail.id) ? activation.getSettings(req.mk.ctx, m.site.id, detail.id) : [];
       return { detail, settings, dependents: detail ? reg.dependentsOf(detail.id) : [], registry: reg };
     }));
+    router.get(`${P}/detail/:ext([a-z_]{2,30})`, ...guard, (req, res) => {
+      const f = fixedSite(req, res); if (!f.ok) return;
+      const m = model(req, "", f.fixed);
+      const item = m.items.find((x) => x.id === req.params.ext);
+      if (!item) return res.status(404).render("error", { message: "Extension introuvable." });
+      const ctx = req.mk.ctx;
+      const settings = m.site && item.settings.length && item.enabled ? activation.getSettings(ctx, m.site.id, item.id) : [];
+      const events = m.site ? activation.history(ctx, { siteId: m.site.id, extension: item.id, limit: 10 }) : [];
+      res.render("marketing/extension-detail", { title: item.name, extUi: true, active: "extensions", query: req.query, ...m, item, settings, events, registry: reg, dependents: reg.dependentsOf(item.id).map((id) => reg.get(id).name) });
+    });
     router.get(`${P}/historique`, ...guard, page("historique", "Historique et activité", (req, m, fixed) => {
       const ext = reg.has(req.query.extension) ? req.query.extension : null;
       const all = !fixed && (req.query.site === "tous" || !req.query.site);
@@ -72,7 +87,11 @@ module.exports = () => {
   // Écritures : le moteur revérifie équipe, permission, site de l'organisation, dépendances, conflits, confirmation (désactivation) ; transaction unique.
   router.post("/site-web/extensions/sites/:id(\\d+)/:ext([a-z_]{2,30})/:etat(activer|desactiver)", ...guard, (req, res, next) => {
     const siteId = Number(req.params.id);
-    const back = req.body.espace === "1" ? `${space(siteId)}/extensions/gestion?extension=${encodeURIComponent(req.params.ext)}` : `${BASE}/gestion?site=${siteId}&extension=${encodeURIComponent(req.params.ext)}`;
+    const inSpace = req.body.espace === "1";
+    const root = inSpace ? `${space(siteId)}/extensions` : BASE;
+    const back = req.body.retour === "catalogue" ? (inSpace ? root : `${root}?site=${siteId}`)
+      : req.body.retour === "detail" ? `${root}/detail/${encodeURIComponent(req.params.ext)}${inSpace ? "" : `?site=${siteId}`}`
+      : inSpace ? `${root}/gestion?extension=${encodeURIComponent(req.params.ext)}` : `${BASE}/gestion?site=${siteId}&extension=${encodeURIComponent(req.params.ext)}`;
     attempt(req, res, next, back, () => {
       const m = reg.get(req.params.ext);
       if (!m) throw new MarketingError("invalid_field", "Extension inconnue.");

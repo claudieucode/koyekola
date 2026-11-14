@@ -1,0 +1,67 @@
+<%#
+  Fiche d'une extension (Extensions → Détails). Tout vient du manifeste du registre et de l'état réel du site ; aucune action fictive : « Configurer » n'apparaît que si l'extension déclare des paramètres.
+%><%- include("partials/top", { title, active, extUi: true }) %>
+<%
+  const here = (extra) => { const p = new URLSearchParams(); if (site && !inSite) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
+  const on = Boolean(site) && item.enabled;
+  const blocked = item.availability === "unavailable" || item.maintenance !== "stable";
+  const first = item.menus && item.menus[0] && item.menus[0].items[0];
+  const openHref = on && first ? (first.external ? first.href : `/marketing/site-web/sites/${site.id}/${first.key}`) : null;
+  const depName = (d) => (registry.get(d.id) || { name: d.id }).name;
+%>
+<div class="mk-head"><div class="mk-head-main"><p class="mk-head-sub"><a href="<%= BASE %><%= inSite ? '' : here() %>">← Toutes les extensions</a></p></div></div>
+<div class="xd">
+  <header class="xd-hero" style="--xc-accent: <%= item.accent || 'var(--accent)' %>">
+    <span class="xc-logo"><% if (item.logo) { %><img src="<%= item.logo %>" alt="" width="88" height="88" decoding="async"><% } else { %><span class="xc-initial"><%= item.name.charAt(0) %></span><% } %></span>
+    <div>
+      <h2><%= item.name %></h2>
+      <p>Par <%= item.publisher %> · version <%= item.version %> · <%= item.categoryLabel %></p>
+      <p class="xc-state" style="margin-top:8px"><% if (site) { %><span class="xc-dot <%= on ? 'is-on' : '' %>"></span><span><%= on ? "Activée" : "Désactivée" %> sur « <%= site.name %> »</span><% } else { %>Aucun site<% } %></p>
+    </div>
+    <div class="xd-actions">
+      <% if (site && !on && !blocked) { %>
+        <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= item.id %>/activer"><input type="hidden" name="retour" value="detail"><% if (inSite) { %><input type="hidden" name="espace" value="1"><% } %><button class="btn btn-primary" type="submit">Activer pour ce site</button></form>
+      <% } %>
+      <% if (openHref) { %><a class="btn btn-primary" href="<%= openHref %>">Ouvrir</a><% } %>
+      <% if (on && item.settings.length) { %><a class="btn btn-outline" href="<%= BASE %>/gestion<%= here({ extension: item.id }) %>">Configurer</a><% } %>
+      <% if (on) { %><a class="btn btn-outline" href="<%= BASE %>/gestion<%= here({ extension: item.id, confirmer: item.id }) %>">Désactiver</a><% } %>
+      <a class="btn btn-outline" href="<%= BASE %>/historique<%= here({ extension: item.id }) %>">Historique</a>
+    </div>
+  </header>
+
+  <div>
+    <section class="xd-card"><h3>Description</h3><p><%= item.description %></p></section>
+    <% if (item.features && item.features.length) { %><section class="xd-card"><h3>Fonctionnalités</h3><ul class="xd-list"><% item.features.forEach((f) => { %><li><%= f %></li><% }) %></ul></section><% } %>
+    <section class="xd-card"><h3>Activité sur ce site</h3>
+      <% if (!events.length) { %><p class="mk-sub">Aucune activation ni désactivation enregistrée pour cette extension sur ce site.</p>
+      <% } else { %><ul class="xd-list"><% events.forEach((e) => { %><li><%= String(e.created_at).replace("T", " ").slice(0, 16) %> — <%= ACTION[e.action] || e.action %><%= e.version ? " (version " + e.version + ")" : "" %></li><% }) %></ul><% } %>
+    </section>
+    <% if (settings.length) { %><section class="xd-card"><h3>Paramètres</h3><p class="mk-sub">Propres à « <%= site.name %> ».</p><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: item.id }) %>">Modifier les paramètres</a></section><% } %>
+  </div>
+
+  <aside>
+    <section class="xd-card"><h3>Informations</h3>
+      <dl class="xd-facts">
+        <dt>Version</dt><dd><%= item.version %></dd>
+        <dt>Éditeur</dt><dd><%= item.publisher %></dd>
+        <dt>Catégorie</dt><dd><%= item.categoryLabel %></dd>
+        <dt>Compatibilité</dt><dd>Kolakisa <%= item.compatibility.kolakisa %> ✓</dd>
+        <dt>Disponibilité</dt><dd><%= item.availability === "beta" ? "Bêta" : item.availability === "unavailable" ? "Non disponible" : item.maintenance === "maintenance" ? "En maintenance" : item.maintenance === "deprecated" ? "Obsolète" : "Disponible" %></dd>
+        <dt>Ajoutée le</dt><dd><%= item.added || "—" %></dd>
+        <% if (!inSite) { %><dt>Sites actifs</dt><dd><%= item.activeSites %> / <%= totalSites %></dd><% } %>
+      </dl>
+    </section>
+    <section class="xd-card"><h3>Dépendances</h3>
+      <dl class="xd-facts">
+        <dt>Nécessite</dt><dd><%= item.dependencies.length ? item.dependencies.map(depName).join(", ") : "Aucune" %></dd>
+        <dt>Utilisée par</dt><dd><%= dependents.length ? dependents.join(", ") : "Aucune autre extension" %></dd>
+        <dt>Incompatible avec</dt><dd><%= item.conflicts.length ? item.conflicts.join(", ") : "Rien" %></dd>
+      </dl>
+    </section>
+    <section class="xd-card"><h3>Permissions</h3>
+      <% if (item.permissions.length) { %><ul class="xd-list"><% item.permissions.forEach((p) => { %><li><code><%= p %></code></li><% }) %></ul><% } else { %><p class="mk-sub">Aucune permission propre : l'extension utilise les permissions existantes du CMS.</p><% } %>
+      <p class="mk-sub" style="margin-top:8px">L'activation est réservée à l'équipe de l'organisation (permission <code>sites.modules</code>).</p>
+    </section>
+  </aside>
+</div>
+<%- include("partials/bottom") %>

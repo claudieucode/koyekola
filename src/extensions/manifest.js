@@ -9,7 +9,7 @@ const MAINTENANCE = ["stable", "maintenance", "deprecated"];
 const SCOPES = ["optional", "always_on_primary"]; // always_on_primary : le site principal n'est jamais soumis à l'activation (comportement historique)
 const SETTING_TYPES = ["string", "number", "boolean", "select"];
 const KEYS = new Set(["id", "name", "description", "icon", "version", "publisher", "category", "availability", "maintenance", "compatibility", "dependencies", "conflicts", "permissions",
-  "scope", "migrations", "entry", "adminRoutes", "publicRoutes", "menus", "settings", "events", "hooks", "tasks", "resources", "docs", "phase"]);
+  "scope", "migrations", "entry", "adminRoutes", "publicRoutes", "menus", "settings", "events", "hooks", "tasks", "resources", "docs", "phase", "features", "added", "accent"]);
 
 const isStr = (v, min = 1, max = 400) => typeof v === "string" && v.trim().length >= min && v.length <= max;
 const isRegex = (s) => { try { new RegExp(s); return typeof s === "string"; } catch { return false; } };
@@ -23,6 +23,9 @@ function problems(m, { kolakisaVersion } = {}) {
   if (!ID_RE.test(m.id || "")) bad("id : 2 à 30 lettres minuscules ou « _ », commence par une lettre");
   if (!isStr(m.name, 2, 80)) bad("name : 2 à 80 caractères");
   if (!isStr(m.description, 10, 400)) bad("description : 10 à 400 caractères");
+  if (m.features !== undefined && (!Array.isArray(m.features) || m.features.some((x) => !isStr(x, 3, 120)))) bad("features : liste de phrases courtes");
+  if (m.accent !== undefined && !/^#[0-9a-fA-F]{6}$/.test(m.accent)) bad("accent : couleur #RRGGBB");
+  if (m.added !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(m.added)) bad("added : date AAAA-MM-JJ");
   if (!isStr(m.icon, 2, 30) || !/^[a-z][a-z0-9-]*$/.test(m.icon)) bad("icon : nom d'icône du CMS (minuscules)");
   if (!semver.valid(m.version)) bad("version : majeur.mineur.correctif");
   if (!isStr(m.publisher, 2, 80)) bad("publisher : requis");

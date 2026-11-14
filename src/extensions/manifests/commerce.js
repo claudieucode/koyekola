@@ -1,6 +1,7 @@
 // Kolakisa Commerce : la boutique EXISTANTE (src/marketing/shop, web/shop*.js, api/shop.js), intégrée sans réécriture. Identifiant technique stable : « commerce ».
 module.exports = {
   id: "commerce", name: "Kolakisa Commerce", description: "Boutique complète : produits, commandes, clients, abonnements, rendez-vous, listes cadeaux, factures, taxes, expédition et paiements.",
+  accent: "#1E4FD8", added: "2026-11-14", features: ["Produits, catégories, avis et listes cadeaux", "Commandes, clients, abonnements et rendez-vous", "Factures, taxes, expédition et paiements", "Rapports de ventes et paniers abandonnés", "Accès membre (produits téléchargeables)"],
   icon: "cart", version: "1.0.0", publisher: "Kolakisa", category: "commerce", availability: "available", maintenance: "stable", scope: "always_on_primary", phase: "R7-6.5",
   compatibility: { kolakisa: ">=1.0.0" }, dependencies: [], conflicts: [],
   permissions: ["shop.read", "shop.write", "shop.orders", "shop.payments"],
