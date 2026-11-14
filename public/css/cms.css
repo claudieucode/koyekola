@@ -2243,3 +2243,27 @@ tr.is-skipped { opacity: 0.65; }
 }
 @media (pointer: coarse) { .rd-choice, .rd-shortcut { min-height: 44px; } }
 @media (prefers-reduced-motion: reduce) { .rd-edit[open]::before, .rd-edit[open] > .rd-edit-form { animation: none !important; } .rd-panel *, .rd-shortcut, .rd-choice, .rd-card, .rd-drop, .rd-adv *, .rd-rows > li { transition: none !important; animation: none !important; } .rd-shortcut:hover { transform: none; } }
+
+/* ---- Occupation de l'espace des pages de réglages (Général, Connecteurs, Confidentialité) ----
+   Une seule largeur pour ces pages (jeton --kg-max-settings) au lieu de 880 / 920 / 1040 px écrits en dur ; deux colonnes seulement quand la place le permet (grands écrans).
+   Couleurs, bordures et arrondis inchangés. Aucune règle globale : tout est préfixé .mk-sg / .mk-cn / .mk-pv. */
+:root { --kg-max-settings: 1680px; }
+.mk-sg, .mk-cn, .mk-pv { max-width: var(--kg-max-settings); }
+.mk-pv-head { text-align: left; }
+.mk-pv-tabs { justify-content: flex-start; }
+.mk-sg-control input[type="text"], .mk-sg-control input[type="url"], .mk-sg-control input[type="email"], .mk-sg-control input[type="search"], .mk-sg-control select { max-width: min(100%, 560px); }
+.mk-sg-control textarea { max-width: min(100%, 720px); }
+@media (min-width: 1500px) {
+  .mk-sg-section { grid-template-columns: 280px minmax(0, 1fr); gap: 8px 40px; }
+  .mk-sg-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 40px; padding: 24px 28px; }
+  .mk-sg-fields > .mk-sg-row { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .mk-sg-fields > .mk-sg-row .mk-sg-label { padding-top: 0; }
+  .mk-sg-fields > :not(.mk-sg-row), .mk-sg-fields > .mk-sg-row:has(textarea, .mk-sg-radios, button, img, input[type="file"], .mk-sg-example) { grid-column: 1 / -1; }
+  .mk-cn-list { grid-template-columns: repeat(auto-fill, minmax(620px, 1fr)); gap: 14px; align-items: start; }
+  .mk-cn-card.is-open { grid-column: 1 / -1; }
+  .mk-pv-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; align-items: start; }
+  .mk-pv-panel > * { grid-column: 1 / -1; margin: 0; }
+  .mk-pv-panel > .mk-pv-card:has(.mk-pv-row) { grid-column: auto; }
+  .mk-pv-panel .mk-pv-row { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 1900px) { :root { --kg-max-settings: 1920px; } }
