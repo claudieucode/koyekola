@@ -12,8 +12,8 @@ const leaf = (key, label, href, extra = {}) => ({ key, label, href, status: "liv
 
 // Menus des extensions : lus dans le registre (manifestes). Un groupe porte `extension` : il n'apparaît dans l'espace d'un site que si l'extension y est activée (voir projectSections).
 const extensionSections = () => require("../../extensions/registry").load().menuGroups().map((g) => ({
-  key: g.key, label: g.label, icon: g.icon, extension: g.extension,
-  items: g.items.map((i) => leaf(i.key, i.label, i.href, { permission: i.permission, ...(i.primary ? { primary: i.primary } : {}), ...(i.external ? { external: true } : {}) })),
+  key: g.key, label: g.label, icon: g.icon, extension: g.extension, ...(g.single ? { single: true } : {}),
+  items: g.items.map((i) => leaf(i.key, i.label, i.href, { permission: i.permission, ...(i.hidden ? { hidden: true } : {}), ...(i.primary ? { primary: i.primary } : {}), ...(i.external ? { external: true } : {}) })),
 }));
 
 // Les clés « sitedash », « sites », « landing » et « pagetests » sont celles que passent déjà les écrans existants
@@ -81,14 +81,7 @@ const SECTIONS = [
       leaf("utilisateurs/profil", "Profil", `${BASE}/profil`, { permission: "profile.self" }), // Comptes → Profil : son propre profil (toute personne ayant accès à l'administration)
     ],
   },
-  {
-    key: "boutique", label: "Boutique", icon: "cart", single: true, items: [ // single : une seule entrée dans le menu principal ; les rubriques (commandes, clients, réglages…) sont dans la navigation secondaire de l'espace Boutique, leurs routes et droits restent résolvables (hidden)
-      leaf("boutique", "Produits", `${BASE}/boutique`, { permission: "shop.read", primary: { label: "Nouveau produit", href: `${BASE}/boutique/produits/nouveau`, permission: "shop.write" } }),
-      leaf("boutique/commandes", "Commandes", `${BASE}/boutique/commandes`, { permission: "shop.read", hidden: true }),
-      leaf("boutique/clients", "Clients", `${BASE}/boutique/clients`, { permission: "shop.read", hidden: true }),
-      leaf("boutique/reglages", "Réglages de la boutique", `${BASE}/boutique/reglages`, { permission: "shop.read", hidden: true }),
-    ],
-  },
+  ...extensionSections(), // groupes déclarés par les manifestes (Boutique, Formation…) : visibles dans un site seulement si l'extension y est activée ; aucun menu d'extension écrit en dur ici
   {
     key: "seo", label: "SEO", icon: "searchCheck", items: [
       leaf("seo", "Vue générale", `${BASE}/seo`, { permission: "seo.view" }),
@@ -442,6 +435,9 @@ function marketingGroup(space) {
 // Une entrée du registre vue depuis un espace : { key, label, href, status, permission, reg, alias?, disabled?, phase?, primary? } — ou null (central)
 function projectItem(item, group, space) {
   const base = { key: item.key, label: item.label, permission: item.permission, reg: item.key, section: group.key, ...(item.hidden ? { hidden: true } : {}), ...(item.anyOf ? { anyOf: item.anyOf } : {}) };
+  if (item.external) return { ...base, href: item.href, status: "live", external: true }; // entrée d'extension qui ouvre son propre espace (ex. Formation → /formateur)
+  // Entrée présente dans l'espace de chaque site, à l'adresse de CE site (ex. Extensions → /sites/N/extensions) ; réservée à l'équipe (jamais proposée à un accès limité à un site)
+  if (item.siteSpaceHref && !space.principal) return item.teamOnly && space.limited ? null : { ...base, href: `${space.base}${item.siteSpaceHref}`, status: "live" };
   // Dans son espace, le principal a le même « Tableau de bord » que tout autre site, à l'adresse de SON espace
   if (space.principal && item.key === "apparence/theme-builder") return { ...base, href: `${space.base}/constructeur-de-theme`, status: "live", external: true };
   if (space.principal) return item.key === "sitedash" ? { ...item, ...base, label: "Tableau de bord", href: `${space.base}/tableau-de-bord` } : { ...item, ...base };

@@ -9,11 +9,11 @@ module.exports = {
   // Administration : écrans d'un site (/site-web/sites/N/boutique…), du principal (/site-web/principal/boutique, /site-web/boutique…) et les revenus. Le préfixe d'espace est retiré avant la comparaison (voir runtime.extensionPath).
   adminRoutes: ["^\\/revenus(?:\\/|$)", "^\\/boutique(?:\\/|$)", "^\\/site-web\\/boutique(?:\\/|$)"],
   publicRoutes: ["^\\/boutique(?:\\/|$)"],
-  menus: [{ key: "boutique", label: "Boutique", icon: "cart", items: [
+  menus: [{ key: "boutique", label: "Boutique", icon: "cart", single: true, items: [ // single : une seule entrée dans le menu principal ; les autres rubriques sont dans la navigation secondaire de la boutique (routes et droits inchangés)
     { key: "boutique", label: "Produits", href: "/marketing/site-web/boutique", permission: "shop.read", primary: { label: "Nouveau produit", href: "/marketing/site-web/boutique/produits/nouveau", permission: "shop.write" } },
-    { key: "boutique/commandes", label: "Commandes", href: "/marketing/site-web/boutique/commandes", permission: "shop.read" },
-    { key: "boutique/clients", label: "Clients", href: "/marketing/site-web/boutique/clients", permission: "shop.read" },
-    { key: "boutique/reglages", label: "Réglages de la boutique", href: "/marketing/site-web/boutique/reglages", permission: "shop.read" },
+    { hidden: true, key: "boutique/commandes", label: "Commandes", href: "/marketing/site-web/boutique/commandes", permission: "shop.read" },
+    { hidden: true, key: "boutique/clients", label: "Clients", href: "/marketing/site-web/boutique/clients", permission: "shop.read" },
+    { hidden: true, key: "boutique/reglages", label: "Réglages de la boutique", href: "/marketing/site-web/boutique/reglages", permission: "shop.read" },
   ] }],
   settings: [], events: ["shop.order.created", "shop.order.paid", "shop.order.refunded"], hooks: [], tasks: [], resources: {}, docs: "docs/boutique/GUIDE_ADMINISTRATION.md",
 };

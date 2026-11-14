@@ -49,7 +49,7 @@ function createMarketingRouters({ db }) {
     };
     res.locals.mk = { role, can: allowed, ctx: req.mk.ctx };
     // R7 lot 6.0 : écrans des six moteurs secondaires — un accès LIMITÉ à un site n'y entre que si le module est activé pour CE site (en plus des permissions et de la portée des routes) ; jamais pour un site inconnu
-    if (require("../siteModules").denies(req.mk, req.path, db, orgId)) return res.status(403).render("error", { message: "Ce module n'est pas activé pour ce site." });
+    if (require("../siteModules").denies(req.mk, req.path, db, orgId)) return res.status(403).render("error", { message: "Ce module n'est pas activé pour ce site. L'équipe de l'organisation peut l'activer dans Extensions → Gestion des extensions." });
     // Écrans de contenu d'un site (R6 lot 2) : le site courant est conservé dans les formulaires (champ caché « site »)
     res.locals.mkToken = () => require("crypto").randomBytes(16).toString("hex"); // jeton à usage unique d'un formulaire (idempotence des créations : PAGES-02)
     { const s = require("../../services/siteContent").siteParam(req.mk.ctx); res.locals.mkSiteField = s ? `<input type="hidden" name="site" value="${s}">` : ""; res.locals.mkSiteId = s; res.locals.mkNavUrl = (u) => (s && typeof u === "string" && /^\/marketing\/site-web\/(?:articles|commentaires)(?:[/?#]|$)/.test(u) && !/[?&]site=/.test(u) ? u + (u.includes("?") ? "&" : "?") + "site=" + s : u); res.locals.mkRestricted = Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteScope > 0; }

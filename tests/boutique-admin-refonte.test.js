@@ -64,7 +64,7 @@ describe("boutique : socle visuel de l'administration", () => {
   test("les écrans rattachés au menu du site gardent le menu latéral du site (Boutique) et non celui du Marketing", async () => {
     for (const path of ["/classes", "/paiements", "/factures", "/rapports", "/avis", "/acces", "/abonnements", "/rendez-vous", "/listes-cadeaux"]) {
       const html = (await boss.get(`${B}${path}`)).text;
-      assert.match(html, /Réglages de la boutique/, `${path} : menu du site`);
+      assert.match(html, /class="bq-side/, `${path} : navigation latérale de la boutique`);
       assert.match(html, /Vous êtes dans le site/, `${path} : bandeau du site`);
     }
   });
