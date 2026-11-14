@@ -101,6 +101,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./rss")());
   admin.use(require("./landing")());
   admin.use(require("./siteWeb")());
+  admin.use(require("./lmsAdmin")()); // Kolakisa LMS intégré : tableau de bord, formations, étudiants, certificats d'un site — avant l'espace du site
   admin.use(require("./shopAdmin")()); // Programme 20.5 : boutique d'un site (produits, commandes, clients, réglages) — avant l'espace du site
   admin.use(require("./redirectsHub")()); // Redirections : tableau de bord, groupes, 404, journaux, adresses, import / export, outils, paramètres (site principal et sites)
   admin.use(require("./siteSeo")()); // R8 lot 6C : SEO d'un site (réglages, redirections, 404) — avant l'espace du site (ses routes /sites/:id/redirections sont plus précises)

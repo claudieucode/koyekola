@@ -1151,10 +1151,10 @@ body.mk-nm-dragging { cursor: grabbing; user-select: none; }
 .mk-pv-acc-btn:hover { background: var(--mk-hover, #f6f9fc); }
 .mk-pv-acc-btn > span:first-child { flex: 1 1 auto; min-width: 0; }
 .mk-pv-acc-btn small { display: block; font-size: 0.75rem; font-weight: 500; color: var(--mk-muted, #5a687d); }
-.mk-pv-chev { flex: none; transition: transform .2s ease; color: var(--mk-muted, #5a687d); }
+.mk-pv-chev { flex: none; transition: transform .17s cubic-bezier(.2, 0, 0, 1); color: var(--mk-muted, #5a687d); }
 .mk-pv-acc-btn[aria-expanded="true"] .mk-pv-chev { transform: rotate(180deg); }
-.mk-pv-acc-panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .22s ease, visibility 0s linear .22s; }
-.mk-pv-acc.is-open > .mk-pv-acc-panel { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .22s ease, visibility 0s; }
+.mk-pv-acc-panel { display: grid; grid-template-rows: 0fr; visibility: hidden; transition: grid-template-rows .17s cubic-bezier(.2, 0, 0, 1), visibility 0s linear .17s; }
+.mk-pv-acc.is-open > .mk-pv-acc-panel { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .17s cubic-bezier(.2, 0, 0, 1), visibility 0s; }
 .mk-pv-acc-inner { overflow: hidden; min-height: 0; }
 .mk-pv-acc-content { padding: 4px 20px 20px; font-size: 0.9375rem; line-height: 1.6; }
 .mk-pv-acc-content h4 { margin: 16px 0 6px; font-size: 0.8125rem; text-transform: uppercase; letter-spacing: .04em; color: var(--mk-muted, #5a687d); }

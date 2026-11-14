@@ -1,0 +1,5 @@
+<%# État vide commun. Paramètres : titre, texte, action = { href, label } ou null. %>
+<div class="mk-empty bq-empty"><%- illu("formations", { className: "kx-empty-ill" }) %>
+  <h3><%= titre %></h3><% if (typeof texte !== "undefined" && texte) { %><p><%= texte %></p><% } %>
+  <% if (typeof action !== "undefined" && action) { %><a class="btn btn-primary btn-sm" href="<%= action.href %>"><%= action.label %></a><% } %>
+</div>

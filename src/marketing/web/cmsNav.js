@@ -239,6 +239,8 @@ const SITE_MODULES = {
   seo: { label: "SEO", kind: "own", permission: "seo.view", legacy: `${BASE}/seo`, reg: "seo" },
   // Programme 20.5 : boutique du site (écrans de l'espace du site ; données de CE site seulement, voir shopAdmin.js)
   boutique: { label: "Boutique", kind: "own", permission: "shop.read" },
+  // Kolakisa LMS intégré : tableau de bord, formations, étudiants, certificats d'UN site (voir lmsAdmin.js) ; extension activée par site
+  formations: { label: "Formations", kind: "own", permission: "lms.manage" },
   // Écrans partagés ouverts dans le cadre du site. `to` = adresse de l'écran existant, relative au routeur d'administration ; `reg` = sa clé `active`.
   listes: { label: "Listes", kind: "delegate", to: "/listes", reg: "lists", permission: "lists.read", legacy: "/marketing/listes" },
   segments: { label: "Segments", kind: "delegate", to: "/segments", reg: "segments", permission: "segments.read", legacy: "/marketing/segments" },
@@ -327,6 +329,7 @@ const ABILITY = {
   "redirections/parametres": { mode: "open", module: "redirections", sub: "parametres" },
   seo: { mode: "open", module: "seo" },
   boutique: { mode: "open", module: "boutique" },
+  formation: { mode: "open", module: "formations" },
   "boutique/commandes": { mode: "open", module: "boutique", sub: "commandes" },
   "boutique/clients": { mode: "open", module: "boutique", sub: "clients" },
   "boutique/reglages": { mode: "open", module: "boutique", sub: "reglages" },

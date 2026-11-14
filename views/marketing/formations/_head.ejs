@@ -1,0 +1,20 @@
+<%#
+  En-tête commun de l'espace Formations (Kolakisa LMS dans le CMS) : navigation secondaire (même gabarit que la boutique) et avertissements réels.
+  Paramètres : heading (titre), tab (rubrique active).
+%><%
+  const lmGroups = [
+    [["", "", "Tableau de bord", "barChart"], ["liste", "/liste", "Formations", "graduation"]],
+    [["etudiants", "/etudiants", "Étudiants", "users"], ["certificats", "/certificats", "Certificats", "trophy"]],
+  ];
+  const lmCurrent = lmGroups.flat().find((e) => e[0] === (tab || "")) || lmGroups[0][0];
+%>
+<aside class="bq-side" data-bq-side>
+  <button type="button" class="bq-side-toggle" aria-expanded="false" aria-controls="bq-side-nav" data-bq-toggle><span class="bq-ico" aria-hidden="true"><%- icon(lmCurrent[3], { size: 18 }) %></span><span class="bq-side-current">Formations · <%= lmCurrent[2] %></span><span class="bq-chev" aria-hidden="true"><%- icon("chevronDown", { size: 16 }) %></span></button>
+  <nav class="bq-side-nav" id="bq-side-nav" aria-label="Rubriques des formations">
+    <p class="bq-side-title">Formations</p>
+    <% lmGroups.forEach((group, gi) => { %><% if (gi) { %><span class="bq-side-sep" role="separator"></span><% } %><ul class="bq-side-list"><% group.forEach(([key, path, label, ico]) => { %><li><a class="bq-link" href="<%= base %><%= path %>"<%- (tab || "") === key ? ' aria-current="page"' : "" %>><span class="bq-ico" aria-hidden="true"><%- icon(ico, { size: 18 }) %></span><span><%= label %></span></a></li><% }) %></ul><% }) %>
+  </nav>
+</aside>
+<div class="mk-head"><div class="mk-head-main"><h1><%= heading %></h1>
+  <p class="mk-head-sub">Formations de « <%= space.name %> » : cours, étudiants et certificats propres à ce site.</p></div>
+  <% if (canWrite) { %><div class="mk-head-actions"><a class="btn btn-primary btn-sm" href="/formateur/cours/nouveau"><%- icon("plus", { size: 16 }) %> Nouvelle formation</a></div><% } %></div>

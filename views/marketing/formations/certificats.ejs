@@ -1,0 +1,28 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Certificats" }) %>
+<section class="mk-panel">
+  <form method="get" class="mk-form mk-inline-form" role="search" aria-label="Filtrer les certificats">
+    <div class="field-group"><label for="c-q">Rechercher</label><input type="search" id="c-q" name="q" value="<%= query.q || "" %>" maxlength="80" placeholder="Étudiant, formation ou code"></div>
+    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+  </form>
+  <% if (!list.items.length) { %>
+    <%- include("_vide", { titre: query.q ? "Aucun certificat ne correspond" : "Aucun certificat délivré", texte: query.q ? "Essayez un autre nom ou un autre code." : "Un certificat est délivré automatiquement quand un étudiant termine une formation.", action: query.q ? { href: base + "/certificats", label: "Voir tous les certificats" } : null }) %>
+  <% } else { %>
+  <div class="mk-table-wrap"><table class="mk-table">
+    <caption class="sr-only">Certificats délivrés</caption>
+    <thead><tr><th scope="col">Étudiant</th><th scope="col">Formation</th><th scope="col">Délivré le</th><th scope="col">Code</th><th scope="col">Statut</th></tr></thead>
+    <tbody>
+    <% list.items.forEach((c) => { %>
+      <tr>
+        <th scope="row"><%= c.student_name %></th>
+        <td><%= c.course_title %></td>
+        <td class="mk-num"><%= String(c.issued_at).slice(0, 10).split("-").reverse().join("/") %></td>
+        <td><a href="/verifier-certificat?code=<%= encodeURIComponent(c.code) %>" target="_blank" rel="noopener"><%= c.code %></a></td>
+        <td><span class="<%= c.revoked_at ? "mk-status mk-status-warn" : "mk-status mk-status-ok" %>"><%= c.revoked_at ? "Révoqué" : "Valide" %></span></td>
+      </tr>
+    <% }) %>
+    </tbody></table></div>
+  <%- include("_pager", { list, nom: "certificats" }) %>
+  <% } %>
+</section>
+<%- include("../partials/bottom") %>
