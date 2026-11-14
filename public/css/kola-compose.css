@@ -34,7 +34,7 @@ html[data-kola-theme="dark"] {
 /* Les bandes pleine largeur de kola-pages.css se calent sur --kp-x / --kp-t : on règle ces variables, jamais le remplissage seul */
 .mk-content { --kp-x: var(--kg-pad); --kp-t: 20px; padding: var(--kp-t) var(--kp-x) 56px; max-width: var(--kg-max); margin-inline: auto; } /* marges et largeur : jetons --kg-* (marketing.css), jamais de valeur propre */
 @media (max-width: 640px) { .mk-content { --kp-t: 16px; } }
-.mk-body .mk-main { background: radial-gradient(900px 340px at 78% -80px, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%), var(--mk-bg); }
+.mk-body .mk-main { background: radial-gradient(900px 340px at 78% -80px, color-mix(in srgb, var(--accent) 7%, transparent), transparent 70%) top / 100% 420px no-repeat, var(--mk-bg); } /* dégradé borné à 420 px (même rendu) : il n'est plus redessiné en entier quand la hauteur de la page change (accordéons, repliables) */
 
 /* Menu latéral : entrées arrondies, pastille d'icône, état actif lumineux, groupes séparés */
 .mk-sidebar .mk-nav-heading { display: flex; align-items: center; gap: 10px; padding: 18px 12px 6px; letter-spacing: 0.12em; }
