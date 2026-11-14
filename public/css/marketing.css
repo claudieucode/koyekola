@@ -1761,16 +1761,18 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* ---------- Rapports comparatifs (Analytics → Rapports comparatifs) ---------- */
 .mk-cmp-main { min-width: 0; }
 .mk-cmp-side { margin-bottom: 16px; }
-.mk-cmp-side > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; list-style-position: inside; }
+.mk-cmp-side > summary { cursor: pointer; min-height: 44px; padding: 0 4px; display: flex; align-items: center; list-style-position: inside; }
 .mk-cmp-side-title { display: inline; margin: 0; font-size: 1.05rem; }
-.mk-cmp-side-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 20px; align-items: start; padding-top: 12px; }
+.mk-cmp-side-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 20px; align-items: start; padding: 16px 4px 4px; }
 .mk-cmp-saved { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .mk-cmp-saved li { display: grid; gap: 2px; padding-bottom: 10px; border-bottom: 1px solid var(--mk-border); }
 .mk-cmp-saved a[aria-current="page"] { font-weight: 800; }
 .mk-cmp-saved form { justify-self: start; }
 .mk-cmp-best { font-weight: 800; color: var(--primary); }
 .mk-cmp-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-.mk-cmp-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 14px; }
+.mk-cmp-actions { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--mk-border); }
+.mk-cmp-actions .btn { min-height: var(--mk-field-h, 40px); }
+.mk-cmp-actions + .field-hint { margin-top: 12px; }
 .mk-cmp-actions .field-group { margin-bottom: 0; min-width: 200px; }
 .mk-table tbody th[scope="row"] .mk-sub { display: block; font-weight: 400; }
 @media (max-width: 800px) { .mk-cmp-side-body { grid-template-columns: 1fr; } }
@@ -2034,3 +2036,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
   border-radius: var(--kb-r-panel, 12px); background: var(--kb-canvas, var(--bg)); color-scheme: normal;
 }
 @media (max-width: 640px) { .mk-body .mk-sourcing-frame { height: max(560px, calc(100dvh - 150px)); border-radius: var(--kb-r-ctl, 8px); } }
+
+/* Finitions d'espacement (audit global) : groupes de boutons et réseaux autorisés */
+.mk-ev-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.mk-ev-actions form { margin: 0; }
+.mk-soc-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
+.mk-soc-grant .checkbox-row { margin: 0; }
+.mk-soc-grant .btn { margin-left: auto; }

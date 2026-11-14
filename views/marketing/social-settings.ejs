@@ -33,7 +33,7 @@
           <% grants.forEach((g) => { %>
             <tr><th scope="row" data-label="Site"><%= g.name %></th>
               <td data-label="Module"><%- g.moduleEnabled ? '<span class="mk-status mk-status-ok">Activé</span>' : '<span class="mk-status">Désactivé</span>' %></td>
-              <td data-label="Réseaux autorisés" colspan="2"><form method="post" action="/marketing/reseaux/reglages/sites" class="mk-row-actions">
+              <td data-label="Réseaux autorisés" colspan="2"><form method="post" action="/marketing/reseaux/reglages/sites" class="mk-row-actions mk-soc-grant">
                 <input type="hidden" name="site_id" value="<%= g.id %>">
                 <% Object.entries(NETWORKS).forEach(([n, label]) => { %><label class="checkbox-row"><input type="checkbox" name="networks" value="<%= n %>"<%= g.networks.includes(n) ? " checked" : "" %><%= canWrite ? "" : " disabled" %>> <%= label %></label><% }) %>
                 <% if (canWrite) { %><button type="submit" class="btn btn-outline btn-sm">Enregistrer<span class="sr-only"> pour <%= g.name %></span></button><% } %>

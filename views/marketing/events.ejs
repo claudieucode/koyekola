@@ -27,8 +27,8 @@
             </tr><% }) %></tbody></table></div>
         </details>
       <% } %>
-      <% if (canSync) { %><form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-outline btn-sm">Synchroniser maintenant</button></form>
-        <form action="/marketing/evenements/abandons" method="post"><button type="submit" class="btn btn-outline btn-sm">Détecter les abandons maintenant</button></form><% } %>
+      <% if (canSync) { %><div class="mk-ev-actions"><form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-outline btn-sm">Synchroniser maintenant</button></form>
+        <form action="/marketing/evenements/abandons" method="post"><button type="submit" class="btn btn-outline btn-sm">Détecter les abandons maintenant</button></form></div><% } %>
     </section>
 
     <h2 class="mk-h2">Événements récents</h2>

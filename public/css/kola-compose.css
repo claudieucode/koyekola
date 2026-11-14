@@ -408,3 +408,6 @@ html[data-sidebar="collapsed"] .mk-sidebar .mk-nav-split-link { flex: 1; }
 .mk-body .mk-content .mk-st-guide .g-page :is(p, li, div) a.g-link:not(.btn) { color: var(--g-link); text-decoration: var(--g-underline); }
 .mk-body .mk-content .mk-st-guide .g-page :is(p, li, div) a.g-link:not(.btn):hover { color: var(--g-link-hover); }
 .mk-body .mk-st-guide .g-page label, .mk-body .mk-st-guide .g-page .g-form > label { color: var(--g-text); }
+/* Interrupteurs : état éteint bien visible (piste plus marquée) et zone de clic confortable (audit global) */
+.mk-body :is(.mk-st-field, .mk-cms-check, .checkbox-row) input[type="checkbox"]:not(.mk-no-switch):not(:checked) { background: color-mix(in srgb, var(--mk-text, #1b2b45) 32%, var(--mk-surface, #fff)); }
+.mk-body .checkbox-row:has(> input[type="checkbox"]:not(.mk-no-switch)) { display: inline-flex; align-items: center; gap: 10px; min-height: 32px; cursor: pointer; }
