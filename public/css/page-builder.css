@@ -2528,3 +2528,33 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-ctx-pref-row:hover { background: var(--accent-light); }
 .pb-ctx-pref-row .icon { width: 16px; height: 16px; color: var(--primary); }
 .pb-menu-item.is-on::before { content: "✓"; margin-right: -6px; color: var(--accent-dark); font-weight: 700; }
+
+/* ---- Navigation du canevas : transition de zoom et panneau « Navigateur » ----
+   Zoom : l'échelle est jouée par transformation seulement (processeur graphique, aucune mise en page par image) ; la couche (will-change) n'existe que pendant le geste.
+   Aucun flou : une transformation d'échelle donne déjà la sensation de rapprochement, et un filtre sur toute la page coûterait cher à chaque image. */
+.pb-frame-wrap.is-zooming { will-change: transform; }
+.pb-canvas:has(.pb-frame-wrap.is-zooming) .pb-cbar { opacity: 0; pointer-events: none; }
+
+.pb-nav { --pb-nav-rule: #c3d0db; --pb-nav-ink: #44596b; --pb-nav-accent: #0277b6; --pb-nav-page: #ffffff;
+  position: absolute; right: 14px; bottom: 58px; z-index: 7; width: 236px; box-sizing: border-box; padding: 0; border: 1px solid var(--border); border-radius: 10px; background: var(--card, #fff); color: var(--text, #0f1f33);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14); opacity: 0; transform: translate3d(0, 6px, 0) scale(var(--kol-motion-scale, 0.97)); transform-origin: 100% 100%;
+  transition: opacity var(--kol-motion-normal, 150ms) var(--kol-motion-ease, ease), transform var(--kol-motion-normal, 150ms) var(--kol-motion-ease, ease); }
+.pb-nav[hidden] { display: none; }
+.pb-nav.is-open { opacity: 1; transform: none; }
+.pb-nav-head { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; border-bottom: 1px solid var(--border); cursor: grab; user-select: none; touch-action: none; }
+.pb-nav-head:active { cursor: grabbing; }
+.pb-nav-title { font-size: 12.5px; font-weight: 650; flex: 1 1 auto; }
+.pb-nav-zoom { font-size: 12px; font-weight: 650; color: var(--muted, #5b6b7c); font-variant-numeric: tabular-nums; }
+.pb-nav-btn { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--pb-radius-md); background: none; color: var(--text, #0f1f33); cursor: pointer; transition: background var(--kol-motion-fast, 100ms) ease; }
+.pb-nav-btn:hover { background: var(--accent-light, #e8f1f8); }
+.pb-nav-btn:focus-visible { outline: 2px solid var(--editor-accent, #0277b6); outline-offset: 1px; }
+.pb-nav-view { display: grid; place-items: center; padding: 12px; min-height: 80px; outline: none; background: var(--editor-panel-secondary, #f4f8fb); touch-action: none; cursor: crosshair; }
+.pb-nav-view:focus-visible { box-shadow: inset 0 0 0 2px var(--editor-accent, #0277b6); }
+.pb-nav-thumbbox { position: relative; overflow: hidden; border: 1px solid var(--pb-nav-rule); border-radius: 3px; background: var(--pb-nav-page); box-sizing: content-box; }
+.pb-nav-thumb { display: block; }
+.pb-nav-rect { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1.5px solid var(--pb-nav-accent); background: color-mix(in srgb, var(--pb-nav-accent) 14%, transparent); border-radius: 2px; cursor: grab; will-change: transform; pointer-events: none; }
+.pb-nav.is-dragging .pb-nav-rect, .pb-nav.is-dragging .pb-nav-view { cursor: grabbing; }
+.pb-nav-foot { display: flex; align-items: center; gap: 2px; padding: 5px 6px; border-top: 1px solid var(--border); }
+.pb-nav-sep { width: 1px; height: 16px; margin: 0 4px; background: var(--border); }
+@media (prefers-reduced-motion: reduce) { .pb-nav, .pb-nav-btn { transition: none; } }
+@media (max-width: 700px) { .pb-nav { right: 8px; bottom: 56px; width: min(236px, calc(100% - 16px)); } }

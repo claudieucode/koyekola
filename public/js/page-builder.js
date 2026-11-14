@@ -5723,7 +5723,7 @@ function selectField(label, value, options, onChange, opts) {
     previews = [];
     var doc = frame.contentDocument;
     if (!doc || !doc.body) return;
-    canvasReady = true;
+    canvasReady = true; canvasGen++; requestAnimationFrame(notifyView);   // nouveau rendu : le Navigateur redessine sa miniature
     guarded(refreshStart); // premier rendu terminé : seul moment où une page vide peut proposer le choix de création
     doc.body.classList.add("lp-builder");
     if (window.pbMotionStudio) window.pbMotionStudio.canvas(frame.contentWindow); // runtime Motion Studio du canevas (mode éditeur : lecture / pause / position)
@@ -5790,8 +5790,10 @@ function selectField(label, value, options, onChange, opts) {
       dragIds = selection.indexOf(id) >= 0 ? selection.slice() : [id]; dragNew = null;
       e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "pb-move");
     });
+    doc.addEventListener("pointerdown", function (e) { if (tool === "hand" && e.isPrimary && e.button === 0) panStart(e); });
+    doc.addEventListener("wheel", onZoomWheel, { passive: false });
     doc.addEventListener("mousedown", function (e) {
-      if (tool === "hand") { panStart(e); return; }
+      if (tool === "hand") { e.preventDefault(); return; }
       var el = targetOf(e);
       var id = idOfEl(el);
       if (el && selection.indexOf(id) >= 0 && !editing && canWrite && !lockedDeep(id) && !e.target.closest(".pb-handle")) el.setAttribute("draggable", "true");
@@ -5811,7 +5813,7 @@ function selectField(label, value, options, onChange, opts) {
       e.preventDefault();
       performDrop(t.target);
     });
-    frame.contentWindow.addEventListener("scroll", function () { drawOverlays(); drawRulers(); }, { passive: true });
+    frame.contentWindow.addEventListener("scroll", onViewScroll, { passive: true });
     // Position du pointeur reportée sur les règles
     var raf = 0;
     doc.addEventListener("mousemove", function (e) {
@@ -6307,7 +6309,7 @@ function selectField(label, value, options, onChange, opts) {
     var x = Math.min(Math.max(right - bw, sr.left + 4), sr.right - bw - 4);
     cbar.style.left = Math.round(x) + "px"; cbar.style.top = Math.round(y) + "px";
   }
-  stage.addEventListener("scroll", placeCanvasBar, { passive: true });
+  stage.addEventListener("scroll", onViewScroll, { passive: true });
   window.addEventListener("resize", function () { barSizes = {}; placeCanvasBar(); });
   // Ouvrir l'inspecteur sur un onglet (et un groupe de réglages déplié)
   function openInspector(tab, group) {
@@ -6319,16 +6321,95 @@ function selectField(label, value, options, onChange, opts) {
     if (target) { scrollInside(target); var f = target.querySelector("input, select, textarea, button"); if (f) f.focus({ preventScroll: true }); }
   }
 
+  // ---- Défilement : au plus UNE mise à jour par image ; les cadres de sélection (dans la page) suivent seuls le défilement, ils ne sont refaits qu'à l'arrêt ----
+  var scrollQueued = false, scrollSettle = 0, viewListeners = [], canvasGen = 0;
+  function onViewScroll() {
+    if (!scrollQueued) {
+      scrollQueued = true;
+      requestAnimationFrame(function () { scrollQueued = false; drawRulers(); placeCanvasBar(); notifyView(); });
+    }
+    clearTimeout(scrollSettle);
+    scrollSettle = setTimeout(function () { drawOverlays(); }, 140);
+  }
+  function notifyView() { for (var i = 0; i < viewListeners.length; i++) viewListeners[i](); }
+  // Zone visible, en coordonnées du DOCUMENT (pixels de la page, indépendants du zoom et de l'écran)
+  function viewState() {
+    var win = frame.contentWindow, doc = frame.contentDocument, de = doc && doc.documentElement;
+    if (!de || !de.clientWidth) return null;
+    var fr = wrap.getBoundingClientRect(), sr = stage.getBoundingClientRect(), z = zoom || 1;
+    var x0 = (Math.max(sr.left, fr.left) - fr.left) / z, x1 = (Math.min(sr.right, fr.right) - fr.left) / z;
+    var y0 = win.scrollY + (Math.max(sr.top, fr.top) - fr.top) / z, y1 = win.scrollY + (Math.min(sr.bottom, fr.bottom) - fr.top) / z;
+    return { gen: canvasGen, zoom: zoom, fit: zoomFit, docW: Math.max(de.scrollWidth, de.clientWidth), docH: de.scrollHeight, x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0) };
+  }
+  // Placer le coin haut-gauche de la zone visible à (x, y) du document : un seul mouvement, appelé au plus une fois par image par l'appelant
+  function viewTo(x, y) {
+    var win = frame.contentWindow, v = viewState();
+    if (!v) return;
+    win.scrollTo(0, Math.max(0, y) - (v.y - win.scrollY));
+    var dx = (x - v.x) * zoom;
+    if (Math.abs(dx) >= 0.5) stage.scrollLeft += dx;
+  }
+  // « Afficher la page entière » : le zoom pour lequel toute la hauteur de la page tient dans la zone de travail (quelques essais : la hauteur dépend de la largeur affichée)
+  function showWholePage() {
+    var doc = frame.contentDocument, de = doc && doc.documentElement;
+    if (!de) return;
+    var z = Math.min(1, zoom);
+    for (var i = 0; i < 5; i++) {
+      setZoom(z);
+      var next = Math.max(MIN_ZOOM, Math.floor((stage.clientHeight - STAGE_PAD) / Math.max(1, de.scrollHeight) * 100) / 100);
+      if (Math.abs(next - z) < 0.005) break;
+      z = Math.min(1, next);
+    }
+    frame.contentWindow.scrollTo(0, 0); stage.scrollLeft = 0; stage.scrollTop = 0;
+    notifyView();
+  }
+  // Navigateur : un fichier chargé au premier clic, jamais au démarrage
+  var navigatorLoading = null;
+  function withNavigator(fn) {
+    var go = function () { fn(window.pbNavigator.attach({ frame: function () { return frame; }, stage: stage, canvas: function () { return $("[data-pb-canvas]"); }, window: window, store: store,
+      zoomStep: zoomStep, setZoom: setZoom, viewState: viewState, viewTo: viewTo, showWholePage: showWholePage,
+      subscribe: function (f) { viewListeners.push(f); return function () { var i = viewListeners.indexOf(f); if (i >= 0) viewListeners.splice(i, 1); }; },
+      subscribeContent: function (f) { navListeners.push(f); return function () { var i = navListeners.indexOf(f); if (i >= 0) navListeners.splice(i, 1); }; } })); };
+    if (window.pbNavigator) { go(); return; }
+    if (!navigatorLoading) navigatorLoading = new Promise(function (ok, ko) {
+      if (!SELF_SRC) { ko(new Error("script introuvable")); return; }
+      var sc = document.createElement("script"); sc.src = SELF_SRC.replace(/page-builder\.js(\?.*)?$/, "page-builder-navigator.js$1"); sc.onload = ok; sc.onerror = function () { navigatorLoading = null; ko(new Error("chargement impossible")); };
+      document.head.appendChild(sc);
+    });
+    navigatorLoading.then(go, function () { toast("Le Navigateur n'a pas pu être chargé : vérifiez votre connexion.", true); });
+  }
+  (function () { var b = $("[data-pb-navigator]"); if (b) b.addEventListener("click", function () { withNavigator(function (nv) { nv.toggle(); }); }); })();
   // Outil « main » : faire défiler la page en la glissant
+  // Le pointeur est CAPTURÉ (le geste continue hors du cadre, jusque dans les panneaux) ; une seule mise à jour du défilement par image ;
+  // la distance vient de la position à l'ÉCRAN (screenX/Y) : celle du cadre bouge avec le défilement horizontal et ferait trembler le geste.
   function panStart(e) {
     e.preventDefault();
-    var win = frame.contentWindow, doc = frame.contentDocument;
-    var sx = e.clientX, sy = e.clientY, oy = win.scrollY, sl = stage.scrollLeft;
-    var move = function (ev) { win.scrollTo(0, oy - (ev.clientY - sy)); stage.scrollLeft = sl - (ev.clientX - sx) * zoom; };
-    var up = function () { doc.removeEventListener("mousemove", move); doc.removeEventListener("mouseup", up); doc.body.classList.remove("is-panning"); };
-    doc.body.classList.add("is-panning"); // curseur « main fermée » pendant le déplacement
-    doc.addEventListener("mousemove", move); doc.addEventListener("mouseup", up);
+    var win = frame.contentWindow, doc = frame.contentDocument, root = doc.documentElement;
+    var sx = e.screenX, sy = e.screenY, oy = win.scrollY, sl = stage.scrollLeft, id = e.pointerId, cx = sx, cy = sy, queued = false, z = zoom || 1;
+    var apply = function () { queued = false; win.scrollTo(0, oy - (cy - sy) / z); stage.scrollLeft = sl - (cx - sx); };
+    var move = function (ev) { if (ev.pointerId !== id) return; cx = ev.screenX; cy = ev.screenY; if (!queued) { queued = true; requestAnimationFrame(apply); } };
+    var up = function (ev) {
+      if (ev.pointerId !== id) return;
+      root.removeEventListener("pointermove", move); root.removeEventListener("pointerup", up); root.removeEventListener("pointercancel", up);
+      try { root.releasePointerCapture(id); } catch (x) { /* déjà relâché */ }
+      apply(); doc.body.classList.remove("is-panning"); document.body.classList.remove("is-panning");
+    };
+    try { root.setPointerCapture(id); } catch (x) { /* capture indisponible : le geste reste limité au cadre */ }
+    doc.body.classList.add("is-panning"); document.body.classList.add("is-panning"); // curseur « main fermée » pendant le déplacement
+    root.addEventListener("pointermove", move); root.addEventListener("pointerup", up); root.addEventListener("pointercancel", up);
   }
+  // Ctrl/⌘ + molette (et pincement du pavé tactile) : un niveau de zoom par geste, jamais une rafale de recalculs
+  var wheelAcc = 0, wheelAt = 0;
+  function onZoomWheel(e) {
+    if (!(e.ctrlKey || e.metaKey) || mode !== "visual") return;
+    e.preventDefault();
+    wheelAcc += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    var now = performance.now();
+    if (Math.abs(wheelAcc) < 24 || now - wheelAt < 110) return;
+    var dir = wheelAcc < 0 ? 1 : -1; wheelAcc = 0; wheelAt = now;
+    setZoom(zoomStep(dir), { animate: true });
+  }
+  stage.addEventListener("wheel", onZoomWheel, { passive: false });
 
   // ---------- Mode « Structure » : le même document, présenté comme une suite de blocs éditables ----------
   // Aucun second document : chaque saisie passe par setProp / change (historique, sauvegarde, calques, inspecteur et
@@ -6663,13 +6744,54 @@ function selectField(label, value, options, onChange, opts) {
     requestAnimationFrame(function () { drawOverlays(); drawGuides(); drawRulers(); refreshInfo(); });
   }
   $$(".pb-top .pb-devices button").forEach(function (b) { b.addEventListener("click", function () { setDevice(b.dataset.device); }); });
-  var MAX_ZOOM = 4; // 400 %
-  function applyZoom() {
+  // ---- Zoom : UNE source de vérité (zoom, zoomFit). Le navigateur de page, les règles, les guides et la barre d'actions la lisent ici. ----
+  // Pourquoi c'était lourd : chaque changement de zoom recalculait la mise en page de la page entière, puis relisait les mesures plusieurs fois de suite
+  // (règles, informations, barre d'actions), le tout sans transition. Désormais : mesures lues d'abord, styles écrits ensuite, UNE seule mise en page ;
+  // la transition elle-même n'est qu'une transformation (échelle) jouée par le processeur graphique, sans nouvelle mise en page à chaque image.
+  var MAX_ZOOM = 4, MIN_ZOOM = 0.25; // 25 % à 400 %
+  var ZOOM_LEVELS = [0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+  function zoomStep(dir) {   // niveau usuel suivant (dir > 0) ou précédent (dir < 0) à partir du zoom actuel, valeurs intermédiaires comprises
+    var z = Math.round(zoom * 1000) / 1000, i;
+    if (dir > 0) { for (i = 0; i < ZOOM_LEVELS.length; i++) if (ZOOM_LEVELS[i] > z + 0.004) return ZOOM_LEVELS[i]; return MAX_ZOOM; }
+    for (i = ZOOM_LEVELS.length - 1; i >= 0; i--) if (ZOOM_LEVELS[i] < z - 0.004) return ZOOM_LEVELS[i];
+    return MIN_ZOOM;
+  }
+  var zoomAnim = null, zoomLabelEl = null, zoomBtns = null;
+  var reducedMotion = window.matchMedia ? window.matchMedia("(prefers-reduced-motion: reduce)") : { matches: false };
+  function shownScale() {  // échelle réellement affichée (différente de `zoom` pendant la transition)
+    if (!zoomAnim) return zoom;
+    var m = /matrix\(([-\d.e]+)/.exec(getComputedStyle(wrap).transform || "");
+    var a = m ? parseFloat(m[1]) : 0;
+    return a > 0 ? a : zoom;
+  }
+  function zoomDecor() { drawRulers(); refreshInfo(); placeCanvasBar(); notifyView(); }
+  function endZoomAnim(cancel) {
+    if (!zoomAnim) return;
+    var a = zoomAnim; zoomAnim = null;
+    a.onfinish = a.oncancel = null;
+    try { a.cancel(); } catch (e) { /* déjà terminée */ }
+    wrap.classList.remove("is-zooming");
+    if (!cancel) { zoomDecor(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
+  }
+  function playZoom(from, to, dx) {
+    endZoomAnim(true);
+    wrap.classList.add("is-zooming");   // couche graphique seulement pendant le geste (will-change), barre d'actions masquée
+    var dur = Math.round(130 + Math.min(70, Math.abs(Math.log(to / from)) * 140));   // 130 à 200 ms : plus le saut est grand, plus il est long
+    var anim = wrap.animate([{ transform: "translate3d(" + dx + "px,0,0) scale(" + from + ")" }, { transform: "translate3d(0,0,0) scale(" + to + ")" }], { duration: dur, easing: "cubic-bezier(.22,.8,.24,1)" });
+    zoomAnim = anim;
+    anim.onfinish = function () { if (zoomAnim === anim) endZoomAnim(false); };
+    anim.oncancel = function () { if (zoomAnim === anim) { zoomAnim = null; wrap.classList.remove("is-zooming"); zoomDecor(); } };
+  }
+  function applyZoom(opts) {
+    // 1. LECTURES (aucune écriture avant : une seule mise en page)
+    var animate = Boolean(opts && opts.animate) && !reducedMotion.matches && Boolean(wrap.animate) && mode === "visual";
+    var from = animate ? (opts.from !== undefined ? opts.from : shownScale()) : zoom, oldLeft = animate ? (wrap.getBoundingClientRect().left) : 0;
     var avail = Math.max(240, stage.clientWidth - STAGE_PAD);
     var w = frameWidth(avail);
     shownWidth = w;
-    if (zoomFit) zoom = Math.min(1, Math.max(0.25, Math.floor(avail / w * 100) / 100));
+    if (zoomFit) zoom = Math.min(1, Math.max(MIN_ZOOM, Math.floor(avail / w * 100) / 100));
     var hgt = Math.max(400, (stage.clientHeight - STAGE_PAD) / zoom);
+    // 2. ÉCRITURES
     wrap.style.width = w + "px";
     wrap.style.height = hgt + "px";
     wrap.style.transform = "scale(" + zoom + ")";
@@ -6677,11 +6799,18 @@ function selectField(label, value, options, onChange, opts) {
     wrap.style.marginLeft = Math.max(0, (avail - w * zoom) / 2) + "px";
     wrap.style.marginRight = -((1 - zoom) * w) + "px";
     wrap.style.marginBottom = -((1 - zoom) * hgt) + "px";
-    $("[data-pb-zoom-value]").textContent = Math.round(zoom * 100) + " %";
-    $$("[data-pb-zoom]").forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= 0.25) || (v === "+" && zoom >= MAX_ZOOM); });
-    drawRulers();
-    refreshInfo();
-    placeCanvasBar();
+    if (!zoomLabelEl) zoomLabelEl = $("[data-pb-zoom-value]");
+    if (!zoomBtns) zoomBtns = $$("[data-pb-zoom]");
+    zoomLabelEl.textContent = Math.round(zoom * 100) + " %";
+    zoomBtns.forEach(function (b) { var v = b.dataset.pbZoom; b.disabled = (v === "-" && zoom <= MIN_ZOOM) || (v === "+" && zoom >= MAX_ZOOM); });
+    if (animate && Math.abs(from - zoom) > 0.004) {
+      // départ = l'image déjà affichée : même échelle, même bord gauche (aucun saut), arrivée = la disposition finale
+      var dx = oldLeft - wrap.getBoundingClientRect().left;
+      playZoom(from, zoom, Math.round(dx * 100) / 100);
+      return;
+    }
+    endZoomAnim(true);
+    zoomDecor();
   }
   // Recalcul de la zone du canevas (largeur du cadre, zoom, règles, barre d'actions) : au plus UN par image, quel que soit le nombre de causes
   // (glisser d'une poignée de panneau, observateur de taille, redimensionnement de la fenêtre)
@@ -6698,8 +6827,16 @@ function selectField(label, value, options, onChange, opts) {
       if (zoomFit) applyZoom(); else drawRulers();
     });
   }
-  function setZoom(z) { zoomFit = z === "fit"; if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(0.25, z)); applyZoom(); requestAnimationFrame(function () { drawOverlays(); drawGuides(); }); }
-  $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? Math.round((zoom + 0.1) * 10) / 10 : Math.round((zoom - 0.1) * 10) / 10); }); });
+  // opts.animate : transition courte (gestes de l'utilisateur) ; sans option : immédiat (programme, tests, chargement)
+  function setZoom(z, opts) {
+    var prev = opts && opts.animate ? shownScale() : zoom;   // l'échelle AFFICHÉE avant le changement (départ de la transition)
+    if (opts && opts.animate) opts = { animate: true, from: prev };
+    zoomFit = z === "fit";
+    if (!zoomFit) zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
+    applyZoom(opts);
+    if (!(opts && opts.animate)) requestAnimationFrame(function () { drawOverlays(); drawGuides(); });
+  }
+  $$("[data-pb-zoom]").forEach(function (b) { b.addEventListener("click", function () { var v = b.dataset.pbZoom; setZoom(v === "fit" ? "fit" : v === "100" ? 1 : v === "+" ? zoomStep(1) : zoomStep(-1), { animate: true }); }); });
   window.addEventListener("resize", queueZoom);
   // La zone du canevas change de taille (panneaux, fenêtre, mise en page initiale) : le cadre suit
   if (window.ResizeObserver) new ResizeObserver(function () { queueZoom(); }).observe(stage);
@@ -6810,7 +6947,6 @@ function selectField(label, value, options, onChange, opts) {
     paint(rx, Math.max(0, cr.width - RULER), true, fr.left - (cr.left + RULER), sx, g.v, pointerPage ? pointerPage.x : null, "v", band && [band.x1, band.x2]);
     paint(ry, Math.max(0, cr.height - RULER), false, fr.top - (cr.top + RULER), sy, g.h, pointerPage ? pointerPage.y : null, "h", band && [band.y1, band.y2]);
   }
-  stage.addEventListener("scroll", drawRulers, { passive: true });
   // ---------- Grille, marges, conteneur, zone de sécurité (dessinés dans le canevas, jamais dans le contenu) ----------
   // La grille suit le magnétisme : « libre » = lignes à pas régulier ; « web » = colonnes + gouttières + marges du conteneur.
   function pageSize() {
@@ -9475,10 +9611,10 @@ function selectField(label, value, options, onChange, opts) {
     if (typing || editing) return;
     if (mod && k === "z") { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
     if (mod && k === "y") { e.preventDefault(); redo(); return; }
-    if (mod && (k === "=" || k === "+")) { e.preventDefault(); setZoom(Math.round((zoom + 0.1) * 10) / 10); return; }
-    if (mod && k === "-") { e.preventDefault(); setZoom(Math.round((zoom - 0.1) * 10) / 10); return; }
-    if (mod && k === "0") { e.preventDefault(); setZoom(1); return; }
-    if (e.shiftKey && (e.code === "Digit1" || k === "!")) { e.preventDefault(); setZoom("fit"); return; }
+    if (mod && (k === "=" || k === "+")) { e.preventDefault(); setZoom(zoomStep(1), { animate: true }); return; }
+    if (mod && k === "-") { e.preventDefault(); setZoom(zoomStep(-1), { animate: true }); return; }
+    if (mod && k === "0") { e.preventDefault(); setZoom(1, { animate: true }); return; }
+    if (e.shiftKey && (e.code === "Digit1" || k === "!")) { e.preventDefault(); setZoom("fit", { animate: true }); return; }
     if (mod && k === "a") { e.preventDefault(); var l0 = selection.length ? locate(selection[0]) : null; selection = (l0 ? l0.list : content.sections).map(function (s) { return s.id; }); markTreeSelection(); renderInspector(); renderContext(); markCanvasSelection(false); return; }
     if (mod && e.altKey && (k === "c" || e.code === "KeyC")) { e.preventDefault(); copyStyle(); return; }
     if (mod && e.altKey && (k === "v" || e.code === "KeyV")) { e.preventDefault(); pasteStyle(); return; }
