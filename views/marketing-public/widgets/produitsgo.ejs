@@ -1,0 +1,30 @@
+<%# Produits GO du Sourcing produit (widgets/produitsgo.js). Variables : p, cls, attrs, isBuilder, L (liens comptés : L.products[i].link), d = { items, missing, notGo, country }.
+    Fiche publique uniquement (nom, texte, photos, prix conseillé) : aucune donnée interne du Sourcing (coût, marge, fournisseurs) n'arrive ici. %>
+<% const D = { items: [], missing: [], notGo: [], country: "", ...(d || {}) }; const items = D.items; const lay = ["list", "feature"].includes(p.layout) ? p.layout : "grid"; const linkOf = (i) => (L.products && L.products[i] && L.products[i].link) || ""; %>
+<section class="<%= cls %> kw-pgo kw-pgo--<%= lay %><%= p.cardStyle === "plain" ? " kw-pgo--plain" : p.cardStyle === "soft" ? " kw-pgo--soft" : "" %><%= p.align === "center" ? " is-center" : "" %>"<%- attrs %> style="--kw-pgo-cols: <%= lay === "grid" ? String(p.columns).replace(/[^1-4]/g, "") || "3" : "1" %>; --kw-pgo-ratio: <%= String(p.ratio || "1/1").replace(/[^0-9/]/g, "") %>; --kw-pgo-fit: <%= p.fit === "contain" ? "contain" : "cover" %>">
+  <% if (p.title) { %><h2 class="kw-pgo-title"><%= p.title %></h2><% } %>
+  <% if (isBuilder && (D.missing.length || D.notGo.length)) { %><p class="kw-pgo-warn" role="note"><% if (D.missing.length) { %>Produit introuvable dans le Sourcing (élément <%= D.missing.join(", ") %>) : il n'est pas affiché. <% } %><% if (D.notGo.length) { %>Plus GO pour <%= D.country %> : <%= D.notGo.join(", ") %> (affiché quand même, visible seulement ici).<% } %></p><% } %>
+  <% if (!items.length) { %><p class="kw-pgo-empty" role="status"><%= isBuilder ? "Choisissez vos produits GO dans l'onglet Contenu (Produits à afficher → Produit)." : p.empty %></p><% } else { %>
+  <ul class="kw-pgo-grid">
+    <% items.forEach((x) => { const href = linkOf(x.index); %>
+    <li class="kw-pgo-card">
+      <% if (p.showImage && x.image) { %><div class="kw-pgo-media">
+        <img class="kw-pgo-img" src="<%= x.image %>" alt="<%= x.name %>" loading="lazy" decoding="async" width="960" height="960">
+        <% if (p.showBadge && x.badge) { %><span class="kw-pgo-badge"><%= x.badge %></span><% } %>
+        <% if (p.showGallery && x.gallery.length > 1) { %><div class="kw-pgo-thumbs" role="group" aria-label="Photos de <%= x.name %>">
+          <% x.gallery.forEach((g, n) => { %><button class="kw-pgo-thumb" type="button" data-kw-pgo-src="<%= g.src %>" aria-label="Photo <%= n + 1 %> sur <%= x.gallery.length %>" aria-pressed="<%= n === 0 ? "true" : "false" %>"><img src="<%= g.thumb %>" alt="" loading="lazy" decoding="async" width="220" height="220"></button><% }) %>
+        </div><% } %>
+      </div><% } %>
+      <div class="kw-pgo-body">
+        <% if (!p.showImage && p.showBadge && x.badge) { %><span class="kw-pgo-badge kw-pgo-badge--inline"><%= x.badge %></span><% } %>
+        <% if (p.showName) { %><h3 class="kw-pgo-name"><%= x.name %></h3><% } %>
+        <% if (x.text) { %><p class="kw-pgo-text"><%= x.text %></p><% } %>
+        <% if (p.showPrice && x.price) { %><p class="kw-pgo-price"><%= x.price %></p><% } %>
+        <% if (p.showButton && href) { %><a class="kw-button kw-pgo-btn" href="<%= href %>"<%- p.newTab ? ' target="_blank" rel="noopener"' : "" %>><%= p.buttonLabel || "Voir le produit" %></a><% } %>
+      </div>
+    </li>
+    <% }) %>
+  </ul>
+  <% if (p.showGallery && p.showImage) { %><script src="/js/produits-go.js" defer></script><% } %>
+  <% } %>
+</section>
