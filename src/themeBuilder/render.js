@@ -28,6 +28,7 @@ const FAMILY = {
   category_archive: { type: "archive", view: "archive", kind: "category" },
   tag_archive: { type: "archive", view: "archive", kind: "tag" },
   author_archive: { type: "archive", view: "archive", kind: "author" },
+  date_archive: { type: "archive", view: "archive", kind: "date" },
   search_results: { type: "search_results", view: "search", kind: "search" },
   not_found: { type: "not_found", view: "not_found" },
   cart: { type: "cart", view: "cart" },
@@ -45,7 +46,7 @@ function regionContext(siteId, family, o = {}) {
   const cats = list([o.category, ...list(o.categories)]);
   const c = { siteId, view: m.view, id: o.postId ?? null, authorId: o.authorId ?? null, parents: list(o.parents).map(Number).filter(Number.isInteger), categories: cats, categoryAncestors: list(o.categories), tags: list(o.tags) };
   if (m.view === "product_archive") c.archive = { kind: o.category ? "category" : o.tag ? "tag" : "shop", name: o.category || o.tag || "", ancestors: list(o.categories) };
-  else if (m.view === "archive" || m.view === "search") c.archive = { kind: m.kind, name: m.kind === "category" ? (o.category || "") : m.kind === "tag" ? (o.tag || "") : "", ancestors: m.kind === "category" ? list(o.categories) : [], authorId: m.kind === "author" ? (o.authorId ?? null) : null };
+  else if (m.view === "archive" || m.view === "search") c.archive = { kind: m.kind, name: m.kind === "category" ? (o.category || "") : m.kind === "tag" ? (o.tag || "") : m.kind === "date" ? (o.date || "") : "", ancestors: m.kind === "category" ? list(o.categories) : [], authorId: m.kind === "author" ? (o.authorId ?? null) : null };
   return c;
 }
 // Contexte par défaut d'une page du site qui ne déclare rien (catalogue, formation, compte…) : accueil si « / », sinon page

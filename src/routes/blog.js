@@ -131,7 +131,7 @@ function readingMinutes(p) {
 // Liste du blog, éventuellement filtrée (catégorie, étiquette, auteur) et/ou recherchée (?q=).
 // Page d'accueil du blog (sans filtre ni recherche, page 1) : « hub » éditorial — à la une, derniers articles,
 // thèmes, articles populaires (vraies lectures), à découvrir.
-function renderList(req, res, { filter = null } = {}) {
+function renderList(req, res, { filter = null, date = "" } = {}) {
   const where = ["published = 1"];
   const params = [];
   // Contenus par site (R6 lot 4) : le domaine demandé ne montre QUE ses articles (domaine d'un site) ; le domaine principal ne montre pas ceux des sites qui ont leur domaine
@@ -142,7 +142,9 @@ function renderList(req, res, { filter = null } = {}) {
   if (filter && filter.type === "author") { where.push("(author_id = ? OR (author_id IS NULL AND ? = (SELECT MIN(id) FROM users WHERE role = 'formateur')))"); params.push(filter.id, filter.id); }
   let rows = postColumns.lightRows(db.prepare(`SELECT ${postColumns.listColumns()} FROM posts WHERE ${where.join(" AND ")} ORDER BY published_at DESC, id DESC`).all(...params)); // sans le contenu des articles (src/utils/postColumns.js) ; il se charge à la demande pour ceux qui sont affichés
   // Archives par date (blocs Archives / Calendrier) : ?date=AAAA-MM ou AAAA-MM-JJ
-  const dateFilter = /^\d{4}-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?$/.test(String(req.query.date || "")) ? String(req.query.date) : "";
+  // Archives par date : ?date=AAAA, AAAA-MM ou AAAA-MM-JJ, ou les adresses /blog/archives/AAAA[/MM[/JJ]] (même filtre, même modèle « archive de date »)
+  const dateRaw = String(date || req.query.date || "");
+  const dateFilter = /^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(dateRaw) ? dateRaw : "";
   if (dateFilter) rows = rows.filter((p) => String(p.published_at || "").startsWith(dateFilter));
   // Recherche : titre, extrait, catégorie, sous-catégorie, étiquettes et texte de l'article ; tous les mots doivent figurer
   const q = String(req.query.q || "").replace(/\s+/g, " ").trim().slice(0, 100);
@@ -173,8 +175,10 @@ function renderList(req, res, { filter = null } = {}) {
   });
   const posts = rows.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(decorate);
   const listed0 = req.kwList || null; // accueil en mode articles, ou page des articles : l'adresse publique n'est pas /blog
-  const basePath = filter ? filter.path : listed0 ? listed0.basePath : "/blog";
-  const heading = filter ? filter.heading : listed0 && listed0.title ? listed0.title : "Blog";
+  const basePath = filter ? filter.path : dateFilter && date ? `/blog/archives/${dateFilter.replace(/-/g, "/")}` : listed0 ? listed0.basePath : "/blog";
+  const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const dateLabel = (() => { if (!dateFilter) return ""; const [y, m, d] = dateFilter.split("-"); return m ? `${d ? `${Number(d)} ` : ""}${MONTHS[Number(m) - 1]} ${y}` : y; })();
+  const heading = filter ? filter.heading : dateFilter ? `Articles de ${dateLabel}` : listed0 && listed0.title ? listed0.title : "Blog";
   const crumbs = filter ? [{ name: "Accueil", url: "/" }, { name: "Blog", url: "/blog" }, ...(filter.ancestors || []), { name: filter.label }] : [{ name: "Accueil", url: "/" }, { name: "Blog" }];
   // Données structurées : l'article à la une fait partie de la liste (en tête), comme les autres articles de la page
   const listed = featured && page === 1 ? [featured, ...posts] : posts;
@@ -201,11 +205,11 @@ function renderList(req, res, { filter = null } = {}) {
   const isCat = Boolean(filter && filter.type === "category"), isTag = Boolean(filter && filter.type === "tag");
   if (isTag) themeQuery.etiquette = filter.name;
   const isAuthor = Boolean(filter && filter.type === "author");
-  const families = q ? ["search_results", "blog_archive"] : isAuthor ? ["author_archive", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
+  const families = q ? ["search_results", "blog_archive"] : dateFilter ? ["date_archive", "blog_archive"] : isAuthor ? ["author_archive", "blog_archive"] : isCat ? ["category_archive", "blog_archive"] : isTag ? ["tag_archive", "blog_archive"] : "blog_archive";
   // Archive affichée (catégorie, étiquette, auteur) : lue par les éléments « En-tête d'archive » et les listes « suivre l'archive »
-  const archive = { type: filter ? filter.type : q ? "search" : "blog", name: filter ? (filter.name || filter.label) : "", id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
-    title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : "Blog", description: filter ? filter.lead : "", count: total, url: basePath, search: q || "" };
-  themeRender.renderRegion(req, res, db, families, { category: isCat ? filter.name : "", categories: isCat ? (filter.ancestors || []).map((a) => a.name).reverse() : [], tag: isTag ? filter.name : "", authorId: isAuthor && filter ? filter.id : null, query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
+  const archive = { type: filter ? filter.type : q ? "search" : dateFilter ? "date" : "blog", name: filter ? (filter.name || filter.label) : dateFilter, id: filter && filter.type === "author" ? filter.id : null, termIds: filter && filter.termIds ? filter.termIds : [],
+    title: filter ? filter.heading : q ? `Résultats pour « ${q} »` : dateFilter ? heading : "Blog", description: filter ? filter.lead : dateFilter ? `Les articles publiés en ${dateLabel}.` : "", count: total, url: basePath, search: q || "" };
+  themeRender.renderRegion(req, res, db, families, { category: isCat ? filter.name : "", categories: isCat ? (filter.ancestors || []).map((a) => a.name).reverse() : [], tag: isTag ? filter.name : "", authorId: isAuthor && filter ? filter.id : null, date: dateFilter, query: { ...themeQuery, ...(q ? { q } : {}) }, scope: { archive } }, (themeTemplate) => {
   res.render("blog/index", {
     themeTemplate, posts, page, pages, crumbs, basePath, heading, filter, q, hub, total, categories, popular, discover,
     featured: featured && page === 1 ? decorate(featured) : null,
@@ -294,6 +298,15 @@ router.get(`${tagBase}/:slug`, (req, res) => {
   const term = urls.resolveTerm("tag", req.params.slug, req.kwSite || null);
   if (!term) return res.status(404).render("error", { message: "Étiquette introuvable." });
   renderList(req, res, { filter: { type: "tag", termIds: [term.id], name: term.name, slug: term.slug, path: taxonomy.urlOf(term), label: `#${term.name}`, heading: `Articles : ${term.name}`, lead: term.description || `Tous nos articles sur « ${term.name} ».` } });
+});
+
+// Archives par date : /blog/archives/2026, /blog/archives/2026/11, /blog/archives/2026/11/08 (une date impossible = vraie 404)
+router.get("/blog/archives/:annee(\\d{4})/:mois(\\d{2})?/:jour(\\d{2})?", (req, res) => {
+  const { annee, mois, jour } = req.params;
+  const date = [annee, mois, jour].filter(Boolean).join("-");
+  if (jour && !mois) return res.status(404).render("error", { message: "Archive introuvable." });
+  if (!/^\d{4}(?:-(?:0[1-9]|1[0-2])(?:-(?:0[1-9]|[12]\d|3[01]))?)?$/.test(date) || (jour && (() => { const t = new Date(Date.UTC(Number(annee), Number(mois) - 1, Number(jour))); return t.getUTCMonth() !== Number(mois) - 1 || t.getUTCDate() !== Number(jour); })())) return res.status(404).render("error", { message: "Archive introuvable." });
+  renderList(req, res, { date });
 });
 
 router.get("/blog/auteur/:id", (req, res) => {

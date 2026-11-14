@@ -18,7 +18,7 @@ function useTemplate(ctx, siteId, type, key, { name, conditions, identity } = {}
   if (!Types.has(type) || !Catalog.types().includes(type)) throw bad("Ce type de modèle n'a pas de catalogue.");
   const meta = Catalog.find(type, String(key || ""));
   if (!meta) throw bad("Modèle du catalogue introuvable.", "not_found");
-  const mode = ["single_product", "single_page"].includes(type) && ["own", "site", "hybrid"].includes(identity) ? identity : "own";
+  const mode = ["single_product", "single_page", "archive"].includes(type) && ["own", "site", "hybrid"].includes(identity) ? identity : "own";
   const doc = Catalog.build(type, meta.key, { formId: siteFormId(ctx, siteId), identity: mode });
   const label = String(name || meta.name).slice(0, 100);
   return transaction(ctx.db, () => {
@@ -26,7 +26,7 @@ function useTemplate(ctx, siteId, type, key, { name, conditions, identity } = {}
     if (doc.kind === "component") created = P().createComponent(ctx, { name: store.docName(ctx, siteId, "component", label), section: JSON.parse(JSON.stringify(doc.section)), siteId, kind: "standard" });
     else created = P().createPage(ctx, { name: store.docName(ctx, siteId, "page", label), siteId, kind: "page", sections: JSON.parse(JSON.stringify(doc.sections)) });
     const tpl = store.create(ctx, siteId, { type, name: label, conditions: conditions || {}, sourceKind: doc.kind, sourceId: created.id });
-    if (type === "single_product" || type === "single_page") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, identity_mode = ? WHERE id = ? AND organization_id = ?").run(meta.key, mode, tpl.id, ctx.organizationId); // modèle d'origine + mode d'identité (conversion ultérieure sans perte)
+    if (["single_product", "single_page", "archive"].includes(type)) ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, identity_mode = ? WHERE id = ? AND organization_id = ?").run(meta.key, mode, tpl.id, ctx.organizationId); // modèle d'origine + mode d'identité (conversion ultérieure sans perte)
     if (type === "footer") ctx.db.prepare("UPDATE mk_tb_templates SET origin_key = ?, origin_version = ? WHERE id = ? AND organization_id = ?").run(meta.key, Number.isInteger(meta.version) ? meta.version : null, tpl.id, ctx.organizationId); // mémoire du modèle d'origine ET de sa version de composition (« Revenir au modèle d'origine »)
     return tpl;
   });

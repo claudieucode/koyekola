@@ -79,7 +79,7 @@ const siteIdOf = (req, siteId) => (siteId !== undefined ? siteId : req.kwSite &&
 
 // done(html | null)
 // type : une famille ou une liste ordonnée (la première qui a un modèle en ligne gagne : ex. archive de catégorie, puis liste du blog)
-function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, query = {}, siteId } = {}, done) {
+function renderRegion(req, res, db, type, { category = "", categories = [], tag = "", tags = [], postId = null, authorId = null, scope = {}, date = "", query = {}, siteId } = {}, done) {
   let finished = false;
   const end = (html) => { if (!finished) { finished = true; done(html); } };
   try {
@@ -87,7 +87,7 @@ function renderRegion(req, res, db, type, { category = "", categories = [], tag 
     if (!marketing || !marketing.ready) return end(null);
     const ctx = ctxOf(db, marketing);
     const visitor = visitorContext(db, marketing.organizationId, req);
-    const opts = { category, categories, tag, tags, postId, authorId };
+    const opts = { category, categories, tag, tags, postId, authorId, date };
     // Theme Builder (23.1) : modèles du site de la requête, toutes familles. Le contexte de la page est mémorisé pour l'en-tête et le pied de page (themeLayout)
     const tbSite = siteIdOf(req, siteId);
     const TB = require("../../themeBuilder/render");
@@ -209,7 +209,7 @@ const SAMPLE_NOTE = 'nav[data-kw-sample]::after{content:"(menu d\'exemple)";disp
 const FSMENU_CLOSED = ".kw-ms-fm .kw-ms-fm-panel{display:none}.kw-ms-fm .kw-ms-fm-toggle[hidden]{display:inline-flex}";
 // done(html | null). doc : résultat de catalog.build()
 // thumb : miniature de carte (sans bloc de remplissage, sans défilement) ; mêmes éléments et même CSS que l'aperçu complet
-function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false, withTheme = false }, done) {
+function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = false, withTheme = false, demoKey = "" }, done) {
   try {
     const marketing = req.app.locals.marketing, db = require("../../config/database");
     if (!marketing || !marketing.ready) return done(null);
@@ -228,13 +228,14 @@ function previewDoc(req, res, { siteId, type, doc, thumb = false, sampleMenu = f
     const isoFoot = type === "footer" && Boolean(section) && !withTheme;
     const themedSite = type === "footer" && withTheme ? siteOf(ctx, { site_id: siteId }) : null, themedPack = themedSite && themedSite.assets && themedSite.assets.pack && themedSite.assets.pack.link ? themedSite.assets.pack : null; /* « voir avec mon thème » : la feuille du thème actif aussi */
     if (type === "footer" && section) content.sections = content.sections.map((x) => (x.type === "layout" ? { ...x, id: x.id || "partfoot", sitePart: "footer", ...(isoFoot ? { ftMode: "solo" } : {}) } : x));
-    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: demoScope(catalogScope(db, ctx, type)), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}) } : {}) });
+    const vm = landing.viewModel(ctx, { id: null, slug: "", site_id: siteId, organization_id: marketing.organizationId, visitor, theme: {}, scope: demoScope(catalogScope(db, ctx, type)), sections: content.sections, ...(sampleMenu ? { demoMenu: true, ...(type === "product_archive" || type === "single_product" ? { demoShop: true } : {}), ...(type === "archive" ? { demoPosts: ((c) => (c ? c.maison : true))(require("../../themeBuilder/catalog/archive-lib/concepts").find((c) => c.key === demoKey)) } : {}) } : {}) });
     const cls = doc.kind === "component" ? `kw-theme-part kw-theme-${type}${type === "header" ? partMode(section) : ""}${bleedOf(content.sections)}` : `kw-theme-template${bleedOf(content.sections)}`;
     renderVm(res, vm, isoFoot ? null : siteOf(ctx, { site_id: siteId }), cls, (html) => {
       if (!html) return done(null);
       // En-tête : contexte de page NEUTRE sous l'en-tête (dégradé CSS sans image ni texte qui paraisse réel) pour juger un en-tête superposé, transparent ou en verre ; mêmes éléments dans la vignette (plus court)
       const demoNote = (type === "product_archive" || type === "single_product") && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des produits d\'exemple : votre boutique affichera ses vrais produits.</p>' : "";
-      const body = demoNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
+      const demoPostsNote = type === "archive" && sampleMenu && !thumb ? '<p style="margin:0;padding:8px 16px;background:#fef3c7;color:#78350f;font:13px/1.4 system-ui,sans-serif;text-align:center">Aperçu avec des articles d\'exemple : votre site affichera ses vrais articles.</p>' : "";
+      const body = demoNote + demoPostsNote + (type === "header" ? html + headerContext(thumb) : type === "footer" ? (thumb ? "" : FILLER) + html : html);
       done(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aperçu</title>${themedPack ? themedPack.link : ""}${type === "header" && html.includes("kw-ms-fm") ? `<link rel="stylesheet" href="${res.locals.asset ? res.locals.asset("/css/motion-studio.css") : "/css/motion-studio.css"}">` : ""}<style>html,body{margin:0}${type === "footer" && sampleMenu ? SAMPLE_NOTE : ""}${type === "header" ? FSMENU_CLOSED : ""}${thumb ? "html,body{overflow:hidden;pointer-events:none}" : ""}</style></head><body${type === "footer" ? ' class="lp-body lp-site"' : ""}${themedPack ? themedPack.attr : ""}${thumb ? "" : ' data-kw-demo="1"'}>${body}${thumb ? "" : '<script src="' + (res.locals.asset ? res.locals.asset("/js/landing.js") : "/js/landing.js") + '" defer></script>'}</body></html>`);
     }, isoFoot ? { noSite: true, legalSite: siteOf(ctx, { site_id: siteId }) } : {});
   } catch { done(null); }

@@ -4,7 +4,7 @@
 // · use()   — « Utiliser ce modèle » : crée la copie INDÉPENDANTE du site (composant ou page), puis le modèle du Theme Builder (brouillon). Modifier la copie ne change jamais le catalogue.
 const { SKINS, skinOf, kit, layout, withIds } = require("./kit");
 const Modes = require("./identityModes");
-const MODE_TYPES = new Set(["single_product", "single_page"]); // catalogues dont les modèles portent leur identité propre ET proposent les modes indépendant / hérité / hybride
+const MODE_TYPES = new Set(["single_product", "single_page", "archive"]); // catalogues dont les modèles portent leur identité propre ET proposent les modes indépendant / hérité / hybride
 const Types = require("../types");
 
 const FILES = ["header", "footer", "single_page", "single_post", "archive", "search_results", "not_found", "single_product", "product_archive", "cart", "checkout", "order_received", "my_account"];
@@ -117,6 +117,8 @@ function legibleLinks(nodes, bg) {
   }
 }
 
+const MODES = Modes.MODES; // les trois modes d'identité sont définis dans identityModes.js (un seul mécanisme pour tous les catalogues)
+
 const CACHE = new Map();
 // Document d'un modèle : { name, kind: "component" | "page", section | sections }. env : { formId } (formulaire d'inscription réel du site, s'il en existe un).
 function build(type, key, env = {}) {
@@ -127,7 +129,7 @@ function build(type, key, env = {}) {
   if (CACHE.has(ck)) return CACHE.get(ck);
   const d = def(type), S = Modes.skinFor(identities(d).find((x) => x.key === meta.skinKey) || skinOf(meta.skinKey), mode);
   const buildFn = meta.build || d.layouts.find((x) => x.key === meta.layoutId).build;
-  const children = withIds(buildFn(kit(S), env));
+  const children = withIds(buildFn(kit(S), { ...env, identity: mode }));
   if (type === "single_post") { legibleLinks(children, null); require("./single_post/apply").apply(children, S); } // identité propre : voir single_post/apply.js
   const out = { name: meta.name, kind: d.kind, ...(d.kind === "component" ? { section: { id: undefined, ...layout(children) } } : { sections: [layout(children)] }) };
   if (out.section) delete out.section.id;
@@ -140,4 +142,4 @@ function build(type, key, env = {}) {
 }
 const thumbDoc = (type, key, env = {}) => { const b = build(type, key, env); return b ? (b.section || b.sections[0]) : null; };
 const stats = () => types().map((t) => ({ type: t, label: Types.TYPES[t].label, count: entries(t).length, layouts: def(t).layouts.length, ...(def(t).flat ? { flat: true } : {}) }));
-module.exports = { types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };
+module.exports = { MODES, types, list, find, build, thumbDoc, entries, stats, SKINS, PER_TYPE, FILES };

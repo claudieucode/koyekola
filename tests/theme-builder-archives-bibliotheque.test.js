@@ -1,36 +1,54 @@
-// Bibliothèque « Archives » du Theme Builder : 100 modèles distincts par leur COMPOSITION, valides, responsives, sans contrôle décoratif ;
-// aperçu = vignette ; utilisation → publication → vraie page de résultats du site (terme, nombre, pertinence, pagination, état vide, champ pré-rempli) ; isolation entre sites.
+// Bibliothèque « Archives » du Theme Builder : 100 modèles = 25 familles × 4 concepts, chacun avec SA composition et SON identité visuelle (valeurs fixes, polices de la bibliothèque) ;
+// trois modes d'identité (propre, suit le site, hybride) ; aperçu = vignette ; utilisation → publication → vraie page d'archive du site (terme, nombre, pagination, filtre, état vide) ; isolation entre sites.
 const { test, describe, before, after } = require("node:test");
 const assert = require("node:assert/strict");
 const http = require("node:http");
 const { TEST_KEY } = require("./marketing-helpers");
 const { startServer, loginInstructor } = require("./helpers");
 const Catalog = require("../src/themeBuilder/catalog");
+const Archive = require("../src/themeBuilder/catalog/archive");
+const concepts = require("../src/themeBuilder/catalog/archive-lib/concepts");
 
+const skinOf = (key) => Archive.skins.find((x) => x.key === key);
 const walk = (n, f) => { f(n); (n.children || []).forEach((c) => walk(c, f)); };
-const docOf = (key) => { const b = Catalog.build("archive", key); return { type: "layout", children: b.sections[0].children }; };
+const docOf = (key, identity) => { const b = Catalog.build("archive", key, identity ? { identity } : {}); return { type: "layout", children: b.sections[0].children }; };
 const tree = (n) => `${n.type}${n.children ? `(${n.children.map(tree).join(",")})` : ""}`;
-const OLD = ["grille-3.clair", "grille-2.marque", "liste.clair", "vedette.clair", "magazine.nuit", "auteur.doux", "carrousel.clair", "charger-plus.clair"];
+const OLD = ["grille-3.clair", "grille-2.marque", "liste.clair", "vedette.clair", "magazine.nuit", "auteur.doux", "carrousel.clair", "charger-plus.clair", "blog.grille", "blog.bandeau", "magazine.liste", "minimal.index"];
+const lum = (h) => { const v = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4)); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; };
+const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 
-describe("Archives : 100 modèles distincts, structurés et responsives (catalogue)", () => {
+describe("Archives par date : contexte et conditions d'affichage", () => {
+  const TB = require("../src/themeBuilder/render"), M = require("../src/themeBuilder/match");
+  test("la famille « date » existe et donne une archive de sorte « date » ; la condition « Archives de date » s'y applique, pas aux catégories", () => {
+    const d = TB.regionContext(null, "date_archive", { date: "2026-03" }), c = TB.regionContext(null, "category_archive", { category: "Cuisine" });
+    assert.equal(d.view, "archive"); assert.equal(d.archive.kind, "date"); assert.equal(d.archive.name, "2026-03");
+    const cond = { kind: "archive", sub: "date" };
+    assert.ok(M.matches(cond, d), "archive de date : condition satisfaite"); assert.ok(!M.matches(cond, c), "archive de catégorie : condition non satisfaite");
+    assert.ok(M.matches({ kind: "archive", sub: "date", names: ["2026-03"] }, d), "condition sur une période précise");
+    assert.ok(!M.matches({ kind: "archive", sub: "date", names: ["2025-01"] }, d));
+  });
+});
+
+describe("Archives : 100 modèles distincts, indépendants du site, structurés et responsives (catalogue)", () => {
   const all = Catalog.entries("archive");
-  test("exactement 100 modèles, clés et noms uniques ; les anciens modèles ont disparu", () => {
+  test("exactement 100 modèles, clés et noms uniques, 25 familles de 4 ; les anciens modèles ont disparu", () => {
     assert.equal(all.length, 100);
     assert.equal(new Set(all.map((e) => e.key)).size, 100);
     assert.equal(new Set(all.map((e) => e.name)).size, 100);
+    const fam = {}; for (const e of all) fam[e.layoutKey] = (fam[e.layoutKey] || 0) + 1;
+    assert.equal(Object.keys(fam).length, 25); assert.ok(Object.values(fam).every((n) => n === 4), "4 concepts par famille");
     for (const old of OLD) assert.equal(Catalog.find("archive", old), null, old);
     assert.equal(Catalog.list("archive", { limit: 60 }).total, 100);
   });
-  test("distincts par la composition : 10 compositions par contenu, aucun document répété, au moins 50 structures différentes", () => {
-    const byContent = {};
-    for (const e of all) (byContent[e.layoutKey] ||= []).push(tree(docOf(e.key)));
-    assert.equal(Object.keys(byContent).length, 10);
-    for (const [k, trees] of Object.entries(byContent)) assert.equal(new Set(trees).size, 10, `${k} : 10 compositions différentes`);
+  test("diversité réelle : 100 documents différents ET 100 structures d'éléments différentes (pas des variations de couleur)", () => {
     const docs = all.map((e) => JSON.stringify(docOf(e.key), (key, v) => (key === "id" ? undefined : v)));
     assert.equal(new Set(docs).size, 100, "aucun document identique");
-    assert.ok(new Set(all.map((e) => tree(docOf(e.key)))).size >= 50, "au moins 50 structures différentes sur 100");
+    assert.equal(new Set(all.map((e) => tree(docOf(e.key)))).size, 100, "100 structures différentes");
+    assert.equal(new Set(concepts.map((c) => c.comp)).size, 25, "25 compositions de base");
+    const sig = new Set(concepts.map((c) => [c.maison, c.comp, c.barre, c.nav, c.filtre].join("|"))); assert.equal(sig.size, 100, "100 signatures de réglages différentes");
+    assert.equal(new Set(concepts.map((c) => c.maison)).size, 25, "25 maisons"); for (const m of new Set(concepts.map((c) => c.maison))) assert.equal(new Set(concepts.filter((c) => c.maison === m).map((c) => c.comp)).size, 4, `${m} : 4 compositions différentes`);
   });
-  test("chaque modèle : un seul titre principal (en-tête d'archive), une vraie boucle d'articles qui suit l'archive, état vide, pagination, liens réels", () => {
+  test("chaque modèle : un seul titre principal, une vraie boucle d'articles qui suit l'archive, état vide, liens et images réels", () => {
     for (const e of all) {
       const doc = docOf(e.key); let h1 = 0, loops = 0, bad = [];
       walk(doc, (n) => {
@@ -41,6 +59,7 @@ describe("Archives : 100 modèles distincts, structurés et responsives (catalog
           assert.equal(l.source, "posts", `${e.key} : articles réels`); assert.equal(l.archive, true, `${e.key} : suit l'archive affichée`);
           assert.ok(l.empty && l.empty.length <= 160, `${e.key} : message d'état vide`);
           assert.ok(n.children.length >= 1, `${e.key} : modèle de carte`);
+          assert.ok(["numbers", "prevnext", "both", "more", "infinite"].includes(l.pagination) || l.paginate === false, `${e.key} : pagination du moteur`);
         }
         if (n.type === "image" && n.props && !/^\{\{post\.image\}\}$/.test(String(n.props.src || n.props.url || "{{post.image}}"))) bad.push("image " + (n.props.src || n.props.url));
         if ((n.type === "button" || n.type === "link") && !/^(\/(?:|blog|catalogue|contact|boutique|compte)|\{\{[a-z_.]+\}\})$/.test(String(n.props.url))) bad.push(n.props.url);
@@ -55,35 +74,57 @@ describe("Archives : 100 modèles distincts, structurés et responsives (catalog
       let abs = 0, badGrid = 0, badRow = 0;
       walk(docOf(e.key), (n) => {
         const d = (n.styles && n.styles.desktop) || {};
-        if (n.type === "grid" && !(n.props && n.props.loop)) { if (!(n.styles.tablet && n.styles.mobile)) badGrid += 1; }
-        if (n.type === "grid" && n.props && n.props.loop && Number(d.columns) > 1) { if (!(n.styles.tablet && n.styles.mobile)) badGrid += 1; }
+        if (n.type === "grid" && (!(n.props && n.props.loop) || Number(d.columns) > 1)) { if (!(n.styles.tablet && n.styles.mobile)) badGrid += 1; }
         if (d.position === "absolute" || d.position === "fixed") abs += 1;
         if (d.display === "flex" && d.flexDirection === "row" && d.flexWrap !== "wrap") badRow += 1;
       });
-      assert.equal(abs, 0, `${e.key} : pas de positionnement absolu`);
-      assert.equal(badGrid, 0, `${e.key} : grilles adaptées`);
-      assert.equal(badRow, 0, `${e.key} : lignes qui passent à la ligne`);
+      assert.equal(abs, 0, `${e.key} : pas de positionnement absolu`); assert.equal(badGrid, 0, `${e.key} : grilles adaptées`); assert.equal(badRow, 0, `${e.key} : lignes qui passent à la ligne`);
     }
   });
-  test("pas de contrôle décoratif : tout filtre est le widget de catégories branché sur la boucle (urlFilter) ; l'auteur a sa fiche, la catégorie sa description", () => {
+  test("validation par le moteur du Page Builder : les 100 modèles × 3 modes d'identité sont acceptés tels quels (aucune valeur refusée)", () => {
+    const Sections = require("../src/marketing/pages/sections");
+    for (const e of all) for (const mode of ["own", "site", "hybrid"]) {
+      const d = Catalog.build("archive", e.key, { identity: mode });
+      assert.doesNotThrow(() => Sections.normalizeSection({ db: null, siteId: null }, JSON.parse(JSON.stringify(d.sections[0])), "Section 1", { n: 0, ids: new Set() }), `${e.key} (${mode})`);
+    }
+  });
+  test("limites du moteur : au plus 400 éléments et 8 niveaux d'imbrication (sinon la page est refusée)", () => {
+    const depth = (n) => 1 + Math.max(0, ...(n.children || []).map(depth)), count = (n) => 1 + (n.children || []).reduce((a, c) => a + count(c), 0);
+    for (const e of all) { const d = Catalog.build("archive", e.key).sections[0]; assert.ok(count(d) <= 400, `${e.key} : ${count(d)} éléments`); assert.ok(depth(d) <= 9, `${e.key} : ${depth(d)} niveaux (layout compris)`); }
+  });
+  test("pas de contrôle décoratif : tout filtre de rubriques est branché sur une boucle (urlFilter), la recherche est le vrai widget, les étiquettes sont une vraie liste", () => {
     for (const e of all) {
-      let cat = 0, filtered = 0, author = 0, desc = 0;
+      let cat = 0, filtered = 0, search = 0;
       walk(docOf(e.key), (n) => {
         if (n.type === "select" || n.type === "tabs") assert.fail(`${e.key} : contrôle non pris en charge (${n.type})`);
         if (n.type === "catfilter") cat += 1;
+        if (n.type === "search") search += 1;
         if (n.type === "grid" && n.props && n.props.loop && n.props.loop.urlFilter) filtered += 1;
-        if (n.type === "authorbox") author += 1;
-        if (n.type === "archiveinfo" && n.props.showDescription) desc += 1;
       });
       if (cat) assert.ok(filtered >= 1, `${e.key} : le filtre est branché sur une boucle`);
-      if (e.layoutKey === "auteur") assert.equal(author, 1, `${e.key} : fiche auteur`);
-      if (e.layoutKey === "categorie") assert.equal(desc, 1, `${e.key} : description de la catégorie`);
+      const c = concepts[e.concept - 1];
+      assert.equal(cat > 0, /C/.test(c.filtre), `${e.key} : filtre de rubriques conforme à la fiche`);
+      assert.equal(search > 0, /S/.test(c.filtre), `${e.key} : recherche conforme à la fiche`);
     }
   });
-  test("les 5 identités visuelles, 20 modèles chacune ; 10 contenus aux directions différentes (pas de style Kolakisa imposé)", () => {
-    const n = {}; for (const e of all) n[e.skinKey] = (n[e.skinKey] || 0) + 1;
-    assert.deepEqual(Object.values(n), [20, 20, 20, 20, 20]);
-    assert.equal(new Set(all.map((e) => e.layoutKey)).size, 10);
+  test("identité propre : aucune couleur ni police du site (0 jeton, polices de la bibliothèque), 25 palettes différentes (une par maison), contrastes lisibles (AA)", () => {
+    const pal = new Set();
+    for (const e of all) {
+      const json = JSON.stringify(docOf(e.key)); assert.doesNotMatch(json, /token:/, `${e.key} : aucun jeton du site`);
+      for (const f of json.matchAll(/"fontFamily":"([^"]+)"/g)) assert.match(f[1], /^font\./, `${e.key} : police de la bibliothèque`);
+      const s = Archive.skins.find((x) => x.key === e.skinKey); pal.add([s.bg, s.fg, s.accent].join());
+      assert.ok(ratio(s.fg, s.bg) >= 4.5 && ratio(s.mute, s.bg) >= 4.5 && ratio(s.mute, s.alt) >= 4.5 && ratio(s.onAccent, s.accent) >= 4.5 && ratio(s.accent, s.bg) >= 4.5, `${e.key} : contrastes`);
+    }
+    assert.equal(pal.size, 25, "25 palettes différentes");
+  });
+  test("modes d'identité : « site » remplace les valeurs fixes par les jetons du site, « hybride » garde les fonds et textes du modèle et prend la couleur de marque du site, « propre » est le mode par défaut", () => {
+    for (const e of all) {
+      assert.equal(JSON.stringify(docOf(e.key)), JSON.stringify(docOf(e.key, "own")), `${e.key} : propre = défaut`);
+      const site = JSON.stringify(docOf(e.key, "site")); assert.match(site, /token:background/, `${e.key} : mode site`);
+      const s = Archive.skins.find((x) => x.key === e.skinKey); assert.ok(!site.includes(`"backgroundColor":"${s.bg}"`), `${e.key} : fond fixe remplacé`);
+      const hy = JSON.stringify(docOf(e.key, "hybrid")); assert.match(hy, /token:primary/, `${e.key} : couleur de marque du site`); assert.doesNotMatch(hy, /token:background/, `${e.key} : hybride = fonds du modèle`);
+    }
+    assert.equal(Catalog.build("archive", all[0].key, { identity: "invalide" }).name, all[0].name, "mode inconnu = propre");
   });
 });
 
@@ -120,8 +161,8 @@ describe("Archives : bibliothèque → aperçu → archives publiques (vrai serv
     return id;
   };
   const setDomain = async (site, url) => { const cur = JSON.parse((await boss.get(`/marketing/site-web/sites/${site}/reglages.json`)).text); return boss.request(`/marketing/site-web/sites/${site}/reglages.json`, { method: "PUT", json: { settings: { ...cur.settings, seo: { ...cur.settings.seo, publicUrl: url } }, revision: cur.revision }, headers: ORIGIN() }); };
-  const adopt = async (site, key, conditions) => {
-    const u = await post(U(site, "/api/bibliotheque/utiliser"), { type: "archive", key }); assert.equal(u.status, 200, u.text.slice(0, 300));
+  const adopt = async (site, key, identite) => {
+    const u = await post(U(site, "/api/bibliotheque/utiliser"), { type: "archive", key, ...(identite ? { identite } : {}) }); assert.equal(u.status, 200, u.text.slice(0, 300));
     const t = JSON.parse(u.text).template;
     const p = await post(U(site, `/api/modeles/${t.id}/publier`), { replace: true }); assert.equal(p.status, 200, p.text.slice(0, 300));
     return t;
@@ -145,15 +186,23 @@ describe("Archives : bibliothèque → aperçu → archives publiques (vrai serv
       const base = U(A, `/api/bibliotheque/archive/${e.key}`);
       const pv = await boss.get(`${base}/apercu`), th = await boss.get(`${base}/vignette`);
       assert.equal(pv.status, 200, e.key); assert.equal(th.status, 200, e.key);
-      const core = (h) => h.replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "").replace(/ data-kw-demo="1"/, "").replace(/<script src="[^"]*landing\.js[^"]*" defer><\/script>/, "");
+      const core = (h) => h.replace(/<p style="margin:0;padding:8px 16px;background:#fef3c7[^>]*>Aperçu avec des articles d'exemple[^<]*<\/p>/, "").replace(/data-sid="[^"]*"/g, "").replace(/<title>[^<]*<\/title>/, "").replace(/<style>[^<]*<\/style>/, "").replace(/ data-kw-demo="1"/, "").replace(/<script src="[^"]*landing\.js[^"]*" defer><\/script>/, "");
       assert.equal(core(pv.text), core(th.text), `${e.key} : aperçu = vignette`);
       assert.match(pv.text, /kw-theme-template/, e.key);
       n += 1;
     }
     assert.equal(n, 100);
   });
+  test("les 100 modèles s'insèrent dans un site (validation du moteur, 3 modes d'identité pour un échantillon) ; l'insertion ne publie rien", async () => {
+    for (const e of Catalog.entries("archive")) {
+      const u = await post(U(A, "/api/bibliotheque/utiliser"), { type: "archive", key: e.key }); assert.equal(u.status, 200, `${e.key} : ${u.text.slice(0, 200)}`);
+      assert.notEqual(JSON.parse(u.text).template.status, "published", `${e.key} : brouillon`);
+    }
+    for (const mode of ["site", "hybrid", "own"]) { const u = await post(U(A, "/api/bibliotheque/utiliser"), { type: "archive", key: "kernel.liste-texte", identite: mode }); assert.equal(u.status, 200, mode); }
+    for (const mode of ["site", "hybrid"]) for (const key of ["verso.heros-grille", "obscura.mosaique", "colloque.index-date"]) { const u = await post(U(A, "/api/bibliotheque/utiliser"), { type: "archive", key, identite: mode }); assert.equal(u.status, 200, `${key} ${mode}`); }
+  });
   test("archive de catégorie : seuls les articles de la catégorie et du site, paginés (9 par page), page 2 atteignable", async () => {
-    await adopt(A, "blog.grille");
+    await adopt(A, "cursus.grille");
     const blog = await hostReq(srv, "a.test", "/blog"); assert.equal(blog.status, 200); assert.match(vis(blog.text), /kw-theme-template/);
     const r = await hostReq(srv, "a.test", "/blog/categorie/cuisine"); r.text = vis(r.text);
     assert.equal(r.status, 200, r.text.slice(0, 200)); assert.match(r.text, /kw-theme-template/, "le modèle d'archive s'applique à la catégorie");
@@ -164,13 +213,27 @@ describe("Archives : bibliothèque → aperçu → archives publiques (vrai serv
     const p2 = await hostReq(srv, "a.test", "/blog/categorie/cuisine" + href.replace(/&amp;/g, "&").replace(/^[^?]*/, "")); p2.text = vis(p2.text);
     assert.equal(p2.status, 200); assert.match(p2.text, /Recette cuisine 04/); assert.doesNotMatch(p2.text, /Recette cuisine 13/);
   });
+  test("archives par date : /blog/archives/AAAA[/MM[/JJ]] ne montrent que les articles de la période ; une date impossible est une vraie 404 ; non indexées", async () => {
+    const at = (slug, title, when) => { const id = mkPost(A, slug, title, "Histoire"); db.prepare("UPDATE posts SET published_at = ? WHERE id = ?").run(when, id); return id; };
+    at("date-mars-1", "Article de mars un", "2025-03-10 10:00:00"); at("date-mars-2", "Article de mars deux", "2025-03-22 09:00:00"); at("date-juin", "Article de juin", "2025-06-05 09:00:00"); at("date-2024", "Article de 2024", "2024-12-01 09:00:00");
+    const m = await hostReq(srv, "a.test", "/blog/archives/2025/03"); m.text = vis(m.text);
+    assert.equal(m.status, 200); assert.match(m.text, /Article de mars un/); assert.match(m.text, /Article de mars deux/); assert.doesNotMatch(m.text, /Article de juin/); assert.doesNotMatch(m.text, /Article de 2024/);
+    assert.match(m.text, /Articles de mars 2025/, "titre de la période"); assert.match(m.text, /noindex/, "archive de date non indexée");
+    const y = await hostReq(srv, "a.test", "/blog/archives/2025"); y.text = vis(y.text);
+    assert.equal(y.status, 200); assert.match(y.text, /Article de juin/); assert.doesNotMatch(y.text, /Article de 2024/);
+    const d = await hostReq(srv, "a.test", "/blog/archives/2025/03/22"); d.text = vis(d.text);
+    assert.equal(d.status, 200); assert.match(d.text, /Article de mars deux/); assert.doesNotMatch(d.text, /Article de mars un/);
+    assert.equal((await hostReq(srv, "a.test", "/blog/archives/2025/13")).status, 404, "mois impossible"); assert.equal((await hostReq(srv, "a.test", "/blog/archives/2025/02/31")).status, 404, "jour impossible");
+    assert.doesNotMatch(vis((await hostReq(srv, "b.test", "/blog/archives/2025/03")).text), /Article de mars/, "isolation entre sites");
+    const q = await hostReq(srv, "a.test", "/blog?date=2025-06"); q.text = vis(q.text); assert.match(q.text, /Article de juin/); assert.doesNotMatch(q.text, /Article de mars un/, "ancienne adresse ?date= toujours valable");
+  });
   test("archive d'étiquette : seuls les articles portant l'étiquette", async () => {
     const r = await hostReq(srv, "a.test", "/blog/etiquette/four"); r.text = vis(r.text);
     if (r.status === 404) return; // adresse d'étiquette configurable : ignorée si absente
     assert.equal(r.status, 200); assert.match(r.text, /kw-theme-template/); assert.match(r.text, /Recette cuisine 13/); assert.doesNotMatch(r.text, /Conseil de jardin/);
   });
-  test("barre de catégories branchée : le modèle « bandeau » filtre réellement la liste (?categorie=)", async () => {
-    await adopt(A, "blog.bandeau"); assert.match(vis((await hostReq(srv, "a.test", "/blog")).text), />Le blog</, "modèle bandeau affiché");
+  test("barre de catégories branchée : le modèle « Cursus · Grille » filtre réellement la liste (?categorie=)", async () => {
+    await adopt(A, "cursus.grille"); assert.ok(vis((await hostReq(srv, "a.test", "/blog")).text).toLowerCase().includes(skinOf("cursus.grille").accent.toLowerCase()), "modèle Cursus affiché (sa couleur d'accent est dans la page)");
     const all = await hostReq(srv, "a.test", "/blog"); all.text = vis(all.text);
     assert.match(all.text, /Conseil de jardin/);
     const f = await hostReq(srv, "a.test", "/blog?categorie=Jardin"); f.text = vis(f.text);
@@ -180,12 +243,31 @@ describe("Archives : bibliothèque → aperçu → archives publiques (vrai serv
     // Une catégorie réelle du site sans aucun article publié : l'archive existe (page 200) et affiche l'état vide du modèle
     const tid = Number(db.prepare("INSERT INTO taxonomy_terms (taxonomy, name, slug) VALUES ('category', 'Vide', 'vide')").run().lastInsertRowid);
     db.prepare("INSERT INTO mk_content_sites (content_type, content_id, organization_id, site_id, address) VALUES ('term', ?, ?, ?, 'vide')").run(tid, org, A);
-    await adopt(A, "magazine.liste");
+    await adopt(A, "marge.liste-texte");
     const e = await hostReq(srv, "a.test", "/blog/categorie/vide"); e.text = vis(e.text);
     assert.equal(e.status, 200); assert.match(e.text, /Aucun article dans cette rubrique/); assert.doesNotMatch(e.text, /Cannot|TypeError|undefined/);
-    await adopt(A, "minimal.index");
+    await adopt(A, "cursus.grille");
     const r = await hostReq(srv, "a.test", "/blog"); r.text = vis(r.text);
-    assert.match(r.text, />Journal</, "le nouveau modèle s'affiche"); assert.doesNotMatch(r.text, />Le blog</, "aucun reste du modèle précédent");
+    assert.ok(r.text.toLowerCase().includes(skinOf("cursus.grille").accent.toLowerCase()), "le nouveau modèle s'affiche"); assert.ok(!r.text.toLowerCase().includes(skinOf("marge.liste-texte").accent.toLowerCase()), "aucun reste du modèle précédent");
     const b = await hostReq(srv, "b.test", "/blog"); b.text = vis(b.text); assert.doesNotMatch(b.text, /kw-theme-template/, "le site B garde son rendu historique");
   });
+
+  test("identité indépendante : bleu marine → beige/noir ; la charte du site change, le modèle non ; mode « site » puis retour au mode propre", async () => {
+    const setTokens = (primary, background) => db.prepare("UPDATE mk_sites SET tokens = ? WHERE id = ?").run(JSON.stringify({ colors: { primary, secondary: primary, background } }), A);
+    const skin = Catalog.entries("archive").find((e) => e.key === "verso.heros-grille"), S = skinOf(skin.key);
+    setTokens("#0b2a40", "#0b2a40"); // 1. site bleu marine
+    await adopt(A, skin.key); // 2. modèle beige / noir / blanc inséré (mode propre par défaut)
+    let r = await hostReq(srv, "a.test", "/blog"); let t = vis(r.text).toLowerCase();
+    assert.ok(t.includes(S.bg.toLowerCase()), "3. le fond beige du modèle est présent"); assert.ok(t.includes(S.fg.toLowerCase()), "le texte noir du modèle est présent");
+    setTokens("#b91c1c", "#14532d"); // 4. la charte globale change
+    r = await hostReq(srv, "a.test", "/blog"); t = vis(r.text).toLowerCase();
+    assert.ok(t.includes(S.bg.toLowerCase()) && t.includes(S.fg.toLowerCase()), "5. le modèle indépendant n'a pas changé");
+    await adopt(A, skin.key, "site"); // 6. passage volontaire au mode « suit le site »
+    r = await hostReq(srv, "a.test", "/blog"); t = vis(r.text).toLowerCase();
+    assert.ok(!t.includes(`background-color:${S.bg.toLowerCase()}`), "7. les valeurs fixes du modèle ne sont plus utilisées"); assert.match(t, /var\(--kw-background/, "les jetons du site s'appliquent");
+    await adopt(A, skin.key, "own"); // 8. retour au mode indépendant
+    r = await hostReq(srv, "a.test", "/blog"); t = vis(r.text).toLowerCase();
+    assert.ok(t.includes(S.bg.toLowerCase()) && t.includes(S.fg.toLowerCase()), "9. l'identité d'origine est retrouvée intacte");
+  });
 });
+

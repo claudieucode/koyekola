@@ -280,7 +280,19 @@ const courseScope = (c) => ({ id: c.id, instructor: c.instructor_name || c.instr
 // Éléments d'une boucle (grille « répéter pour chaque ») : une page de résultats, filtrée par l'adresse si demandé
 // Tri choisi par le visiteur (?tri=…) : ne s'applique qu'aux boucles « filtrées par l'adresse » ; une valeur que la source ne gère pas est ignorée par le moteur
 const TRI = { recent: ["date", "desc"], ancien: ["date", "asc"], alpha: ["title", "asc"], "alpha-inverse": ["title", "desc"], "prix-croissant": ["price", "asc"], "prix-decroissant": ["price", "desc"] };
-function loopQuery(ctx, loop, id, visitor, scope) {
+// Aperçu de la BIBLIOTHÈQUE uniquement (page.demoPosts posé par themeRender.previewDoc) : articles d'EXEMPLE, annoncés comme tels. Jamais sur un site publié.
+const DEMO_CATS = ["Actualités", "Conseils", "Dossiers", "Coulisses"];
+// Images d'exemple : illustrations abstraites générées aux couleurs de la maison du modèle (themeArtPublic) ; sans maison connue, un article sans image n'en montre pas.
+function demoPostsResult(loop, maison) {
+  const all = Array.from({ length: 12 }, (_, i) => ({ id: null, authorId: null, title: `Titre de l'article d'exemple ${i + 1}`, url: "/blog", slug: `exemple-${i + 1}`, excerpt: "Le résumé de l'article s'affichera ici : quelques lignes pour donner envie de lire la suite.",
+    image: maison ? `/themes-art/apercu-${String(maison).toLowerCase()}/card-${(i % 12) + 1}.svg` : "", imageAlt: "", date: Date.now() - i * 3 * 86400000, modified: Date.now() - i * 86400000, category: DEMO_CATS[i % DEMO_CATS.length], categoryUrl: "/blog", tags: ["exemple"],
+    author: "Auteur", authorView: null, minutes: 3 + (i % 6), views: 900 - i * 37, commentsCount: i % 5, commentsOpen: true }));
+  if (loop.orderby === "views") all.sort((a, b) => b.views - a.views);
+  const off = Math.max(0, Number(loop.offset) || 0), n = Math.max(1, Math.min(Number(loop.count) || 6, 48));
+  return { items: all.slice(off, off + n), total: all.length, pageNo: 1, pages: 1 };
+}
+function loopQuery(ctx, loop, id, visitor, scope, page) {
+  if (page && page.demoPosts && loop.source === "posts") return demoPostsResult(loop, typeof page.demoPosts === "string" ? page.demoPosts : "");
   const q = (visitor && visitor.query) || {};
   const pageNo = loop.paginate ? Math.max(1, Math.min(parseInt(q[`lp-${id}`], 10) || 1, 500)) : 1;
   // Aperçu de la bibliothèque (jamais le site publié) : résultats de démonstration clairement fictifs
@@ -302,7 +314,7 @@ function nodeView(ctx, nodes, visitor, page, scope) {
     if (n.type === "postcontent") return { ...n, props: { ...n.props, html: scope.post && scope.post.contentHtml ? scope.post.contentHtml : "" } };
     // Boucle : la grille répète ses enfants (le modèle) pour chaque résultat ; chaque copie reçoit son propre contexte
     if (n.type === "grid" && n.props && n.props.loop && n.children) {
-      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope);
+      const loop = n.props.loop, found = loopQuery(ctx, loop, n.id, visitor, scope, page);
       const children = [];
       // Cartes insérées (conteneurs « loopInsert ») : hors du modèle, intercalées après le N-ième résultat (une fois ou tous les N)
       const cards = loop.insertAt ? n.children.filter((c) => c.props && c.props.loopInsert) : [];
