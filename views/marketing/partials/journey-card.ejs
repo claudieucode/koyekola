@@ -10,6 +10,9 @@
   const needsSetup = (j.needs || []).some((n) => ["list", "site_event", "course"].includes(n));
 %>
 <article class="mk-lib-card mk-journey-card<%= v.usable ? "" : " mk-journey-off" %>" data-journey="<%= j.key %>">
+  <% if (v.usable && typeof j.emails === "function") { %>
+    <a class="mk-jp-thumb" href="/marketing/automatisations/parcours/<%= j.key %>" tabindex="-1" aria-hidden="true"><iframe class="mk-jp-frame" src="/marketing/automatisations/parcours/<%= j.key %>/email/0" loading="lazy" sandbox title="" tabindex="-1" scrolling="no"></iframe></a>
+  <% } %>
   <div class="mk-lib-body">
     <div class="mk-journey-card-head">
       <h3><a href="/marketing/automatisations/parcours/<%= j.key %>"><%= j.label %></a></h3>

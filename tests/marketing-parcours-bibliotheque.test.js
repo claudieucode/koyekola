@@ -653,3 +653,20 @@ describe("bibliothèque : pages et droits", () => {
     assert.equal((await student.post(`${base}/suivi-achat/favori`, {})).status, 403);
   });
 });
+
+describe("bibliothèque : aperçu réel des e-mails", () => {
+  beforeEach(() => { m = freshMarketing(); A = m.A; });
+  test("chaque e-mail de chaque parcours utilisable se rend en vrai HTML, sans rien créer", () => {
+    const before = m.db.prepare("SELECT COUNT(*) n FROM mk_templates").get().n;
+    for (const j of usable().filter((x) => typeof x.emails === "function")) {
+      j.emails("https://votre-site").forEach((_, i) => {
+        const html = journeys.emailPreview(A, j.key, i);
+        assert.match(html, /<html|<table|<div/i, `${j.key} #${i} : HTML`);
+        assert.doesNotMatch(html, /<script/i, `${j.key} #${i} : aucun script`);
+      });
+    }
+    assert.equal(m.db.prepare("SELECT COUNT(*) n FROM mk_templates").get().n, before, "aucun modèle créé par un aperçu");
+    assert.equal(journeys.emailPreview(A, "bienvenue-abonnes", 99), null);
+    assert.equal(journeys.emailPreview(A, "inconnu", 0), null);
+  });
+});
