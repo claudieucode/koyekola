@@ -1,80 +1,60 @@
-// R7 (lot 6.0) — Socle PARTAGÉ d'activation des modules par site (décision produit du 17/10/2026). Un seul mécanisme pour les six moteurs secondaires (un seul registre, une seule table `mk_site_modules`).
-// Règles :
-//  - désactivé PAR DÉFAUT pour un site (pas de ligne = désactivé) ; le site principal n'est jamais soumis à l'activation (comportement historique) ;
-//  - l'activation est explicite et réservée à l'ÉQUIPE de l'organisation (jamais à une personne limitée à un site, même administrateur de ce site) ;
-//  - désactiver ne supprime AUCUNE donnée ; l'activation ne remplace NI les permissions NI l'isolation par site (contrôle supplémentaire seulement) ;
-//  - côté serveur : `assertEnabled(ctx, module)` pour les services, `isEnabled` / `moduleOfPath` pour les routes (garde dans web/index.js).
+// Socle d'activation des modules par site — ADAPTATEUR du moteur d'extensions (src/extensions/). Les six moteurs historiques (sms, ai, social, scoring, commerce, lms) sont des extensions déclarées par manifeste ;
+// ce fichier garde l'interface historique (MODULES, KEYS, isEnabled, assertEnabled, denies, listFor, setEnabled) pour que tout le code existant continue de fonctionner sans changement.
+// Règles inchangées : désactivé PAR DÉFAUT pour un site ; le site principal n'est jamais soumis à l'activation ; équipe seulement ; désactiver ne supprime AUCUNE donnée ; l'activation s'ajoute aux permissions et à l'isolation.
 const { MarketingError } = require("./errors");
 const primarySite = require("../services/primarySite"); // R9-4 : la ligne dédiée du site principal n'est pas un site ordinaire
-const { recordAudit } = require("./audit");
+const registry = require("../extensions/registry");
+const state = require("../extensions/state");
+const activation = require("../extensions/activation");
 
-// Registre fermé. `phase` : sous-lot qui rend le moteur sensible au site ; `ready` : le moteur honore le site (false = activation possible mais SANS effet visible tant que le sous-lot n'est pas livré).
-const MODULES = Object.freeze({
-  sms: { label: "SMS", phase: "R7-6.1", ready: true },
-  ai: { label: "Intelligence artificielle", phase: "R7-6.2", ready: true },
-  social: { label: "Réseaux sociaux", phase: "R7-6.3", ready: true },
-  scoring: { label: "Score des contacts", phase: "R7-6.4", ready: true },
-  commerce: { label: "Commerce", phase: "R7-6.5", ready: true },
-  lms: { label: "Formations", phase: "Titan XXIII", ready: true },
-});
-const KEYS = Object.keys(MODULES);
+const reg = registry.load();
+const KEYS = reg.ids;
+// Vue historique du registre : { label, phase, ready }. `ready` : l'extension est disponible (pas « unavailable »).
+const MODULES = Object.freeze(Object.fromEntries(reg.list().map((m) => [m.id, Object.freeze({ label: m.name, phase: m.phase || "", ready: m.availability !== "unavailable" })])));
+const isModule = (key) => reg.has(key);
 
-// Écrans d'administration de chaque moteur (déclaration unique ; les pages publiques /s/…, /go/…, /e/… ne sont pas concernées). Un module sans écran ici (lms) est gardé par ses propres routes.
-const ROUTES = Object.freeze({
-  sms: /^\/(?:sms(?:\/|$)|contacts\/\d+\/sms(?:\/|$))/,
-  social: /^\/reseaux(?:\/|$)/,
-  scoring: /^\/score(?:\/|$)/,
-  ai: /^\/ia(?:\/|$)/,
-  commerce: /^\/revenus(?:\/|$)/, // la boutique (Programme 20.5) : ses écrans d'administration suivent les permissions shop.* ; le module commande l'OUVERTURE PUBLIQUE de la boutique du site
-});
-function moduleOfPath(path) {
-  for (const [key, re] of Object.entries(ROUTES)) if (re.test(path)) return key;
-  return null;
+// Chemin d'une écran d'administration : retire le préfixe d'espace d'un site (« /site-web/sites/N ») s'il y est, et rend l'identifiant du site ainsi désigné par l'ADRESSE (vérifiée par ailleurs).
+function pathInfo(path) {
+  const m = /^\/site-web\/sites\/(\d{1,12})(\/.*)?$/.exec(path);
+  return m ? { siteId: Number(m[1]), rest: m[2] || "/" } : { siteId: null, rest: path };
 }
+const moduleOfPath = (path) => reg.ownerOfPath("admin", pathInfo(path).rest);
+const isEnabled = (db, organizationId, siteId, module) => state.isEnabled(db, organizationId, siteId, module);
 
-const isModule = (key) => typeof key === "string" && Object.hasOwn(MODULES, key);
-// Site principal (null / undefined) : toujours actif. Site : activé seulement par une ligne explicite enabled = 1.
-function isEnabled(db, organizationId, siteId, module) {
-  if (!isModule(module)) return false;
-  if (siteId === null || siteId === undefined) return true;
-  if (!Number.isInteger(siteId) || siteId < 1) return false;
-  try { return Boolean(db.prepare("SELECT 1 FROM mk_site_modules WHERE site_id = ? AND organization_id = ? AND module = ? AND enabled = 1").get(siteId, organizationId, module)); } catch { return false; }
-}
-
-// Garde de SERVICE : un accès limité à un site (ctx.siteScope, imposé par le serveur) exige que le module soit activé pour CE site ; l'équipe (sans siteScope) n'est jamais bloquée (elle gère les données).
 function assertEnabled(ctx, module) {
   if (!isModule(module)) throw new MarketingError("invalid_field", "Module inconnu.");
   if (ctx.siteScope === undefined || ctx.siteScope === null) return;
   if (!isEnabled(ctx.db, ctx.organizationId, ctx.siteScope, module)) throw new MarketingError("module_disabled", `Le module « ${MODULES[module].label} » n'est pas activé pour ce site.`);
 }
 
-// Décision de garde d'un écran (utilisée par web/index.js) : refuse un accès LIMITÉ à un site (`siteOnly`) sur l'écran d'un module qui n'est pas activé pour CE site, ou dont le site n'est pas un site valide.
-// L'équipe et les écrans qui n'appartiennent à aucun module ne sont jamais refusés ici (les permissions et la portée des routes s'appliquent par ailleurs).
+// Garde d'un écran d'administration (web/index.js) :
+//  - l'adresse désigne un SITE (/site-web/sites/N/…) : refus pour tout le monde si l'extension n'y est pas activée (l'équipe aussi : l'espace du site n'ouvre pas ce qui est désactivé pour lui) ;
+//  - sinon, un accès LIMITÉ à un site est refusé sur l'écran d'une extension non activée pour CE site ; l'équipe sur un écran central n'est jamais refusée (elle gère les données).
 function denies({ siteOnly, siteId }, path, db, organizationId) {
-  const mod = moduleOfPath(path);
-  if (!mod || !siteOnly) return false;
-  return !(Number.isInteger(siteId) && isEnabled(db, organizationId, siteId, mod));
+  const info = pathInfo(path);
+  const ext = reg.ownerOfPath("admin", info.rest);
+  if (!ext) return false;
+  if (info.siteId !== null) {
+    let prim = null; try { prim = primarySite.row(db, organizationId); } catch { prim = null; }
+    if (prim && prim.id === info.siteId) return false; // la ligne dédiée du principal : redirigée plus loin vers l'espace du principal, jamais soumise à l'activation
+    return !isEnabled(db, organizationId, info.siteId, ext);
+  }
+  if (!siteOnly) return false;
+  return !(Number.isInteger(siteId) && isEnabled(db, organizationId, siteId, ext));
 }
 
 function listFor(ctx, siteId) {
   const site = ctx.db.prepare(`SELECT id FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId);
   if (!site) throw new MarketingError("not_found", "Site introuvable.");
-  const rows = new Map(ctx.db.prepare("SELECT module, enabled FROM mk_site_modules WHERE site_id = ? AND organization_id = ?").all(siteId, ctx.organizationId).map((r) => [r.module, r.enabled === 1]));
-  return KEYS.map((key) => ({ key, label: MODULES[key].label, phase: MODULES[key].phase, ready: MODULES[key].ready, enabled: rows.get(key) === true }));
+  const on = new Set(state.enabledIds(ctx.db, ctx.organizationId, siteId));
+  return reg.list().length ? KEYS.map((key) => { const m = reg.get(key); return { key, label: m.name, phase: m.phase || "", ready: m.availability !== "unavailable", enabled: on.has(key), description: m.description, icon: m.icon, version: m.version, category: m.category, publisher: m.publisher, maintenance: m.maintenance, availability: m.availability, dependencies: m.dependencies.map((d) => d.id) }; }) : [];
 }
 
-// Activation / désactivation : ÉQUIPE seulement (jamais une personne limitée à un site), site existant non supprimé, module du registre. Idempotent. Aucune donnée de moteur touchée.
+// Activation / désactivation : délègue au moteur (atomique, dépendances, journal). Les appelants historiques (assistant de site, écran « Modules du site ») ont déjà recueilli leur confirmation.
 function setEnabled(ctx, siteId, module, enabled) {
-  if (ctx.siteScope !== undefined && ctx.siteScope !== null) throw new MarketingError("forbidden", "L'activation des modules est réservée à l'équipe de l'organisation.");
-  if (!isModule(module)) throw new MarketingError("invalid_field", "Module inconnu.");
-  const site = ctx.db.prepare(`SELECT id, deleted_at FROM mk_sites WHERE id = ? AND organization_id = ?${primarySite.excludeSql(ctx.db)}`).get(siteId, ctx.organizationId);
-  if (!site || site.deleted_at) throw new MarketingError("not_found", "Site introuvable.");
-  const value = enabled ? 1 : 0;
-  const before = ctx.db.prepare("SELECT enabled FROM mk_site_modules WHERE site_id = ? AND module = ?").get(siteId, module);
-  if ((before ? before.enabled : 0) === value) return { changed: false, enabled: Boolean(value) };
-  ctx.db.prepare("INSERT INTO mk_site_modules (site_id, organization_id, module, enabled, updated_by) VALUES (?, ?, ?, ?, ?) ON CONFLICT (site_id, module) DO UPDATE SET enabled = excluded.enabled, updated_by = excluded.updated_by, updated_at = datetime('now')")
-    .run(siteId, ctx.organizationId, module, value, ctx.userId ?? null);
-  try { recordAudit(ctx.db, { organizationId: ctx.organizationId, userId: ctx.userId ?? null, action: value ? "site_module.enabled" : "site_module.disabled", resourceType: "site_module", resourceId: module, metadata: { module }, siteId }); } catch { /* la trace ne bloque jamais */ }
-  return { changed: true, enabled: Boolean(value) };
+  const r = enabled ? activation.enable(ctx, siteId, module, { confirm: true }) : activation.disable(ctx, siteId, module, { confirm: true });
+  return { changed: r.changed, enabled: r.enabled };
 }
-module.exports = { MODULES, KEYS, ROUTES, moduleOfPath, isModule, isEnabled, assertEnabled, denies, listFor, setEnabled };
+// ROUTES : conservé pour la lecture (documentation, tests) — expressions des écrans d'administration de chaque extension
+const ROUTES = Object.freeze(Object.fromEntries(reg.list().filter((m) => m.adminRoutes.length).map((m) => [m.id, new RegExp(m.adminRoutes.join("|"))])));
+module.exports = { MODULES, KEYS, ROUTES, moduleOfPath, pathInfo, isModule, isEnabled, assertEnabled, denies, listFor, setEnabled };

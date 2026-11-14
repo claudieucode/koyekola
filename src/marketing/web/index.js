@@ -76,6 +76,7 @@ function createMarketingRouters({ db }) {
   });
   admin.use(require("./siteSpace").attach); // contexte de l'espace d'un site (palier 3, B1) : avant les routeurs qui affichent des écrans
   admin.use(require("./siteModules")()); // R7 lot 6.0 : activation des modules par site (équipe seulement)
+  admin.use(require("./extensions")()); // Extensions : catalogue central, état par site, gestion, historique (équipe seulement)
   admin.use(require("./aiMedia")()); // Programme 21.7 : médias IA et gestionnaire de ressources (génération asynchrone, provenance, affectation aux pages)
   admin.use(require("./designGenerator")()); // Programme 21.5 : direction artistique générée (brouillon des styles)
   admin.use(require("./pageGenerator")()); // Programme 21.4 : générateur de pages natives à partir d'un plan (brouillons uniquement)

@@ -170,6 +170,7 @@ app.get("/sante", async (req, res) => {
   res.json({ statut: "ok", formations: c, versions_images: (await require("./src/marketing/media/variants").selfTest()) ? "ok" : "indisponible" });
 });
 
+app.use(require("./src/extensions/runtime").publicGuard(db)); // extensions : sur le domaine d'un site, les pages d'une extension non activée pour CE site répondent « introuvable »
 app.use(seoRoutes);
 app.use(require("./src/seo/web").router);
 app.use(mediaRoutes);
