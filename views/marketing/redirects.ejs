@@ -13,10 +13,13 @@
       <div class="mk-actions"><% if (can.create) { %><button type="button" class="btn btn-primary btn-sm" data-ur-new>Ajouter une redirection</button><% } %></div></div>
 
     <%- include("partials/redirections-tabs", { rdActive: "toutes" }) %>
+<div class="rd-stack">
 
-    <% if (chains > 0) { %><p class="mk-note" role="status"><%= chains %> redirection<%= chains > 1 ? "s font" : " fait" %> passer par plusieurs étapes (A → B → C) ou boucle<%= chains > 1 ? "nt" : "" %>. Une redirection directe est plus rapide et mieux comprise par les moteurs : <a href="/formateur/seo/redirections">voir les chaînes</a>.</p><% } %>
+    <% if (chains > 0) { %><p class="rd-result is-warn" role="status"><span><%= chains %> redirection<%= chains > 1 ? "s font" : " fait" %> passer par plusieurs étapes (A → B → C) ou boucle<%= chains > 1 ? "nt" : "" %>. Une redirection directe est plus rapide et mieux comprise par les moteurs : <a href="/formateur/seo/redirections">voir les chaînes</a>.</span></p><% } %>
 
-    <form class="mk-cms-toolbar mk-cms-filters" method="get" action="/marketing/site-web/redirections" role="search" aria-label="Rechercher parmi les redirections">
+    <section class="rd-panel">
+      <div class="rd-panel-head"><div><h2>Toutes les redirections</h2><p><%= total %> redirection<%= total > 1 ? "s" : "" %><%= filtered ? " correspondant aux critères" : "" %>. Filtrez, triez, puis agissez sur une ligne ou sur une sélection.</p></div><div class="rd-panel-tools"><a class="btn btn-outline btn-sm" href="/marketing/site-web/redirections/import-export"><%- icon("download", { size: 15 }) %> Importer / Exporter</a></div></div>
+    <form class="rd-panel-body rd-filters mk-cms-filters" method="get" action="/marketing/site-web/redirections" role="search" aria-label="Rechercher parmi les redirections">
       <label class="mk-search"><span class="sr-only">Rechercher (adresse, destination, note)</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" placeholder="Rechercher une adresse"></label>
       <label class="sr-only" for="ur-f-type">Type</label>
       <select id="ur-f-type" name="type"><option value="">Tous les types</option><% [[301, "301 — définitive"], [302, "302 — temporaire"], [303, "303 — vers GET"], [307, "307 — temporaire, méthode conservée"], [308, "308 — définitive, méthode conservée"], [410, "410 — supprimée"], [451, "451 — indisponible (légal)"]].forEach(([k, l]) => { %><option value="<%= k %>"<%= f.type === String(k) ? " selected" : "" %>><%= l %></option><% }) %></select>
@@ -32,7 +35,7 @@
     </form>
 
     <% if (!rows.length) { %>
-      <div class="mk-empty"><%- illu("arrowRightLeft", { className: "kx-empty-ill" }) %><h2><%= filtered ? "Aucun résultat" : "Aucune redirection" %></h2>
+      <div class="rd-empty"><strong><%= filtered ? "Aucun résultat" : "Aucune redirection" %></strong>
         <p><%= filtered ? "Aucune redirection ne correspond à ces critères." : "Aucune redirection pour l'instant : elles apparaissent ici dès que vous en ajoutez une." %></p>
         <% if (can.create && !filtered) { %><div class="mk-actions"><button type="button" class="btn btn-primary btn-sm" data-ur-new>Ajouter une redirection</button></div><% } %></div>
     <% } else { %>
@@ -75,6 +78,7 @@
           <% if (page < pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: page + 1 }) %>">Suivant</a><% } %></span><% } %>
       </nav>
     <% } %>
+    </section>
 
     <% if (can.create || can.edit) { %>
       <dialog class="mk-dialog mk-modal" id="ur-form" aria-labelledby="ur-form-title">
@@ -123,4 +127,5 @@
         <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-ur-close>Fermer</button></div>
       </div>
     </dialog>
+</div>
 <%- include("partials/bottom") %>
