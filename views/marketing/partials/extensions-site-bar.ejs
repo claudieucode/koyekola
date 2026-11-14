@@ -1,0 +1,7 @@
+<%# Sélecteur de site (écran central) : change le site courant, mémorisé côté serveur ; absent dans l'espace d'un site. %>
+<% if (!inSite && sites.length) { %>
+<form method="get" action="<%= BASE %><%= tab ? '/' + tab : '' %>" class="xg-sitebar">
+  <label class="xg-f"><span>Site</span><select name="site" data-xc-site><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select></label>
+  <noscript><button class="btn btn-outline btn-sm" type="submit">Afficher</button></noscript>
+</form>
+<% } %>

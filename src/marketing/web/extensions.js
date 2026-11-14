@@ -25,21 +25,35 @@ module.exports = () => {
   const sitesOf = (ctx) => ctx.db.prepare(`SELECT id, name, status FROM mk_sites WHERE organization_id = ? AND deleted_at IS NULL${primarySite.excludeSql(ctx.db)} ORDER BY name COLLATE NOCASE`).all(ctx.organizationId);
   const reg = registry.load();
 
-  // Données communes : sites, site choisi (paramètre validé contre la liste de l'organisation), extensions avec leur état pour ce site
-  // `fixed` : espace d'UN site (adresse /sites/N/extensions…, site vérifié par le serveur) — jamais un autre site, pas de sélecteur
+  // Données communes : sites, site courant, extensions avec leur état pour ce site — UNE seule source de vérité (state.enabledIds → mk_site_modules, clé organisation + site) pour les cinq écrans.
+  // `fixed` : espace d'UN site (adresse /sites/N/extensions…, site vérifié par le serveur) — jamais un autre site, pas de sélecteur.
+  // Site courant (écran central) : paramètre ?site= validé contre la liste de l'organisation, sinon le dernier site choisi (session), sinon le premier site qui a au moins une extension activée, sinon le premier.
+  function currentSite(req, sites, fixed) {
+    const ctx = req.mk.ctx;
+    if (fixed) return sites.find((s) => s.id === fixed) || null;
+    const explicit = sites.find((s) => s.id === Number(req.query.site));
+    const remembered = req.session && sites.find((s) => s.id === Number(req.session.mkExtSite));
+    const withAny = sites.find((s) => state.enabledIds(ctx.db, ctx.organizationId, s.id).length);
+    const site = explicit || remembered || withAny || sites[0] || null;
+    if (site && req.session) req.session.mkExtSite = site.id;
+    return site;
+  }
   function model(req, tab, fixed = null) {
     const ctx = req.mk.ctx;
     const sites = fixed ? sitesOf(ctx).filter((s) => s.id === fixed) : sitesOf(ctx);
-    const wanted = fixed || Number(req.query.site);
-    const site = sites.find((s) => s.id === wanted) || sites[0] || null;
+    const site = currentSite(req, sites, fixed);
     const on = site ? new Set(state.enabledIds(ctx.db, ctx.organizationId, site.id)) : new Set();
     const counts = new Map(reg.ids.map((id) => [id, 0]));
-    for (const s of sites) for (const id of state.enabledIds(ctx.db, ctx.organizationId, s.id)) counts.set(id, (counts.get(id) || 0) + 1);
+    const perSite = new Map();
+    for (const s of sites) { const ids = state.enabledIds(ctx.db, ctx.organizationId, s.id); perSite.set(s.id, ids.length); for (const id of ids) counts.set(id, (counts.get(id) || 0) + 1); }
     const items = reg.list().map((m) => ({ ...m, logo: logoOf(m.id), categoryLabel: CATEGORY[m.category] || m.category, enabled: on.has(m.id), activeSites: counts.get(m.id) || 0 }));
     const confirmId = reg.has(req.query.confirmer) ? req.query.confirmer : null;
     const confirmPlan = site && confirmId ? activation.plan(ctx, site.id, confirmId, !on.has(confirmId)) : null;
     const root = fixed ? `${space(fixed)}/extensions` : BASE;
-    return { tab, tabs: TABS.map(([slug, label]) => ({ slug, label, href: slug ? `${root}/${slug}` : root, current: slug === tab })), sites, site, items, totalSites: fixed ? reg.ids.length && sitesOf(ctx).length : sites.length, confirmId, confirmPlan, CATEGORY, ACTION, BASE: root, inSite: Boolean(fixed), POSTBASE: BASE };
+    const tally = { all: items.length, on: items.filter((m) => m.enabled).length, off: items.filter((m) => !m.enabled).length };
+    const withActive = sites.filter((s) => s.id !== (site && site.id) && perSite.get(s.id)).map((s) => ({ id: s.id, name: s.name, n: perSite.get(s.id) }));
+    const tabCount = { "": tally.all, activees: tally.on, desactivees: tally.off };
+    return { tab, tally, withActive, tabs: TABS.map(([slug, label]) => ({ slug, label, count: site ? tabCount[slug] : undefined, href: slug ? `${root}/${slug}` : root, current: slug === tab })), sites, site, items, totalSites: fixed ? reg.ids.length && sitesOf(ctx).length : sites.length, confirmId, confirmPlan, CATEGORY, ACTION, BASE: root, inSite: Boolean(fixed), POSTBASE: BASE, loadError: null };
   }
   const space = (id) => `/marketing/site-web/sites/${id}`;
   const render = (req, res, tab, title, extra = {}) => res.render("marketing/extensions", { title, active: tab ? `extensions/${tab}` : "extensions", query: req.query, ...model(req, tab), ...extra });
@@ -55,7 +69,12 @@ module.exports = () => {
   for (const P of PREFIXES) {
     const page = (tab, title, extra) => (req, res) => {
       const f = fixedSite(req, res); if (!f.ok) return;
-      const m = model(req, tab, f.fixed);
+      let m;
+      try { m = model(req, tab, f.fixed); } catch (e) {
+        // Échec de lecture : jamais « 0 sur 0 » — l'écran dit qu'il y a une erreur et propose de réessayer.
+        req.log && req.log.error && req.log.error(e);
+        return res.status(500).render("marketing/extensions", { title, extUi: true, active: tab ? `extensions/${tab}` : "extensions", query: req.query, tab, tabs: [], sites: [], site: null, items: [], tally: { all: 0, on: 0, off: 0 }, withActive: [], totalSites: 0, confirmId: null, confirmPlan: null, CATEGORY, ACTION, BASE: f.fixed ? `${space(f.fixed)}/extensions` : BASE, inSite: Boolean(f.fixed), POSTBASE: BASE, loadError: "Les extensions n'ont pas pu être lues. Aucune donnée n'a été modifiée.", detail: null, settings: [], dependents: [], registry: reg, events: [], total: 0, filters: {}, lastChanges: {} });
+      }
       res.render("marketing/extensions", { title, extUi: true, active: tab ? `extensions/${tab}` : "extensions", query: req.query, ...m, ...(extra ? extra(req, m, f.fixed) : {}) });
     };
     router.get(P, ...guard, page("", "Toutes les extensions"));
@@ -64,7 +83,7 @@ module.exports = () => {
     router.get(`${P}/gestion`, ...guard, page("gestion", "Gestion des extensions", (req, m) => {
       const detail = reg.has(req.query.extension) ? reg.get(req.query.extension) : null;
       const settings = detail && m.site && detail.settings.length && state.isEnabled(req.mk.ctx.db, req.mk.ctx.organizationId, m.site.id, detail.id) ? activation.getSettings(req.mk.ctx, m.site.id, detail.id) : [];
-      return { detail, settings, dependents: detail ? reg.dependentsOf(detail.id) : [], registry: reg };
+      return { detail, settings, dependents: detail ? reg.dependentsOf(detail.id) : [], registry: reg, lastChanges: m.site ? activation.lastChanges(req.mk.ctx, m.site.id) : {} };
     }));
     router.get(`${P}/detail/:ext([a-z_]{2,30})`, ...guard, (req, res) => {
       const f = fixedSite(req, res); if (!f.ok) return;
@@ -77,10 +96,20 @@ module.exports = () => {
       res.render("marketing/extension-detail", { title: item.name, extUi: true, active: "extensions", query: req.query, ...m, item, settings, events, registry: reg, dependents: reg.dependentsOf(item.id).map((id) => reg.get(id).name) });
     });
     router.get(`${P}/historique`, ...guard, page("historique", "Historique et activité", (req, m, fixed) => {
-      const ext = reg.has(req.query.extension) ? req.query.extension : null;
-      const all = !fixed && (req.query.site === "tous" || !req.query.site);
-      const events = activation.history(req.mk.ctx, { siteId: all ? null : (m.site && m.site.id), extension: ext, limit: 100 });
-      return { events, filterExt: ext, filterAll: all, registry: reg };
+      const q = req.query;
+      const ext = reg.has(q.extension) ? q.extension : null;
+      const all = !fixed && (q.site === "tous" || !q.site);
+      const action = activation.ACTIONS.includes(q.operation) ? q.operation : null;
+      const from = /^\d{4}-\d{2}-\d{2}$/.test(q.du || "") ? q.du : "";
+      const to = /^\d{4}-\d{2}-\d{2}$/.test(q.au || "") ? q.au : "";
+      const text = String(q.q || "").trim().slice(0, 80);
+      const PER = 25;
+      const page = Math.max(1, Number.parseInt(q.page, 10) || 1);
+      let res0 = { rows: [], total: 0 };
+      res0 = activation.historyPage(req.mk.ctx, { siteId: all ? null : (m.site && m.site.id), extension: ext, action, from, to, q: text, limit: PER, offset: (page - 1) * PER });
+      const filters = { site: all ? "tous" : (m.site && m.site.id), extension: ext || "", operation: action || "", du: from, au: to, q: text };
+      const active = Boolean(ext || action || from || to || text || (!fixed && !all));
+      return { events: res0.rows, total: res0.total, page, pages: Math.max(1, Math.ceil(res0.total / PER)), per: PER, filters, filtersActive: active, filterExt: ext, filterAll: all, registry: reg };
     }));
   }
 

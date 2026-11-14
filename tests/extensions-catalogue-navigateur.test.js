@@ -84,4 +84,34 @@ describe("extensions : catalogue dans le navigateur", { skip: SKIP }, () => {
       } finally { await context.close(); }
     }
   });
+
+  test("Gestion et Historique : aucun débordement à 1440, 1024, 768 et 390 px ; filtres de l'historique utilisables ; double envoi impossible", async () => {
+    const X = "/marketing/site-web/extensions";
+    for (const w of [1440, 1024, 768, 390]) for (const path of [`${X}/gestion`, `${X}/historique`, `${X}/activees`]) {
+      const context = await env.browser.newContext({ viewport: { width: w, height: 900 } });
+      await context.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
+      const page = await context.newPage(); context.setDefaultTimeout(15000);
+      try {
+        await page.goto(`${env.srv.base}${path}?site=${env.site}`); await page.waitForLoadState("networkidle");
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), false, `${w}px ${path} : débordement`);
+      } finally { await context.close(); }
+    }
+    const context = await env.browser.newContext({ viewport: { width: 1440, height: 900 } });
+    await context.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
+    const page = await context.newPage(); context.setDefaultTimeout(15000);
+    try {
+      await page.goto(`${env.srv.base}${X}/historique`); await page.waitForLoadState("networkidle");
+      await page.selectOption('select[name="operation"]', "enable"); await page.click('button:has-text("Filtrer")'); await page.waitForLoadState("networkidle");
+      assert.match(page.url(), /operation=enable/);
+      await page.click('a:has-text("Réinitialiser")'); await page.waitForLoadState("networkidle");
+      assert.doesNotMatch(page.url(), /operation=/);
+      // un envoi de formulaire n'est possible qu'une fois : le second clic est ignoré
+      await page.goto(`${env.srv.base}${X}/desactivees?site=${env.site}`); await page.waitForLoadState("networkidle");
+      const card = page.locator('[data-xc-item][data-name="sms"]');
+      await card.getByRole("button", { name: "Activer" }).dblclick();
+      await page.waitForLoadState("networkidle");
+      const n = env.db.prepare("SELECT COUNT(*) n FROM mk_extension_events WHERE site_id = ? AND extension = 'sms' AND action = 'enable'").get(env.site).n;
+      assert.equal(n, 1, "une seule activation enregistrée malgré le double clic");
+    } finally { await context.close(); }
+  });
 });
