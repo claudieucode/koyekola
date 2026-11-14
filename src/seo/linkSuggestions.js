@@ -62,8 +62,8 @@ const parse = (t, fb) => { try { return JSON.parse(t); } catch { return fb; } };
 
 // Pages publiées du site → candidats (siteId vérifié par l'appelant)
 function candidatesFor(siteId) {
-  if (!Number.isInteger(siteId) || siteId <= 0) throw new Error("Suggestions de liens : site non vérifié.");
-  return db.prepare("SELECT id, slug, site_id, name, title, seo FROM mk_landing_pages WHERE site_id = ? AND archived_at IS NULL AND status = 'published' ORDER BY id LIMIT ?").all(siteId, MAX_CANDIDATES).map((r) => {
+  if (siteId !== null && (!Number.isInteger(siteId) || siteId <= 0)) throw new Error("Suggestions de liens : site non vérifié.");
+  return db.prepare(`SELECT id, slug, site_id, name, title, seo FROM mk_landing_pages WHERE ${siteId === null ? "site_id IS NULL" : "site_id = ?"} AND archived_at IS NULL AND status = 'published' ORDER BY id LIMIT ?`).all(...(siteId === null ? [] : [siteId]), MAX_CANDIDATES).map((r) => {
     const seo = parse(r.seo, {});
     return { id: r.id, name: r.title || r.name, path: urls.pageCanonicalPath(r), phrases: [seo.focusKeyword, r.title, r.name].filter(Boolean) };
   });
@@ -72,7 +72,7 @@ function candidatesFor(siteId) {
 // Suggestions pour chaque page en ligne du site (la page n'est jamais proposée vers elle-même)
 function forSite(siteId, { limitPerPage = 5, pageId = null } = {}) {
   const cands = candidatesFor(siteId);
-  const rows = db.prepare("SELECT id, slug, site_id, name, title, description, sections, seo FROM mk_landing_pages WHERE site_id = ? AND archived_at IS NULL AND status = 'published' ORDER BY id LIMIT ?").all(siteId, MAX_CANDIDATES);
+  const rows = db.prepare(`SELECT id, slug, site_id, name, title, description, sections, seo FROM mk_landing_pages WHERE ${siteId === null ? "site_id IS NULL" : "site_id = ?"} AND archived_at IS NULL AND status = 'published' ORDER BY id LIMIT ?`).all(...(siteId === null ? [] : [siteId]), MAX_CANDIDATES);
   const out = [];
   for (const r of rows) {
     if (pageId && r.id !== pageId) continue;

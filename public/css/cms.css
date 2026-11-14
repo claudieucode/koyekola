@@ -2401,3 +2401,35 @@ a.cmx-on-title:hover { color: var(--kb-action, #0277b6); text-decoration: underl
 }
 @media (max-width: 720px) { .cmx-top { gap: 8px; } .cmx-search { flex: 1 1 100%; } }
 @media (prefers-reduced-motion: reduce) { .cmx-row, .cmx-act, .cmx-item, .cmx-check, .cmx-bubble, .cmx-tabs .mk-tab-count { transition: none; } .cmx-menu-list, .cmx-drawer:not([hidden]) { animation: none; } }
+
+/* ---- SEO › Google : cartes Search Console et Analytics 4 (même système visuel, états reliés au serveur) ---- */
+.gx-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 20px; align-items: start; margin-top: 16px; }
+.gx-card { min-width: 0; padding: 22px 24px 24px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; box-shadow: 0 1px 2px rgba(16, 34, 47, .05), 0 6px 18px rgba(16, 34, 47, .04); }
+.gx-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-bottom: 18px; }
+.gx-logo { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--mk-surface-2, #f3f7fa); border: 1px solid var(--mk-border, #dbe4ea); }
+.gx-title h2 { margin: 0; font-size: 1.0625rem; line-height: 1.25; }
+.gx-title p { margin: 2px 0 0; color: var(--mk-muted, #5a6f7d); font-size: .875rem; line-height: 1.4; }
+.gx-pill { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 999px; font-size: .8125rem; font-weight: 600; white-space: nowrap; background: var(--mk-surface-2, #eef3f6); color: var(--mk-muted, #4a5f6d); }
+.gx-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.gx-pill-ok { background: #e3f6ea; color: #14683a; } .gx-pill-bad { background: #fde8e8; color: #a12323; } .gx-pill-warn { background: #fff3d6; color: #8a5a00; }
+.gx-pill-busy { background: #e1f0fb; color: #0b5d94; } .gx-pill-busy .gx-dot { animation: gx-pulse 1s ease-in-out infinite; }
+@keyframes gx-pulse { 50% { opacity: .25; } }
+.gx-detail { margin: -6px 0 16px; padding: 9px 12px; border-radius: 8px; font-size: .875rem; background: var(--mk-surface-2, #f3f7fa); color: var(--mk-muted, #4a5f6d); overflow-wrap: anywhere; }
+.gx-detail-bad { background: #fdf0f0; color: #8e1f1f; } .gx-detail-ok { background: #eaf7ef; color: #14683a; }
+.gx-form { display: grid; gap: 16px; }
+.gx-field { display: grid; gap: 6px; min-width: 0; }
+.gx-field label { font-weight: 600; font-size: .9rem; }
+.gx-field input, .gx-field textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--mk-border, #c9d6de); border-radius: 8px; background: #fff; color: inherit; font: inherit; line-height: 1.4; }
+.gx-field input { min-height: 42px; }
+.gx-field textarea { min-height: 190px; max-height: 420px; resize: vertical; overflow: auto; background: var(--mk-surface-2, #f6f9fb); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .8125rem; line-height: 1.55; tab-size: 2; white-space: pre; }
+.gx-field input:focus-visible, .gx-field textarea:focus-visible { outline: 2px solid var(--accent, #0277b6); outline-offset: 1px; border-color: transparent; }
+.gx-field textarea.is-invalid { border-color: #c53030; background: #fffafa; } .gx-field textarea.is-valid { border-color: #1f8a4c; }
+.gx-field small, .gx-json-state { color: var(--mk-muted, #5a6f7d); font-size: .8125rem; line-height: 1.45; margin: 0; }
+.gx-json-state.is-bad { color: #a12323; font-weight: 600; } .gx-json-state.is-ok { color: #14683a; font-weight: 600; overflow-wrap: anywhere; }
+.gx-perm { display: flex; gap: 9px; align-items: flex-start; margin: 0; padding: 10px 12px; border-radius: 8px; background: #eef6fc; color: #1d4a6b; font-size: .8125rem; line-height: 1.45; }
+.gx-perm svg { flex: none; margin-top: 1px; }
+.gx-actions { display: flex; flex-wrap: wrap; gap: 10px; padding-top: 4px; }
+.gx-actions .btn { width: auto; }
+.gx-danger { color: #a12323; border-color: #e5b5b5; }
+@media (max-width: 560px) { .gx-card { padding: 16px; } .gx-head { grid-template-columns: auto minmax(0, 1fr); } .gx-pill { grid-column: 1 / -1; justify-self: start; } .gx-actions .btn { flex: 1 1 100%; } }
+@media (prefers-reduced-motion: reduce) { .gx-pill-busy .gx-dot { animation: none; } }

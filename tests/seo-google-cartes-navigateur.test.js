@@ -31,7 +31,7 @@ describe("SEO › Google : cartes (navigateur)", { skip: SKIP }, () => {
     }
     const boxes = await page.locator("[data-gx-card]").evaluateAll((l) => l.map((e) => e.getBoundingClientRect().left));
     assert.ok(Math.abs(boxes[0] - boxes[1]) > 300, "deux cartes côte à côte sur ordinateur");
-    await page.screenshot({ path: process.env.GX_SHOTS ? process.env.GX_SHOTS + "/gx-desktop.png" : "/dev/null" });
+    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/gx-desktop.png" });
   });
 
   test("JSON : invalide signalé, valide confirmé avec l'e-mail du compte ; un envoi invalide est bloqué", async () => {
@@ -65,7 +65,7 @@ describe("SEO › Google : cartes (navigateur)", { skip: SKIP }, () => {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "pas de défilement horizontal");
     const lefts = await page.locator("[data-gx-card]").evaluateAll((l) => l.map((e) => Math.round(e.getBoundingClientRect().left)));
     assert.equal(lefts[0], lefts[1], "une seule colonne");
-    await page.screenshot({ path: process.env.GX_SHOTS ? process.env.GX_SHOTS + "/gx-mobile.png" : "/dev/null", fullPage: true });
+    if (process.env.GX_SHOTS) await page.screenshot({ path: process.env.GX_SHOTS + "/gx-mobile.png", fullPage: true });
     assert.deepEqual(env.errors, []);
   });
 });

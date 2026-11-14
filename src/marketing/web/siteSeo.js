@@ -30,6 +30,15 @@ const deny = (res, status, message) => res.status(status).render("error", { mess
 module.exports = () => {
   const router = express.Router({ mergeParams: true });
   const P = "/site-web/sites/:id(\\d+)";
+  // Site PRINCIPAL (équipe de l'organisation, aucun site) : mêmes écrans, mêmes données « site_id NULL », à l'adresse historique /site-web/seo/<rubrique>.
+  // Sans ces routes, l'écran générique des rubriques SEO (cmsScreens) recevait ces quatre adresses et affichait sa vue générale.
+  const M = "/site-web";
+  const mainGate = (req, res, next) => {
+    if (req.mk.siteId !== null) return deny(res, 403, "Cet écran est réservé à l'équipe de l'organisation.");
+    req.seoSpace = { siteId: null, principal: true, base: BASE, name: "Site principal", status: "active", deleted: false, slug: null };
+    next();
+  };
+  router.use(`${M}/seo/(liens-internes|positions|connexions|transfert)`, mainGate);
   // Toutes les routes de ce module exigent un site vérifié ; sinon la même réponse que les autres écrans de l'espace
   router.use(`${P}/(seo|redirections)`, (req, res, next) => {
     const space = spaceOf(req, res);
@@ -312,15 +321,15 @@ module.exports = () => {
   // ---------- Export / import des réglages SEO, import Rank Math / Yoast ----------
   // Le fichier ne désigne jamais le site : tout s'applique au site de l'adresse vérifiée.
   const sendJson = (res, name, data) => res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename="${name}"`, "Cache-Control": "no-store" }).send(JSON.stringify(data, null, 2));
-  router.get(`${P}/seo/transfert`, need("seo.view"), (req, res) => render(req, res, "transfert", "Export et import SEO", { report: null, kind: null }));
-  router.get(`${P}/seo/transfert/export.json`, need("seo.view"), (req, res) => sendJson(res, `seo-site-${sid(req)}.json`, transfer.exportScope(sid(req))));
-  router.post(`${P}/seo/transfert/import`, need("seo.edit"), (req, res) => {
+  router.get([`${P}/seo/transfert`, `${M}/seo/transfert`], need("seo.view"), (req, res) => render(req, res, "transfert", "Export et import SEO", { report: null, kind: null }));
+  router.get([`${P}/seo/transfert/export.json`, `${M}/seo/transfert/export.json`], need("seo.view"), (req, res) => sendJson(res, `seo-site-${sid(req)}.json`, transfer.exportScope(sid(req))));
+  router.post([`${P}/seo/transfert/import`, `${M}/seo/transfert/import`], need("seo.edit"), (req, res) => {
     if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses réglages ne peuvent pas être modifiés."); return res.redirect(back(req, "/seo/transfert")); }
     const dryRun = req.body.apply !== "1";
     const report = transfer.importScope(sid(req), String(req.body.json || "").slice(0, 400000), req.session.user.id, { dryRun, allowExternal: req.mk.can("redirects.external") });
     render(req, res, "transfert", "Export et import SEO", { report, kind: "json" });
   });
-  router.post(`${P}/seo/transfert/wordpress`, need("seo.edit"), (req, res) => {
+  router.post([`${P}/seo/transfert/wordpress`, `${M}/seo/transfert/wordpress`], need("seo.edit"), (req, res) => {
     if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses pages ne peuvent pas être modifiées."); return res.redirect(back(req, "/seo/transfert")); }
     const dryRun = req.body.apply !== "1";
     let report;
@@ -329,27 +338,27 @@ module.exports = () => {
   });
 
   // ---------- Suggestions de liens internes ----------
-  router.get(`${P}/seo/liens-internes`, need("seo.view"), (req, res) => {
+  router.get([`${P}/seo/liens-internes`, `${M}/seo/liens-internes`], need("seo.view"), (req, res) => {
     const pageId = /^\d+$/.test(String(req.query.page || "")) ? Number(req.query.page) : null;
     render(req, res, "liens-internes", "Liens internes", { v: linkSuggestions.forSite(sid(req), { pageId }), pageId });
   });
 
   // ---------- Suivi de positionnement ----------
-  router.get(`${P}/seo/positions`, need("seo.view"), (req, res) => render(req, res, "positions", "Suivi de positionnement", { v: rankings.summary(sid(req), { q: String(req.query.q || "") }), sources: rankings.SOURCES, gsc: integrations.status(integrations.scoped("search_console", sid(req))), search: String(req.query.q || "") }));
+  router.get([`${P}/seo/positions`, `${M}/seo/positions`], need("seo.view"), (req, res) => render(req, res, "positions", "Suivi de positionnement", { v: rankings.summary(sid(req), { q: String(req.query.q || "") }), sources: rankings.SOURCES, gsc: integrations.status(integrations.scoped("search_console", sid(req))), search: String(req.query.q || "") }));
   const rankGuard = (req, res) => { if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses mesures ne peuvent pas être modifiées."); res.redirect(back(req, "/seo/positions")); return false; } return true; };
-  router.post(`${P}/seo/positions`, need("seo.edit"), (req, res) => {
+  router.post([`${P}/seo/positions`, `${M}/seo/positions`], need("seo.edit"), (req, res) => {
     if (!rankGuard(req, res)) return;
     const r = rankings.add(sid(req), { keyword: req.body.keyword, url: req.body.url, position: req.body.position, date: req.body.date }, req.session.user.id);
     if (!r.ok) flashError(req, r.errors.join(" ")); else flashOk(req, "Mesure enregistrée.");
     res.redirect(back(req, "/seo/positions"));
   });
-  router.post(`${P}/seo/positions/import`, need("seo.edit"), (req, res) => {
+  router.post([`${P}/seo/positions/import`, `${M}/seo/positions/import`], need("seo.edit"), (req, res) => {
     if (!rankGuard(req, res)) return;
     const r = rankings.importGsc(sid(req), String(req.body.csv || "").slice(0, 400000), { date: req.body.date, userId: req.session.user.id });
     if (!r.ok) flashError(req, r.errors.join(" ")); else if (r.errors.length) flashError(req, `${r.imported} mesure(s) importée(s) ; ${r.errors.length} ligne(s) refusée(s) : ${r.errors.slice(0, 3).join(" ")}`); else flashOk(req, `${r.imported} mesure(s) importée(s).`);
     res.redirect(back(req, "/seo/positions"));
   });
-  router.post(`${P}/seo/positions/api`, need("seo.edit"), async (req, res, next) => {
+  router.post([`${P}/seo/positions/api`, `${M}/seo/positions/api`], need("seo.edit"), async (req, res, next) => {
     if (!rankGuard(req, res)) return;
     try {
       const r = await rankings.snapshotFromSearchConsole(sid(req), req.session.user.id);
@@ -359,7 +368,7 @@ module.exports = () => {
     }
     res.redirect(back(req, "/seo/positions"));
   });
-  router.post(`${P}/seo/positions/:eid(\\d+)/supprimer`, need("seo.edit"), (req, res) => {
+  router.post([`${P}/seo/positions/:eid(\\d+)/supprimer`, `${M}/seo/positions/:eid(\\d+)/supprimer`], need("seo.edit"), (req, res) => {
     if (!rankGuard(req, res)) return;
     if (rankings.remove(sid(req), Number(req.params.eid), req.session.user.id)) flashOk(req, "Mesure supprimée."); else flashError(req, "Mesure introuvable.");
     res.redirect(back(req, "/seo/positions"));
@@ -368,13 +377,13 @@ module.exports = () => {
   // ---------- Connexions Search Console et GA4 propres au site ----------
   // La clé du compte de service est chiffrée sous un nom propre au site et n'est jamais renvoyée au navigateur.
   const gName = (req, base) => integrations.scoped(base, sid(req));
-  router.get(`${P}/seo/connexions`, need("seo.view"), (req, res) => {
+  router.get([`${P}/seo/connexions`, `${M}/seo/connexions`], need("seo.view"), (req, res) => {
     const st = {};
     const config = {};
     for (const b of ["search_console", "analytics"]) { st[b] = integrations.status(gName(req, b)); config[b] = integrations.row(gName(req, b)).config; }
     render(req, res, "connexions", "Search Console et Analytics", { st, config, names: integrations.NAMES });
   });
-  router.post(`${P}/seo/connexions/:base(search_console|analytics)`, need("seo.edit"), async (req, res, next) => {
+  router.post([`${P}/seo/connexions/:base(search_console|analytics)`, `${M}/seo/connexions/:base(search_console|analytics)`], need("seo.edit"), async (req, res, next) => {
     if (!writable(req.seoSpace)) { flashError(req, "Ce site est archivé : ses connexions ne peuvent pas être modifiées."); return res.redirect(back(req, "/seo/connexions")); }
     const base = req.params.base;
     const name = gName(req, base);
