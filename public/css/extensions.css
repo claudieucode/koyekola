@@ -100,3 +100,73 @@
 
 .xd-hero .xc-logo, .xd-hero .xc-state { grid-area: auto; }
 @media (max-width: 720px) { .xc-site, .xc-search { flex: 1 1 100%; } .xc-site select { width: 100%; max-width: none; } .xc-sel { flex: 1 1 calc(50% - 8px); } .xc-view { margin-left: 0; } }
+
+/* ---------- Gestion, Historique : composants partagés (même rayon, mêmes hauteurs, mêmes espacements que le catalogue) ---------- */
+.xc-badge { display: inline-block; min-width: 20px; margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--mk-surface-2, var(--accent-light)); color: var(--mk-text-soft); font-size: .72rem; font-weight: 650; line-height: 20px; text-align: center; }
+.mk-tab[aria-current="page"] .xc-badge { background: var(--accent-light); color: var(--accent-dark); }
+.xg-sitebar { margin: 0 0 12px; }
+.xg-f { display: grid; gap: 4px; font-size: .78rem; color: var(--mk-text-soft); min-width: 0; }
+.xg-f select, .xg-f input, .xg-field select, .xg-field input { min-height: var(--kx-ctl-h, 36px); padding: 0 10px; border: 1px solid var(--mk-border-strong, var(--mk-border)); border-radius: var(--kb-r-ctl, 8px); background-color: var(--mk-surface); color: var(--mk-text); font: inherit; max-width: 100%; }
+.xg-f select:focus-visible, .xg-f input:focus-visible, .xg-field select:focus-visible, .xg-field input:focus-visible, .xg-check input:focus-visible { outline: 2px solid var(--mk-focus, var(--accent)); outline-offset: 2px; }
+.xg-sitebar .xg-f { max-width: 280px; }
+.xg-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 16px; margin: 0 0 12px; padding: 12px 16px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); background: var(--mk-surface); }
+.xg-f-grow { flex: 1 1 200px; }
+.xg-actions { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.xg-actions form { margin: 0; }
+.xg-actions .is-disabled, .xg-pager .is-disabled { opacity: .55; pointer-events: none; }
+.xg-table-wrap { border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); background: var(--mk-surface); overflow: hidden; }
+.mk-content .xg-table { width: 100%; margin: 0; border: 0; border-collapse: collapse; }
+.xg-table th { padding: 10px 16px; text-align: left; font-size: .74rem; font-weight: 650; color: var(--mk-text-soft); background: var(--mk-surface-2, transparent); border-bottom: 1px solid var(--kb-rule, var(--mk-border)); white-space: nowrap; }
+.xg-table td { padding: 12px 16px; vertical-align: middle; border-bottom: 1px solid var(--kb-rule, var(--mk-border)); font-size: .88rem; }
+.xg-table tbody tr:last-child td { border-bottom: 0; }
+.xg-table tbody tr { transition: background-color var(--kb-dur-fast, 120ms) var(--kb-ease, ease); }
+.xg-table tbody tr:hover { background: var(--mk-hover, var(--mk-surface-2)); }
+.xg-table tbody tr[aria-current="true"] { background: var(--accent-light); }
+.xg-col-actions { width: 1%; text-align: right; }
+.xg-col-actions .xg-actions { justify-content: flex-end; }
+.xg-ext { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.xg-ext strong { display: block; }
+.xg-logo, .xg-logo img, .xg-logo .xc-initial { width: 36px; height: 36px; border-radius: 9px; flex: none; }
+.xg-logo .xc-initial { font-size: 1rem; }
+.xg-desc, .xg-sub { display: block; color: var(--mk-text-soft); font-size: .8rem; font-weight: 400; line-height: 1.4; }
+.xg-desc { max-width: 52ch; }
+.xg-nowrap { white-space: nowrap; }
+.xg-error { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.xg-confirm { margin: 0 0 16px; padding: 20px 24px; border: 1px solid var(--accent); border-radius: var(--kb-r-panel, 12px); background: var(--mk-surface); }
+.xg-confirm h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.xg-confirm ul { margin: 0 0 16px; padding-left: 18px; display: grid; gap: 4px; }
+.xg-detail { margin-top: 16px; }
+.xg-detail h4 { margin: 20px 0 12px; font-size: .95rem; }
+.xg-form { display: grid; gap: 16px; max-width: 520px; }
+.xg-field { display: grid; gap: 6px; font-size: .85rem; color: var(--mk-text); font-weight: 600; }
+.xg-field input, .xg-field select { font-weight: 400; }
+.xg-check { display: flex; align-items: center; gap: 10px; min-height: var(--kx-ctl-h, 36px); font-size: .9rem; cursor: pointer; }
+.xg-check input { width: 18px; height: 18px; margin: 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.xg-pager { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 16px 0 0; font-size: .85rem; color: var(--mk-text-soft); }
+@media (max-width: 900px) {
+  .xg-table-wrap { border: 0; background: transparent; overflow: visible; }
+  .xg-col-actions { width: auto; text-align: left; } .xg-col-actions .xg-actions { justify-content: flex-start; flex-wrap: wrap; }
+}
+@media (max-width: 720px) { .xg-filters { padding: 12px; } .xg-f { flex: 1 1 calc(50% - 8px); } .xg-f-grow { flex-basis: 100%; } .xg-sitebar .xg-f { max-width: none; } }
+@media (pointer: coarse) { .xg-actions .btn, .xg-pager .btn { min-height: 44px; } .xg-check input { width: 22px; height: 22px; } }
+.xg-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 46ch; }
+.xg-table .xc-chip { white-space: nowrap; }
+.xg-f input[type="date"] { width: 138px; }
+.xg-f-grow { flex: 1 1 150px; min-width: 140px; }
+.xg-filters > .xg-actions { margin-left: auto; }
+.mk-tab .xc-badge { margin-left: 2px; }
+@media (max-width: 720px) { .xg-f select, .xg-f input, .xg-f input[type="date"] { width: 100%; } }
+/* Colonnes secondaires de Gestion : masquées quand la largeur utile manque (les fiches mobiles les montrent toutes) */
+@media (min-width: 901px) and (max-width: 1360px) { .xg-hide-lg { display: none; } }
+@media (min-width: 901px) and (max-width: 1160px) { .xg-hide-md { display: none; } }
+/* Tableaux Gestion / Historique : fiches empilées dès 900 px (le contenu utile est alors trop étroit pour des colonnes) */
+@media (max-width: 900px) {
+  .xg-table, .xg-table tbody, .xg-table tr, .xg-table td { display: block; width: 100%; }
+  .xg-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  .xg-table tr { margin: 0 0 12px; border: 1px solid var(--kb-rule, var(--mk-border)); border-radius: var(--kb-r-panel, 12px); background: var(--mk-surface); overflow: hidden; }
+  .xg-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 16px; border: 0; text-align: right; }
+  .xg-table td::before { content: attr(data-label); flex: none; color: var(--mk-text-soft); font-size: .78rem; font-weight: 650; text-align: left; }
+  .xg-table td.xg-col-actions { display: block; width: 100%; text-align: left; padding-top: 12px; border-top: 1px solid var(--kb-rule, var(--mk-border)); }
+  .xg-table td.xg-col-actions::before { content: none; }
+  .xg-ext { text-align: left; }
+}

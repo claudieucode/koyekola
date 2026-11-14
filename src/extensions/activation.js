@@ -101,13 +101,30 @@ const enable = (ctx, siteId, id, opts) => change(ctx, siteId, id, true, opts);
 const disable = (ctx, siteId, id, opts) => change(ctx, siteId, id, false, opts);
 
 // Historique : journal de l'organisation (ou d'un site), plus récent d'abord. Un accès limité à un site ne voit que SON site.
-function history(ctx, { siteId = null, extension: ext = null, limit = 50 } = {}) {
+// Filtres : site, extension, opération (action), période (from/to : AAAA-MM-JJ, bornes incluses), texte (site, extension, utilisateur) ; pagination par offset. Retourne { rows, total }.
+const ACTIONS = ["enable", "disable", "refused", "failed", "settings"];
+function historyPage(ctx, { siteId = null, extension: ext = null, action = null, from = null, to = null, q = "", limit = 25, offset = 0 } = {}) {
   const where = ["e.organization_id = ?"]; const args = [ctx.organizationId];
   if (!team(ctx)) { where.push("e.site_id = ?"); args.push(ctx.siteScope); } else if (Number.isInteger(siteId)) { where.push("e.site_id = ?"); args.push(siteId); }
   if (ext) { where.push("e.extension = ?"); args.push(String(ext)); }
-  args.push(Math.min(Math.max(Number(limit) || 50, 1), 200));
-  return ctx.db.prepare(`SELECT e.id, e.site_id, s.name AS site_name, e.extension, e.action, e.version, e.user_id, e.detail, e.created_at FROM mk_extension_events e JOIN mk_sites s ON s.id = e.site_id WHERE ${where.join(" AND ")} ORDER BY e.id DESC LIMIT ?`).all(...args)
+  if (action && ACTIONS.includes(action)) { where.push("e.action = ?"); args.push(action); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(from || "")) { where.push("date(e.created_at) >= ?"); args.push(from); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(to || "")) { where.push("date(e.created_at) <= ?"); args.push(to); }
+  const text = String(q || "").trim().slice(0, 80).toLowerCase();
+  if (text) { where.push("(lower(s.name) LIKE ? ESCAPE '\\' OR lower(e.extension) LIKE ? ESCAPE '\\' OR lower(COALESCE(u.username, '')) LIKE ? ESCAPE '\\' OR lower(COALESCE(u.email, '')) LIKE ? ESCAPE '\\')"); const like = `%${text.replace(/[\\%_]/g, "\\$&")}%`; args.push(like, like, like, like); }
+  const from_ = "FROM mk_extension_events e JOIN mk_sites s ON s.id = e.site_id LEFT JOIN users u ON u.id = e.user_id";
+  const total = ctx.db.prepare(`SELECT COUNT(*) AS n ${from_} WHERE ${where.join(" AND ")}`).get(...args).n;
+  const lim = Math.min(Math.max(Number(limit) || 25, 1), 200), off = Math.max(Number(offset) || 0, 0);
+  const rows = ctx.db.prepare(`SELECT e.id, e.site_id, s.name AS site_name, e.extension, e.action, e.version, e.user_id, COALESCE(u.username, u.email) AS user_name, e.detail, e.created_at ${from_} WHERE ${where.join(" AND ")} ORDER BY e.id DESC LIMIT ? OFFSET ?`).all(...args, lim, off)
     .map((r) => ({ ...r, detail: (() => { try { return JSON.parse(r.detail); } catch { return {}; } })() }));
+  return { rows, total };
+}
+const history = (ctx, opts = {}) => historyPage(ctx, { ...opts, limit: opts.limit || 50 }).rows;
+// Dernière modification (activation / désactivation) de chaque extension pour un site : { extension → created_at }
+function lastChanges(ctx, siteId) {
+  if (!team(ctx) && ctx.siteScope !== siteId) return {};
+  const rows = ctx.db.prepare("SELECT extension, MAX(created_at) AS at FROM mk_extension_events WHERE organization_id = ? AND site_id = ? AND action IN ('enable', 'disable') GROUP BY extension").all(ctx.organizationId, siteId);
+  return Object.fromEntries(rows.map((r) => [r.extension, r.at]));
 }
 
 // Paramètres d'une extension pour un site : validés par le manifeste, jamais lus d'un autre site.
@@ -140,4 +157,4 @@ function setSetting(ctx, siteId, id, key, raw) {
   return { value };
 }
 
-module.exports = { plan, enable, disable, history, getSettings, setSetting };
+module.exports = { plan, enable, disable, history, historyPage, lastChanges, ACTIONS, getSettings, setSetting };

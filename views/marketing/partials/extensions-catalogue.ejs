@@ -10,9 +10,9 @@
   const detailUrl = (m) => `${BASE}/detail/${m.id}${here()}`;
   const unavailable = (m) => m.availability === "unavailable" || m.maintenance !== "stable";
 %>
+<%- include("extensions-site-bar", { sites, site, inSite, BASE, tab: preset === "on" ? "activees" : preset === "off" ? "desactivees" : "" }) %>
 <section class="xc" data-xc data-preset="<%= preset || '' %>" aria-label="Catalogue des extensions">
   <div class="xc-bar">
-    <% if (!inSite && sites.length) { %><form method="get" action="<%= BASE %><%= preset === 'on' ? '/activees' : preset === 'off' ? '/desactivees' : '' %>" class="xc-sel xc-site"><span>Site</span><select name="site" data-xc-site><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select><noscript><button class="btn btn-outline btn-sm" type="submit">Afficher</button></noscript></form><% } %>
     <label class="xc-search"><span class="sr-only">Rechercher une extension</span><%- icon("search", { size: 16 }) %><input type="search" data-xc-search placeholder="Rechercher…" autocomplete="off"></label>
     <label class="xc-sel"><span>Catégorie</span><select data-xc-cat><option value="">Toutes</option><% cats.forEach((c) => { %><option value="<%= c %>"><%= CATEGORY[c] || c %></option><% }) %></select></label>
     <% if (!preset) { %><label class="xc-sel"><span>État</span><select data-xc-state><option value="">Tous</option><option value="on">Activées</option><option value="off">Désactivées</option></select></label><% } %>

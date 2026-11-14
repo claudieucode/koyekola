@@ -1,116 +1,148 @@
 <%#
-  Menu « Extensions » (src/marketing/web/extensions.js) : cinq rubriques, une seule vue. Tout vient du registre central et de l'état réel des sites ; aucune action n'est simulée.
-%><%- include("partials/top", { title, active, extUi: typeof extUi !== "undefined" ? extUi : false }) %>
+  Menu « Extensions » (src/marketing/web/extensions.js) : cinq rubriques, une seule vue. Tout vient du registre central et de l'état réel du site (une seule source : mk_site_modules via state.enabledIds) ; aucune action n'est simulée.
+%><%- include("partials/top", { title, active, extUi: true }) %>
 <%
-  const here = (extra) => { const p = new URLSearchParams(); if (site) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
-  const pageUrl = (slug) => BASE + (slug ? "/" + slug : "");
+  const here = (extra) => { const p = new URLSearchParams(); if (site && !inSite) p.set("site", site.id); Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v)); const q = p.toString(); return q ? "?" + q : ""; };
   const stateChip = (m) => m.enabled ? '<span class="mk-status mk-status-ok">Activée</span>' : '<span class="mk-status mk-status-off">Désactivée</span>';
-  const maint = { stable: "", maintenance: "En maintenance", deprecated: "Obsolète" };
-  const avail = { available: "", beta: "Bêta", unavailable: "Pas encore disponible" };
+  const fmt = (d) => { const t = String(d || "").replace("T", " "); return t ? t.slice(8, 10) + "/" + t.slice(5, 7) + "/" + t.slice(0, 4) + " " + t.slice(11, 16) : "—"; };
 %>
 <div class="mk-head">
   <div class="mk-head-main"><h1><%= title %></h1>
-    <p class="mk-head-sub">Les extensions sont communes à tous les sites ; chaque site choisit les siennes. Activer ou désactiver une extension n'a aucun effet sur les autres sites, et <strong>désactiver ne supprime jamais de données</strong>.</p></div>
+    <p class="mk-head-sub">Catalogue commun à tous les sites ; chaque site choisit ses extensions. <strong>Désactiver ne supprime jamais de données.</strong></p></div>
 </div>
 <nav class="mk-tabs mk-cms-tabs" aria-label="Rubriques des extensions">
-  <% tabs.forEach((t) => { %><a class="mk-tab" href="<%= t.href %><%= site && t.slug && t.slug !== 'historique' ? '?site=' + site.id : '' %>"<%- t.current ? ' aria-current="page"' : "" %>><%= t.label %></a><% }) %>
+  <% tabs.forEach((t) => { %><a class="mk-tab" href="<%= t.href %><%= site && !inSite && t.slug !== 'historique' ? '?site=' + site.id : '' %>"<%- t.current ? ' aria-current="page"' : "" %>><%= t.label %><% if (t.count !== undefined) { %> <span class="xc-badge"><%= t.count %></span><% } %></a><% }) %>
 </nav>
 
-<% if (tab === "" || tab === "activees" || tab === "desactivees") { %>
+<% if (loadError) { %>
+  <div class="mk-callout mk-callout-warn xg-error" role="alert"><strong>Erreur de chargement.</strong> <%= loadError %> <a class="btn btn-outline btn-sm" href="">Réessayer</a></div>
+<% } else if (tab === "" || tab === "activees" || tab === "desactivees") { %>
   <% if (!site) { %>
     <div class="mk-empty" role="status"><p><strong>Aucun site</strong></p><p class="mk-sub">Créez un site pour pouvoir y activer des extensions.</p><a class="btn btn-primary btn-sm" href="/marketing/site-web/sites#nouveau">Créer un site</a></div>
+  <% } else { %>
+    <% const list = tab === "" ? items : items.filter((m) => m.enabled === (tab === "activees")); %>
+    <% if (!list.length) { %>
+      <%- include("partials/extensions-site-bar", { sites, site, inSite, BASE, tab }) %>
+      <div class="mk-empty" role="status">
+        <p><strong><%= tab === "activees" ? "Aucune extension activée sur « " + site.name + " »" : "Toutes les extensions sont activées sur « " + site.name + " »" %></strong></p>
+        <p class="mk-sub"><%= tab === "activees" ? "Ce site n'utilise encore aucune extension." : "Il n'y a rien à activer pour ce site." %></p>
+        <% if (tab === "activees" && withActive.length) { %><p class="mk-sub">Des extensions sont activées sur : <% withActive.forEach((w, i) => { %><a href="<%= BASE %>/activees?site=<%= w.id %>"><%= w.name %></a> (<%= w.n %>)<%= i < withActive.length - 1 ? ", " : "" %><% }) %>.</p><% } %>
+        <a class="btn btn-primary btn-sm" href="<%= BASE %><%= tab === 'activees' ? '/desactivees' : '' %><%= here() %>"><%= tab === "activees" ? "Voir les extensions à activer" : "Voir toutes les extensions" %></a>
+      </div>
+    <% } else { %>
+      <%- include("partials/extensions-catalogue", { items: list, site, inSite, sites, totalSites, BASE, POSTBASE, CATEGORY, preset: tab === "activees" ? "on" : tab === "desactivees" ? "off" : "", tally }) %>
+    <% } %>
   <% } %>
-  <%- include("partials/extensions-catalogue", { items: tab === "" || !site ? items : items.filter((m) => m.enabled === (tab === "activees")), site, inSite, sites, totalSites, BASE, POSTBASE, CATEGORY, preset: tab === "activees" ? "on" : tab === "desactivees" ? "off" : "" }) %>
 <% } else if (tab === "gestion") { %>
-  <% if (!inSite) { %><%- include("partials/extensions-site-picker", { sites, site, BASE, tab }) %><% } %>
   <% if (!site) { %>
     <div class="mk-empty" role="status"><p><strong>Aucun site</strong></p><p class="mk-sub">Créez un site pour pouvoir y gérer des extensions.</p></div>
   <% } else { %>
+    <%- include("partials/extensions-site-bar", { sites, site, inSite, BASE, tab }) %>
     <% if (confirmPlan) { const cm = confirmPlan.extension; const enabling = !confirmPlan.enabledNow; %>
-      <section class="mk-card" role="alertdialog" aria-label="Confirmation" style="margin:0 0 16px">
-        <h2><%= enabling ? "Activer" : "Désactiver" %> « <%= cm.name %> » pour « <%= site.name %> » ?</h2>
+      <section class="xg-confirm" role="alertdialog" aria-labelledby="xg-confirm-t">
+        <h2 id="xg-confirm-t"><%= enabling ? "Activer" : "Désactiver" %> « <%= cm.name %> » pour « <%= site.name %> » ?</h2>
         <ul><% confirmPlan.effects.forEach((e) => { %><li><%= e %></li><% }) %></ul>
         <% if (confirmPlan.blockers.length) { %>
           <p role="alert"><strong>Impossible pour l'instant :</strong></p>
           <ul><% confirmPlan.blockers.forEach((b) => { %><li><%= b.message %></li><% }) %></ul>
           <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: cm.id }) %>">Retour</a>
         <% } else { %>
-          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= cm.id %>/<%= enabling ? 'activer' : 'desactiver' %>" class="mk-inline">
+          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= cm.id %>/<%= enabling ? 'activer' : 'desactiver' %>" class="xg-actions" data-xg-busy>
             <input type="hidden" name="confirmer" value="1"><% if (inSite) { %><input type="hidden" name="espace" value="1"><% } %>
-            <button class="btn <%= enabling ? 'btn-primary' : 'btn-outline' %> btn-sm" type="submit"><%= enabling ? "Confirmer l'activation" : "Confirmer la désactivation" %></button>
+            <button class="btn <%= enabling ? 'btn-primary' : 'btn-primary' %> btn-sm" type="submit"><%= enabling ? "Confirmer l'activation" : "Confirmer la désactivation" %></button>
             <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: cm.id }) %>">Annuler</a>
           </form>
         <% } %>
       </section>
     <% } %>
-    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+    <div class="xg-table-wrap"><table class="mk-table mk-datatable xg-table">
       <caption class="sr-only">Extensions de <%= site.name %></caption>
-      <thead><tr><th scope="col">Extension</th><th scope="col">Version</th><th scope="col">État</th><th scope="col">Dépendances</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <thead><tr><th scope="col">Extension</th><th scope="col" class="xg-hide-md">Catégorie</th><th scope="col">Version</th><th scope="col">État sur ce site</th><th scope="col">Dépendances</th><th scope="col" class="xg-hide-lg">Dernière modification</th><th scope="col" class="xg-col-actions"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>
-        <% items.forEach((m) => { %>
-          <tr<%- detail && detail.id === m.id ? ' aria-current="true"' : "" %>>
-            <td data-label="Extension"><span><strong><%= m.name %></strong><br><span class="mk-sub"><%= m.description %></span></span></td>
+        <% items.forEach((m) => { const sel = detail && detail.id === m.id; const blocked = m.availability === "unavailable" || m.maintenance !== "stable"; %>
+          <tr<%- sel ? ' aria-current="true"' : "" %> style="--xc-accent: <%= m.accent || 'var(--accent)' %>">
+            <td data-label="Extension"><div class="xg-ext"><span class="xc-logo xg-logo"><% if (m.logo) { %><img src="<%= m.logo %>" alt="" width="36" height="36" loading="lazy" decoding="async"><% } else { %><span class="xc-initial"><%= m.name.charAt(0) %></span><% } %></span><span><strong><%= m.name %></strong><span class="xg-desc"><%= m.description %></span></span></div></td>
+            <td data-label="Catégorie" class="xg-hide-md"><span class="xc-chip"><%= m.categoryLabel %></span></td>
             <td data-label="Version"><%= m.version %></td>
             <td data-label="État"><%- stateChip(m) %></td>
-            <td data-label="Dépend de"><%= m.dependencies.length ? m.dependencies.map((d) => (registry.get(d.id) || { name: d.id }).name).join(", ") : "Aucune" %></td>
-            <td data-label="Actions">
-              <a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id }) %>">Détails</a>
-              <a class="btn <%= m.enabled ? 'btn-outline' : 'btn-primary' %> btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id, confirmer: m.id }) %>"><%= m.enabled ? "Désactiver" : "Activer" %></a>
-            </td>
+            <td data-label="Dépend de"><%= m.dependencies.length ? m.dependencies.map((d) => (registry.get(d.id) || { name: d.id }).name).join(", ") : "Aucune" %><% if (registry.dependentsOf(m.id).length) { %><span class="xg-sub">Requise par <%= registry.dependentsOf(m.id).map((d) => (registry.get(d) || { name: d }).name).join(", ") %></span><% } %></td>
+            <td data-label="Dernière modification" class="xg-hide-lg"><%= lastChanges[m.id] ? fmt(lastChanges[m.id]) : "Jamais modifiée" %></td>
+            <td class="xg-col-actions" data-label="Actions"><div class="xg-actions">
+              <a class="btn btn-outline btn-sm" href="<%= BASE %>/detail/<%= m.id %><%= here() %>">Détails</a>
+              <% if (m.enabled) { %><a class="btn btn-outline btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id, confirmer: m.id }) %>">Désactiver</a>
+              <% } else if (blocked) { %><span class="btn btn-outline btn-sm is-disabled" aria-disabled="true">Indisponible</span>
+              <% } else { %><a class="btn btn-primary btn-sm" href="<%= BASE %>/gestion<%= here({ extension: m.id, confirmer: m.id }) %>">Activer</a><% } %>
+            </div></td>
           </tr>
         <% }) %>
       </tbody>
     </table></div>
     <% if (detail) { const d = detail; %>
-      <section class="mk-card" style="margin-top:16px">
-        <h2><%= d.name %> <span class="mk-sub">version <%= d.version %></span></h2>
+      <section class="xd-card xg-detail">
+        <h3><%= d.name %> <span class="mk-sub">version <%= d.version %></span></h3>
         <p><%= d.description %></p>
-        <dl>
+        <dl class="xd-facts">
           <dt>Éditeur</dt><dd><%= d.publisher %></dd>
           <dt>Compatibilité</dt><dd>Kolakisa <%= d.compatibility.kolakisa %></dd>
           <dt>Permissions concernées</dt><dd><%= d.permissions.length ? d.permissions.join(", ") : "Aucune propre" %></dd>
-          <dt>Dépend de</dt><dd><%= d.dependencies.length ? d.dependencies.map((x) => x.id + " " + x.range).join(", ") : "Rien" %></dd>
+          <dt>Dépend de</dt><dd><%= d.dependencies.length ? d.dependencies.map((x) => (registry.get(x.id) || { name: x.id }).name + " " + x.range).join(", ") : "Rien" %></dd>
           <dt>Utilisée par</dt><dd><%= dependents.length ? dependents.join(", ") : "Aucune autre extension" %></dd>
           <dt>Incompatible avec</dt><dd><%= d.conflicts.length ? d.conflicts.join(", ") : "Rien" %></dd>
           <dt>Maintenance</dt><dd><%= { stable: "Stable", maintenance: "En maintenance", deprecated: "Obsolète" }[d.maintenance] %></dd>
-          <dt>Documentation</dt><dd><code><%= d.docs %></code></dd>
         </dl>
         <% if (settings.length) { %>
-          <h3>Paramètres pour « <%= site.name %> »</h3>
-          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= d.id %>/parametres">
+          <h4>Paramètres pour « <%= site.name %> »</h4>
+          <form method="post" action="<%= POSTBASE %>/sites/<%= site.id %>/<%= d.id %>/parametres" class="xg-form" data-xg-busy>
             <% settings.forEach((s) => { %>
-              <p><label><%= s.label %>
-                <% if (s.type === "boolean") { %><input type="checkbox" name="<%= s.key %>" value="1" <%= s.value ? "checked" : "" %>>
-                <% } else if (s.type === "select") { %><select name="<%= s.key %>"><% s.options.forEach((o) => { %><option <%= String(s.value) === o ? "selected" : "" %>><%= o %></option><% }) %></select>
-                <% } else { %><input name="<%= s.key %>" type="<%= s.type === 'number' ? 'number' : 'text' %>" value="<%= s.value %>"><% } %></label></p>
+              <% if (s.type === "boolean") { %><label class="xg-check"><input type="checkbox" name="<%= s.key %>" value="1" <%= s.value ? "checked" : "" %>><span><%= s.label %></span></label>
+              <% } else if (s.type === "select") { %><label class="xg-field"><span><%= s.label %></span><select name="<%= s.key %>"><% s.options.forEach((o) => { %><option <%= String(s.value) === o ? "selected" : "" %>><%= o %></option><% }) %></select></label>
+              <% } else { %><label class="xg-field"><span><%= s.label %></span><input name="<%= s.key %>" type="<%= s.type === 'number' ? 'number' : 'text' %>" value="<%= s.value %>"></label><% } %>
             <% }) %>
-            <button class="btn btn-primary btn-sm" type="submit">Enregistrer</button>
+            <div class="xg-actions"><% if (inSite) { %><input type="hidden" name="espace" value="1"><% } %><button class="btn btn-primary btn-sm" type="submit">Enregistrer</button></div>
           </form>
         <% } %>
-        <p><a href="<%= BASE %>/historique?site=<%= site.id %>&extension=<%= d.id %>">Voir l'historique de cette extension</a></p>
+        <p><a href="<%= BASE %>/historique<%= here({ extension: d.id }) %>">Voir l'historique de cette extension</a></p>
       </section>
     <% } %>
   <% } %>
 <% } else if (tab === "historique") { %>
-  <form method="get" action="<%= BASE %>/historique" class="mk-inline" style="margin:0 0 12px">
-    <label>Site <select name="site"><option value="tous" <%= filterAll ? "selected" : "" %>>Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= !filterAll && site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select></label>
-    <label>Extension <select name="extension"><option value="">Toutes</option><% items.forEach((m) => { %><option value="<%= m.id %>" <%= filterExt === m.id ? "selected" : "" %>><%= m.name %></option><% }) %></select></label>
-    <button class="btn btn-outline btn-sm" type="submit">Filtrer</button>
+  <form method="get" action="<%= BASE %>/historique" class="xg-filters" role="search" aria-label="Filtrer l'historique">
+    <% if (!inSite) { %><label class="xg-f"><span>Site</span><select name="site"><option value="tous" <%= filterAll ? "selected" : "" %>>Tous les sites</option><% sites.forEach((s) => { %><option value="<%= s.id %>" <%= !filterAll && site && site.id === s.id ? "selected" : "" %>><%= s.name %></option><% }) %></select></label><% } %>
+    <label class="xg-f"><span>Extension</span><select name="extension"><option value="">Toutes</option><% items.forEach((m) => { %><option value="<%= m.id %>" <%= filterExt === m.id ? "selected" : "" %>><%= m.name %></option><% }) %></select></label>
+    <label class="xg-f"><span>Opération</span><select name="operation"><option value="">Toutes</option><% Object.entries(ACTION).forEach(([k, v]) => { %><option value="<%= k %>" <%= filters.operation === k ? "selected" : "" %>><%= v %></option><% }) %></select></label>
+    <label class="xg-f"><span>Du</span><input type="date" name="du" value="<%= filters.du %>"></label>
+    <label class="xg-f"><span>Au</span><input type="date" name="au" value="<%= filters.au %>"></label>
+    <label class="xg-f xg-f-grow"><span>Recherche</span><input type="search" name="q" value="<%= filters.q %>" placeholder="Site, extension, utilisateur" maxlength="80"></label>
+    <div class="xg-actions"><button class="btn btn-primary btn-sm" type="submit">Filtrer</button><a class="btn btn-outline btn-sm" href="<%= BASE %>/historique">Réinitialiser</a></div>
   </form>
+  <p class="xc-count" role="status"><%= total %> opération<%= total > 1 ? "s" : "" %><%= filtersActive ? " (filtres actifs)" : "" %></p>
   <% if (!events.length) { %>
-    <div class="mk-empty" role="status"><p><strong>Aucune activité</strong></p><p class="mk-sub">Chaque activation, désactivation, refus ou échec est consigné ici.</p></div>
+    <div class="mk-empty" role="status"><p><strong><%= filtersActive ? "Aucune opération ne correspond" : "Aucune activité" %></strong></p><p class="mk-sub"><%= filtersActive ? "Modifiez ou réinitialisez les filtres." : "Chaque activation, désactivation, refus ou échec sera consigné ici." %></p><% if (filtersActive) { %><a class="btn btn-outline btn-sm" href="<%= BASE %>/historique">Réinitialiser les filtres</a><% } %></div>
   <% } else { %>
-    <div class="mk-table-wrap"><table class="mk-table mk-datatable">
+    <div class="xg-table-wrap"><table class="mk-table mk-datatable xg-table xg-log">
       <caption class="sr-only">Historique des extensions</caption>
-      <thead><tr><th scope="col">Date</th><th scope="col">Site</th><th scope="col">Extension</th><th scope="col">Opération</th><th scope="col">Détail</th></tr></thead>
+      <thead><tr><th scope="col">Date et heure</th><th scope="col">Site</th><th scope="col">Extension</th><th scope="col">Version</th><th scope="col">Opération</th><th scope="col">Utilisateur</th><th scope="col">Détails</th></tr></thead>
       <tbody>
-        <% events.forEach((e) => { const ex = registry.get(e.extension); %>
-          <tr><td data-label="Date"><%= String(e.created_at).replace("T", " ").slice(0, 16) %></td><td data-label="Site"><%= e.site_name %></td><td data-label="Extension"><%= ex ? ex.name : e.extension %> <span class="mk-sub"><%= e.version || "" %></span></td>
-            <td data-label="Opération"><span class="mk-status <%= e.action === 'enable' ? 'mk-status-ok' : (e.action === 'disable' ? 'mk-status-off' : 'mk-status-warn') %>"><%= ACTION[e.action] || e.action %></span></td>
-            <td class="mk-sub" data-label="Détail"><%= e.detail.error || e.detail.code || e.detail.key || "" %></td></tr>
+        <% events.forEach((e) => { const ex = registry.get(e.extension); const det = e.detail.error || e.detail.code || e.detail.key || ""; %>
+          <tr>
+            <td data-label="Date" class="xg-nowrap"><%= fmt(e.created_at) %></td>
+            <td data-label="Site"><%= e.site_name %></td>
+            <td data-label="Extension"><%= ex ? ex.name : e.extension %></td>
+            <td data-label="Version"><%= e.version || "—" %></td>
+            <td data-label="Opération"><span class="mk-status <%= e.action === 'enable' ? 'mk-status-ok' : (e.action === 'disable' ? 'mk-status-off' : (e.action === 'settings' ? 'mk-status-off' : 'mk-status-warn')) %>"><%= ACTION[e.action] || e.action %></span></td>
+            <td data-label="Utilisateur"><%= e.user_name || "—" %></td>
+            <td data-label="Détails" class="mk-sub"><%= det || "—" %></td>
+          </tr>
         <% }) %>
       </tbody>
     </table></div>
+    <% if (pages > 1) { const pq = (n) => { const p = new URLSearchParams(); Object.entries({ site: filters.site, extension: filters.extension, operation: filters.operation, du: filters.du, au: filters.au, q: filters.q }).forEach(([k, v]) => { if (v) p.set(k, v); }); p.set("page", n); return "?" + p; }; %>
+      <nav class="xg-pager" aria-label="Pagination">
+        <a class="btn btn-outline btn-sm<%= page <= 1 ? ' is-disabled' : '' %>" href="<%= page <= 1 ? '#' : pq(page - 1) %>" <%- page <= 1 ? 'aria-disabled="true"' : "" %>>Précédent</a>
+        <span>Page <%= page %> sur <%= pages %></span>
+        <a class="btn btn-outline btn-sm<%= page >= pages ? ' is-disabled' : '' %>" href="<%= page >= pages ? '#' : pq(page + 1) %>" <%- page >= pages ? 'aria-disabled="true"' : "" %>>Suivant</a>
+      </nav>
+    <% } %>
   <% } %>
 <% } %>
 <%- include("partials/bottom") %>
