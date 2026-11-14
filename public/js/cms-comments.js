@@ -64,6 +64,16 @@
       $("button[type=submit]", f).forEach(function (b) { b.disabled = true; b.textContent = "Envoi…"; });
     });
   });
+  // Filtres repliables en zone étroite (le bouton n'existe que si le script tourne)
+  var panel = document.querySelector(".cmx-panel");
+  if (panel) {
+    panel.classList.add("cmx-js");
+    var tg = panel.querySelector("[data-cmx-toggle]"), fl = document.getElementById("cmx-filters");
+    if (tg && fl) { tg.hidden = false; tg.addEventListener("click", function () { var open = fl.classList.toggle("is-open"); tg.setAttribute("aria-expanded", open ? "true" : "false"); }); }
+    // Chargement : le tableau s'estompe pendant l'envoi ; retiré si la page revient de l'historique
+    panel.addEventListener("submit", function (e) { if (!e.defaultPrevented) panel.setAttribute("aria-busy", "true"); });
+    window.addEventListener("pageshow", function () { panel.removeAttribute("aria-busy"); });
+  }
   // Menu « Plus » : un seul ouvert à la fois, fermé par un clic ailleurs ou Échap
   var menus = $("details.cmx-menu");
   menus.forEach(function (m) { m.addEventListener("toggle", function () { if (m.open) menus.forEach(function (o) { if (o !== m) o.open = false; }); }); });

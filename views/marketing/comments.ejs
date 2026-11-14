@@ -25,7 +25,7 @@
   const headRow = `<tr>${canModerate ? '<td class="mk-cms-check-col"><input type="checkbox" data-cms-select-all aria-label="Tout sélectionner (cette page)"></td>' : ""}${sortTh("auteur", "Auteur/autrice")}<th scope="col">Commentaire</th>${sortTh("article", "En réponse à")}${sortTh("date", "Envoyé le")}</tr>`;
 %>
     <div class="mk-head">
-      <div class="mk-head-main"><h1>Commentaires</h1></div>
+      <div class="mk-head-main"><h1>Commentaires</h1><p class="mk-head-sub">Modérez les commentaires laissés sous vos articles : approuvez, répondez, ou écartez les indésirables.</p></div>
       <% if (!(typeof mkRestricted !== "undefined" && mkRestricted)) { %><div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/site-web/parametres/commentaires">Réglages</a></div><% } %></div>
     <% if (canEmail && canDelete && !(typeof mkRestricted !== "undefined" && mkRestricted)) { %><details class="mk-panel"><summary>Effacer les commentaires d'une personne (droit à l'effacement)</summary>
       <form action="/marketing/site-web/commentaires/effacer-invite" method="post">
@@ -38,7 +38,9 @@
 <%
   // Date en deux lignes (jour, puis heure) pour éviter les retours à la ligne au milieu d'une date
   const fparts = (v) => (v ? [String(v).slice(0, 10).split("-").reverse().join("/"), String(v).slice(11, 16).replace(":", "h") + " UTC"] : ["—", ""]);
-  const TAB_NAMES = tabs;
+  const nActive = [f.type, f.contenu, f.auteur, f.periode].filter(Boolean).length;
+  // Pagination numérotée : première, dernière, page courante et ses voisines, avec des points de suspension
+  const pageList = (cur, total) => { const keep = new Set([1, total, cur - 1, cur, cur + 1]); const out = []; let last = 0; for (let n = 1; n <= total; n++) { if (!keep.has(n)) continue; if (n - last > 1) out.push(null); out.push(n); last = n; } return out; };
 %>
     <div class="cmx-top">
       <nav class="mk-tabs cmx-tabs" aria-label="Filtrer les commentaires par statut"><% tabs.forEach(([k, name, ck]) => { %><a class="mk-tab" href="<%= tabHref(k) + keep() %>"<%- sub === k ? ' aria-current="page"' : "" %>><span><%= name %></span><span class="mk-tab-count" aria-label="<%= counts[ck] %> commentaire<%= counts[ck] > 1 ? "s" : "" %>"><%= counts[ck] %></span></a><% }) %></nav>
@@ -52,7 +54,8 @@
     <div class="cmx-toolbar">
     <% if (canModerate) { %><form id="cm-bulk" class="cmx-bulkform" action="<%= BASE %>/actions" method="post"><%- siteField %><input type="hidden" name="retour" value="<%= here %>">
       <div class="cmx-bulkbar"><%- bulkSelect("cm-bulk-action") %></div></form><% } %>
-      <form class="cmx-filters" method="get" action="<%= tabHref(sub) %>" aria-label="Filtrer les commentaires"><%- siteField %>
+      <button type="button" class="btn btn-outline btn-sm cmx-filters-toggle" data-cmx-toggle aria-expanded="<%= nActive ? "true" : "false" %>" aria-controls="cmx-filters" hidden><%- icon("sliders", { size: 15 }) %><span>Filtres</span><% if (nActive) { %><span class="cmx-badge"><%= nActive %></span><% } %></button>
+      <form class="cmx-filters<%= nActive ? " is-open" : "" %>" id="cmx-filters" method="get" action="<%= tabHref(sub) %>" aria-label="Filtrer les commentaires"><%- siteField %>
         <% if (f.q) { %><input type="hidden" name="q" value="<%= f.q %>"><% } %>
         <label class="sr-only" for="cm-type">Type de commentaire</label>
         <select id="cm-type" name="type"><option value="">Tous les types de commentaires</option><% Object.entries(TYPES).forEach(([k, name]) => { %><option value="<%= k %>"<%= f.type === k ? " selected" : "" %>><%= name %></option><% }) %></select>
@@ -123,7 +126,8 @@
         <span><%= result.total %> commentaire<%= result.total > 1 ? "s" : "" %> · <%= rows.length %> affiché<%= rows.length > 1 ? "s" : "" %> sur cette page (30 par page)</span>
         <% if (result.pages > 1) { %><span class="cmx-pager-nav">
           <% if (result.page > 1) { %><a class="btn btn-outline btn-sm" href="<%= tabHref(sub) + keep({ page: result.page - 1 }) %>">Précédent</a><% } %>
-          <span>Page <%= result.page %> sur <%= result.pages %></span>
+          <span class="cmx-pageof">Page <%= result.page %> sur <%= result.pages %></span>
+          <span class="cmx-pages" role="list"><% pageList(result.page, result.pages).forEach((n) => { %><% if (n === null) { %><span class="cmx-gap" aria-hidden="true">…</span><% } else if (n === result.page) { %><span class="cmx-page is-current" role="listitem" aria-current="page"><%= n %></span><% } else { %><a class="cmx-page" role="listitem" href="<%= tabHref(sub) + keep({ page: n > 1 ? n : "" }) %>" aria-label="Page <%= n %>"><%= n %></a><% } %><% }) %></span>
           <% if (result.page < result.pages) { %><a class="btn btn-outline btn-sm" href="<%= tabHref(sub) + keep({ page: result.page + 1 }) %>">Suivant</a><% } %></span><% } %>
       </nav>
     <% } %>

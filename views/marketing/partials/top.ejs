@@ -67,6 +67,7 @@
   <link rel="stylesheet" href="<%= asset('/css/kola-vivid.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-soft.css') %>">
   <% if (typeof extUi !== "undefined" && extUi) { %><link rel="stylesheet" href="<%= asset('/css/extensions.css') %>"><script src="<%= asset('/js/extensions.js') %>" defer></script><% } %>
+  <% if (typeof cmComments !== "undefined" && cmComments) { %><link rel="stylesheet" href="<%= asset('/css/cms-comments.css') %>"><% } %>
   <% if (typeof shopAdmin !== "undefined" && shopAdmin) { %><link rel="stylesheet" href="<%= asset('/css/shop-admin.css') %>"><script src="<%= asset('/js/shop-admin.js') %>" defer></script><% } %>
 </head>
 <body class="mk-body<%= cms ? ' is-cms' : '' %><%= typeof shopAdmin !== "undefined" && shopAdmin ? ' mk-shop' : '' %>" data-kb-module="<%= kbModule %>">
