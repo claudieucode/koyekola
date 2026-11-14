@@ -369,7 +369,7 @@ html[data-kola-theme="dark"] { --k-tip-bg: #e8eef6; --k-tip-fg: #0b1626; --k-tip
 .mk-cm-card:focus-within { border-color: var(--accent); }
 .mk-cm-card header h2 { margin: 0 0 2px; font-size: 1.05rem; }
 .mk-cm-card header .mk-sub { margin: 0; }
-.mk-cm-row { display: block; }
+div.mk-cm-row { display: block; }
 .mk-cm-switch { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: start; cursor: pointer; }
 .mk-cm-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .mk-cm-ui { width: 38px; height: 22px; border-radius: 999px; background: var(--mk-border-strong, #b9c4d2); position: relative; transition: background var(--k-dur) var(--k-ease); margin-top: 2px; flex: none; }
