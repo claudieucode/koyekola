@@ -3,18 +3,24 @@
   Paramètres : heading (titre), tab (facultatif : onglet actif quand il diffère de « active »).
 %><%
   const bqTab = typeof tab !== "undefined" && tab ? tab : active;
+  // Les 14 rubriques, dans l'ordre d'origine ; une ligne de séparation entre familles (catalogue, ventes, gestion, configuration).
   const bqGroups = [
-    [["boutique", "", "Produits"], ["boutique/categories", "/categories", "Catégories"], ["boutique/avis", "/avis", "Avis"]],
-    [["boutique/commandes", "/commandes", "Commandes"], ["boutique/clients", "/clients", "Clients"], ["boutique/abonnements", "/abonnements", "Abonnements"], ["boutique/rendez-vous", "/rendez-vous", "Rendez-vous"], ["boutique/listes-cadeaux", "/listes-cadeaux", "Listes cadeaux"]],
-    [["boutique/rapports", "/rapports", "Rapports"], ["boutique/factures", "/factures", "Factures"], ["boutique/acces", "/acces", "Accès membre"]],
-    [["boutique/classes", "/classes", "Taxes et expédition"], ["boutique/paiements", "/paiements", "Paiements"], ["boutique/reglages", "/reglages", "Réglages"]],
+    [["boutique", "", "Produits", "tag"], ["boutique/categories", "/categories", "Catégories", "grid"], ["boutique/avis", "/avis", "Avis", "star"]],
+    [["boutique/commandes", "/commandes", "Commandes", "inbox"], ["boutique/clients", "/clients", "Clients", "users"], ["boutique/abonnements", "/abonnements", "Abonnements", "arrowRightLeft"], ["boutique/rendez-vous", "/rendez-vous", "Rendez-vous", "calendarClock"], ["boutique/listes-cadeaux", "/listes-cadeaux", "Listes cadeaux", "heart"]],
+    [["boutique/rapports", "/rapports", "Rapports", "barChart"], ["boutique/factures", "/factures", "Factures", "fileText"], ["boutique/acces", "/acces", "Accès membre", "lock"]],
+    [["boutique/classes", "/classes", "Taxes et expédition", "calculator"], ["boutique/paiements", "/paiements", "Paiements", "coin"], ["boutique/reglages", "/reglages", "Réglages", "settings"]],
   ];
+  const bqCurrent = bqGroups.flat().find((e) => e[0] === bqTab) || bqGroups[0][0];
 %>
+<aside class="bq-side" data-bq-side>
+  <button type="button" class="bq-side-toggle" aria-expanded="false" aria-controls="bq-side-nav" data-bq-toggle><span class="bq-ico" aria-hidden="true"><%- icon(bqCurrent[3], { size: 18 }) %></span><span class="bq-side-current">Boutique · <%= bqCurrent[2] %></span><span class="bq-chev" aria-hidden="true"><%- icon("chevronDown", { size: 16 }) %></span></button>
+  <nav class="bq-side-nav" id="bq-side-nav" aria-label="Rubriques de la boutique">
+    <p class="bq-side-title">Boutique</p>
+    <% bqGroups.forEach((group, gi) => { %><% if (gi) { %><span class="bq-side-sep" role="separator"></span><% } %><ul class="bq-side-list"><% group.forEach(([key, path, label, ico]) => { %><li><a class="bq-link" href="<%= base %><%= path %>"<%- bqTab === key ? ' aria-current="page"' : "" %>><span class="bq-ico" aria-hidden="true"><%- icon(ico, { size: 18 }) %></span><span class="bq-label"><%= label %></span></a></li><% }) %></ul><% }) %>
+  </nav>
+</aside>
 <div class="mk-head"><div class="mk-head-main"><h1><%= heading %></h1>
   <p class="mk-head-sub">Boutique de « <%= space.name %> » — produits, commandes et clients propres à ce site.</p></div></div>
-<nav class="mk-tabs bq-tabs" aria-label="Boutique" data-bq-tabs>
-  <% bqGroups.forEach((group, gi) => { %><% if (gi) { %><span class="bq-sep" aria-hidden="true"></span><% } %><% group.forEach(([key, path, label]) => { %><a class="mk-tab" href="<%= base %><%= path %>"<%- bqTab === key ? ' aria-current="page"' : "" %>><%= label %></a><% }) %><% }) %>
-</nav>
 <% if (!moduleOn || !shopSettings.enabled) { %><div class="bq-notices">
 <% if (!moduleOn) { %><p class="mk-callout mk-callout-warn bq-notice" role="status"><%- icon("info", { size: 16 }) %><span>Le module « Commerce » n'est pas activé pour ce site : la boutique publique reste fermée. L'équipe de l'organisation l'active dans les réglages du site.</span></p><% } %>
 <% if (!shopSettings.enabled) { %><p class="mk-callout bq-notice" role="status"><%- icon("info", { size: 16 }) %><span>La boutique n'est pas ouverte au public. Ouvrez-la dans <a href="<%= base %>/reglages">Réglages</a> une fois les produits, la livraison et le paiement prêts.</span></p><% } %>

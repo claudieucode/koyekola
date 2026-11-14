@@ -1,20 +1,18 @@
 // Administration de la boutique : confort d'usage uniquement (aucune donnée, aucune requête).
-// 1) onglet actif visible + bords estompés quand la barre défile ; 2) étiquettes des cellules pour l'affichage en fiches sur mobile ;
+// 1) barre latérale de la boutique : sélecteur compact sur mobile, rubrique active visible ; 2) étiquettes des cellules pour l'affichage en fiches sur mobile ;
 // 3) bouton « occupé » à l'envoi d'un formulaire (évite le double clic, montre que l'action est en cours).
 (function () {
   "use strict";
-  var nav = document.querySelector("[data-bq-tabs]");
-  if (nav) {
-    var edges = function () {
-      var max = nav.scrollWidth - nav.clientWidth;
-      nav.classList.toggle("has-more-start", nav.scrollLeft > 4);
-      nav.classList.toggle("has-more-end", nav.scrollLeft < max - 4);
-    };
-    var cur = nav.querySelector('[aria-current="page"]');
-    if (cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = Math.max(0, cur.offsetLeft - (nav.clientWidth - cur.offsetWidth) / 2);
-    nav.addEventListener("scroll", edges, { passive: true });
-    window.addEventListener("resize", edges);
-    edges();
+  var side = document.querySelector("[data-bq-side]");
+  if (side) {
+    var toggle = side.querySelector("[data-bq-toggle]");
+    var setOpen = function (open) { side.classList.toggle("is-open", open); if (toggle) toggle.setAttribute("aria-expanded", String(open)); };
+    if (toggle) toggle.addEventListener("click", function () { setOpen(!side.classList.contains("is-open")); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape" && side.classList.contains("is-open")) { setOpen(false); if (toggle) toggle.focus(); } });
+    document.addEventListener("click", function (e) { if (side.classList.contains("is-open") && !side.contains(e.target)) setOpen(false); });
+    // Grand écran : la rubrique active reste visible si la liste défile
+    var list = side.querySelector(".bq-side-nav"), cur = side.querySelector('[aria-current="page"]');
+    if (list && cur && list.scrollHeight > list.clientHeight) cur.scrollIntoView({ block: "nearest" });
   }
   Array.prototype.forEach.call(document.querySelectorAll(".mk-shop table.mk-table"), function (table) {
     table.classList.add("mk-datatable");

@@ -28,6 +28,7 @@ const fs = require("fs");
       await page.waitForLoadState("networkidle");
       const name = (path || "produits").replace(/[^a-z0-9]+/gi, "_");
       await page.screenshot({ path: `${outDir}/${name}.png`, fullPage: true });
+      if (process.env.PROBE) console.log("PROBE", JSON.stringify(await page.evaluate(process.env.PROBE)));
       const over = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);
       console.log(res.status(), path || "/", over ? "DÉBORDEMENT HORIZONTAL" : "ok");
       await page.close();

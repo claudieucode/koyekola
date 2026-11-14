@@ -36,13 +36,13 @@ describe("boutique : interface dans le navigateur", { skip: SKIP }, () => {
     }
   });
 
-  test("mobile (390 px) : pas de débordement, navigation défilante avec l'onglet actif visible, tableau en fiches étiquetées, formulaires sur une colonne", async () => {
+  test("mobile (390 px) : pas de débordement, sélecteur de rubrique compact, tableau en fiches étiquetées, formulaires sur une colonne", async () => {
     for (const path of ["", "/reglages", "/classes", "/categories", "/commandes/nouvelle"]) {
       const { context, page } = await open(path, 390);
       try {
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), false, `${path} : débordement horizontal à 390 px`);
-        const nav = await page.evaluate(() => { const n = document.querySelector("[data-bq-tabs]"); const a = n.querySelector('[aria-current="page"]'); const nb = n.getBoundingClientRect(), ab = a.getBoundingClientRect(); return { scroll: n.scrollWidth > n.clientWidth, visible: ab.left >= nb.left - 1 && ab.right <= nb.right + 1 }; });
-        assert.equal(nav.scroll, true, `${path} : la navigation défile`); assert.equal(nav.visible, true, `${path} : onglet actif visible`);
+        const nav = await page.evaluate(() => { const side = document.querySelector("[data-bq-side]"); const t = side.querySelector("[data-bq-toggle]"); const list = side.querySelector(".bq-side-nav"); return { toggle: getComputedStyle(t).display !== "none", closed: getComputedStyle(list).display === "none", label: t.textContent.trim(), h: Math.round(side.getBoundingClientRect().height) }; });
+        assert.equal(nav.toggle, true, `${path} : sélecteur compact visible`); assert.equal(nav.closed, true, `${path} : liste repliée par défaut`); assert.match(nav.label, /^Boutique · /); assert.ok(nav.h < 80, `${path} : barre compacte (${nav.h}px)`);
       } finally { await context.close(); }
     }
     const { context, page } = await open("", 390);
@@ -58,10 +58,66 @@ describe("boutique : interface dans le navigateur", { skip: SKIP }, () => {
   });
 
   test("bureau : les champs courts se rangent en grille (Réglages), sans s'étirer sur toute la largeur", async () => {
-    const { context, page } = await open("/reglages");
+    const { context, page } = await open("/reglages", 1440);
     try {
       const m = await page.evaluate(() => { const w = (s) => Math.round(document.querySelector(s).getBoundingClientRect().width); const lefts = ["#r-cur", "#r-cty", "#r-pre", "#r-low"].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().left)); return { cur: w("#r-cur"), panel: w("#general"), cols: new Set(lefts).size }; });
       assert.ok(m.cur < m.panel / 2, `devise trop large : ${m.cur} / ${m.panel}`); assert.ok(m.cols >= 3, `champs courts sur ${m.cols} colonnes`);
+    } finally { await context.close(); }
+  });
+
+  test("trois colonnes sur bureau : menu du CMS · barre de la boutique · contenu ; aucune navigation horizontale", async () => {
+    const { context, page } = await open("/commandes", 1440);
+    try {
+      const g = await page.evaluate(() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); const side = r(".bq-side"), main = r(".mk-content > .mk-head"), cms = document.querySelector("#mk-sidebar, .mk-sidebar, nav.mk-nav") ? (document.querySelector("#mk-sidebar") || document.querySelector(".mk-sidebar") || document.querySelector("nav.mk-nav")).getBoundingClientRect() : null; return { sideL: side.left, sideR: side.right, sideW: side.width, mainL: main.left, cmsR: cms ? cms.right : null, horiz: document.querySelectorAll("nav.bq-tabs, .mk-content > nav.mk-tabs").length }; });
+      assert.ok(g.sideW >= 200 && g.sideW <= 280, `largeur de la barre : ${g.sideW}`); assert.ok(g.mainL >= g.sideR, "le contenu est à droite de la barre");
+      if (g.cmsR != null) assert.ok(g.sideL >= g.cmsR - 1, "la barre vient après le menu principal du CMS");
+      assert.equal(g.horiz, 0, "plus de navigation horizontale");
+      assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector(".bq-link")).textDecorationLine), "none");
+    } finally { await context.close(); }
+  });
+
+  test("les 14 rubriques : clic réel, bonne adresse, rubrique active, rechargement et retour du navigateur", async () => {
+    const ROUTES = [["Produits", ""], ["Catégories", "/categories"], ["Avis", "/avis"], ["Commandes", "/commandes"], ["Clients", "/clients"], ["Abonnements", "/abonnements"], ["Rendez-vous", "/rendez-vous"], ["Listes cadeaux", "/listes-cadeaux"], ["Rapports", "/rapports"], ["Factures", "/factures"], ["Accès membre", "/acces"], ["Taxes et expédition", "/classes"], ["Paiements", "/paiements"], ["Réglages", "/reglages"]];
+    const { context, page } = await open("", 1440);
+    try {
+      const visited = [];
+      for (const [label, path] of ROUTES) {
+        await Promise.all([page.waitForNavigation(), page.click(`.bq-side-nav a.bq-link:has(.bq-label:text-is("${label}"))`)]);
+        assert.equal(new URL(page.url()).pathname, `${B}${path}`, `${label} : adresse`);
+        assert.equal(await page.textContent('.bq-link[aria-current="page"] .bq-label'), label, `${label} : rubrique active`);
+        assert.equal(await page.locator(".bq-link").count(), 14, `${label} : barre complète`);
+        assert.ok((await page.textContent(".mk-head h1")).length > 2, `${label} : titre`);
+        visited.push(label);
+      }
+      assert.equal(visited.length, 14);
+      // rechargement : on retrouve la rubrique de l'adresse
+      await page.reload(); await page.waitForLoadState("networkidle");
+      assert.equal(await page.textContent('.bq-link[aria-current="page"] .bq-label'), "Réglages");
+      // retour puis avance du navigateur
+      await page.goBack(); await page.waitForLoadState("networkidle");
+      assert.equal(await page.textContent('.bq-link[aria-current="page"] .bq-label'), "Paiements");
+      await page.goBack(); await page.waitForLoadState("networkidle");
+      assert.equal(await page.textContent('.bq-link[aria-current="page"] .bq-label'), "Taxes et expédition");
+      await page.goForward(); await page.waitForLoadState("networkidle");
+      assert.equal(await page.textContent('.bq-link[aria-current="page"] .bq-label'), "Paiements");
+    } finally { await context.close(); }
+  });
+
+  test("mobile : le sélecteur s'ouvre, liste les 14 rubriques, se ferme avec Échap et mène à la rubrique choisie", async () => {
+    const { context, page } = await open("/reglages", 390);
+    try {
+      const toggle = page.locator("[data-bq-toggle]");
+      assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+      await toggle.click();
+      assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+      assert.equal(await page.locator(".bq-side-nav .bq-link:visible").count(), 14);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1), false);
+      await page.keyboard.press("Escape");
+      assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+      await toggle.click();
+      await Promise.all([page.waitForNavigation(), page.click('.bq-side-nav a.bq-link:has(.bq-label:text-is("Clients"))')]);
+      assert.equal(new URL(page.url()).pathname, `${B}/clients`);
+      assert.match(await page.textContent("[data-bq-toggle]"), /Boutique · Clients/);
     } finally { await context.close(); }
   });
 

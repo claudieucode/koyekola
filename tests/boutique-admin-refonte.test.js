@@ -23,28 +23,31 @@ describe("boutique : socle visuel de l'administration", () => {
 
   const ROUTES = ["", "/categories", "/avis", "/rendez-vous", "/rendez-vous/reglages", "/listes-cadeaux", "/abonnements", "/commandes", "/commandes/nouvelle", "/rapports", "/factures", "/acces", "/clients", "/classes", "/paiements", "/reglages", "/produits/nouveau"];
 
-  test("chaque écran répond, porte le socle (feuille, script, navigation en onglets) et marque un seul onglet actif", async () => {
+  test("chaque écran répond, porte le socle (feuille, script, barre latérale verticale) et marque une seule rubrique active", async () => {
     for (const path of ROUTES) {
       const r = await boss.get(`${B}${path}`);
       assert.equal(r.status, 200, `${path} : ${r.status}`);
       assert.match(r.text, /<body class="mk-body[^"]*\bmk-shop\b/, `${path} : classe mk-shop`);
       assert.match(r.text, /\/css\/shop-admin\.css/, `${path} : feuille de styles de la boutique`);
       assert.match(r.text, /\/js\/shop-admin\.js/, `${path} : script`);
-      const nav = r.text.match(/<nav class="mk-tabs bq-tabs"[^]*?<\/nav>/);
-      assert.ok(nav, `${path} : navigation secondaire`);
-      assert.equal((nav[0].match(/class="mk-tab"/g) || []).length, 14, `${path} : 14 rubriques conservées`);
-      assert.equal((nav[0].match(/aria-current="page"/g) || []).length, 1, `${path} : un seul onglet actif`);
+      const nav = r.text.match(/<nav class="bq-side-nav"[^]*?<\/nav>/);
+      assert.ok(nav, `${path} : barre latérale de la boutique`);
+      assert.equal((nav[0].match(/class="bq-link"/g) || []).length, 14, `${path} : 14 rubriques conservées`);
+      assert.equal((nav[0].match(/aria-current="page"/g) || []).length, 1, `${path} : une seule rubrique active`);
+      assert.doesNotMatch(r.text, /class="mk-tabs bq-tabs"/, `${path} : plus de navigation horizontale`);
     }
   });
 
   test("toutes les rubriques d'origine restent atteignables", async () => {
-    const nav = (await boss.get(`${B}`)).text.match(/<nav class="mk-tabs bq-tabs"[^]*?<\/nav>/)[0];
-    for (const label of ["Produits", "Catégories", "Avis", "Rendez-vous", "Listes cadeaux", "Abonnements", "Commandes", "Rapports", "Factures", "Accès membre", "Clients", "Taxes et expédition", "Paiements", "Réglages"]) assert.match(nav, new RegExp(`>${label}</a>`), label);
+    const nav = (await boss.get(`${B}`)).text.match(/<nav class="bq-side-nav"[^]*?<\/nav>/)[0];
+    const order = [...nav.matchAll(/<span class="bq-label">([^<]+)<\/span>/g)].map((m) => m[1]);
+    assert.deepEqual(order, ["Produits", "Catégories", "Avis", "Commandes", "Clients", "Abonnements", "Rendez-vous", "Listes cadeaux", "Rapports", "Factures", "Accès membre", "Taxes et expédition", "Paiements", "Réglages"], "ordre et libellés d'origine");
+    for (const label of ["Produits", "Catégories", "Avis", "Rendez-vous", "Listes cadeaux", "Abonnements", "Commandes", "Rapports", "Factures", "Accès membre", "Clients", "Taxes et expédition", "Paiements", "Réglages"]) assert.match(nav, new RegExp(`<span class="bq-label">${label}</span>`), label);
     for (const path of ["/categories", "/avis", "/rendez-vous", "/listes-cadeaux", "/abonnements", "/commandes", "/rapports", "/factures", "/acces", "/clients", "/classes", "/paiements", "/reglages"]) assert.ok(nav.includes(`href="${B}${path}"`), path);
   });
 
   test("onglet actif exact : Catégories, Taxes et expédition, Paiements", async () => {
-    const active = async (path) => (await boss.get(`${B}${path}`)).text.match(/<a class="mk-tab" href="[^"]*" aria-current="page">([^<]+)<\/a>/)[1];
+    const active = async (path) => (await boss.get(`${B}${path}`)).text.match(/<a class="bq-link" href="[^"]*" aria-current="page"><span class="bq-ico"[^]*?<span class="bq-label">([^<]+)<\/span>/)[1];
     assert.equal(await active(""), "Produits"); assert.equal(await active("/categories"), "Catégories");
     assert.equal(await active("/classes"), "Taxes et expédition"); assert.equal(await active("/paiements"), "Paiements"); assert.equal(await active("/reglages"), "Réglages");
   });
