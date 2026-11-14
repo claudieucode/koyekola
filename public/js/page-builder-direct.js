@@ -329,7 +329,8 @@
       e.preventDefault();
       var win = B.frame().contentWindow, sx = e.clientX, sy = e.clientY, oy = win.scrollY, sl = stage.scrollLeft, st0 = stage.scrollTop;
       document.body.classList.add("is-panning");
-      var move = function (ev) { win.scrollTo(0, oy - (ev.clientY - sy) / (B.zoom() || 1)); stage.scrollLeft = sl - (ev.clientX - sx); stage.scrollTop = st0 - (ev.clientY - sy); };
+      var cx = sx, cy = sy, queued = false, apply = function () { queued = false; win.scrollTo(0, oy - (cy - sy) / (B.zoom() || 1)); stage.scrollLeft = sl - (cx - sx); stage.scrollTop = st0 - (cy - sy); };
+      var move = function (ev) { cx = ev.clientX; cy = ev.clientY; if (!queued) { queued = true; requestAnimationFrame(apply); } }; // une seule mise à jour par image
       var up = function () { stage.removeEventListener("pointermove", move); stage.removeEventListener("pointerup", up); stage.removeEventListener("pointercancel", up); document.body.classList.remove("is-panning"); try { stage.releasePointerCapture(e.pointerId); } catch (x) { /* déjà relâché */ } };
       try { stage.setPointerCapture(e.pointerId); } catch (x) { /* capture indisponible */ }
       stage.addEventListener("pointermove", move); stage.addEventListener("pointerup", up); stage.addEventListener("pointercancel", up);
