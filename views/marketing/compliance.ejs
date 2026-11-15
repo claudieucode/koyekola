@@ -1,4 +1,6 @@
 <%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/conformite.css">
+<div class="cf-page">
     <div class="mk-head">
       <div class="mk-head-main"><h1>Conformité</h1><p class="mk-head-sub">Les règles qui protègent vos contacts, et vous. Elles s'appliquent avant tout envoi. L'outil aide, mais la conformité légale (RGPD, ePrivacy…) reste de votre responsabilité.</p></div></div>
 
@@ -6,7 +8,7 @@
       <h2>Liste de suppression</h2>
       <p class="field-hint">Ces adresses ne reçoivent <strong>jamais</strong> de marketing. Un rebond ou une plainte ne peut pas être levé ; un blocage manuel le peut, mais la personne devra se réabonner elle-même.</p>
       <% if (mk.can("compliance.manage")) { %>
-        <form action="/marketing/conformite/suppression" method="post" class="mk-inline-form mk-create">
+        <form action="/marketing/conformite/suppression" method="post" class="mk-inline-form mk-create cf-line">
           <label for="s-email" class="sr-only">Adresse à bloquer</label><input id="s-email" type="email" name="email" required maxlength="254" placeholder="adresse@exemple.fr">
           <label for="s-note" class="sr-only">Motif</label><input id="s-note" type="text" name="note" maxlength="500" placeholder="Motif (facultatif)">
           <button type="submit" class="btn btn-primary">Bloquer l'adresse</button>
@@ -45,16 +47,15 @@
       <h2>Catégories de préférences</h2>
       <p class="field-hint">Permettent à une personne de refuser certains types de messages sans se désinscrire de tout.</p>
       <% if (mk.can("compliance.manage")) { %>
-        <form action="/marketing/conformite/categories" method="post" class="mk-form">
-          <div class="field-row">
-            <div class="field-group"><label for="k-label">Libellé</label><input id="k-label" type="text" name="label" maxlength="100" required placeholder="Promotions"></div>
+        <form action="/marketing/conformite/categories" method="post" class="mk-form cf-grid">
+          <div class="field-group"><label for="k-label">Libellé</label><input id="k-label" type="text" name="label" maxlength="100" required placeholder="Promotions"></div>
             <div class="field-group"><label for="k-key">Clé</label><input id="k-key" type="text" name="key" maxlength="40" required placeholder="promotions"></div>
-          </div>
-          <div class="field-group"><label for="k-desc">Description affichée à la personne</label><input id="k-desc" type="text" name="description" maxlength="300" placeholder="Offres et réductions"></div>
+          <div class="field-group cf-wide"><label for="k-desc">Description affichée à la personne</label><input id="k-desc" type="text" name="description" maxlength="300" placeholder="Offres et réductions"></div>
           <button type="submit" class="btn btn-primary btn-sm">Créer la catégorie</button>
         </form>
       <% } %>
       <% if (!categories.length) { %><p class="field-hint">Aucune catégorie.</p>
       <% } else { %><ul class="mk-status-list"><% categories.forEach((k) => { %><li><strong><%= k.label %></strong> <code><%= k.key %></code> <%= k.description ? "— " + k.description : "" %></li><% }) %></ul><% } %>
     </section>
+</div>
 <%- include("partials/bottom") %>
