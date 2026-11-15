@@ -2024,3 +2024,29 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* Ergonomie : écart régulier entre les entrées du menu latéral du marketing et entre les liens de la barre d'applications */
 .mk-nav-group + .mk-nav-group, .mk-nav-head + .mk-nav-head { margin-top: 2px; }
 .mk-nav-head { min-height: 36px; }
+
+/* ---- Réglages SMS : une seule colonne de lecture, cartes de même largeur, grilles alignées en haut, barre d'enregistrement séparée ---- */
+.mk-sms-set { max-width: 980px; display: grid; gap: 20px; padding-bottom: 32px; }
+.mk-sms-set > .mk-head, .mk-sms-set > .mk-panel, .mk-sms-set > form { margin: 0; min-width: 0; }
+.mk-sms-set .mk-form { max-width: none; display: grid; gap: 20px; }
+.mk-sms-set .mk-panel { margin: 0; padding: 24px 28px; }
+.mk-sms-set .mk-panel > h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.mk-sms-set .mk-panel > .field-hint { margin: 0 0 16px; max-width: 72ch; }
+.mk-sms-set .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; align-items: start; }
+.mk-sms-set .field-row + .field-row { margin-top: 18px; }
+.mk-sms-set .field-group { margin: 0; min-width: 0; }
+.mk-sms-set .field-group + .field-group { margin-top: 16px; }
+.mk-sms-set .field-row > .field-group { margin-top: 0; }
+.mk-sms-set .field-group label { display: block; margin-bottom: 6px; }
+.mk-sms-set .field-group input:not([type="checkbox"]), .mk-sms-set .field-group select { width: 100%; }
+.mk-sms-set .field-hint { display: block; margin-top: 6px; line-height: 1.5; }
+.mk-sms-set .mk-inline-form { display: grid; grid-template-columns: minmax(0, 360px) auto; gap: 10px; align-items: center; justify-content: start; margin: 4px 0 0; }
+.mk-sms-set .mk-inline-form.mk-create { grid-template-columns: minmax(0, 240px) minmax(0, 1fr) auto; padding: 0; margin: 4px 0 12px; background: none; border: 0; }
+.mk-sms-set .mk-inline-form input, .mk-sms-set .mk-inline-form .btn { width: 100%; margin: 0; }
+.mk-sms-set .mk-inline-form .btn { width: auto; white-space: nowrap; }
+.mk-sms-set-save { display: flex; justify-content: flex-end; padding-top: 4px; }
+@media (max-width: 640px) {
+  .mk-sms-set .mk-panel { padding: 18px 16px; }
+  .mk-sms-set .mk-inline-form, .mk-sms-set .mk-inline-form.mk-create { grid-template-columns: minmax(0, 1fr); }
+  .mk-sms-set .mk-inline-form .btn, .mk-sms-set-save .btn { width: 100%; }
+}
