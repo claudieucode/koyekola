@@ -2108,6 +2108,20 @@ function selectField(label, value, options, onChange, opts) {
       var k = sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp; if (!create && !e.states) return null; e.states = e.states || {}; return (e.states[k] = e.states[k] || {});
     };
     var read = function (k) { var e = isPanel ? (p.panelStyles || {})[sel.part] : entries[sel.key] && entries[sel.key][sel.part]; if (!e) return ""; var set = sel.state === "base" ? e.styles && e.styles[sel.bp] : sel.state === "current" ? e.current && e.current[sel.bp] : e.states && e.states[sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp]; return set && set[k] !== undefined ? String(set[k]) : ""; };
+    if (!isPanel) {
+      var hidden = (entries[sel.key] && entries[sel.key].hide) || [];
+      box.appendChild(h("p", { class: "pb-hint", text: "Visibilité de ce lien : cochez les écrans où il doit être MASQUÉ (il reste dans le menu, rien n'est supprimé)." }));
+      [["desktop", "Masquer sur ordinateur (1024 px et plus)"], ["tablet", "Masquer sur tablette (768 à 1023 px)"], ["mobile", "Masquer sur mobile (moins de 768 px)"]].forEach(function (b) {
+        box.appendChild(checkField(b[1], hidden.indexOf(b[0]) >= 0, function (v) {
+          if (probing) return;
+          change(function () {
+            var x = byId(it.id).props; x.itemStyles = x.itemStyles || {}; var e = x.itemStyles[sel.key] = x.itemStyles[sel.key] || {}; var list = (e.hide || []).filter(function (k) { return k !== b[0]; });
+            if (v) list.push(b[0]); if (list.length) e.hide = list; else delete e.hide;
+            if (!Object.keys(e).length) delete x.itemStyles[sel.key]; if (!Object.keys(x.itemStyles).length) delete x.itemStyles;
+          });
+        }, { disabled: disabled }));
+      });
+    }
     var prune = function (x) { if (isPanel) { var pe = x.panelStyles || {}; Object.keys(pe).forEach(function (pp) { var t = pe[pp]; ["styles", "states"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete pe[pp]; }); if (!Object.keys(pe).length) delete x.panelStyles; return; } var e = x.itemStyles; Object.keys(e).forEach(function (kk) { Object.keys(e[kk]).forEach(function (pp) { var t = e[kk][pp]; ["styles", "states", "current"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete e[kk][pp]; }); if (!Object.keys(e[kk]).length) delete e[kk]; }); if (!Object.keys(e).length) delete x.itemStyles; };
     LINK_STYLE_FIELDS.forEach(function (f) {
       box.appendChild(textField(f[1], read(f[0]), function (v) {
@@ -6886,8 +6900,8 @@ function selectField(label, value, options, onChange, opts) {
   // Pourquoi c'était lourd : chaque changement de zoom recalculait la mise en page de la page entière, puis relisait les mesures plusieurs fois de suite
   // (règles, informations, barre d'actions), le tout sans transition. Désormais : mesures lues d'abord, styles écrits ensuite, UNE seule mise en page ;
   // la transition elle-même n'est qu'une transformation (échelle) jouée par le processeur graphique, sans nouvelle mise en page à chaque image.
-  var MAX_ZOOM = 4, MIN_ZOOM = 0.1; // 10 % à 400 %
-  var ZOOM_LEVELS = [0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+  var MAX_ZOOM = 5, MIN_ZOOM = 0.1; // 10 % à 500 %
+  var ZOOM_LEVELS = [0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
   function zoomStep(dir) {   // niveau usuel suivant (dir > 0) ou précédent (dir < 0) à partir du zoom actuel, valeurs intermédiaires comprises
     var z = Math.round(zoom * 1000) / 1000, i;
     if (dir > 0) { for (i = 0; i < ZOOM_LEVELS.length; i++) if (ZOOM_LEVELS[i] > z + 0.004) return ZOOM_LEVELS[i]; return MAX_ZOOM; }
@@ -7718,6 +7732,7 @@ function selectField(label, value, options, onChange, opts) {
     main.classList.toggle("is-right-hidden", panels.rightHidden);
     $("[data-pb-right]").style.setProperty("--pb-layers-h", panels.layers + "%");
     if (!live) store.set("panels", panels);
+    if (window.pbPanels && window.pbPanels.sync) window.pbPanels.sync(); // le gestionnaire de panneaux suit tout changement (masquer, afficher, largeur)
     queueZoom();
   }
   function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); if (pageSettingsStale) refreshPageSettings(); }
@@ -9398,6 +9413,12 @@ function selectField(label, value, options, onChange, opts) {
       { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
+      { label: "Panneau de droite : afficher / masquer", run: function () { if (window.pbPanels) window.pbPanels.toggle("right"); } },
+      { label: "Panneaux : conception étendue (tout masquer) / retour", run: function () { if (window.pbPanels) window.pbPanels.extended(); } },
+      { label: "Panneaux : espace de travail Standard", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("standard"); } },
+      { label: "Panneaux : espace de travail Conception", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("conception"); } },
+      { label: "Panneaux : espace de travail Structure", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("structure"); } },
+      { label: "Panneaux : rétablir la disposition par défaut", run: function () { if (window.pbPanels) window.pbPanels.reset(); } },
       { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
@@ -9842,6 +9863,14 @@ function selectField(label, value, options, onChange, opts) {
   applyZoom();
   renderCanvas();
   setMode(mode);
+  // Pont vers le gestionnaire de panneaux (page-builder-panels.js) : mêmes objets d'état que l'éditeur (aucune copie), jamais le document
+  window.pbPanelsBridge = {
+    panels: panels, dock: dock, userId: boot.userId || 0, siteId: PAGE.siteId || 0,
+    applyPanels: function () { applyPanels(); }, applyLayers: function () { applyLayersPanel(); }, applyDock: function () { applyDock(); },
+    renderTools: function () { renderTools(); }, queueZoom: function () { queueZoom(); }, saveDock: function () { store.set("layers-dock", dock); },
+    openTab: function (id) { var t = document.getElementById(id); if (t) openTab(t); }, toast: toast
+  };
+  if (window.pbPanels) window.pbPanels.start();
   // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
   window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };

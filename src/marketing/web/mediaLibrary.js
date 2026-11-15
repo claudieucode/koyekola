@@ -105,16 +105,24 @@ module.exports = () => {
     const scoped = Boolean(folders.scopeOf(ctx));
     if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
     const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
-    const listed = !section || section === "dossiers" ? section === "dossiers" ? { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE } : search(ctx, f) : { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
+    const prefs = manager.getPrefs(ctx);
+    const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
+    // Vue en colonnes : le navigateur charge la liste dossier par dossier (liste.json), le serveur ne rend aucune ligne
+    const noRows = { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
+    const listed = !section || section === "dossiers" ? section === "dossiers" || view === "colonnes" ? noRows : search(ctx, f) : noRows;
     const found = listed;
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
     const tree = folders.listFolders(ctx);
     const starredFolders = new Set(manager.starredSet(ctx, "folder"));
-    const view = manager.VIEWS.includes(req.query.vue) ? req.query.vue : prefs.view;
     const current = f.adv.folder || null;
-    const filtered = Boolean(f.q || f.period || f.type || f.month || f.recents || f.adv.ext || f.adv.minSize || f.adv.maxSize || f.adv.minWidth || f.adv.maxWidth || f.adv.duplicates || f.adv.large || f.adv.tagId || f.adv.collectionId || f.adv.starred || f.adv.usedOnly);
-    // Dossiers affichés dans la zone centrale : ceux du dossier courant, ou ceux de la racine (« Mes dossiers » et « Sans dossier »)
-    const subfolders = tree.enabled && !f.trashed && !filtered && (section === "dossiers" || f.raw.dossier === "racine" || current) ? tree.folders.filter((x) => (x.parentId || null) === (section === "dossiers" || f.raw.dossier === "racine" ? null : current)).map((x) => ({ ...x, starred: starredFolders.has(x.id) })) : [];
+    const otherFilters = Boolean(f.q || f.period || f.month || f.recents || f.adv.ext || f.adv.minSize || f.adv.maxSize || f.adv.minWidth || f.adv.maxWidth || f.adv.duplicates || f.adv.large || f.adv.tagId || f.adv.collectionId || f.adv.starred || f.adv.usedOnly);
+    const filtered = Boolean(f.type) || otherFilters;
+    // Dossiers affichés dans la zone centrale, à CHAQUE emplacement : sous-dossiers du dossier courant ; à la racine (Tous les fichiers, Sans dossier, Mes dossiers) les dossiers de premier niveau ;
+    // dans Images / Vidéos / Audio / Documents les dossiers de premier niveau créés dans cette catégorie (+ les dossiers anciens, sans catégorie). Les catégories restent des catégories de fichiers : aucun dossier physique.
+    const CAT = { image: "image", video: "video", audio: "audio", documents: "document", pdf: "document", document: "document" }[f.type] || "";
+    const asRoot = section === "dossiers" || f.raw.dossier === "racine";
+    const showFolders = tree.enabled && !f.trashed && !otherFilters && (section === "dossiers" || asRoot || current || !section);
+    const subfolders = showFolders ? tree.folders.filter((x) => (x.parentId || null) === (asRoot || !current ? null : current) && (current || asRoot || !CAT || !x.category || x.category === CAT)).map((x) => ({ ...x, starred: starredFolders.has(x.id) })) : [];
     // Titre et repère de la rubrique affichée (la barre latérale s'y réfère)
     const tag = f.adv.tagId ? (scoped ? manager.listTags(ctx) : []).find((t) => t.id === f.adv.tagId) : null;
     const col = f.adv.collectionId ? (scoped ? manager.listCollections(ctx) : []).find((c) => c.id === f.adv.collectionId) : null;
@@ -219,7 +227,7 @@ module.exports = () => {
     res.set("Cache-Control", "no-store").json({ ...folders.listFolders(ctx), breadcrumb: folders.breadcrumb(ctx, intOrNull(req.query.dossier)) });
   });
   router.post(`${base}/dossiers`, need("media.write"), (req, res, next) => {
-    try { const b = req.body || {}; res.status(201).json({ folder: folders.createFolder(ctxOf(req), { name: b.name, parentId: intOrNull(b.parent_id) }) }); } catch (error) { fail(res, next, error); }
+    try { const b = req.body || {}; res.status(201).json({ folder: folders.createFolder(ctxOf(req), { name: b.name, parentId: intOrNull(b.parent_id), category: String(b.category || "") }) }); } catch (error) { fail(res, next, error); }
   });
   router.post(`${base}/dossiers/:fid(\\d+)`, need("media.write"), (req, res, next) => {
     try {
@@ -230,6 +238,9 @@ module.exports = () => {
       if (Object.hasOwn(b, "parent_id")) folder = folders.moveFolder(ctx, id, intOrNull(b.parent_id));
       res.json({ folder });
     } catch (error) { fail(res, next, error); }
+  });
+  router.post(`${base}/dossiers/ordre`, need("media.write"), (req, res, next) => {
+    try { res.json({ order: folders.reorderFolders(ctxOf(req), intOrNull(req.body.parent_id), req.body.ids) }); } catch (error) { fail(res, next, error); }
   });
   router.post(`${base}/dossiers/:fid(\\d+)/supprimer`, need("media.write"), (req, res, next) => {
     try { res.json({ ok: folders.deleteFolder(ctxOf(req), Number(req.params.fid)) }); } catch (error) { fail(res, next, error); }
@@ -304,7 +315,7 @@ module.exports = () => {
   router.post(`${base}/collections/:cid(\\d+)/ajouter`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.addToCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
   router.post(`${base}/collections/:cid(\\d+)/retirer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.removeFromCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
   // Dossiers enrichis : couleur, description, propriétés, corbeille
-  router.post(`${base}/dossiers/:fid(\\d+)/meta`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.updateFolder(ctxOf(req), Number(req.params.fid), { color: body(req).color, description: body(req).description }) })));
+  router.post(`${base}/dossiers/:fid(\\d+)/meta`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.updateFolder(ctxOf(req), Number(req.params.fid), { name: body(req).name, color: body(req).color, description: body(req).description, icon: body(req).icon, coverMediaId: body(req).cover_media_id }) })));
   router.get(`${base}/dossiers/:fid(\\d+)/proprietes.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ properties: manager.folderProperties(ctxOf(req), Number(req.params.fid)) })));
   router.post(`${base}/dossiers/:fid(\\d+)/corbeille`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.trashFolder(ctxOf(req), Number(req.params.fid)))));
   router.post(`${base}/dossiers/:fid(\\d+)/restaurer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.restoreFolder(ctxOf(req), Number(req.params.fid)) })));

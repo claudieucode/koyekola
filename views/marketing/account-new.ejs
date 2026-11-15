@@ -3,7 +3,7 @@
   Toute la logique est côté serveur (services/accounts + cmsAccess) ; public/js/cms-account-new.js ajoute le générateur de mot de passe, l'affichage / masquage, le repère de robustesse,
   la validation à la saisie et le verrou de double soumission. Sans JavaScript, le formulaire fonctionne (envoi classique, validation serveur).
 %><%- include("partials/top", { title, active }) %>
-<link rel="stylesheet" href="/css/comptes.css">
+<link rel="stylesheet" href="<%= asset('/css/comptes.css') %>">
 <%
   const v = values || {};
   const fe = fieldErrors || {};

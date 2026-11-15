@@ -106,6 +106,23 @@ describe("Header Builder : style individuel de chaque lien du menu (navigateur)"
     assert.deepEqual(env.errors, []);
   });
 
+  test("visibilité par écran : « Boutique » masqué sur tablette et mobile (barre et panneau), visible sur ordinateur ; les autres liens restent", async () => {
+    const itemStyles = { ["m" + ids.b]: { hide: ["tablet", "mobile", "inconnu"] } };
+    await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", mobileToggle: true, mobileMode: "drawer", itemStyles }));
+    const shown = async (width) => {
+      const { context, page } = await env.visit({ viewport: { width, height: 800 } });
+      const vis = await page.evaluate(() => { const v = (t) => { const a = [...document.querySelectorAll(".lp-site-header .kw-menu-item")].find((e) => e.textContent.includes(t)); return a ? getComputedStyle(a).display !== "none" : null; }; return { boutique: v("Boutique"), accueil: v("Accueil") }; });
+      let inPanel = null;
+      if (width < 768) { await page.locator(".lp-site-header .kw-menu-burger").first().click(); await page.waitForSelector(".kw-menu-panel"); inPanel = await page.evaluate(() => [...document.querySelectorAll(".kw-menu-panel li")].filter((e) => getComputedStyle(e).display !== "none").map((e) => e.textContent.trim().slice(0, 20))); }
+      await context.close(); return { ...vis, inPanel };
+    };
+    const desk = await shown(1280), tab = await shown(900), mob = await shown(390);
+    assert.equal(desk.boutique, true, "visible sur ordinateur"); assert.equal(tab.boutique, false, "masqué sur tablette"); assert.equal(mob.boutique, false, "masqué sur mobile");
+    assert.equal(desk.accueil, true); assert.ok(tab.accueil !== false, "Accueil reste visible sur tablette");
+    assert.ok(mob.inPanel && mob.inPanel.length >= 1 && !mob.inPanel.some((t) => /Boutique/.test(t)), "absent du panneau mobile : " + JSON.stringify(mob.inPanel));
+    assert.deepEqual(env.errors, []);
+  });
+
   test("menu mobile : le tiroir prend le fond, la largeur, le fond assombri et la fermeture réglés ; liens du panneau stylés", async () => {
     const panelStyles = { panel: { styles: { desktop: { backgroundColor: "#0f172a", width: "300px" } } }, backdrop: { styles: { desktop: { backgroundColor: "#7c2d12cc" } } }, links: { styles: { desktop: { color: "#fde68a", fontSize: "22px" } } }, close: { styles: { desktop: { color: "#fbbf24" } } } };
     await env.publishHeader("luxe-01.luxe-01", { mode: "static" }, withMenu({ source: "location", location: "header", mobileToggle: true, mobileMode: "drawer", drawerSide: "right", panelStyles }));

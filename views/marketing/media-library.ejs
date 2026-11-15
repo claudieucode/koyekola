@@ -3,7 +3,7 @@
   Le serveur rend la liste (filtrée, triée, paginée dans la base) ; public/js/media-explorer.js ajoute la navigation fluide, les modes d'affichage, la sélection,
   le glisser-déposer, les menus contextuels, le panneau d'informations et la prévisualisation. Une médiathèque distincte par site.
 %><%- include("partials/top", { title, active }) %>
-<link rel="stylesheet" href="<%= asset('/css/media-explorer.css') %>">
+<link rel="stylesheet" href="<%= asset('/css/media-explorer.css') %>"><link rel="stylesheet" href="<%= asset('/css/media-columns.css') %>">
 <%
   const depthOf = (fo) => { let d = 0, cur = fo; while (cur && cur.parentId && d < 9) { cur = tree.folders.find((x) => x.id === cur.parentId); d++; } return d; };
   const ordered = []; const walk = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid).forEach((x) => { ordered.push(x); walk(x.id); }); walk(null);

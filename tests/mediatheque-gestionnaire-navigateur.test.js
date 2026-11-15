@@ -201,12 +201,11 @@ describe("médiathèque : gestionnaire de fichiers dans Chrome", { skip: SKIP },
     await open("?section=accueil"); await page.locator(".mx-cards").waitFor(); assert.match(await page.locator("[data-mx-section]").innerText(), /récemment ajoutés/i);
   });
 
-  test("barre latérale : réduite en icônes, masquée, rétablie ; le choix est mémorisé ; aucun bouton sans action ; aucune erreur de script pendant tout le parcours", async () => {
+  test("barre latérale : réduite en icônes puis rétablie par le même bouton ; le choix est mémorisé ; aucune erreur de script pendant tout le parcours", async () => {
     await open();
     await page.click("[data-mx-side-collapse]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "rail");
-    await page.click("[data-mx-side-toggle]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "hidden");
-    await page.waitForTimeout(600); await page.reload(); await page.waitForSelector("[data-mx]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "hidden", "mémorisé");
-    await page.click("[data-mx-side-toggle]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "open"); await page.waitForTimeout(600);
+    await page.waitForTimeout(600); await page.reload(); await page.waitForSelector("[data-mx]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "rail", "mémorisé");
+    await page.click("[data-mx-side-collapse]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "open"); await page.waitForTimeout(600);
     assert.deepEqual(errors, [], "aucune erreur de script : " + errors.join(" | "));
   });
 });

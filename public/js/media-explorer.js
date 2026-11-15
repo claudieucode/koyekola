@@ -79,8 +79,41 @@
     if (!Object.keys(p).length) return Promise.resolve();
     return K.api("POST", BASE + "/preferences", p).catch(function () { /* préférence non enregistrée : l'affichage reste correct pour cette session */ });
   }
+
+  // ----- Apparence (couleurs libres, rayon, espacement, taille d'icônes) : enregistrée par personne et par site -----
+  var PRESETS = {
+    clair: { sideBg: "#0d2238", mainBg: "#ffffff", text: "#0b2a40", textSoft: "#5b6b7b", icon: "#9fb0c4", sep: "#2a4058", sel: "#e3eefa", hover: "#eaf1f8", folder: "#4f8fd6", accent: "#0a74b5", border: "#dbe3ec", badge: "#2a4058" },
+    sombre: { sideBg: "#08131f", mainBg: "#0f1b2a", text: "#e6edf6", textSoft: "#9fb0c4", icon: "#9fb0c4", sep: "#22364b", sel: "#1d4670", hover: "#16283b", folder: "#6fb4ff", accent: "#6fb4ff", border: "#22364b", badge: "#22364b" }
+  };
+  function themeOf() { var t = prefs.theme || {}; return { mode: t.mode === "sombre" || t.mode === "personnalise" ? t.mode : "clair", colors: t.colors || {}, radius: t.radius == null ? 8 : t.radius, space: t.space == null ? 100 : t.space, iconSize: t.iconSize == null ? 16 : t.iconSize }; }
+  function themeColor(t, k) { return t.colors[k] || (PRESETS[t.mode] || PRESETS.clair)[k]; }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; }
+  function applyTheme() {
+    var t = themeOf(), st = rootEl.style, c = function (k) { return themeColor(t, k); };
+    var custom = t.mode !== "clair" || Object.keys(t.colors).length > 0, vars = {};
+    if (custom) {
+      var darkSide = lum(c("sideBg")) < 0.55;
+      vars = { "--mx-bg": c("mainBg"), "--mx-text": c("text"), "--mx-muted": c("textSoft"), "--mx-sel": c("sel"), "--mx-hover": c("hover"), "--mx-folder": c("folder"), "--mx-accent": c("accent"), "--mx-accent-ink": c("accent"), "--mx-line": c("border"), "--mx-badge": c("badge"),
+        "--mxs-bg": c("sideBg"), "--mxs-icon": c("icon"), "--mxs-sep": c("sep"), "--mxs-folder": c("folder"), "--mxs-text": darkSide ? "#e6edf6" : c("text"), "--mxs-muted": darkSide ? "#9fb0c4" : c("textSoft") };
+      // survol, sélection et accent de la barre latérale : seulement si la personne les a choisis elle-même (les valeurs du thème clair sont pensées pour la zone centrale)
+      if (t.colors.hover) vars["--mxs-hover"] = t.colors.hover; if (t.colors.sel) vars["--mxs-sel"] = t.colors.sel; if (t.colors.accent) vars["--mxs-accent"] = t.colors.accent;
+    }
+    var sideEl = $("[data-mx-side]", rootEl);
+    ["--mx-bg", "--mx-text", "--mx-muted", "--mx-sel", "--mx-hover", "--mx-folder", "--mx-accent", "--mx-accent-ink", "--mx-line", "--mx-badge"].forEach(function (k) { if (vars[k]) st.setProperty(k, vars[k]); else st.removeProperty(k); });
+    ["--mxs-bg", "--mxs-icon", "--mxs-sep", "--mxs-folder", "--mxs-text", "--mxs-muted", "--mxs-hover", "--mxs-sel", "--mxs-accent"].forEach(function (k) { if (!sideEl) return; if (vars[k]) sideEl.style.setProperty(k, vars[k]); else sideEl.style.removeProperty(k); });
+    st.setProperty("--mx-radius", t.radius + "px"); st.setProperty("--mx-space", String(t.space / 100)); st.setProperty("--mx-icon", t.iconSize + "px");
+  }
+  function themeSave(patch) { var t = themeOf(); var next = { mode: t.mode, colors: Object.assign({}, t.colors), radius: t.radius, space: t.space, iconSize: t.iconSize }; patch(next); savePrefs({ theme: next }); applyTheme(); syncThemeUi(); }
+  function syncThemeUi() {
+    var pop = $("[data-mx-theme]", rootEl); if (!pop) return; var t = themeOf();
+    $$("[data-mx-theme-color]", pop).forEach(function (i) { i.value = themeColor(t, i.getAttribute("data-mx-theme-color")); });
+    $$("[data-mx-theme-mode]", pop).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-mx-theme-mode") === t.mode ? "true" : "false"); });
+    ["radius", "space", "iconSize"].forEach(function (k) { var r = $("[data-mx-theme-range=" + k + "]", pop), o = $("[data-mx-theme-out=" + k + "]", pop); if (r) r.value = t[k]; if (o) o.textContent = k === "space" ? t[k] + " %" : t[k] + " px"; });
+  }
+  var themeSnapshot = null;
   function applyPrefs() {
-    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
+    if (prefs.sidebar === "hidden") prefs.sidebar = "rail";
+    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); syncCollapse(); applyTheme(); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
     rootEl.style.setProperty("--mx-size", (prefs.size || 160) + "px"); rootEl.style.setProperty("--mx-info-w", (prefs.infoWidth || 340) + "px");
     rootEl.setAttribute("data-pane", prefs.pane || "infos"); // colonnes : voir media-columns.js
     if (window.MXColumns) window.MXColumns.apply();
@@ -98,6 +131,8 @@
     if (ul) { ul.setAttribute("data-view", v); var list = v === "liste" || v === "details"; ul.removeAttribute("data-ml-list"); ul.removeAttribute("data-ml-grid"); ul.setAttribute(list ? "data-ml-list" : "data-ml-grid", ""); $$("img", ul).forEach(function (img) { var it = img.closest("[data-ml-item]"); }); }
     var colBtn = $("[data-mx-cols]"); if (colBtn) colBtn.hidden = v !== "liste"; if (window.MXColumns) window.MXColumns.lazy();
     if (!quiet) { $$("[data-mx-view]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-mx-view") === v)); }); savePrefs({ view: v }); }
+    // La vue en colonnes a son propre contenu (rendu par media-columns.js) : y entrer ou en sortir demande l'affichage serveur du nouveau mode
+    if (!quiet && (v === "colonnes" || rootEl.hasAttribute("data-columns-on"))) { var u = new URL(location.href); u.searchParams.set("vue", v); go(u.pathname + u.search, { replace: true, quiet: true }); }
   }
   function small() { return window.matchMedia("(max-width: 900px)").matches; }
   document.addEventListener("click", function (e) { if (rootEl.getAttribute("data-drawer") === "open" && !e.target.closest("[data-mx-side], [data-mx-side-toggle]")) rootEl.removeAttribute("data-drawer"); });
@@ -292,24 +327,29 @@
   function starFiles(items, on) { return Promise.all(items.map(function (m) { return K.api("POST", BASE + "/favoris", { kind: "media", id: m.id, on: on }); })).then(function () { toast(on ? "Ajoutés aux favoris." : "Retirés des favoris.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }
 
   // ---- Dossiers
-  var folderById = function (id) { return (cfg.folders || []).filter(function (f) { return f.id === id; })[0] || null; };
+  var folderById = function (id) { id = Number(id); return (cfg.folders || []).filter(function (f) { return Number(f.id) === id; })[0] || null; };
   function descendantsOf(id) { var out = new Set([id]), grew = true; while (grew) { grew = false; (cfg.folders || []).forEach(function (f) { if (f.parentId && out.has(f.parentId) && !out.has(f.id)) { out.add(f.id); grew = true; } }); } return out; }
   function folderPath(id) { var out = [], cur = folderById(id), n = 0; while (cur && n++ < 12) { out.unshift(cur.name); cur = cur.parentId ? folderById(cur.parentId) : null; } return "Médiathèque / " + out.join(" / "); }
   function newFolder(parentId) {
-    return askText("Nouveau dossier", { label: "Nom du dossier", placeholder: "Ex. Photos produits" }).then(function (name) { if (!name) return; return K.folderCreate(name, parentId === undefined ? cfg.folder : parentId).then(function (f) { toast("Dossier « " + f.name + " » créé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
+    return askText("Nouveau dossier", { label: "Nom du dossier", placeholder: "Ex. Photos produits" }).then(function (name) { if (!name) return; return K.folderCreate(name, parentId === undefined ? cfg.folder : parentId, cfg.category).then(function (f) { toast("Dossier « " + f.name + " » créé" + (cfg.category && !(parentId === undefined ? cfg.folder : parentId) ? " dans " + (cfg.pageTitle || "cette catégorie") : "") + ".", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
   }
-  function renameFolder(id) { var f = folderById(id); if (!f) return; return askText("Renommer le dossier", { value: f.name }).then(function (name) { if (!name || name === f.name) return; return K.folderRename(id, name).then(function () { toast("Dossier renommé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }); }
+  function renameFolder(id) { var f = folderById(id); if (!f) { toast("Ce dossier n'est plus dans la liste : actualisation.", "error"); return refresh(); } return askText("Renommer le dossier", { value: f.name }).then(function (name) { if (!name || name === f.name) return; return K.folderRename(id, name).then(function () { toast("Dossier renommé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }); }
   function folderProps(id) {
     var f = folderById(id); if (!f) return;
     return K.api("GET", BASE + "/dossiers/" + id + "/proprietes.json").then(function (r) {
       var p = r.properties, color = f.color || "", desc = h("textarea", { id: "mx-fdesc", rows: "3", maxlength: "300", text: p.description || "" }); desc.value = p.description || "";
+      var ICONS = [["", "Dossier"], ["image", "Image"], ["video", "Vidéo"], ["music", "Audio"], ["fileText", "Document"], ["star", "Étoile"], ["heart", "Cœur"], ["home", "Maison"], ["briefcase", "Mallette"], ["book", "Livre"], ["globe", "Globe"], ["cart", "Boutique"], ["gallery", "Galerie"], ["hardDrive", "Archive"], ["shield", "Bouclier"]];
+      var ficon = h("select", { id: "mx-ficon" }, ICONS.map(function (o) { return h("option", { value: o[0], text: o[1] }); })); ficon.value = p.icon || "";
       var sw = ["", "bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"].map(function (c) { return h("label", { class: "mx-swatch", "data-color": c || null, title: c || "Aucune" }, [h("input", { type: "radio", name: "mx-fcolor", value: c, checked: c === color ? "" : null }), h("span", { class: "sr-only", text: c || "Aucune couleur" })]); });
+      var nameIn = h("input", { type: "text", id: "mx-fname", maxlength: "120", autocomplete: "off" }); nameIn.value = f.name;
       var body = h("div", {}, [
+        h("div", { class: "field-group" }, [h("label", { for: "mx-fname", text: "Nom du dossier" }), nameIn]),
         h("dl", { class: "mx-dl" }, [h("dt", { text: "Chemin" }), h("dd", { text: p.path }), h("dt", { text: "Contenu" }), h("dd", { text: plural(p.files, "fichier", "fichiers") + " (" + plural(p.subfolders, "sous-dossier", "sous-dossiers") + ")" }), h("dt", { text: "Taille" }), h("dd", { text: K.fmtSize(p.bytes) }), h("dt", { text: "Créé le" }), h("dd", { text: K.fmtDate(p.createdAt) })]),
         h("div", { class: "field-group" }, [h("label", { text: "Couleur" }), h("div", { class: "mx-swatches" }, sw)]),
+        h("div", { class: "field-group" }, [h("label", { for: "mx-ficon", text: "Icône" }), ficon]),
         h("div", { class: "field-group" }, [h("label", { for: "mx-fdesc", text: "Description" }), desc]),
       ]);
-      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { color: c ? c.value : color, description: desc.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
+      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { name: nameIn.value, color: c ? c.value : color, description: desc.value, icon: ficon.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
     }).catch(function (e) { toast(errMsg(e), "error"); });
   }
   function trashFolder(id) {
@@ -355,7 +395,7 @@
     document.addEventListener("keydown", menuKeys, true);
     var first = $("button:not(:disabled)", m); if (first) first.focus();
   }
-  var ICONS = { eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", download: "M12 3v12M7 10l5 5 5-5M5 21h14", link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z", copy: "M9 9h11v11H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1", star: "M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z", moveTo: "M5 12h14M13 6l6 6-6 6M3 5v14", folder: "M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", undo: "M3 7v6h6M3 13a9 9 0 1 0 3-7", info: "M12 8h.01M11 12h1v5h1M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", plus: "M12 5v14M5 12h14", refresh: "M21 12a9 9 0 1 1-3-6.7M21 3v6h-6", upload: "M12 15V3M7 8l5-5 5 5M5 21h14", check: "M5 12l5 5 9-10", gallery: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" };
+  var ICONS = { panelLeft: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 4v16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", download: "M12 3v12M7 10l5 5 5-5M5 21h14", link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z", copy: "M9 9h11v11H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1", star: "M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z", moveTo: "M5 12h14M13 6l6 6-6 6M3 5v14", folder: "M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", undo: "M3 7v6h6M3 13a9 9 0 1 0 3-7", info: "M12 8h.01M11 12h1v5h1M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", plus: "M12 5v14M5 12h14", refresh: "M21 12a9 9 0 1 1-3-6.7M21 3v6h-6", upload: "M12 15V3M7 8l5-5 5 5M5 21h14", check: "M5 12l5 5 9-10", gallery: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" };
   function iconEl(name) { var d = ICONS[name]; var s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "icon"); s.setAttribute("width", "16"); s.setAttribute("height", "16"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true"); var p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", d || ""); s.appendChild(p); return s; }
   function trashedView() { return Boolean(cfg.trashed); }
   function fileEntries(items) {
@@ -584,8 +624,12 @@
 
   // =============================================================== Barre latérale, vues, tailles, colonnes
   document.addEventListener("click", function (e) {
-    var t = e.target.closest("[data-mx-side-toggle]"); if (t && rootEl.contains(t)) { if (small()) { if (rootEl.getAttribute("data-drawer") === "open") rootEl.removeAttribute("data-drawer"); else rootEl.setAttribute("data-drawer", "open"); return; } savePrefs({ sidebar: prefs.sidebar === "hidden" ? "open" : "hidden" }); applyPrefs(); return; }
-    var c = e.target.closest("[data-mx-side-collapse]"); if (c && rootEl.contains(c)) { savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
+    var t = e.target.closest("[data-mx-side-toggle]"); if (t && rootEl.contains(t)) { if (small()) { if (rootEl.getAttribute("data-drawer") === "open") rootEl.removeAttribute("data-drawer"); else rootEl.setAttribute("data-drawer", "open"); return; } savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
+    var tm = e.target.closest("[data-mx-theme-mode]"); if (tm && rootEl.contains(tm)) { var m = tm.getAttribute("data-mx-theme-mode"); themeSave(function (n) { n.mode = m; if (m !== "personnalise") n.colors = {}; }); return; }
+    if (e.target.closest("[data-mx-theme-reset]")) { themeSave(function (n) { n.mode = "clair"; n.colors = {}; n.radius = 8; n.space = 100; n.iconSize = 16; }); return; }
+    if (e.target.closest("[data-mx-theme-undo]") && themeSnapshot) { var snap = themeSnapshot; themeSave(function (n) { n.mode = snap.mode; n.colors = Object.assign({}, snap.colors); n.radius = snap.radius; n.space = snap.space; n.iconSize = snap.iconSize; }); return; }
+    var ts = e.target.closest("[data-mx-theme] > summary"); if (ts && rootEl.contains(ts)) { var cur = themeOf(); themeSnapshot = { mode: cur.mode, colors: Object.assign({}, cur.colors), radius: cur.radius, space: cur.space, iconSize: cur.iconSize }; syncThemeUi(); }
+    var c = e.target.closest("[data-mx-side-collapse]"); if (c && rootEl.contains(c)) { if (small()) { rootEl.removeAttribute("data-drawer"); return; } savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
     var v = e.target.closest("[data-mx-view]"); if (v && rootEl.contains(v)) { setView(v.getAttribute("data-mx-view")); return; }
     var tg = e.target.closest("[data-mx-tree-toggle]"); if (tg && rootEl.contains(tg)) { e.preventDefault(); var li = tg.closest(".mx-tree-item"), grp = $(".mx-tree-group", li), open = li.getAttribute("aria-expanded") !== "true"; li.setAttribute("aria-expanded", String(open)); if (grp) grp.hidden = !open; var openIds = $$('.mx-tree-item[aria-expanded="true"]', rootEl).map(function (x) { return x.getAttribute("data-mx-folder-node"); }); try { sessionStorage.setItem("mxTree", JSON.stringify(openIds)); } catch (x) { /* sans stockage */ } return; }
     if (e.target.closest("[data-mx-new-folder]")) { newFolder(); return; }
@@ -606,7 +650,7 @@
   });
 
   // =============================================================== Glisser-déposer : fichiers et dossiers (déplacement), fichiers du bureau (importation)
-  var drag = null, ghost = null, blankImg = null;
+  var drag = null, ghost = null, blankImg = null, reorder = null;
   function dropTargetOf(el) { return el && el.closest ? el.closest("[data-mx-folder], [data-mx-folder-root]") : null; }
   function targetId(t) { return t.hasAttribute("data-mx-folder-root") ? null : Number(t.getAttribute("data-mx-folder")); }
   function targetName(t) { return t.hasAttribute("data-mx-folder-root") ? "Sans dossier" : (folderById(targetId(t)) || {}).name || t.getAttribute("data-name") || "ce dossier"; }
@@ -635,18 +679,37 @@
     setTimeout(function () { if (!drag) return; $$("[data-ml-item].is-selected, .mx-folder.is-selected", rootEl).forEach(function (x) { x.classList.add("is-dragging"); }); el.classList.add("is-dragging"); }, 0);
   });
   function moveGhost(x, y) { if (ghost) { ghost.style.left = x + "px"; ghost.style.top = y + "px"; } }
-  function clearDropMarks() { $$(".is-drop, .is-nodrop", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop"); }); }
+  function clearDropMarks() { reorder = null; $$(".is-drop, .is-nodrop, .is-before, .is-after", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop", "is-before", "is-after"); }); }
+  // Ordre personnalisé : lâcher un dossier sur le BORD gauche/droit d'un dossier du même emplacement le place avant/après (la position change, rien n'est déplacé). Le centre = déplacer DANS ce dossier.
+  function reorderOf(t, e) {
+    if (!drag || drag.kind !== "folder" || !t.classList.contains("mx-folder") || t.hasAttribute("data-mx-folder-root")) return null;
+    var tid = Number(t.getAttribute("data-mx-folder")), tf = folderById(tid); if (!tf || drag.ids.indexOf(tid) >= 0) return null;
+    if (!drag.ids.every(function (id) { var f = folderById(id); return f && (f.parentId || null) === (tf.parentId || null); })) return null;
+    var r = t.getBoundingClientRect(), x = (e.clientX - r.left) / Math.max(1, r.width);
+    if (x < 0.22) return { id: tid, after: false, parent: tf.parentId || null };
+    if (x > 0.78) return { id: tid, after: true, parent: tf.parentId || null };
+    return null;
+  }
+  function applyReorder(d, ro) {
+    var cards = $$("[data-mx-folders] > .mx-folder", rootEl).map(function (el) { return Number(el.getAttribute("data-mx-folder")); });
+    var order = cards.filter(function (id) { return d.ids.indexOf(id) < 0; }), at = order.indexOf(ro.id) + (ro.after ? 1 : 0);
+    order.splice.apply(order, [at, 0].concat(d.ids.filter(function (id) { return cards.indexOf(id) >= 0; })));
+    return K.api("POST", BASE + "/dossiers/ordre", { parent_id: ro.parent, ids: order }).then(function () { toast("Ordre des dossiers enregistré.", "ok"); return refresh(); }, function (er) { toast(errMsg(er), "error"); });
+  }
   function endDrag() { drag = null; if (blankImg) { blankImg.remove(); blankImg = null; } if (ghost) { ghost.remove(); ghost = null; } clearDropMarks(); $$(".is-dragging", rootEl).forEach(function (x) { x.classList.remove("is-dragging"); }); }
   document.addEventListener("dragover", function (e) {
     if (!drag) return;
     moveGhost(e.clientX, e.clientY);
     var t = dropTargetOf(e.target); clearDropMarks();
+    var ro = t ? reorderOf(t, e) : null;
+    if (ro) { reorder = ro; t.classList.add(ro.after ? "is-after" : "is-before"); e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (ghost) { ghost.textContent = "Placer " + (ro.after ? "après" : "avant") + " « " + targetName(t) + " »"; ghost.classList.remove("is-no"); } return; }
     if (t) { var c = canDrop(t); t.classList.add(c.ok ? "is-drop" : "is-nodrop"); if (c.ok) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } else e.dataTransfer.dropEffect = "none"; if (ghost) { ghost.textContent = ghostText(t); ghost.classList.toggle("is-no", !c.ok); } }
     else if (ghost) { ghost.textContent = ghostText(null); ghost.classList.remove("is-no"); }
   });
   document.addEventListener("drop", function (e) {
     if (!drag) return;
     var t = dropTargetOf(e.target); if (!t) { endDrag(); return; }
+    var ro = reorder; if (ro) { e.preventDefault(); var dd = drag; endDrag(); applyReorder(dd, ro); return; }
     var c = canDrop(t); e.preventDefault();
     if (!c.ok) { if (c.why) toast(c.why, "error"); endDrag(); return; }
     var d = drag, to = targetId(t); endDrag();
@@ -781,7 +844,7 @@
     if (!rootEl.isConnected) return;
     var mod = e.metaKey || e.ctrlKey, typing = e.target.closest("input, textarea, select, [contenteditable]");
     if (mod && (e.key === "i" || e.key === "I") && !typing) { e.preventDefault(); openInfo(prefs.info !== "open"); return; }
-    if (mod && (e.key === "b" || e.key === "B") && !typing) { e.preventDefault(); savePrefs({ sidebar: prefs.sidebar === "hidden" ? "open" : "hidden" }); applyPrefs(); return; }
+    if (mod && (e.key === "b" || e.key === "B") && !typing) { e.preventDefault(); savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
     if (typing || document.querySelector("dialog[open]") || (document.getElementById("mx-preview") && !document.getElementById("mx-preview").hidden)) return;
     if (e.key === "Escape") { if (menuEl) return; if (sel.size || selF.size) { clearSelection(); return; } if (prefs.info === "open") { openInfo(false); return; } }
     if (mod && (e.key === "a" || e.key === "A") && e.target.closest("[data-mx-scroll], [data-ml-item]")) { e.preventDefault(); selectAll(); return; }
@@ -855,13 +918,20 @@
     var rt = $("[data-mx-retention]", rootEl); if (rt && cfg.retention !== undefined) rt.value = String(cfg.retention);
     // Rubriques calculées (accueil, doublons, stockage) : montées par media-sections.js
     var section = $("[data-mx-section]", rootEl); if (section && window.MXSections) window.MXSections.mount(section.getAttribute("data-mx-section"), section);
+    var colHost = $("[data-mx-columns]", rootEl); if (colHost) rootEl.setAttribute("data-columns-on", ""); else rootEl.removeAttribute("data-columns-on");
+    if (colHost && window.MXColumns) window.MXColumns.mount(colHost);
     initItems(); setupMore(); fitHeight();
     if (pendingPick) { var all = itemEls(), pick = pendingPick === "first" ? all[0] : all[all.length - 1]; pendingPick = null; if (pick) { selectOnly(Number(pick.getAttribute("data-id"))); pick.scrollIntoView({ block: "nearest" }); } }
     if (prefs.info === "open") renderInfo();
     if (window.MXPreview && window.MXPreview.refreshList) window.MXPreview.refreshList();
   }
   // Rubrique de la barre latérale : bouton de repli (ajouté une fois)
-  (function () { var side = $("[data-mx-side]", rootEl); if (side && !$("[data-mx-side-collapse]", side)) { var b = h("button", { type: "button", class: "mx-iconbtn is-small mx-side-collapse", "data-mx-side-collapse": "", "aria-label": "Réduire ou déployer la barre latérale", title: "Réduire / déployer" }, [iconEl("moveTo")]); b.style.transform = "scaleX(-1)"; side.appendChild(b); } })();
+    rootEl.addEventListener("input", function (e) {
+    var ci = e.target.closest && e.target.closest("[data-mx-theme-color]"); if (ci) { var k = ci.getAttribute("data-mx-theme-color"), v = ci.value; themeSave(function (n) { n.mode = "personnalise"; n.colors[k] = v; }); return; }
+    var ri = e.target.closest && e.target.closest("[data-mx-theme-range]"); if (ri) { var rk = ri.getAttribute("data-mx-theme-range"), rv = Number(ri.value); themeSave(function (n) { n[rk] = rv; }); }
+  });
+  function syncCollapse() { var b = $("[data-mx-side-collapse]", rootEl); if (!b) return; var open = (prefs.sidebar || "open") === "open"; b.setAttribute("aria-expanded", open ? "true" : "false"); b.setAttribute("aria-label", open ? "Replier la barre latérale" : "Déployer la barre latérale"); b.setAttribute("title", (open ? "Replier" : "Déployer") + " la barre latérale (Cmd/Ctrl + B)"); }
+  (function () { var side = $("[data-mx-side]", rootEl); if (side && !$("[data-mx-side-collapse]", side)) { var b = h("button", { type: "button", class: "mx-iconbtn mx-side-collapse", "data-mx-side-collapse": "", "aria-controls": "mx-side" }, [iconEl("panelLeft")]); side.appendChild(b); syncCollapse(); } })();
   window.addEventListener("resize", fitHeight);
   try { var flash = sessionStorage.getItem("mlFlash"); if (flash) { sessionStorage.removeItem("mlFlash"); var fl = JSON.parse(flash); toast(fl.text, fl.type); } } catch (x) { /* ignoré */ }
 

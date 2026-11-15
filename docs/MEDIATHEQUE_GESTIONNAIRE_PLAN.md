@@ -62,3 +62,26 @@ Isolation par site (contextes, routes protégées), dossiers logiques et anti-cy
 - **Performance** : miniatures optimisées à la demande, chargement progressif par pages de 48 et `content-visibility` ; pas de virtualisation complète de la liste (le DOM grandit avec le défilement). Les statistiques de stockage ne mesurent pas le stockage physique du fournisseur ni les versions réduites.
 - **Utilisations** : les contenus analysés pour la suppression sont ceux déjà listés à l'écran (cours, produits et formulaires ne le sont pas, et l'écran le dit).
 - **Partagés** : « Partagés » n'apparaît que pour l'équipe de l'organisation (vue multisite).
+
+## 5. Lot « barre latérale et apparence » (2026-11-15)
+
+### Audit (constats avant correction)
+- Deux boutons de repli coexistaient : l'icône « deux panneaux » à côté du titre (état `hidden` : la barre disparaissait entièrement) et une flèche en bas de la barre (état `rail`). Passer par l'icône du titre masquait la barre sans laisser de zone de réouverture dans la barre elle-même.
+- La barre latérale utilisait un fond gris clair ; aucune couleur n'était réglable ; les préférences existantes (par personne et par site, table `mk_media_prefs`) ne contenaient ni thème ni couleurs.
+- Le renommage d'un dossier (principal ou sous-dossier) fonctionnait déjà par le menu clic droit de l'arbre et des cartes (route `POST …/dossiers/:id`, `folders.renameFolder`) : un test Chrome le prouve désormais pour un dossier principal et un sous-dossier. Aucun dossier utilisateur n'est verrouillé.
+
+### Corrigé
+- **Un seul contrôle** : le bouton de la barre latérale (icône deux panneaux, en haut de la barre) replie en bande d'icônes et déploie. Il reste visible dans les deux états, ne bouge pas hors de l'écran, indique `aria-expanded`, un libellé, un tooltip et se retourne en miroir à l'état replié. Cmd/Ctrl + B fait la même chose.
+- **Plus d'état « masqué »** : un ancien réglage `hidden` est converti en `rail` côté serveur (`sanitizePrefs`) et côté navigateur ; aucun état bloqué possible. Test : 8 replis/déploiements d'affilée, largeurs vérifiées, mémorisation après rechargement.
+- **Icône du titre** : masquée sur ordinateur (classe `mx-side-mobile`) ; elle ne sert plus que de poignée d'ouverture du tiroir sur téléphone (≤ 900 px). Sur téléphone, le bouton de la barre ferme le tiroir.
+
+### Développé
+- **Thème bleu marine** de la barre latérale (variables `--mxs-*`, calées sur la barre principale) : fond, texte, icônes, séparateurs, survol, sélection, compteurs en pastilles, dossiers, étiquettes. Texte clair/sombre choisi automatiquement selon la luminosité du fond choisi.
+- **Panneau Apparence** (icône palette, barre d'outils) : thèmes Clair / Sombre / Personnalisé, 12 sélecteurs de couleur libres (fond barre, fond contenu, texte principal, texte secondaire, icônes, séparateurs, sélection, survol, dossiers, accent, bordures, badges), rayon des bordures (0–20 px), espacement (80–140 %), taille des icônes (14–26 px). Aperçu en direct, enregistrement automatique par personne et par site (`mk_media_prefs.data.theme`), « Annuler les changements » (retour à l'état d'ouverture du panneau) et « Réinitialiser ». Le serveur n'accepte que des couleurs `#rrggbb` et borne les nombres.
+- **Aucune migration** : les préférences sont un JSON déjà existant ; rien n'est supprimé.
+
+### Tests
+`tests/mediatheque-barre-laterale-navigateur.test.js` (9, vrai Chrome) : icône unique, 8 cycles replier/déployer, mémorisation + clavier, conversion de l'ancien état, renommage (dossier principal et sous-dossier), thème par défaut / aperçu / persistance / réinitialisation, valeurs refusées, responsive (820 px et 390 px, tiroir ouvert/fermé 3 fois), aucune erreur de script.
+
+### Reste à faire (de la demande initiale)
+Déplacement par glisser-déposer des sections de la barre latérale, masquage de sections, dossiers intelligents, copie de dossier, tri manuel des dossiers, colonnes réordonnables, recherches enregistrées, import fractionné avec reprise, virtualisation de la liste, historique des opérations (écran), seuils d'alerte de stockage. Fonctions qu'une page web ne peut pas reproduire comme un Finder : accès direct au système de fichiers, glisser vers le bureau, corbeille du système, annulation Cmd+Z à l'échelle du système.
