@@ -80,6 +80,10 @@
 .mx-pop { position: relative; } .mx-pop > summary { list-style: none; cursor: pointer; } .mx-pop > summary::-webkit-details-marker { display: none; }
 .mx-pop-body { position: absolute; z-index: 25; top: calc(100% + 6px); left: 0; width: min(340px, 86vw); display: grid; gap: 10px; padding: 14px; background: var(--mx-bg); border: 1px solid var(--mx-line); border-radius: 12px; box-shadow: 0 14px 36px -14px rgba(11, 42, 64, 0.4); animation: mx-pop var(--mx-dur) var(--mx-ease); }
 .mx-cols .mx-pop-body { left: auto; right: 0; width: 220px; }
+/* Couche supérieure (Popover API) : position fixe dans la fenêtre, calculée par le script ; défilement interne si la fenêtre est basse */
+.mx-pop-body[popover] { position: fixed; inset: auto; margin: 0; right: auto; overflow: auto; overscroll-behavior: contain; color: var(--mx-text); box-sizing: border-box; }
+.mx-pop-body[popover]:not(:popover-open) { display: none; }
+.mx-cols .mx-pop-body[popover] { right: auto; }
 .mx-pop-body label { display: grid; gap: 4px; font-size: 0.84rem; font-weight: 600; } .mx-pop-body label.mx-check-row { display: flex; gap: 8px; align-items: center; font-weight: 500; }
 .mx-pop-title { margin: 4px 0 0; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mx-muted); }
 .mx-pop-actions { display: flex; gap: 8px; flex-wrap: wrap; }

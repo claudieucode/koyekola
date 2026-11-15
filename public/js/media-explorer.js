@@ -1043,6 +1043,31 @@
     var cm = e.target.closest("[data-mx-col-move]"); if (cm) { var ck = cm.getAttribute("data-col"), cols = (prefs.columns || []).slice(), ci = cols.indexOf(ck); if (ci < 0) { toast("Cochez d'abord la colonne pour l'afficher.", "info"); return; } var cj = cm.getAttribute("data-mx-col-move") === "up" ? ci - 1 : ci + 1; if (cj >= 0 && cj < cols.length) { cols.splice(ci, 1); cols.splice(cj, 0, ck); savePrefs({ columns: cols }); applyPrefs(); } return; }
   });
 
+  // Panneaux déroulants (Apparence, Filtres, Colonnes) : affichés dans la « couche supérieure » du navigateur (Popover API) — ils ne sont plus rognés par le
+  // conteneur (overflow / containment) —, positionnés dans la fenêtre, défilables en interne, fermés par Échap, clic extérieur ou le bouton qui les ouvre.
+  (function () {
+    var can = typeof HTMLElement !== "undefined" && "showPopover" in HTMLElement.prototype;
+    function bodyOf(d) { return d.querySelector(":scope > .mx-pop-body"); }
+    function place(d) {
+      var b = bodyOf(d), s = d.querySelector(":scope > summary"); if (!b || !s) return;
+      var r = s.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight, m = 8;
+      b.style.maxHeight = (vh - 2 * m) + "px";
+      if (vw <= 560) { b.style.width = (vw - 2 * m) + "px"; b.style.left = m + "px"; }
+      else { b.style.width = ""; var w = b.offsetWidth; b.style.left = Math.max(m, Math.min(r.left, vw - w - m)) + "px"; }
+      var hgt = b.offsetHeight, below = vh - r.bottom - 6 - m, top;
+      if (hgt <= below) top = r.bottom + 6; else if (hgt <= r.top - 6 - m) top = r.top - 6 - hgt; else top = Math.max(m, vh - hgt - m);
+      b.style.top = top + "px";
+    }
+    function show(d) { var b = bodyOf(d); if (!b) return; if (can) { b.setAttribute("popover", "manual"); try { b.showPopover(); } catch (e) { } } place(d); }
+    function hide(d) { var b = bodyOf(d); if (b && can && b.matches(":popover-open")) { try { b.hidePopover(); } catch (e) { } } }
+    function openOnes() { return $$("details.mx-pop[open]", rootEl); }
+    rootEl.addEventListener("toggle", function (e) { var d = e.target; if (!d.matches || !d.matches("details.mx-pop")) return; if (d.open) { openOnes().forEach(function (o) { if (o !== d) o.removeAttribute("open"); }); show(d); } else hide(d); }, true);
+    document.addEventListener("pointerdown", function (e) { openOnes().forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute("open"); }); }, true);
+    document.addEventListener("keydown", function (e) { if (e.key !== "Escape") return; var o = openOnes(); if (!o.length || document.querySelector(".mk-modal[open], .mx-menu")) return; o.forEach(function (d) { d.removeAttribute("open"); var s = d.querySelector("summary"); if (s) s.focus(); }); }, true);
+    var raf = 0; function again() { if (raf) return; raf = requestAnimationFrame(function () { raf = 0; openOnes().forEach(place); }); }
+    window.addEventListener("resize", again); window.addEventListener("scroll", again, true);
+  })();
+
   // Interface publique pour media-sections.js et media-preview.js
   window.MX = { prefs: function () { return prefs; }, savePrefs: savePrefs, flushPrefs: flushPrefs, askText: askText, quick: { show: function (id) { quickShow(id, true); }, toggle: function () { quickToggle(); }, step: function (d) { quickStep(d); } }, K: K, cfg: function () { return cfg; }, root: rootEl, $: $, $$: $$, h: h, toast: toast, plural: plural, errMsg: errMsg, go: go, refresh: refresh, openDialog: openDialog, confirm: confirmDialog, selectOnly: selectOnly, itemEls: itemEls, dataOf: dataOf, openInfo: openInfo, setStar: setStar, download: download, folderPath: folderPath, folderById: folderById, trashFiles: trashFiles, iconEl: iconEl, spaceBase: spaceBase, base: BASE };
   afterRender(false);

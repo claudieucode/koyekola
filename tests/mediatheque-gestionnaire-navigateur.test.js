@@ -208,4 +208,19 @@ describe("médiathèque : gestionnaire de fichiers dans Chrome", { skip: SKIP },
     await page.click("[data-mx-side-collapse]"); assert.equal(await page.locator("[data-mx]").getAttribute("data-sidebar"), "open"); await page.waitForTimeout(600);
     assert.deepEqual(errors, [], "aucune erreur de script : " + errors.join(" | "));
   });
+  test("panneaux Apparence et Filtres : entièrement visibles dans la fenêtre (grand écran, fenêtre basse, téléphone), défilables, fermés par Échap ou clic extérieur, ouverts pendant un changement de mode", async () => {
+    for (const [w, h] of [[1500, 900], [1280, 600], [1024, 420], [390, 700]]) {
+      await page.setViewportSize({ width: w, height: h }); await open("?section=dossiers");
+      await page.locator(".mx-theme > summary").click(); await page.waitForTimeout(350);
+      const r = await page.evaluate(() => { const b = document.querySelector(".mx-theme > .mx-pop-body"), q = b.getBoundingClientRect(); return { open: b.matches(":popover-open"), t: q.top, l: q.left, r: q.right, b: q.bottom, vw: innerWidth, vh: innerHeight }; });
+      assert.ok(r.open && r.t >= 0 && r.l >= 0 && r.r <= r.vw + 0.5 && r.b <= r.vh + 0.5, `${w}x${h} : panneau dans la fenêtre (${JSON.stringify(r)})`);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 }); await open("?section=dossiers");
+    await page.locator(".mx-theme > summary").click(); await page.waitForTimeout(300);
+    await page.locator("[data-mx-theme-mode=sombre]").click(); await page.waitForTimeout(250);
+    assert.equal(await page.locator(".mx-theme[open]").count(), 1, "reste ouvert après un changement de mode");
+    await page.keyboard.press("Escape"); await page.waitForTimeout(150); assert.equal(await page.locator(".mx-theme[open]").count(), 0, "Échap ferme");
+    await page.locator(".mx-theme > summary").click(); await page.waitForTimeout(250); await page.mouse.click(600, 500); await page.waitForTimeout(150);
+    assert.equal(await page.locator(".mx-theme[open]").count(), 0, "clic extérieur ferme");
+  });
 });
