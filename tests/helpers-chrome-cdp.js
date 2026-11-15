@@ -62,6 +62,13 @@ async function launch() {
       // Émulation d'une préférence du visiteur, ex. [{ name: "prefers-reduced-motion", value: "reduce" }]
       async emulateMedia(features) { await cmd("Emulation.setEmulatedMedia", { features }); },
       async mouseMove(x, y) { await cmd("Input.dispatchMouseEvent", { type: "mouseMoved", x, y }); },
+      // Glisser réel (souris) : appui en (x1, y1), déplacement progressif, relâchement en (x2, y2)
+      async mouseDrag(x1, y1, x2, y2, steps = 8) {
+        await cmd("Input.dispatchMouseEvent", { type: "mouseMoved", x: x1, y: y1 });
+        await cmd("Input.dispatchMouseEvent", { type: "mousePressed", x: x1, y: y1, button: "left", buttons: 1, clickCount: 1 });
+        for (let i = 1; i <= steps; i++) await cmd("Input.dispatchMouseEvent", { type: "mouseMoved", x: x1 + ((x2 - x1) * i) / steps, y: y1 + ((y2 - y1) * i) / steps, button: "left", buttons: 1 });
+        await cmd("Input.dispatchMouseEvent", { type: "mouseReleased", x: x2, y: y2, button: "left", buttons: 0, clickCount: 1 });
+      },
       async key(key, mods = 0) {
         const code = key.length === 1 ? "Key" + key.toUpperCase() : key;
         await cmd("Input.dispatchKeyEvent", { type: "keyDown", key, code, modifiers: mods, windowsVirtualKeyCode: key.length === 1 ? key.toUpperCase().charCodeAt(0) : 0 });

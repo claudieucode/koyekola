@@ -7718,6 +7718,7 @@ function selectField(label, value, options, onChange, opts) {
     main.classList.toggle("is-right-hidden", panels.rightHidden);
     $("[data-pb-right]").style.setProperty("--pb-layers-h", panels.layers + "%");
     if (!live) store.set("panels", panels);
+    if (window.pbPanels && window.pbPanels.sync) window.pbPanels.sync(); // le gestionnaire de panneaux suit tout changement (masquer, afficher, largeur)
     queueZoom();
   }
   function togglePanel(side) { panels[side + "Hidden"] = !panels[side + "Hidden"]; applyPanels(); renderTools(); if (!panels[side + "Hidden"] && window.KolMotion) window.KolMotion.appear($(side === "left" ? "[data-pb-left]" : "[data-pb-right]"), "panel-" + side); if (pageSettingsStale) refreshPageSettings(); }
@@ -9398,6 +9399,12 @@ function selectField(label, value, options, onChange, opts) {
       { label: aids.guidesLocked ? "Guides : déverrouiller" : "Guides : verrouiller", run: function () { setAid("guidesLocked", !aids.guidesLocked); } },
       { label: "Guides : tout supprimer (cet écran)", run: clearGuides, off: !(guidesFor().h.length || guidesFor().v.length) }, { label: "Contours : afficher / masquer", run: function () { setAid("outlines", !aids.outlines); } }, { label: "Règles : afficher / masquer", run: function () { setAid("rulers", !aids.rulers); } },
       { label: "Panneau des éléments : afficher / masquer", run: function () { togglePanel("left"); } },
+      { label: "Panneau de droite : afficher / masquer", run: function () { if (window.pbPanels) window.pbPanels.toggle("right"); } },
+      { label: "Panneaux : conception étendue (tout masquer) / retour", run: function () { if (window.pbPanels) window.pbPanels.extended(); } },
+      { label: "Panneaux : espace de travail Standard", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("standard"); } },
+      { label: "Panneaux : espace de travail Conception", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("conception"); } },
+      { label: "Panneaux : espace de travail Structure", run: function () { if (window.pbPanels) window.pbPanels.applyWorkspace("structure"); } },
+      { label: "Panneaux : rétablir la disposition par défaut", run: function () { if (window.pbPanels) window.pbPanels.reset(); } },
       { label: "Vider la page : repartir d'un canevas vide (annulable)", run: function () { nextLabel = "Page vidée"; change(function () { if (!content.sections.length) return false; content.sections = []; selection = []; }); }, off: !canWrite || !content.sections.length },
       { label: "Ajouter une structure (Flexbox ou Grille)", run: function () { openStructurePicker(insertionPoint({ type: "container" })); }, off: !canWrite },
       { label: dock.mode === "floating" ? "Structure : rattacher le panneau" : "Structure : détacher le panneau", run: function () { setDockMode(dock.mode === "floating" ? "docked" : "floating"); } },
@@ -9842,6 +9849,14 @@ function selectField(label, value, options, onChange, opts) {
   applyZoom();
   renderCanvas();
   setMode(mode);
+  // Pont vers le gestionnaire de panneaux (page-builder-panels.js) : mêmes objets d'état que l'éditeur (aucune copie), jamais le document
+  window.pbPanelsBridge = {
+    panels: panels, dock: dock, userId: boot.userId || 0, siteId: PAGE.siteId || 0,
+    applyPanels: function () { applyPanels(); }, applyLayers: function () { applyLayersPanel(); }, applyDock: function () { applyDock(); },
+    renderTools: function () { renderTools(); }, queueZoom: function () { queueZoom(); }, saveDock: function () { store.set("layers-dock", dock); },
+    openTab: function (id) { var t = document.getElementById(id); if (t) openTab(t); }, toast: toast
+  };
+  if (window.pbPanels) window.pbPanels.start();
   // Pont vers le gestionnaire de menu (page-builder-menu.js) : mêmes fonctions que l'inspecteur, donc même document et même historique
   window.pbNav = { h: h, walk: function (fn) { walk(fn); }, byId: byId, topOf: topOf, sectionNumber: function (top) { return top ? sectionIndex(top) + 1 : 0; }, change: change, select: function (id) { select(id); },
     selection: function () { return selection.slice(); }, toast: toast, canWrite: canWrite, links: boot.links, addElement: function (type) { addElement(type); }, subscribe: function (f) { navListeners.push(f); }, open: function () {} };
