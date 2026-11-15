@@ -36,6 +36,29 @@
   }
   document.addEventListener("click", function (e) { var b = e.target.closest("[data-mx-open-media]"); if (!b || !MX.root.contains(b)) return; var id = Number(b.getAttribute("data-mx-open-media")); K.detail(id).then(function (d) { if (window.MXPreview) window.MXPreview.open([d.media], 0); }); });
 
+
+  // ---------------------------------------------------------------- Historique des opérations (lecture seule : le journal ne permet pas d'annuler)
+  function historique(el) {
+    var my = ++seq; el.textContent = "";
+    var action = "", list = h("ul", { class: "mx-hist", "aria-live": "polite" }), more = h("button", { type: "button", class: "btn btn-outline btn-sm", text: "Charger la suite", hidden: "" }), note = h("p", { class: "mx-empty-info", text: "Ce journal garde la trace des opérations. Rien n'est annulé d'ici : pour revenir en arrière, utilisez la corbeille (restauration) ou déplacez de nouveau les éléments." });
+    var sel = h("select", { "aria-label": "Filtrer par type d'opération", onchange: function () { action = sel.value; list.textContent = ""; load(null); } }, [h("option", { value: "", text: "Toutes les opérations" })]);
+    el.appendChild(h("div", { class: "mx-inline" }, [h("label", { class: "sr-only", for: "mx-hist-f", text: "Type d'opération" }), sel])); sel.id = "mx-hist-f";
+    el.appendChild(list); el.appendChild(h("div", { class: "mx-pager" }, more)); el.appendChild(note);
+    var when = function (at) { var d = new Date(String(at).replace(" ", "T") + "Z"); return isNaN(d) ? at : d.toLocaleString("fr-FR", { dateStyle: "medium", timeStyle: "short" }); };
+    var filled = false, nextId = null;
+    function load(before) {
+      K.api("GET", BASE + "/historique.json?limite=40" + (before ? "&avant=" + before : "") + (action ? "&action=" + encodeURIComponent(action) : "")).then(function (r) {
+        if (my !== seq) return;
+        if (!filled) { r.actions.forEach(function (a) { sel.appendChild(h("option", { value: a.key, text: a.label })); }); filled = true; }
+        if (!r.items.length && !before) list.appendChild(h("li", { class: "mx-empty-info", text: "Aucune opération enregistrée pour le moment." }));
+        r.items.forEach(function (i) { list.appendChild(h("li", { class: "mx-hist-row" }, [h("span", { class: "mx-hist-what" }, [h("strong", { text: i.label }), i.target ? " — " + i.target : "", i.count > 1 ? " (" + i.count + " éléments)" : ""]), h("span", { class: "mx-hist-meta", text: i.user + " · " + when(i.at) })])); });
+        nextId = r.next; more.hidden = !nextId;
+      }, function (e) { list.textContent = ""; list.appendChild(h("li", { text: MX.errMsg(e) })); });
+    }
+    more.addEventListener("click", function () { if (nextId) load(nextId); });
+    load(null);
+  }
+
   // ---------------------------------------------------------------- Stockage
   function stockage(el) {
     var my = ++seq; el.textContent = "";
@@ -44,6 +67,13 @@
       var saved = Math.max(0, s.bytes - s.uniqueBytes);
       el.appendChild(h("div", { class: "mx-cards" }, [card(String(s.files), s.files > 1 ? "fichiers" : "fichier"), card(String(s.folders), s.folders > 1 ? "dossiers" : "dossier"), card(fmt(s.bytes), "espace logique utilisé"), card(fmt(saved), "récupérable sans les doublons"), card(fmt(s.trash.bytes), "dans la corbeille (" + s.trash.files + ")")]));
       el.appendChild(h("p", { class: "mx-empty-info", text: s.note }));
+      var al = s.alerts || {};
+      if (al.level === "crit" || al.level === "warn") el.appendChild(h("p", { class: "mx-banner is-" + al.level, role: "alert", text: (al.level === "crit" ? "Seuil critique dépassé : " : "Seuil d'avertissement dépassé : ") + fmt(s.bytes) + " utilisés (" + (al.level === "crit" ? al.critMb : al.warnMb) + " Mo fixés)." }));
+      if (al.editable && MX.cfg().canWrite) {
+        var w = h("input", { type: "number", min: "0", inputmode: "numeric", id: "mx-warn", value: al.warnMb || "", placeholder: "désactivé", style: "width:120px" }), c = h("input", { type: "number", min: "0", inputmode: "numeric", id: "mx-crit", value: al.critMb || "", placeholder: "désactivé", style: "width:120px" });
+        el.appendChild(h("details", { class: "mx-alerts" }, [h("summary", { text: "Alertes de stockage" }), h("p", { class: "mx-theme-note", text: "Kolakisa ne connaît pas la capacité de votre hébergement : fixez vous-même vos seuils (en Mo, comptés sur la taille des fichiers enregistrés). 0 ou vide = désactivé." }),
+          h("form", { class: "mx-inline", onsubmit: function (ev) { ev.preventDefault(); K.api("POST", BASE + "/stockage/alertes", { warn_mb: w.value, crit_mb: c.value }).then(function () { MX.toast("Seuils enregistrés.", "ok"); stockage(el); MX.refresh(); }, function (er) { MX.toast(MX.errMsg(er), "error"); }); } }, [h("label", { for: "mx-warn", text: "Avertir à partir de (Mo) " }), w, h("label", { for: "mx-crit", text: " Critique à partir de (Mo) " }), c, h("button", { type: "submit", class: "btn btn-primary btn-sm", text: "Enregistrer" })])]));
+      }
       // Répartition par type
       var total = Math.max(1, s.bytes);
       el.appendChild(h("h2", { class: "mx-sec-title", text: "Répartition par type" }));
@@ -126,6 +156,6 @@
     return box;
   }
 
-  window.MXSections = { mount: function (name, el) { if (name === "accueil") accueil(el); else if (name === "stockage") stockage(el); else if (name === "doublons") doublons(el); } };
+  window.MXSections = { mount: function (name, el) { if (name === "accueil") accueil(el); else if (name === "stockage") stockage(el); else if (name === "doublons") doublons(el); else if (name === "historique") historique(el); } };
   var first = document.querySelector("[data-mx-section]"); if (first) window.MXSections.mount(first.getAttribute("data-mx-section"), first);
 })();

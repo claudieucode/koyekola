@@ -107,7 +107,7 @@
   var themeSnapshot = null;
   function applyPrefs() {
     if (prefs.sidebar === "hidden") prefs.sidebar = "rail";
-    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); syncCollapse(); applyTheme(); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
+    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); syncCollapse(); applyTheme(); applySections(); applyColumnOrder(); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
     rootEl.style.setProperty("--mx-size", (prefs.size || 160) + "px"); rootEl.style.setProperty("--mx-info-w", (prefs.infoWidth || 340) + "px");
     var cols = prefs.columns || [];
     rootEl.className = rootEl.className.replace(/\bhas-c-\w+/g, "").replace(/\s+/g, " ").trim();
@@ -406,6 +406,8 @@
     if (w) {
       if (one) out.push({ label: "Renommer", icon: "edit", run: function () { renameFolder(id); } }, { label: "Propriétés et couleur…", icon: "info", run: function () { folderProps(id); } });
       out.push({ label: "Déplacer vers…", icon: "moveTo", run: function () { moveFolders(ids); } });
+      if (one) out.push({ label: "Monter dans la liste", icon: "moveTo", run: function () { moveFolderOrder(id, "up"); } }, { label: "Descendre dans la liste", icon: "moveTo", run: function () { moveFolderOrder(id, "down"); } });
+      if (one && cfg.canUpload) out.push({ label: "Copier le dossier (avec son contenu)", icon: "copy", run: function () { copyFolder(id); } });
     }
     if (one) out.push({ label: "Copier le chemin", icon: "copy", run: function () { copyText(folderPath(id), "Chemin copié."); } });
     if (w && one) out.push("-", { label: "Supprimer en gardant les fichiers", icon: "folder", run: function () { dissolveFolder(id); } });
@@ -432,6 +434,7 @@
   rootEl.addEventListener("contextmenu", function (e) {
     var item = e.target.closest("[data-ml-item]"), fo = e.target.closest(".mx-folder[data-mx-folder], .mx-tree-row[data-mx-folder]");
     if (e.target.closest("input, textarea, select, .mx-info, .mx-import")) return;
+    var smartEl = e.target.closest("[data-mx-smart]"); if (smartEl) { e.preventDefault(); openMenu(e.clientX, e.clientY, smartEntries(smartEl), "Actions de la vue"); return; }
     var col = e.target.closest("[data-mx-collection]"), tg = e.target.closest("[data-mx-tag]");
     if (col || tg) { e.preventDefault(); var el = col || tg; openMenu(e.clientX, e.clientY, labelEntries(col ? "collection" : "tag", Number(el.getAttribute(col ? "data-mx-collection" : "data-mx-tag")), el.getAttribute("data-name"), el.getAttribute("href")), col ? "Actions de la collection" : "Actions du tag"); return; }
     e.preventDefault();
@@ -853,6 +856,111 @@
   (function () { var side = $("[data-mx-side]", rootEl); if (side && !$("[data-mx-side-collapse]", side)) { var b = h("button", { type: "button", class: "mx-iconbtn mx-side-collapse", "data-mx-side-collapse": "", "aria-controls": "mx-side" }, [iconEl("panelLeft")]); side.appendChild(b); syncCollapse(); } })();
   window.addEventListener("resize", fitHeight);
   try { var flash = sessionStorage.getItem("mlFlash"); if (flash) { sessionStorage.removeItem("mlFlash"); var fl = JSON.parse(flash); toast(fl.text, fl.type); } } catch (x) { /* ignoré */ }
+
+
+  // =============================================================== Lot 2 : sections de la barre latérale, vues enregistrées, ordre et copie des dossiers, colonnes
+  var SEC_LABELS = { bibliotheque: "Bibliothèque", types: "Types", dossiers: "Mes dossiers", favoris: "Dossiers favoris", smart: "Dossiers intelligents", collections: "Collections", tags: "Tags", portee: "Médiathèque affichée", organisation: "Organisation" };
+  var SEC_DEFAULT = ["bibliotheque", "types", "dossiers", "favoris", "smart", "collections", "tags", "portee", "organisation"];
+  function secPrefs() { var s = prefs.sections || {}, order = (s.order && s.order.length ? s.order : SEC_DEFAULT).filter(function (k) { return SEC_LABELS[k]; }); SEC_DEFAULT.forEach(function (k) { if (order.indexOf(k) < 0) order.push(k); }); return { order: order, hidden: (s.hidden || []).filter(function (k) { return k !== "organisation"; }) }; }
+  function saveSections(next) { savePrefs({ sections: next }); applySections(); }
+  function applySections() {
+    var sp = secPrefs();
+    $$("[data-mx-sec]", rootEl).forEach(function (el) {
+      var k = el.getAttribute("data-mx-sec"); el.style.order = String(sp.order.indexOf(k) + 1); el.hidden = sp.hidden.indexOf(k) >= 0;
+      var t = $(":scope > .mx-nav-title, :scope > .mx-nav-head > .mx-nav-title", el); if (t && !t.hasAttribute("data-mx-sec-drag")) { t.setAttribute("data-mx-sec-drag", k); t.setAttribute("draggable", "true"); t.setAttribute("title", "Glisser pour déplacer cette section"); }
+    });
+    syncSectionsUi();
+  }
+  function syncSectionsUi() {
+    var box = $("[data-mx-secs]", rootEl); if (!box) return;
+    var sp = secPrefs(); box.textContent = "";
+    sp.order.forEach(function (k, i) {
+      var vis = h("input", { type: "checkbox", "data-mx-sec-vis": k, disabled: k === "organisation", "aria-label": "Afficher la section " + SEC_LABELS[k] }); vis.checked = sp.hidden.indexOf(k) < 0;
+      box.appendChild(h("li", { class: "mx-secrow" }, [h("label", { class: "mx-check-row" }, [vis, " " + SEC_LABELS[k]]), h("span", { class: "mx-colmove" }, [
+        h("button", { type: "button", class: "mx-iconbtn is-small", "data-mx-sec-move": "up", "data-sec": k, disabled: i === 0, "aria-label": "Monter « " + SEC_LABELS[k] + " »", title: "Monter", text: "↑" }),
+        h("button", { type: "button", class: "mx-iconbtn is-small", "data-mx-sec-move": "down", "data-sec": k, disabled: i === sp.order.length - 1, "aria-label": "Descendre « " + SEC_LABELS[k] + " »", title: "Descendre", text: "↓" })])]));
+    });
+  }
+  // glisser-déposer d'un titre de section (la sélection de fichiers utilise d'autres types de données : aucune interférence)
+  var secDrag = null;
+  rootEl.addEventListener("dragstart", function (e) {
+    var t = e.target.closest && e.target.closest("[data-mx-sec-drag]"); if (!t) return;
+    secDrag = t.getAttribute("data-mx-sec-drag"); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("application/x-mx-section", secDrag);
+    var el = t.closest("[data-mx-sec]"); if (el) setTimeout(function () { el.classList.add("is-sec-dragging"); }, 0);
+  });
+  function secMarks() { $$(".is-sec-before, .is-sec-after, .is-sec-dragging", rootEl).forEach(function (x) { x.classList.remove("is-sec-before", "is-sec-after", "is-sec-dragging"); }); }
+  rootEl.addEventListener("dragover", function (e) {
+    if (!secDrag) return; var target = e.target.closest("[data-mx-sec]"); if (!target || target.getAttribute("data-mx-sec") === secDrag) return;
+    e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = "move";
+    var r = target.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2;
+    $$(".is-sec-before, .is-sec-after", rootEl).forEach(function (x) { x.classList.remove("is-sec-before", "is-sec-after"); }); target.classList.add(after ? "is-sec-after" : "is-sec-before");
+  });
+  rootEl.addEventListener("drop", function (e) {
+    if (!secDrag) return; var target = e.target.closest("[data-mx-sec]"); var from = secDrag; secDrag = null;
+    if (!target || target.getAttribute("data-mx-sec") === from) { secMarks(); return; }
+    e.preventDefault(); e.stopPropagation();
+    var to = target.getAttribute("data-mx-sec"), r = target.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2, sp = secPrefs();
+    sp.order = sp.order.filter(function (k) { return k !== from; }); var at = sp.order.indexOf(to) + (after ? 1 : 0); sp.order.splice(at, 0, from);
+    secMarks(); saveSections(sp);
+  });
+  rootEl.addEventListener("dragend", function () { if (secDrag) { secDrag = null; secMarks(); } });
+  rootEl.addEventListener("change", function (e) {
+    var v = e.target.closest && e.target.closest("[data-mx-sec-vis]"); if (!v) return;
+    var k = v.getAttribute("data-mx-sec-vis"), sp = secPrefs(); sp.hidden = sp.hidden.filter(function (x) { return x !== k; }); if (!v.checked) sp.hidden.push(k); saveSections(sp);
+  });
+  // colonnes réordonnables (vue Liste)
+  var COL_KEYS = ["type", "size", "dims", "folder", "modified", "created", "author", "tags"];
+  function applyColumnOrder() {
+    var cols = (prefs.columns || []).filter(function (k) { return COL_KEYS.indexOf(k) >= 0; }), rest = COL_KEYS.filter(function (k) { return cols.indexOf(k) < 0; });
+    cols.concat(rest).forEach(function (k, i) { rootEl.style.setProperty("--o-" + k, String(i + 1)); });
+    var box = $("[data-mx-colrows]", rootEl); if (box) { cols.concat(rest).forEach(function (k) { var row = $('[data-mx-colrow="' + k + '"]', box); if (row) box.appendChild(row); }); }
+  }
+  // vues enregistrées : dossiers intelligents (partagés) et recherches (personnelles)
+  var CRIT_LABELS = { q: "Recherche", type: "Type", ext: "Extension", mois: "Mois", periode: "Période", tmin: "Taille min. (Ko)", tmax: "Taille max. (Ko)", lmin: "Largeur min.", lmax: "Largeur max.", doublons: "Doublons", volumineux: "Volumineux", tag: "Tag", collection: "Collection", favoris: "Favoris", utilise: "Récemment utilisés", recents: "Récemment ajoutés", dossier: "Dossier" };
+  function currentCriteria() {
+    var out = {}, u = new URL(location.href);
+    Object.keys(CRIT_LABELS).forEach(function (k) { var v = u.searchParams.get(k); if (v) out[k] = v; });
+    var form = $("[data-ml-filters]", rootEl);
+    if (form) { Object.keys(CRIT_LABELS).forEach(function (k) { var f = form.elements[k]; if (!f || !f.name) return; if (f.type === "checkbox") { if (f.checked) out[k] = "1"; else delete out[k]; } else if (f.value) out[k] = f.value; else if (f.type !== "hidden") delete out[k]; }); }
+    return out;
+  }
+  function critSummary(c) { return Object.keys(c).map(function (k) { return (CRIT_LABELS[k] || k) + (c[k] === "1" ? "" : " : " + c[k]); }).join(" · "); }
+  function saveView() {
+    var crit = currentCriteria();
+    if (!Object.keys(crit).length) { toast("Réglez d'abord au moins un filtre (recherche, type, taille…) pour l'enregistrer.", "info"); return; }
+    var name = h("input", { type: "text", id: "mx-view-name", maxlength: "60", autocomplete: "off", placeholder: "Ex. : Photos de la semaine" });
+    var kindSmart = h("input", { type: "radio", name: "mx-view-kind", value: "smart", checked: cfg.canWrite, disabled: !cfg.canWrite }), kindSearch = h("input", { type: "radio", name: "mx-view-kind", value: "search", checked: !cfg.canWrite });
+    var body = h("div", {}, [h("div", { class: "field-group" }, [h("label", { for: "mx-view-name", text: "Nom" }), name]),
+      h("fieldset", { class: "field-group" }, [h("legend", { text: "Type de vue" }), h("label", { class: "mx-check-row" }, [kindSmart, " Dossier intelligent (partagé avec l'équipe du site)"]), h("label", { class: "mx-check-row" }, [kindSearch, " Ma recherche (visible de moi seul)"])]),
+      h("p", { class: "field-hint", text: "Critères : " + critSummary(crit) + ". La vue se met à jour toute seule : aucun fichier n'est déplacé." })]);
+    return openDialog("Enregistrer les filtres", body, { ok: "Enregistrer", collect: function () { var v = name.value.trim(); if (!v) { name.focus(); return undefined; } return { name: v, kind: kindSmart.checked ? "smart" : "search" }; } }).then(function (v) {
+      if (!v) return; return K.api("POST", BASE + "/vues", { name: v.name, kind: v.kind, criteria: crit }).then(function () { toast("Vue enregistrée.", "ok"); refresh(); }, function (er) { toast(errMsg(er), "error"); });
+    });
+  }
+  function smartEntries(el) {
+    var id = Number(el.getAttribute("data-mx-smart")), kind = el.getAttribute("data-kind"), name = el.getAttribute("data-name"), href = el.getAttribute("href"), can = kind === "search" || cfg.canWrite;
+    var out = [{ label: "Ouvrir", icon: "folder", run: function () { go(href); } }];
+    if (!can) return out;
+    out.push({ label: "Mettre à jour avec les filtres actuels", icon: "refresh", run: function () { var crit = currentCriteria(); if (!Object.keys(crit).length) { toast("Aucun filtre actif : réglez-les d'abord.", "info"); return; } K.api("POST", BASE + "/vues/" + id, { criteria: crit }).then(function () { toast("Critères mis à jour.", "ok"); refresh(); }, function (er) { toast(errMsg(er), "error"); }); } });
+    out.push({ label: "Renommer", icon: "edit", run: function () { askText("Renommer la vue", { value: name, max: 60 }).then(function (v) { if (!v || v === name) return; K.api("POST", BASE + "/vues/" + id, { name: v }).then(function () { toast("Vue renommée.", "ok"); refresh(); }, function (er) { toast(errMsg(er), "error"); }); }); } });
+    out.push({ label: "Supprimer", icon: "trash", danger: true, run: function () { confirmDialog("Supprimer la vue « " + name + " » ?", "Seule la vue disparaît : aucun fichier n'est supprimé ni déplacé.", "Supprimer", true).then(function (ok) { if (ok) K.api("POST", BASE + "/vues/" + id + "/supprimer", {}).then(function () { toast("Vue supprimée.", "ok"); refresh(); }, function (er) { toast(errMsg(er), "error"); }); }); } });
+    return out;
+  }
+  // ordre et copie des dossiers
+  function moveFolderOrder(id, dir) { return K.api("POST", BASE + "/dossiers/" + id + "/ordre", { dir: dir }).then(function (r) { if (!r.moved) toast(dir === "up" ? "Ce dossier est déjà le premier." : "Ce dossier est déjà le dernier.", "info"); else refresh(); }, function (er) { toast(errMsg(er), "error"); }); }
+  function copyFolder(id) {
+    var f = folderById(id); toast("Copie en cours…", "info");
+    return K.api("POST", BASE + "/dossiers/" + id + "/copier", {}).then(function (r) {
+      toast("Dossier copié : " + plural(r.copiedFiles, "fichier", "fichiers") + (r.subfolders ? " et " + plural(r.subfolders, "sous-dossier", "sous-dossiers") : "") + (r.failures && r.failures.length ? " (" + r.failures.length + " non copiés)" : "") + ".", r.failures && r.failures.length ? "info" : "ok"); refresh();
+    }, function (er) { toast(errMsg(er), "error"); });
+  }
+  // clics
+  rootEl.addEventListener("click", function (e) {
+    if (e.target.closest("[data-mx-save-view]")) { e.preventDefault(); saveView(); return; }
+    var mv = e.target.closest("[data-mx-sec-move]"); if (mv) { var k = mv.getAttribute("data-sec"), sp = secPrefs(), i = sp.order.indexOf(k), j = mv.getAttribute("data-mx-sec-move") === "up" ? i - 1 : i + 1; if (j >= 0 && j < sp.order.length) { sp.order.splice(i, 1); sp.order.splice(j, 0, k); saveSections(sp); } return; }
+    if (e.target.closest("[data-mx-secs-reset]")) { saveSections({ order: SEC_DEFAULT.slice(), hidden: [] }); return; }
+    var cm = e.target.closest("[data-mx-col-move]"); if (cm) { var ck = cm.getAttribute("data-col"), cols = (prefs.columns || []).slice(), ci = cols.indexOf(ck); if (ci < 0) { toast("Cochez d'abord la colonne pour l'afficher.", "info"); return; } var cj = cm.getAttribute("data-mx-col-move") === "up" ? ci - 1 : ci + 1; if (cj >= 0 && cj < cols.length) { cols.splice(ci, 1); cols.splice(cj, 0, ck); savePrefs({ columns: cols }); applyPrefs(); } return; }
+  });
 
   // Interface publique pour media-sections.js et media-preview.js
   window.MX = { K: K, cfg: function () { return cfg; }, root: rootEl, $: $, $$: $$, h: h, toast: toast, plural: plural, errMsg: errMsg, go: go, refresh: refresh, openDialog: openDialog, confirm: confirmDialog, selectOnly: selectOnly, itemEls: itemEls, dataOf: dataOf, openInfo: openInfo, setStar: setStar, download: download, folderPath: folderPath, folderById: folderById, trashFiles: trashFiles, iconEl: iconEl, spaceBase: spaceBase, base: BASE };

@@ -15,7 +15,7 @@
 %>
 
 
-<% if (section === "accueil" || section === "stockage" || section === "doublons") { %>
+<% if (section === "accueil" || section === "stockage" || section === "doublons" || section === "historique") { %>
   <div class="mx-section" data-mx-section="<%= section %>" aria-live="polite"><p class="mx-loading" role="status">Chargement…</p></div>
 <% } else if (f.trashed) { %>
   <div class="mx-trash" data-mx-trash>

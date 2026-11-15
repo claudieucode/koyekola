@@ -1,7 +1,7 @@
 // Gestionnaire de fichiers de la médiathèque (lot 1) : favoris, tags, collections, préférences, dossiers enrichis, corbeille de dossiers, conservation de la corbeille,
 // stockage, doublons, copie. S'appuie UNIQUEMENT sur le service existant (index.js, folders.js) : même base, mêmes contextes de site, mêmes droits, aucun second stockage.
 // Tout ce qui est propre à une médiathèque (tags, collections, dossiers) exige un site choisi (comme les dossiers) ; les favoris et préférences sont propres à la PERSONNE.
-const { checkCtx, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, audit: sharedAudit, MarketingError } = require("../audience/shared");
 const media = require("./index");
 const folders = require("./folders");
 const variants = require("./variants");
@@ -14,7 +14,9 @@ const bad = (message) => new MarketingError("invalid_field", message);
 const missing = (message) => new MarketingError("not_found", message);
 
 // ---------- Médiathèque courante ----------
-const scope = (ctx) => folders.scopeOf(ctx); // { siteId } ou null (vue d'ensemble de l'équipe : pas de dossiers, tags ni collections)
+const scope = (ctx) => folders.scopeOf(ctx);
+// Les événements du journal sont rattachés au site de la médiathèque, même quand l'action vient de l'équipe (sans site limité)
+const audit = (ctx, ...args) => { const s = folders.scopeOf(ctx); return sharedAudit(s && Number.isInteger(s.siteId) && !Number.isInteger(ctx.siteScope) ? { ...ctx, siteScope: s.siteId } : ctx, ...args); }; // { siteId } ou null (vue d'ensemble de l'équipe : pas de dossiers, tags ni collections)
 function needScope(ctx) {
   checkCtx(ctx);
   const s = scope(ctx);
@@ -624,7 +626,8 @@ function history(ctx, { limit = 50, before, action } = {}) {
   const s = folders.scopeOf(ctx);
   const lim = Math.min(Math.max(Math.round(Number(limit)) || 50, 1), 200);
   const where = ["l.organization_id = ?", "l.action LIKE 'media.%'"], args = [ctx.organizationId];
-  if (s) { if (s.siteId === null) where.push("l.site_id IS NULL"); else { where.push("l.site_id = ?"); args.push(s.siteId); } }
+  const siteOf = `COALESCE(l.site_id, CASE l.resource_type WHEN 'media_folder' THEN (SELECT f.site_id FROM mk_media_folders f WHERE f.id = CAST(l.resource_id AS INTEGER)) WHEN 'media' THEN (SELECT m.site_id FROM mk_media m WHERE m.id = CAST(l.resource_id AS INTEGER)) WHEN 'media_smart' THEN (SELECT v.site_id FROM mk_media_smart v WHERE v.id = CAST(l.resource_id AS INTEGER)) END)`;
+  if (s) { if (s.siteId === null) where.push(`${siteOf} IS NULL`); else { where.push(`${siteOf} = ?`); args.push(s.siteId); } }
   if (Number.isInteger(Number(before)) && Number(before) > 0) { where.push("l.id < ?"); args.push(Number(before)); }
   if (action && Object.hasOwn(ACTIONS, action)) { where.push("l.action = ?"); args.push(action); }
   const rows = ctx.db.prepare(`SELECT l.id, l.action, l.resource_type AS type, l.resource_id AS rid, l.metadata, l.created_at AS at, l.user_id AS uid, u.username FROM mk_audit_logs l LEFT JOIN users u ON u.id = l.user_id WHERE ${where.join(" AND ")} ORDER BY l.id DESC LIMIT ?`).all(...args, lim + 1);
