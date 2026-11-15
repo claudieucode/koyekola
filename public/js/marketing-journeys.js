@@ -31,3 +31,14 @@
   }
   form.querySelectorAll("select").forEach(function (select) { select.addEventListener("change", submit); });
 })();
+
+// Fiche d'un parcours : bascule ordinateur / mobile de l'aperçu réel des e-mails (largeur du cadre seulement, aucun rechargement)
+(function () {
+  "use strict";
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-jp-view]"); if (!b) return;
+    var mobile = b.getAttribute("data-jp-view") === "mobile";
+    document.querySelectorAll("[data-jp-view]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    document.querySelectorAll("[data-jp-stage]").forEach(function (s) { s.classList.toggle("is-mobile", mobile); });
+  });
+})();

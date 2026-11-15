@@ -74,7 +74,8 @@
               </dl>
               <% if (j.emails.length) { %>
                 <h3 class="mk-journey-sub">E-mails créés (modifiables)</h3>
-                <ol class="mk-journey-emails"><% j.emails.forEach((e) => { %><li><strong><%= e.name %></strong> — objet : « <%= e.subject %> »</li><% }) %></ol>
+                <div class="mk-jp-bar" role="group" aria-label="Rendu de l'e-mail"><button type="button" class="btn btn-outline btn-sm" data-jp-view="desktop" aria-pressed="true">Ordinateur</button><button type="button" class="btn btn-outline btn-sm" data-jp-view="mobile" aria-pressed="false">Mobile</button></div>
+                <ol class="mk-journey-emails mk-jp-list"><% j.emails.forEach((e, i) => { %><li><p><strong><%= e.name %></strong> — objet : « <%= e.subject %> »</p><div class="mk-jp-stage" data-jp-stage><iframe class="mk-jp-full" src="/marketing/automatisations/parcours/<%= j.key %>/email/<%= i %>" loading="lazy" sandbox title="Aperçu de l'e-mail « <%= e.name %> »"></iframe></div></li><% }) %></ol>
               <% } %>
               <% if (j.sms.length) { %>
                 <h3 class="mk-journey-sub">SMS du parcours (modifiables dans le scénario)</h3>
@@ -128,4 +129,5 @@
         </section>
       </div>
     <% } %>
+    <script src="<%= asset('/js/marketing-journeys.js') %>" defer></script>
 <%- include("partials/bottom") %>

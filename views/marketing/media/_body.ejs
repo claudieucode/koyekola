@@ -1,0 +1,76 @@
+<%#
+  Contenu du gestionnaire : dossiers, fichiers (grille, liste, détails, grandes icônes, compact), corbeille, rubriques calculées (accueil, doublons, stockage).
+  UNE seule structure pour les cinq modes : les colonnes et la taille des miniatures se règlent en CSS (data-view, --mx-size), donc changer de mode est instantané.
+%><%
+  const isList = ["liste", "details"].includes(view);
+  const cols = new Set(prefs.columns);
+  const dirOf = (key) => (f.sort === key ? key + "_desc" : key);
+  const sortLink = (asc, desc, text, extra = "") => `<a href="${h.esc(h.keep({ tri: f.sort === asc ? desc : asc, page: "" }))}" data-mx-sort="${asc}"${f.sort === asc || f.sort === desc ? ` aria-sort="${f.sort === asc ? "ascending" : "descending"}"` : ""}${extra}>${text}${f.sort === asc ? '<span aria-hidden="true"> ↑</span>' : f.sort === desc ? '<span aria-hidden="true"> ↓</span>' : ""}</a>`;
+  const thumbOf = (m, eager) => m.type === "image" && (m.thumb || m.path) ? `<img src="${h.esc(view === "icones" || view === "grille" ? (m.medium || m.thumb || m.path) : (m.thumb || m.path))}" alt="" loading="lazy" decoding="async"${m.width && m.height ? ` width="${m.width}" height="${m.height}"` : ""}>` : `<span class="mk-ml-badge">${h.esc(h.ext(m))}</span>`;
+  const empty = (title, text) => { const art = "image"; return `<div class="mk-empty mx-empty">${illu(art, { className: "kx-empty-ill" })}<h2>${h.esc(title)}</h2><p>${h.esc(text)}</p></div>`; };
+  const folderCard = (fo) => `<li class="mx-folder" role="listitem" data-mx-folder="${fo.id}" data-name="${h.esc(fo.name)}"${fo.color ? ` data-color="${h.esc(fo.color)}"` : ""} data-mx-draggable="folder">
+      <a class="mx-folder-link" href="${h.esc(h.url({ dossier: String(fo.id) }))}" data-mx-nav="dossier:${fo.id}" title="${h.esc(fo.name)}"><span class="mx-folder-ico"${fo.color ? ` data-color="${h.esc(fo.color)}"` : ""}>${icon("folder", { size: 28 })}</span><span class="mx-folder-text"><span class="mx-folder-name">${h.esc(fo.name)}</span><span class="mx-sub">${fo.count} fichier${fo.count > 1 ? "s" : ""}</span></span></a>
+      <button type="button" class="mx-star${fo.starred ? " is-on" : ""}" data-mx-star="folder" aria-pressed="${fo.starred ? "true" : "false"}" aria-label="${fo.starred ? "Retirer des favoris" : "Ajouter aux favoris"} : ${h.esc(fo.name)}">${icon(fo.starred ? "star" : "starOutline", { size: 16 })}</button>
+      <button type="button" class="mx-iconbtn is-small mx-more" data-mx-more="folder" aria-haspopup="menu" aria-label="Actions du dossier ${h.esc(fo.name)}">${icon("moreVertical", { size: 16 })}</button></li>`;
+%>
+
+
+<% if (section === "accueil" || section === "stockage" || section === "doublons") { %>
+  <div class="mx-section" data-mx-section="<%= section %>" aria-live="polite"><p class="mx-loading" role="status">Chargement…</p></div>
+<% } else if (f.trashed) { %>
+  <div class="mx-trash" data-mx-trash>
+    <div class="mx-banner" role="note">
+      <p><strong>Corbeille.</strong> Les éléments restent ici, intacts, jusqu'à leur suppression définitive. Un élément encore utilisé par une page, un article ou un e-mail est toujours signalé et jamais supprimé en silence.</p>
+      <% if (canDelete && scoped) { %><label class="mx-retention">Supprimer automatiquement après
+        <select data-mx-retention aria-label="Durée de conservation de la corbeille"><% [[0, "Jamais (vidage manuel)"], [7, "7 jours"], [30, "30 jours"], [90, "90 jours"]].forEach(([d, t]) => { %><option value="<%= d %>"<%= retention === d ? " selected" : "" %>><%= t %></option><% }) %></select></label><% } %>
+    </div>
+    <% if (trashData.folders.length) { %><h2 class="mx-sec-title">Dossiers supprimés</h2>
+    <ul class="mx-folder-list" role="list"><% trashData.folders.forEach((fo) => { %>
+      <li class="mx-folder is-trashed" role="listitem" data-mx-trash-folder="<%= fo.id %>" data-name="<%= fo.name %>"><span class="mx-folder-link"><span class="mx-folder-ico"<%- fo.color ? ' data-color="' + h.esc(fo.color) + '"' : "" %>><%- icon("folder", { size: 28 }) %></span><span class="mx-folder-text"><span class="mx-folder-name"><%= fo.name %></span><span class="mx-sub"><%= fo.files %> fichier<%= fo.files > 1 ? "s" : "" %> · supprimé le <%= h.fdate(fo.deletedAt) %> · depuis « <%= fo.originalPath %> »</span></span></span>
+        <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-mx-trash-restore="folder">Restaurer</button><% } %><% if (canDelete) { %><button type="button" class="btn btn-ghost btn-sm" data-mx-trash-purge="folder">Supprimer définitivement</button><% } %></li><% }) %></ul>
+    <% } %>
+    <% if (found.items.length) { %><h2 class="mx-sec-title">Fichiers supprimés</h2><% } %>
+  </div>
+<% } %>
+
+<% if (subfolders.length && !f.trashed) { %>
+  <section class="mx-folders" aria-label="Dossiers"><% if (found.items.length || section !== "dossiers") { %><h2 class="mx-sec-title">Dossiers</h2><% } %>
+    <ul class="mx-folder-list" role="list" data-mx-folders><%- subfolders.map(folderCard).join("") %></ul></section>
+<% } %>
+
+<% if (section === "dossiers") { %>
+  <% if (!subfolders.length) { %><%- empty("Aucun dossier", canWrite ? "Créez votre premier dossier pour ranger vos fichiers : bouton « Nouveau dossier »." : "Aucun dossier n'a encore été créé.", "folder") %><% } %>
+<% } else if (!section) { %>
+  <% if (!found.items.length && !(f.trashed && trashData.folders.length)) { %>
+    <%- empty(f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : subfolders.length ? "Aucun fichier dans ce dossier" : "Aucun fichier", f.trashed ? "Les fichiers et dossiers mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : filtered ? "Aucun fichier ne correspond à ces critères. Modifiez la recherche ou réinitialisez les filtres." : "Envoyez votre premier fichier : glissez-le dans cette fenêtre ou utilisez « Ajouter un fichier média ».") %>
+  <% } else if (found.items.length) { %>
+    <% if (!f.trashed && subfolders.length) { %><h2 class="mx-sec-title">Fichiers</h2><% } %>
+    <div class="mx-colhead" role="row" data-mx-colhead aria-label="Colonnes">
+      <span class="mx-ch-name"><%- sortLink("nom", "nom_desc", "Nom") %></span>
+      <span class="mx-c mx-c-type"><%- sortLink("type", "type", "Type") %></span><span class="mx-c mx-c-size"><%- sortLink("taille", "taille", "Taille") %></span><span class="mx-c mx-c-dims">Dimensions</span><span class="mx-c mx-c-folder">Dossier</span>
+      <span class="mx-c mx-c-modified"><%- sortLink("modifie", "modifie", "Modifié le") %></span><span class="mx-c mx-c-created"><%- sortLink("recent", "ancien", "Ajouté le") %></span><span class="mx-c mx-c-author">Auteur</span><span class="mx-c mx-c-tags">Tags</span></div>
+    <ul class="mx-items" data-view="<%= view %>" role="list"<%- isList ? " data-ml-list" : " data-ml-grid" %> data-mx-items>
+      <% found.items.forEach((m) => { %>
+      <li class="mx-item<%= m.starred ? " is-starred" : "" %>" role="listitem" data-ml-item data-id="<%= m.id %>" data-type="<%= m.type %>" data-size="<%= m.size %>" data-name="<%= m.name %>" data-path="<%= m.path %>" data-folder="<%= m.folderId || "" %>" data-mx-draggable="file" data-mx-star-state="<%= m.starred ? "1" : "0" %>">
+        <% if (canWrite) { %><input type="checkbox" class="mk-ml-check mx-check" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"><% } %>
+        <button type="button" class="mx-thumb" data-ml-open aria-label="Détails de « <%= m.name %> » (<%= h.label(m) %>, <%= h.small(m.size) %>)"><%- thumbOf(m) %></button>
+        <span class="mx-name" data-ml-name><%= m.name %></span>
+        <span class="mx-meta mk-sub"><%= h.label(m) %> · <%= h.small(m.size) %><% if (orgView && m.reach === "site") { %> · propre à un site<% } %></span>
+        <span class="mx-meta-long"><%= [h.label(m), h.small(m.size), m.width ? h.dims(m) : "", m.folderName || "", m.tags.map((t) => "#" + t.name).join(" ")].filter(Boolean).join(" · ") %></span>
+        <span class="mx-c mx-c-type"><%= h.label(m) %><% if (orgView && m.reach === "site") { %> <span class="mk-sub">· propre à un site</span><% } %></span><span class="mx-c mx-c-size"><%= h.small(m.size) %></span><span class="mx-c mx-c-dims"><%= h.dims(m) %></span><span class="mx-c mx-c-folder"><%= m.folderName || "—" %></span>
+        <span class="mx-c mx-c-modified"><%= h.fdate(m.updatedAt || m.createdAt) %></span><span class="mx-c mx-c-created"><%= h.fdate(m.createdAt) %></span><span class="mx-c mx-c-author"><%= authors[m.createdBy] || "—" %></span>
+        <span class="mx-c mx-c-tags"><% m.tags.slice(0, 3).forEach((t) => { %><span class="mx-chip"<%- t.color ? ' data-color="' + h.esc(t.color) + '"' : "" %>><%= t.name %></span><% }) %><% if (m.tags.length > 3) { %><span class="mx-chip">+<%= m.tags.length - 3 %></span><% } %></span>
+        <button type="button" class="mx-star<%= m.starred ? " is-on" : "" %>" data-mx-star="media" aria-pressed="<%= m.starred ? "true" : "false" %>" aria-label="<%= m.starred ? "Retirer des favoris" : "Ajouter aux favoris" %> : <%= m.name %>"><%- icon(m.starred ? "star" : "starOutline", { size: 16 }) %></button>
+        <button type="button" class="mx-iconbtn is-small mx-more" data-mx-more="file" aria-haspopup="menu" aria-label="Actions de « <%= m.name %> »"><%- icon("moreVertical", { size: 16 }) %></button>
+      </li>
+      <% }) %>
+    </ul>
+    <nav class="mk-cms-pager mx-pager" aria-label="Pagination" data-mx-pager>
+      <span><%= found.total %> fichier<%= found.total > 1 ? "s" : "" %></span>
+      <% if (found.pages > 1) { %><span class="mk-cms-pager-nav">
+        <% if (found.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= h.keep({ page: found.page - 1 }) %>">Précédent</a><% } %>
+        <span>Page <%= found.page %> sur <%= found.pages %></span>
+        <% if (found.page < found.pages) { %><a class="btn btn-ghost btn-sm" href="<%= h.keep({ page: found.page + 1 }) %>" data-mx-next rel="next">Suivant</a><% } %></span><% } %>
+    </nav>
+  <% } %>
+<% } %>

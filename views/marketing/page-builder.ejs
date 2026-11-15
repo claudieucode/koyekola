@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="<%= asset('/css/page-builder-menu.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/site-settings.css') %>">
   <link rel="stylesheet" href="<%= asset('/css/kola-brand-editors.css') %>">
+  <link rel="stylesheet" href="<%= asset('/css/page-builder-panels.css') %>">
 </head>
 <% const bodyClass = typeof embedded !== "undefined" && embedded ? "pb-body pb-embedded" : "pb-body"; %>
 <body class="<%= bodyClass %>">
@@ -140,14 +141,16 @@
       <%# Écran de démarrage d'une page réellement vide : rempli et affiché par page-builder.js (jamais pendant le chargement), limité à la zone du canevas %>
       <section class="pb-start" data-pb-start aria-label="Comment voulez-vous commencer cette page ?" hidden></section>
       <%# Navigation du canevas (bas droite) : zoom réel, partagé avec les règles, les guides et le magnétisme %>
-      <div class="pb-gizmo" role="group" aria-label="Zoom du canevas">
+      <div class="pb-gizmo" role="group" aria-label="Zoom et navigation du canevas">
         <button type="button" class="pb-icon-btn" data-pb-zoom="-" data-tip="Zoom arrière (Ctrl/⌘ + -)" aria-label="Zoom arrière"><%- icon("minus", { size: 15 }) %></button>
         <output class="pb-zoom-value" data-pb-zoom-value aria-live="polite" title="Niveau de zoom">100 %</output>
         <button type="button" class="pb-icon-btn" data-pb-zoom="+" data-tip="Zoom avant (Ctrl/⌘ + +)" aria-label="Zoom avant"><%- icon("plus", { size: 15 }) %></button>
-        <span class="pb-gizmo-sep" aria-hidden="true"></span>
         <button type="button" class="pb-gizmo-btn" data-pb-zoom="100" data-tip="Taille réelle : 100 % (Ctrl/⌘ + 0)" aria-label="Zoom à 100 %">1:1</button>
-        <button type="button" class="pb-icon-btn" data-pb-pan aria-pressed="false" data-tip="Main : déplacer le canevas (maintenir Espace, ou touche H)" aria-label="Main : déplacer le canevas"><%- icon("arrowRightLeft", { size: 15 }) %></button>
+        <span class="pb-gizmo-sep" aria-hidden="true"></span>
         <button type="button" class="pb-icon-btn" data-pb-zoom="fit" data-tip="Ajuster à l'écran : toute la largeur de la page visible (Maj + 1)" aria-label="Ajuster à l'écran"><%- icon("maximize", { size: 15 }) %></button>
+        <button type="button" class="pb-icon-btn" data-pb-pan aria-pressed="false" data-tip="Main : déplacer le canevas (touche H, ou maintenir Espace)" aria-label="Main : déplacer le canevas"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 11V6a2 2 0 0 0-4 0"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></button>
+        <button type="button" class="pb-icon-btn" data-pb-zoomarea aria-pressed="false" data-tip="Zoom par zone : encadrez la partie à examiner (touche Z)" aria-label="Zoom par zone"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="2.5"/><path d="m16 16-1.9-1.9"/></svg></button>
+        <button type="button" class="pb-icon-btn" data-pb-navigator aria-pressed="false" aria-expanded="false" data-tip="Navigateur : miniature de la page et zone visible" aria-label="Navigateur"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="7" y="7" width="8" height="6" rx="1"/></svg></button>
       </div>
     </main>
     <div class="pb-resizer" data-pb-resize="right" role="separator" aria-orientation="vertical" aria-label="Largeur du panneau des calques (flèches gauche et droite)" tabindex="0"></div>
@@ -245,8 +248,8 @@
   <dialog class="pb-modal pb-shortcuts" data-pb-shortcuts role="dialog" aria-modal="true" aria-labelledby="pb-sc-title" aria-describedby="pb-sc-sub">
     <%# Liste réelle des raccourcis gérés par l'éditeur : données INCHANGÉES (même ordre), seulement regroupées et présentées en touches %>
     <%
-      const SC_ALL = [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]];
-      const SC_GROUPS = [["Général", 0, 3], ["Panneaux et modes", 3, 5], ["Édition", 5, 15], ["Affichage", 15, 18], ["Outils et ajout", 18, 20]];
+      const SC_ALL = [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + Alt + 1", "Afficher / masquer le panneau de gauche"], ["Ctrl/⌘ + Alt + 2", "Afficher / masquer le panneau de droite"], ["Ctrl/⌘ + Alt + 0", "Afficher / masquer les deux panneaux"], ["Ctrl/⌘ + Alt + F", "Conception étendue (panneaux masqués) / retour"], ["Ctrl/⌘ + Alt + R", "Rétablir la disposition par défaut"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]];
+      const SC_GROUPS = [["Général", 0, 3], ["Panneaux et modes", 3, 10], ["Édition", 10, 20], ["Affichage", 20, 23], ["Outils et ajout", 23, 25]];
       // « Ctrl/⌘ + Maj + Y », « Alt + ↑ / ↓ », « Ctrl/⌘ + + / − / 0 » : chaque touche devient une pastille ; « + » et « / » entre deux touches sont des séparateurs
       const scTokens = (s) => { const out = []; let prevSep = true; s.split(" ").forEach((t) => { const sep = (t === "+" || t === "/") && !prevSep; out.push({ t, sep }); prevSep = sep; }); return out; };
     %>
@@ -305,6 +308,7 @@
   <script src="<%= asset('/js/media-picker.js') %>" defer></script>
   <script src="<%= asset('/js/font-manager.js') %>" defer></script>
   <script src="<%= asset('/js/accordion-engine.js') %>" defer></script>
+  <script src="<%= asset('/js/page-builder-panels.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-menu.js') %>" defer></script>
   <script src="<%= asset('/js/page-builder-shortcuts.js') %>" defer></script>

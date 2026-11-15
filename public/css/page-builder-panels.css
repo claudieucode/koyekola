@@ -1,0 +1,110 @@
+/* Éditeur de pages — panneaux gauche et droit : ancré, flottant, barre d'icônes, masqué ; espaces de travail.
+   Seule la PRÉSENTATION change (jamais le document). Les déplacements passent par transform (pas de recalcul de la mise en page du canevas). */
+
+/* Barre d'en-tête de chaque panneau (poignée de déplacement + commandes) */
+.pbp-bar { position: sticky; top: 0; z-index: 3; grid-row: 1; display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 3px 6px 3px 8px; background: var(--bg, #f4f8fb); border-bottom: 1px solid var(--border); user-select: none; touch-action: none; cursor: grab; }
+.pbp-bar:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pbp-grip { display: inline-flex; color: var(--muted); }
+.pbp-title { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pbp-chips { display: inline-flex; gap: 4px; margin-left: 4px; }
+.pbp-chip { height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--card, #fff); color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer; transition: background-color 0.15s, color 0.15s, border-color 0.15s; }
+.pbp-chip[aria-pressed="true"] { background: var(--accent-light); border-color: var(--accent); color: var(--primary); }
+.pbp-chip:focus-visible, .pbp-btn:focus-visible, .pbp-mini:focus-visible, .pbp-strip-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pbp-actions { margin-left: auto; display: inline-flex; gap: 1px; }
+.pbp-btn, .pbp-mini { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--pb-radius-md, 6px); background: none; color: var(--muted); cursor: pointer; transition: background-color 0.15s, color 0.15s; }
+.pbp-btn:hover, .pbp-mini:hover { background: var(--accent-light); color: var(--primary); }
+.pbp-btn[aria-pressed="true"] { color: var(--accent); }
+.pb-left > .pbp-bar + .pb-tabs { top: 34px; }
+.pbp-narrow .pbp-bar [data-pbp="float"], .pbp-narrow .pbp-bar [data-pbp="icons"] { display: none; }
+
+/* Grille : les colonnes viennent de variables posées par le gestionnaire (une valeur par mode : ancré, flottant, barre d'icônes, masqué) */
+@media (min-width: 1101px) {
+  .pb-main.pbp { grid-template-columns: var(--pb-tools-w) var(--pbp-lc, var(--pb-left-w)) var(--pbp-lr, 6px) minmax(0, 1fr) var(--pbp-rr, 6px) var(--pbp-rc, var(--pb-right-w)) !important; }
+  .pb-main.pbp > .pbp-strip[data-side="left"] { grid-column: 2; grid-row: 1; }
+  .pb-main.pbp > .pbp-strip[data-side="right"] { grid-column: 6; grid-row: 1; }
+  .pb-main.pbp > .pbp-no-resizer { display: none; }
+}
+
+/* Panneau flottant : hors de la grille, position par transform, profondeur au-dessus du canevas, sous les menus et boîtes de dialogue */
+.pb-left.pbp-floating, .pb-right.pbp-floating { position: fixed; left: 0; top: 0; z-index: 61; min-width: 240px; min-height: 180px; border: 1px solid var(--border); border-radius: var(--pb-radius-lg, 10px); box-shadow: 0 14px 40px rgba(11, 42, 64, 0.28); overflow: hidden; will-change: transform; }
+.pb-left.pbp-floating { display: grid; overflow: hidden; }
+.pb-right.pbp-floating { display: grid; }
+.pbp-floating > .pbp-bar { border-radius: var(--pb-radius-lg, 10px) var(--pb-radius-lg, 10px) 0 0; }
+.pbp-floating.is-moving { box-shadow: 0 20px 56px rgba(11, 42, 64, 0.4); }
+.pbp-floating.is-moving > .pbp-bar { cursor: grabbing; }
+body.pbp-moving { user-select: none; cursor: grabbing; }
+.pbp-floating.pbp-enter { animation: pbp-pop 0.18s ease-out; }
+@keyframes pbp-pop { from { opacity: 0.4; } }
+
+/* Poignées de redimensionnement (bords et coins), visibles seulement sur un panneau flottant */
+.pbp-rz { display: none; position: absolute; z-index: 5; touch-action: none; }
+.pbp-floating > .pbp-rz { display: block; }
+.pbp-rz-e { top: 8px; bottom: 14px; right: -3px; width: 8px; cursor: ew-resize; }
+.pbp-rz-w { top: 8px; bottom: 14px; left: -3px; width: 8px; cursor: ew-resize; }
+.pbp-rz-s { left: 14px; right: 14px; bottom: -3px; height: 8px; cursor: ns-resize; }
+.pbp-rz-se { right: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nwse-resize; background: linear-gradient(135deg, transparent 0 50%, var(--muted, #64748b) 50% 56%, transparent 56% 70%, var(--muted, #64748b) 70% 76%, transparent 76%); opacity: 0.6; }
+.pbp-rz-sw { left: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nesw-resize; }
+.pbp-rz:hover { background-color: color-mix(in srgb, var(--accent) 25%, transparent); }
+
+/* Zone d'ancrage : aperçu discret de l'emplacement futur */
+.pbp-drop { position: fixed; z-index: 60; pointer-events: none; border: 2px dashed var(--accent); border-radius: 8px; background: color-mix(in srgb, var(--accent) 12%, transparent); opacity: 0; transition: opacity 0.12s; }
+.pbp-drop.is-on { opacity: 1; }
+.pbp-floating.is-dock-target { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Barre d'icônes : petite colonne remplaçant le panneau ; le contenu s'ouvre dans un panneau temporaire */
+.pbp-strip { display: flex; flex-direction: column; justify-content: space-between; align-items: center; gap: 4px; padding: 6px 0; background: var(--card, #fff); border-left: 1px solid var(--border); border-right: 1px solid var(--border); min-height: 0; }
+.pbp-strip[hidden] { display: none; }
+.pbp-strip-top, .pbp-strip-bot { display: flex; flex-direction: column; gap: 4px; }
+.pbp-strip-btn { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: var(--pb-radius-md, 6px); background: none; color: var(--muted); cursor: pointer; transition: background-color 0.15s, color 0.15s; }
+.pbp-strip-btn:hover { background: var(--accent-light); color: var(--primary); }
+.pb-main[data-pbp-left="icons"] > .pb-left:not(.pbp-peek), .pb-main[data-pbp-right="icons"] > .pb-right:not(.pbp-peek) { display: none; }
+.pb-left.pbp-icons.pbp-peek, .pb-right.pbp-icons.pbp-peek { position: fixed; z-index: 66; border: 1px solid var(--border); box-shadow: 0 16px 44px rgba(11, 42, 64, 0.3); animation: pbp-peek 0.16s ease-out; overflow-x: hidden; }
+.pb-left.pbp-icons.pbp-peek { display: grid; overflow: hidden; }
+.pb-right.pbp-icons.pbp-peek { display: grid; }
+@keyframes pbp-peek { from { opacity: 0; } }
+.pb-left.pbp-peek > .pbp-bar [data-pbp="float"], .pb-right.pbp-peek > .pbp-bar [data-pbp="float"] { display: none; }
+
+/* Propriétés repliées : la Structure prend toute la hauteur du panneau droit (et inversement via le bouton Structure) */
+.pb-right.pbp-insp-collapsed { grid-template-rows: auto minmax(0, 1fr) 0 0; }
+.pb-right.pbp-insp-collapsed .pb-inspector, .pb-right.pbp-insp-collapsed .pb-hsplit { display: none; }
+.pb-right.pbp-insp-collapsed.is-layers-collapsed { grid-template-rows: auto auto 0 0; }
+.pb-right.pbp-insp-collapsed.is-layers-detached { grid-template-rows: auto 0 0 0; }
+
+/* Menu « Espaces de travail » */
+.pbp-menu { position: fixed; z-index: 68; max-height: min(70vh, 560px); overflow: auto; padding: 6px; background: var(--card, #fff); border: 1px solid var(--border); border-radius: var(--pb-radius-lg, 10px); box-shadow: 0 16px 44px rgba(11, 42, 64, 0.3); font-size: 13px; animation: pbp-peek 0.12s ease-out; }
+.pbp-menu-h { padding: 8px 8px 4px; font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.pbp-row { display: flex; align-items: center; gap: 2px; border-radius: var(--pb-radius-md, 6px); }
+.pbp-row:hover { background: var(--accent-light); }
+.pbp-row-main { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 0; background: none; font: inherit; color: var(--text); text-align: left; cursor: pointer; border-radius: var(--pb-radius-md, 6px); }
+.pbp-row-main:focus-visible, .pbp-reset:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pbp-row-ck { width: 16px; flex: none; color: var(--accent); }
+.pbp-row-t { display: flex; flex-direction: column; min-width: 0; }
+.pbp-row-t small { color: var(--muted); font-size: 11.5px; }
+.pbp-row .pbp-mini { flex: none; opacity: 0; }
+.pbp-row:hover .pbp-mini, .pbp-row:focus-within .pbp-mini { opacity: 1; }
+.pbp-new { display: flex; gap: 6px; padding: 8px 6px 4px; border-top: 1px solid var(--border); margin-top: 6px; }
+.pbp-in { flex: 1 1 auto; min-width: 0; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: var(--pb-radius-md, 6px); background: var(--card, #fff); color: var(--text); font: inherit; }
+.pbp-save { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border: 0; border-radius: var(--pb-radius-md, 6px); background: var(--primary); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.pbp-reset { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px; padding: 8px; border: 0; border-radius: var(--pb-radius-md, 6px); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.pbp-reset:hover { background: var(--accent-light); }
+.pbp-menu-f { margin: 6px 8px 2px; font-size: 11.5px; color: var(--muted); }
+
+/* Écrans étroits : la mise en page empilée existante reste en vigueur (pas de panneau flottant ni de barre d'icônes) */
+@media (max-width: 1100px) {
+  .pb-left.pbp-floating, .pb-right.pbp-floating { position: static; transform: none !important; width: auto !important; height: auto !important; box-shadow: none; border-radius: 0; will-change: auto; }
+  .pbp-rz, .pbp-strip, .pbp-drop { display: none !important; }
+  .pb-main[data-pbp-left="icons"] > .pb-left, .pb-main[data-pbp-right="icons"] > .pb-right { display: grid; }
+  .pb-left.pbp-icons.pbp-peek, .pb-right.pbp-icons.pbp-peek { position: static; }
+}
+@media (prefers-reduced-motion: reduce) { .pbp-floating.pbp-enter, .pb-left.pbp-icons.pbp-peek, .pb-right.pbp-icons.pbp-peek, .pbp-menu { animation: none; } .pbp-chip, .pbp-btn, .pbp-strip-btn, .pbp-drop { transition: none; } }
+/* Le panneau gauche est une grille (onglets, contenu, pied) : la barre ajoute une rangée au-dessus */
+.pb-main.pbp > .pb-left { grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.pb-left > .pbp-bar { grid-row: 1; }
+.pbp-bar[data-pbp-bar="right"] .pbp-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.pbp-bar[data-pbp-bar="right"] .pbp-chips { margin-left: 2px; }
+/* La barre ne déborde jamais, même au minimum de largeur (280 px) : les pastilles rétrécissent avant les boutons */
+.pbp-bar { min-width: 0; overflow: hidden; }
+.pbp-grip, .pbp-actions { flex: none; }
+.pbp-chips { flex: 1 1 0; min-width: 0; overflow: hidden; }
+.pbp-chip { flex: 0 1 auto; min-width: 0; padding: 0 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pbp-title { flex: 0 1 auto; }

@@ -114,7 +114,7 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     return bad;
   });
   const setDevice = async (d) => { await page.click(`[data-device="${d}"]`); await wait(450); };
-  const clickZoom = async (v) => { await page.click(`[data-pb-zoom="${v}"]`); await wait(250); };
+  const clickZoom = async (v) => { await page.click(`[data-pb-zoom="${v}"]`); await wait(450); };   // la transition de zoom dure au plus 200 ms
 
   before(async () => {
     srv = await startServer({ ENCRYPTION_KEY: TEST_KEY, SITE_URL: "https://k.test", SMTP_HOST: "" });
@@ -177,11 +177,11 @@ describe("canvas, largeur de page, contraintes web et palette (navigateur)", { s
     await wait(300);
     const niveaux = [];
     await clickZoom("100"); niveaux.push(await geometry());
-    for (let i = 0; i < 5; i += 1) await clickZoom("-");
+    for (let i = 0; i < 3; i += 1) await clickZoom("-");   // niveaux usuels : 100 → 75 → 66 → 50 %
     niveaux.push(await geometry());
     await clickZoom("100"); await clickZoom("+"); await clickZoom("+");
     niveaux.push(await geometry());
-    assert.deepEqual(niveaux.map((g) => g.zoom), [1, 0.5, 1.2]);
+    assert.deepEqual(niveaux.map((g) => g.zoom), [1, 0.5, 1.5]);   // puis 100 → 125 → 150 %
     for (const g of niveaux) {
       // Largeur à l'écran = largeur de la page × zoom (à l'arrondi près) ; le cadre ne déborde pas de la zone vers la gauche
       assert.ok(Math.abs(g.wrap.w - g.pageW * g.zoom) <= 2, `zoom ${g.zoom} : ${Math.round(g.wrap.w)} px à l'écran pour ${g.pageW} px × ${g.zoom}`);

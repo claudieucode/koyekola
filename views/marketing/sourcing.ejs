@@ -2,6 +2,8 @@
     <div class="mk-head">
       <div class="mk-head-main"><h1>Sourcing produit</h1></div></div>
 
-    <%# Point de montage de la future application : elle s'y branchera sans toucher au menu. Le site courant est donné par data-site. %>
-    <section id="sourcing-app" class="mk-sourcing" data-site="<%= siteId %>" aria-label="Sourcing produit"></section>
+    <%# Point de montage : l'application Product Hunter, servie par /marketing/sourcing-produit/app (même permission), suit le thème et le mouvement de la page. %>
+    <section id="sourcing-app" class="mk-sourcing" data-site="<%= siteId %>" aria-label="Sourcing produit">
+      <iframe class="mk-sourcing-frame" src="/marketing/sourcing-produit/app?embed=1" title="Chasseur de produits : critères, produits GO et pays ciblé"></iframe>
+    </section>
 <%- include("partials/bottom") %>

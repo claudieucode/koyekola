@@ -10,6 +10,13 @@
   const needsSetup = (j.needs || []).some((n) => ["list", "site_event", "course"].includes(n));
 %>
 <article class="mk-lib-card mk-journey-card<%= v.usable ? "" : " mk-journey-off" %>" data-journey="<%= j.key %>">
+  <% if (v.usable && e.channel !== "sms" && typeof j.emails === "function" && j.emails("https://votre-site").length) { %>
+    <a class="mk-jp-thumb" href="/marketing/automatisations/parcours/<%= j.key %>" tabindex="-1" aria-hidden="true"><iframe class="mk-jp-frame" src="/marketing/automatisations/parcours/<%= j.key %>/email/0" loading="lazy" sandbox title="" tabindex="-1" scrolling="no"></iframe></a>
+  <% } else if (v.usable && typeof j.sms === "function" && j.sms("https://votre-site").length) {
+       const first = (j.sms("https://votre-site")[0] || {}).body || "";
+       const shown = first.replace(/\{\{\s*\w+\|([^}]*)\}\}/g, "$1"); %>
+    <a class="mk-jp-thumb mk-jp-sms" href="/marketing/automatisations/parcours/<%= j.key %>" tabindex="-1" aria-hidden="true"><span class="mk-jp-bubble"><%= shown %></span></a>
+  <% } %>
   <div class="mk-lib-body">
     <div class="mk-journey-card-head">
       <h3><a href="/marketing/automatisations/parcours/<%= j.key %>"><%= j.label %></a></h3>

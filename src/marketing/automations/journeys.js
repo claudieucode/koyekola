@@ -391,4 +391,13 @@ function createJourney(ctx, key, params = {}) {
 }
 
 // Journal lisible de la création (utilisé par la page) : combien d'e-mails et de SMS le scénario contient
-module.exports = { JOURNEYS, GROUPS, createJourney, byKey, summary, browseLibrary, detailFor, toggleFavorite: store.toggleFavorite, instantiate };
+// Rendu réel (HTML) d'un des e-mails d'un parcours, avec les données d'exemple : sert aux miniatures et à l'aperçu ordinateur/mobile. Rien n'est créé ni envoyé.
+function emailPreview(ctx, key, n) {
+  const j = byKey(key);
+  if (!j || j.unavailable || typeof j.emails !== "function") return null;
+  const e = j.emails(SITE)[n];
+  if (!e) return null;
+  return templates.previewTemplate(ctx, { kind: e.kind || j.kind, subject: e.subject, preheader: e.preheader, blocks: e.blocks }, { tolerant: true }).html;
+}
+
+module.exports = { emailPreview, JOURNEYS, GROUPS, createJourney, byKey, summary, browseLibrary, detailFor, toggleFavorite: store.toggleFavorite, instantiate };

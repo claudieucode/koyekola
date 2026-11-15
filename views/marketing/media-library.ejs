@@ -1,146 +1,53 @@
 <%#
-  KOLAKISA CMS → Médias → Médiathèque (palier 3, refondue à la manière de WordPress par MEDIA-01 : une médiathèque distincte par site). La liste est rendue par le serveur (filtrée, triée et paginée dans la base) ; public/js/media-library.js
-  ajoute l'envoi par glisser-déposer, la sélection, le panneau de détails (métadonnées, usages, corbeille) et la copie d'adresse.
+  KOLAKISA CMS → Médias → Médiathèque : gestionnaire de fichiers (barre latérale · zone centrale · panneau d'informations).
+  Le serveur rend la liste (filtrée, triée, paginée dans la base) ; public/js/media-explorer.js ajoute la navigation fluide, les modes d'affichage, la sélection,
+  le glisser-déposer, les menus contextuels, le panneau d'informations et la prévisualisation. Une médiathèque distincte par site.
 %><%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="<%= asset('/css/media-explorer.css') %>">
 <%
-  const S = typeof mkSiteId === "number" ? mkSiteId : ""; // site de la médiathèque : conservé dans tous les liens (le serveur le revérifie)
-  const keep = (over = {}, path = spaceBase) => { const p = new URLSearchParams(); const o = { type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, vue: view === "grille" ? "" : view, portee: f.portee, ...f.raw, ...over }; Object.entries(o).forEach(([k, v]) => { if (v) p.set(k, v); }); const t = p.toString(); return path + (t ? "?" + t : ""); };
-  const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
-  const monthName = (m) => MONTHS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
-  const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents], ["lottie", "Animations Lottie", counts.lottie]];
-  const dimsOf = (m) => (m.width ? `${m.width} × ${m.height} px` : "—");
-  const advanced = Boolean(f.raw.ext || f.raw.tmin || f.raw.tmax || f.raw.lmin || f.raw.lmax || f.raw.doublons || f.raw.volumineux);
-  const filtered = Boolean(f.q || f.period || f.type || f.month || f.raw.dossier || advanced);
-  const small = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1).replace(".", ",") + " Mo" : n >= 1024 ? Math.round(n / 1024) + " Ko" : n + " o");
-  const label = (m) => ({ image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document", lottie: "Lottie" }[m.type] || "Fichier");
-  const ext = (m) => { const e = String(m.path).split(".").pop().toUpperCase(); return e.length <= 5 ? e : label(m).toUpperCase(); };
-  const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
+  const depthOf = (fo) => { let d = 0, cur = fo; while (cur && cur.parentId && d < 9) { cur = tree.folders.find((x) => x.id === cur.parentId); d++; } return d; };
+  const ordered = []; const walk = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid).forEach((x) => { ordered.push(x); walk(x.id); }); walk(null);
+  const colsClass = prefs.columns.map((c) => "has-c-" + c).join(" ");
 %>
-    <%- include("partials/kx-hero-open", { title: "Médiathèque", lead: "Les fichiers de ce site : images, vidéos, audio et documents. Ce sont ceux que vous choisissez dans l'éditeur d'articles et de pages ; ils ne sont jamais partagés avec un autre site.", compact: true }) %>
-      <% if (canUpload && !f.trashed) { %><button type="button" class="btn btn-primary btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload"><%- icon("upload", { size: 16 }) %> Ajouter un fichier média</button><% } %>
-    <%- include("partials/kx-hero-close", { art: "media" }) %>
-
-    <form class="mk-cms-toolbar mk-ml-toolbar" method="get" action="<%= spaceBase %>" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
-      <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (view !== "grille") { %><input type="hidden" name="vue" value="<%= view %>"><% } %><% if (f.raw.dossier) { %><input type="hidden" name="dossier" value="<%= f.raw.dossier %>"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
-      <span class="mk-ml-views" role="group" aria-label="Mode d'affichage">
-        <a class="mk-ml-viewbtn" href="<%= keep({ vue: "liste", page: "" }) %>"<%- view === "liste" ? ' aria-current="true"' : "" %> aria-label="Affichage en liste" title="Affichage en liste"><%- icon("list", { size: 18 }) %></a>
-        <a class="mk-ml-viewbtn" href="<%= keep({ vue: "compacte", page: "" }) %>"<%- view === "compacte" ? ' aria-current="true"' : "" %> aria-label="Affichage compact" title="Affichage compact"><%- icon("menu", { size: 18 }) %></a>
-        <a class="mk-ml-viewbtn" href="<%= keep({ vue: "", page: "" }) %>"<%- view === "grille" ? ' aria-current="true"' : "" %> aria-label="Affichage en grille" title="Affichage en grille"><%- icon("grid", { size: 18 }) %></a>
-      </span>
-      <label class="sr-only" for="ml-type">Filtrer par type de média</label>
-      <select id="ml-type" name="type" data-ml-autosubmit><% typeOptions.forEach(([k, name, n]) => { %><option value="<%= k %>"<%= f.type === k ? " selected" : "" %>><%= name %> (<%= n %>)</option><% }) %></select>
-      <label class="sr-only" for="ml-mois">Filtrer par date</label>
-      <select id="ml-mois" name="mois" data-ml-autosubmit><option value="">Toutes les dates</option><% months.forEach((m) => { %><option value="<%= m.month %>"<%= f.month === m.month ? " selected" : "" %>><%= monthName(m.month) %></option><% }) %><% if (f.month && !months.some((m) => m.month === f.month)) { %><option value="<%= f.month %>" selected><%= monthName(f.month) %></option><% } %></select>
-      <label class="sr-only" for="ml-tri">Trier par</label>
-      <select id="ml-tri" name="tri" data-ml-autosubmit><% [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["taille", "Plus volumineux"]].forEach(([k, name]) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= name %></option><% }) %></select>
-      <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-ml-select-toggle aria-pressed="false">Sélection groupée</button><% } %>
-      <label class="mk-search mk-ml-search"><span class="mk-ml-searchlabel">Rechercher des médias</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" aria-label="Rechercher des médias (nom, titre, texte alternatif, légende, description)"></label>
-      <details class="mk-ml-adv"<%- advanced ? " open" : "" %>><summary class="btn btn-outline btn-sm">Filtres avancés<%= advanced ? " •" : "" %></summary>
-        <div class="mk-ml-adv-body">
-          <label>Extension <input type="text" name="ext" value="<%= f.raw.ext %>" maxlength="8" placeholder="png, pdf…" inputmode="text" autocomplete="off"></label>
-          <label>Taille min. (Ko) <input type="number" name="tmin" value="<%= f.raw.tmin %>" min="0" inputmode="numeric"></label>
-          <label>Taille max. (Ko) <input type="number" name="tmax" value="<%= f.raw.tmax %>" min="0" inputmode="numeric"></label>
-          <label>Largeur min. (px) <input type="number" name="lmin" value="<%= f.raw.lmin %>" min="0" inputmode="numeric"></label>
-          <label>Largeur max. (px) <input type="number" name="lmax" value="<%= f.raw.lmax %>" min="0" inputmode="numeric"></label>
-          <label class="mk-ml-adv-check"><input type="checkbox" name="doublons" value="1"<%= f.raw.doublons ? " checked" : "" %>> Doublons (contenu identique)</label>
-          <label class="mk-ml-adv-check"><input type="checkbox" name="volumineux" value="1"<%= f.raw.volumineux ? " checked" : "" %>> Volumineux (≥ 5 Mo)</label>
-        </div></details>
-      <button type="submit" class="btn btn-outline btn-sm">Filtrer</button>
-      <% if (filtered || f.sort !== "recent") { %><a class="btn btn-ghost btn-sm" href="<%= keep({ q: "", periode: "", mois: "", type: "", tri: "", page: "", dossier: "", ext: "", tmin: "", tmax: "", lmin: "", lmax: "", doublons: "", volumineux: "" }) %>">Réinitialiser</a><% } %>
-    </form>
-    <p class="mk-sub mk-ml-sub">
-      <% if (f.trashed) { %><a href="<%= keep({ corbeille: "", page: "" }) %>">← Retour à la médiathèque</a><% } else { %><a href="<%= keep({ corbeille: "1", type: "", mois: "", page: "" }) %>">Corbeille (<%= counts.trash %>)</a><% } %>
-      <% if (orgView) { %> · Médiathèque affichée :
-        <a href="<%= keep({ portee: "", page: "" }) %>"<%- !f.portee || f.portee === "commun" ? ' aria-current="page"' : "" %>>Site principal</a> ·
-        <a href="<%= keep({ portee: "tous", page: "" }) %>"<%- f.portee === "tous" ? ' aria-current="page"' : "" %>>Tous les sites (vue d'ensemble)</a> ·
-        <a href="<%= keep({ portee: "site", page: "" }) %>"<%- f.portee === "site" ? ' aria-current="page"' : "" %>>Fichiers propres à un site</a><% } %></p>
-
-    <% if (canUpload && !f.trashed) { %>
-      <div class="mk-ml-upload" id="ml-upload" <%= uploadOpen ? "" : "hidden" %>>
-        <div class="mk-ml-drop" data-ml-drop tabindex="0" role="button" aria-label="Glissez-déposez vos fichiers ici, ou appuyez sur Entrée pour les choisir">
-          <%- icon("upload", { size: 22 }) %><strong>Déposez les fichiers pour les téléverser</strong><span>ou cliquez pour les choisir · <%= formats %></span>
-          <span class="mk-sub">Poids maximal : image <%= maxMb.image %> Mo · document <%= maxMb.document %> Mo · audio <%= maxMb.audio %> Mo · vidéo <%= maxMb.video %> Mo</span>
-        </div>
-        <input type="file" class="sr-only" data-ml-input multiple tabindex="-1" aria-label="Choisir des fichiers à envoyer" accept="<%= uploadCfg.accept %>">
-        <div class="mk-ml-summary" data-ml-summary role="status" aria-live="polite" hidden></div>
-        <ul class="mk-ml-queue" data-ml-queue aria-live="polite" aria-label="Envois en cours" hidden></ul>
-      </div>
-    <% } %>
-
-    <div class="mk-ml-layout<%= tree.enabled ? " has-tree" : "" %>">
-      <% if (tree.enabled && !f.trashed) {
-           const kids = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid);
-           const renderNodes = (pid, depth) => kids(pid).map((fo) => {
-             const here = f.adv.folder === fo.id, inPath = crumbs.some((c) => c.id === fo.id), sub = kids(fo.id);
-             return '<li role="treeitem" aria-expanded="' + (sub.length ? String(inPath) : "") + '"' + (here ? ' aria-selected="true"' : "") + '><div class="mk-ml-fo' + (here ? " is-here" : "") + '" data-ml-folder="' + fo.id + '" data-name="' + String(fo.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])) + '"><a href="' + keep({ dossier: String(fo.id), page: "" }) + '">' + String(fo.name).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])) + ' <span class="mk-sub">' + fo.count + '</span></a></div>' + (sub.length && (inPath || depth < 0) ? '<ul role="group">' + renderNodes(fo.id, depth + 1) + '</ul>' : "") + '</li>';
-           }).join("");
-      %>
-      <nav class="mk-ml-tree" aria-label="Dossiers" data-ml-tree>
-        <ul role="tree">
-          <li role="treeitem"><div class="mk-ml-fo<%= !f.raw.dossier ? " is-here" : "" %>"><a href="<%= keep({ dossier: "", page: "" }) %>">Tous les fichiers</a></div></li>
-          <li role="treeitem"><div class="mk-ml-fo<%= f.raw.dossier === "racine" ? " is-here" : "" %>"><a href="<%= keep({ dossier: "racine", page: "" }) %>">Sans dossier <span class="mk-sub"><%= tree.rootCount %></span></a></div></li>
-          <%- renderNodes(null, 0) %>
-        </ul>
-        <% if (canWrite) { %><form class="mk-ml-newfolder" data-ml-newfolder><label class="sr-only" for="ml-nf">Nom du nouveau dossier</label><input id="ml-nf" type="text" maxlength="80" placeholder="Nouveau dossier" autocomplete="off"><button type="submit" class="btn btn-outline btn-sm">Créer</button></form><% } %>
-        <p class="mk-sub mk-ml-trees-note"><a href="<%= keep({ doublons: "1", dossier: "", page: "" }) %>">Voir les doublons</a> · <a href="<%= keep({ volumineux: "1", dossier: "", page: "" }) %>">Fichiers volumineux</a></p>
-      </nav>
-      <% } %>
-      <div class="mk-ml-main" data-ml-main>
-        <% if (crumbs.length || f.raw.dossier === "racine") { %><nav class="mk-ml-crumb" aria-label="Fil d'Ariane">
-          <a href="<%= keep({ dossier: "", page: "" }) %>">Médiathèque</a><% crumbs.forEach((c, i) => { %> <span aria-hidden="true">›</span> <% if (i < crumbs.length - 1) { %><a href="<%= keep({ dossier: String(c.id), page: "" }) %>"><%= c.name %></a><% } else { %><strong aria-current="page"><%= c.name %></strong>
-            <% if (canWrite) { %> <button type="button" class="btn btn-ghost btn-sm" data-ml-folder-rename="<%= c.id %>" data-name="<%= c.name %>">Renommer</button> <button type="button" class="btn btn-ghost btn-sm" data-ml-folder-delete="<%= c.id %>" data-name="<%= c.name %>">Supprimer le dossier</button><% } %><% } %><% }) %>
-          <% if (f.raw.dossier === "racine") { %> <span aria-hidden="true">›</span> <strong aria-current="page">Sans dossier</strong><% } %></nav><% } %>
-        <% if (!found.items.length) { %>
-          <div class="mk-empty"><%- illu("image", { className: "kx-empty-ill" }) %><h2><%= f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : "Aucun fichier" %></h2>
-            <p><%= f.trashed ? "Les fichiers mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : filtered ? "Aucun fichier ne correspond à ces critères." : "Envoyez votre premier fichier : glissez-le dans la zone ci-dessus." %></p></div>
-        <% } else { %>
-          <% if (canWrite) { %>
-          <div class="mk-ml-bulk" data-ml-bulk hidden>
-            <label class="mk-ml-selectall"><input type="checkbox" data-ml-all> <span>Tout sélectionner</span></label>
-            <label class="sr-only" for="ml-bulk-action">Action groupée</label>
-            <select id="ml-bulk-action" data-ml-bulk-action disabled><option value="">Actions groupées</option>
-              <% if (f.trashed) { %><option value="restaurer">Restaurer</option><% if (canDelete) { %><option value="supprimer">Supprimer définitivement</option><% } %><% } else { %><option value="corbeille">Mettre à la corbeille</option><% } %></select>
-            <button type="button" class="btn btn-outline btn-sm" data-ml-bulk-apply disabled>Appliquer</button>
-            <% if (tree.enabled && !f.trashed) { %><label class="sr-only" for="ml-move-to">Déplacer vers</label><select id="ml-move-to" data-ml-move-to disabled><option value="">Déplacer vers…</option><option value="racine">Sans dossier</option><% tree.folders.forEach((fo) => { %><option value="<%= fo.id %>"><%= fo.name %></option><% }) %></select><% } %>
-            <span class="mk-sub" data-ml-bulk-count aria-live="polite"></span>
-          </div>
-          <% } %>
-          <% if (view === "liste") { %>
-          <div class="mk-table-wrap"><table class="mk-table mk-datatable mk-cms-table mk-ml-table" data-ml-list>
-            <caption class="sr-only">Fichiers</caption>
-            <thead><tr><% if (canWrite) { %><th scope="col" class="mk-cms-check-col"><span class="sr-only">Sélection</span></th><% } %><th scope="col">Fichier</th><th scope="col">Type</th><th scope="col" class="mk-num">Taille</th><th scope="col">Dimensions</th><th scope="col">Ajouté le</th><th scope="col">Auteur</th><th scope="col" class="mk-cms-actions-col"><span class="sr-only">Détails</span></th></tr></thead>
-            <tbody><% found.items.forEach((m) => { %>
-              <tr data-ml-item data-id="<%= m.id %>">
-                <% if (canWrite) { %><td class="mk-cms-check-col" data-label="Sélection"><input type="checkbox" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"></td><% } %>
-                <th scope="row" data-label="Fichier"><button type="button" class="mk-ml-link" data-ml-open aria-label="Détails de « <%= m.name %> »"><span class="mk-ml-mini"><% if (m.type === "image") { %><img src="<%= m.path %>" alt="" loading="lazy" width="36" height="36"><% } else { %><span class="mk-ml-badge"><%= ext(m) %></span><% } %></span><span data-ml-name><%= m.name %></span></button></th>
-                <td data-label="Type"><%= label(m) %><% if (m.reach === "site") { %> <span class="mk-sub">· propre à un site</span><% } %></td><td class="mk-num" data-label="Taille"><%= small(m.size) %></td><td data-label="Dimensions"><%= dimsOf(m) %></td>
-                <td data-label="Ajouté le"><%= fdate(m.createdAt) %></td><td data-label="Auteur"><%= authors[m.createdBy] || "—" %></td>
-                <td class="mk-row-actions mk-cms-actions-col"><button type="button" class="btn btn-ghost btn-sm" data-ml-open>Détails</button></td></tr>
-            <% }) %></tbody></table></div>
-          <% } else { %>
-          <ul class="mk-ml-grid<%= view === "compacte" ? " is-compact" : "" %>" data-ml-grid role="list">
-            <% found.items.forEach((m) => { %>
-              <li class="mk-ml-item" data-ml-item data-id="<%= m.id %>">
-                <% if (canWrite) { %><input type="checkbox" class="mk-ml-check" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"><% } %>
-                <button type="button" class="mk-ml-thumb" data-ml-open aria-label="Détails de « <%= m.name %> » (<%= label(m) %>, <%= small(m.size) %>)">
-                  <% if (m.type === "image") { %><img src="<%= m.path %>" alt="" loading="lazy" width="<%= m.width || 160 %>" height="<%= m.height || 120 %>"><% } else { %><span class="mk-ml-badge"><%= ext(m) %></span><% } %>
-                </button>
-                <span class="mk-ml-name" data-ml-name><%= m.name %></span><span class="mk-sub"><%= label(m) %> · <%= small(m.size) %><% if (m.reach === "site") { %> · propre à un site<% } %></span>
-              </li>
-            <% }) %>
-          </ul>
-          <% } %>
-          <nav class="mk-cms-pager" aria-label="Pagination">
-            <span><%= found.total %> fichier<%= found.total > 1 ? "s" : "" %></span>
-            <% if (found.pages > 1) { %><span class="mk-cms-pager-nav">
-              <% if (found.page > 1) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: found.page - 1 }) %>">Précédent</a><% } %>
-              <span>Page <%= found.page %> sur <%= found.pages %></span>
-              <% if (found.page < found.pages) { %><a class="btn btn-ghost btn-sm" href="<%= keep({ page: found.page + 1 }) %>">Suivant</a><% } %></span><% } %>
-          </nav>
-        <% } %>
-      </div>
-      <aside class="mk-panel mk-ml-panel" data-ml-panel hidden aria-label="Détails du fichier" tabindex="-1"></aside>
+<div class="mx <%= colsClass %>" data-mx data-sidebar="<%= prefs.sidebar %>" data-info="<%= prefs.info %>" data-view="<%= view %>" data-density="<%= prefs.density %>" style="--mx-size: <%= prefs.size %>px; --mx-info-w: <%= prefs.infoWidth %>px">
+  <aside class="mx-side" id="mx-side" aria-label="Navigation de la médiathèque" data-mx-side><div class="mx-side-scroll" data-frag="side"><%- include("media/_side") %></div></aside>
+  <div class="mx-main">
+    <div data-frag="head"><%- include("media/_head") %></div>
+    <div class="mx-stage" data-mx-main data-ml-main>
+      <div class="mx-scroll" data-mx-scroll tabindex="-1"><div data-frag="body"><%- include("media/_body") %></div></div>
+      <div class="mx-dropveil" data-mx-dropveil hidden aria-hidden="true"><%- icon("upload", { size: 28 }) %><strong>Déposez les fichiers pour les téléverser</strong><span data-mx-dropveil-dest></span></div>
     </div>
-    <script type="application/json" id="mu-config"><%- JSON.stringify(uploadCfg).replace(/</g, "\\u003c") %></script>
-    <script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: Boolean(f.q || f.period || f.month || f.raw.dossier || advanced), folder: f.adv.folder || null, folderEnabled: tree.enabled, view, uploadOpen }).replace(/</g, "\\u003c") %></script>
+  </div>
+  <div class="mx-resizer" data-mx-resizer role="separator" aria-orientation="vertical" aria-label="Largeur du panneau d'informations (flèches gauche et droite)" tabindex="0"></div>
+  <aside class="mx-info" id="mx-info" data-ml-panel hidden aria-label="Informations" tabindex="-1"><button type="button" class="mx-iconbtn is-small mx-info-close" data-mx-info-close aria-label="Fermer le panneau d'informations" title="Fermer"><%- icon("close", { size: 16 }) %></button><div class="mx-info-body" data-mx-info-body></div></aside>
+</div>
+
+<% if (canUpload && !f.trashed) { %>
+<div class="mx-import mk-ml-upload" id="ml-upload" <%= uploadOpen ? "" : "hidden" %> role="dialog" aria-modal="false" aria-labelledby="mx-import-title" data-mx-import>
+  <header class="mx-import-head"><h2 id="mx-import-title">Importer des fichiers</h2>
+    <button type="button" class="mx-iconbtn is-small" data-mx-import-min aria-label="Réduire la fenêtre d'importation" title="Réduire"><%- icon("minus", { size: 16 }) %></button>
+    <button type="button" class="mx-iconbtn is-small" data-mx-import-close aria-label="Fermer la fenêtre d'importation" title="Fermer"><%- icon("close", { size: 16 }) %></button></header>
+  <div class="mx-import-body">
+    <div class="mx-import-opts">
+      <label>Dossier de destination
+        <select data-mx-import-dest aria-label="Dossier de destination"><option value="">Sans dossier (racine)</option><% ordered.forEach((fo) => { %><option value="<%= fo.id %>"<%= f.adv.folder === fo.id ? " selected" : "" %>><%= "  ".repeat(depthOf(fo)) + fo.name %></option><% }) %></select></label>
+      <fieldset class="mx-conflict"><legend>Si un fichier du même nom existe déjà</legend>
+        <label><input type="radio" name="mx-conflict" value="both" checked> Garder les deux (renommer)</label>
+        <label><input type="radio" name="mx-conflict" value="skip"> Ignorer ce fichier</label>
+        <label><input type="radio" name="mx-conflict" value="replace"> Importer quand même</label></fieldset>
+    </div>
+    <div class="mk-ml-drop" data-ml-drop tabindex="0" role="button" aria-label="Glissez-déposez vos fichiers ici, ou appuyez sur Entrée pour les choisir">
+      <%- icon("upload", { size: 22 }) %><strong>Déposez les fichiers pour les téléverser</strong><span>ou cliquez pour les choisir · <%= formats %></span>
+      <span class="mk-sub">Poids maximal : image <%= maxMb.image %> Mo · document <%= maxMb.document %> Mo · audio <%= maxMb.audio %> Mo · vidéo <%= maxMb.video %> Mo</span>
+    </div>
+    <div class="mx-import-more"><button type="button" class="btn btn-outline btn-sm" data-mx-import-folder><%- icon("folderPlus", { size: 16 }) %> Importer un dossier</button><span class="mk-sub">Les sous-dossiers sont recréés dans la médiathèque (navigateurs compatibles).</span></div>
+    <input type="file" class="sr-only" data-ml-input multiple tabindex="-1" aria-label="Choisir des fichiers à envoyer" accept="<%= uploadCfg.accept %>">
+    <input type="file" class="sr-only" data-mx-folder-input webkitdirectory tabindex="-1" aria-label="Choisir un dossier à envoyer">
+    <div class="mk-ml-summary" data-ml-summary role="status" aria-live="polite" hidden></div>
+    <ul class="mk-ml-queue" data-ml-queue aria-live="polite" aria-label="Envois en cours" hidden></ul>
+  </div>
+</div>
+<% } %>
+<script type="application/json" id="mu-config"><%- JSON.stringify(uploadCfg).replace(/</g, "\\u003c") %></script>
+<script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: filtered, folder: f.adv.folder || null, folderEnabled: tree.enabled, scoped, view, section, pageKey, pageTitle, uploadOpen, prefs, retention, spaceBase, folders: tree.folders.map((x) => ({ id: x.id, parentId: x.parentId || null, name: x.name, color: x.color || "", description: x.description || "", count: x.count, starred: Boolean(x.starred) })), colors: ["bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"], total: found.total, nextUrl: found.page < found.pages ? h.keep({ page: found.page + 1 }) : "" }).replace(/</g, "\\u003c") %></script>
 <%- include("partials/bottom") %>

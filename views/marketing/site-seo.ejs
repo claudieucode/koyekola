@@ -40,20 +40,23 @@
 <% } else { %>
 <div class="rd-stack">
     <% if (can.create) { %>
-    <section class="rd-panel"><form id="nouvelle" method="post" action="<%= space.base %>/redirections">
-      <div class="rd-panel-head"><div><h2>Ajouter une redirection</h2><p>Envoie les visiteurs et les moteurs de recherche d'une ancienne adresse vers la nouvelle. Laissez la nouvelle adresse vide pour indiquer que la page est supprimée (410).</p></div></div>
-      <div class="rd-panel-body"><div class="rd-grid">
-        <div class="field-group rd-c6"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
-        <div class="field-group rd-c6"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" placeholder="/nouvelle-page (vide pour un 410)"></div>
-        <div class="field-group rd-c4"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="303">303 — temporaire, vers une consultation (GET)</option><option value="410">410 — supprimée</option><option value="451">451 — indisponible (légal)</option></select></div>
-        <div class="field-group rd-c4"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="contains">Contient un texte</option><option value="endswith">Se termine par un texte</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
-        <div class="field-group rd-c4"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200" placeholder="Facultatif"></div>
-      </div></div>
-      <div class="rd-panel-foot"><button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button></div></form></section>
+    <dialog class="mk-dialog mk-modal" id="rd-new" aria-labelledby="rd-new-title" data-rd-autoopen="<%= prefill ? "1" : "" %>">
+      <form id="nouvelle" method="post" action="<%= space.base %>/redirections">
+        <header class="mk-dialog-head"><div class="mk-dialog-titles"><h2 id="rd-new-title">Ajouter une redirection</h2><p class="field-hint">Envoie les visiteurs et les moteurs de recherche d'une ancienne adresse vers la nouvelle. Laissez la nouvelle adresse vide pour indiquer que la page est supprimée (410).</p></div><button type="button" class="mk-dialog-close" data-rd-close aria-label="Fermer"><%- icon("close", { size: 18 }) %></button></header>
+        <div class="mk-dialog-body">
+<div class="field-group"><label for="rd-source">Ancienne adresse</label><input id="rd-source" type="text" name="source" maxlength="300" required placeholder="/ancienne-page" value="<%= prefill %>"></div>
+        <div class="field-group"><label for="rd-target">Nouvelle adresse</label><input id="rd-target" type="text" name="target" maxlength="500" placeholder="/nouvelle-page (vide pour un 410)"></div>
+        <div class="field-group"><label for="rd-status">Type</label><select id="rd-status" name="status"><option value="301">301 — définitive</option><option value="302">302 — temporaire</option><option value="307">307 — temporaire (même méthode)</option><option value="308">308 — définitive (même méthode)</option><option value="303">303 — temporaire, vers une consultation (GET)</option><option value="410">410 — supprimée</option><option value="451">451 — indisponible (légal)</option></select></div>
+        <div class="field-group"><label for="rd-match">Correspondance</label><select id="rd-match" name="match_type"><option value="exact">Adresse exacte</option><option value="prefix">Préfixe — toute la section (/ancien et ce qui est dessous)</option><option value="contains">Contient un texte</option><option value="endswith">Se termine par un texte</option><option value="regex">Expression régulière (avancé, ^…$ avec $1 dans la destination)</option></select></div>
+        <div class="field-group"><label for="rd-note">Note</label><input id="rd-note" type="text" name="note" maxlength="200" placeholder="Facultatif"></div>
+        </div>
+        <div class="mk-dialog-actions"><button type="button" class="btn btn-outline btn-sm" data-rd-close>Annuler</button><button type="submit" class="btn btn-primary btn-sm">Créer la redirection</button></div>
+      </form>
+    </dialog>
     <% } %>
     <section class="rd-panel">
       <div class="rd-panel-head"><div><h2>Redirections du site</h2><p><%= q.total %> redirection<%= q.total > 1 ? "s" : "" %> : seules les règles de ce site sont affichées.</p></div>
-        <div class="rd-panel-tools"><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/export.csv"><%- icon("download", { size: 15 }) %> Exporter (CSV)</a></div></div>
+        <div class="rd-panel-tools"><% if (can.create) { %><button type="button" class="btn btn-primary btn-sm" data-rd-new>Ajouter une redirection</button><% } %><a class="btn btn-outline btn-sm" href="<%= space.base %>/redirections/export.csv"><%- icon("download", { size: 15 }) %> Exporter (CSV)</a></div></div>
       <form method="get" class="rd-panel-body rd-filters" role="search"><label class="sr-only" for="rd-q">Rechercher</label><input type="search" id="rd-q" name="q" value="<%= search %>" placeholder="Rechercher une adresse ou une note"><button class="btn btn-outline btn-sm" type="submit">Rechercher</button><% if (search) { %><a class="btn btn-ghost btn-sm" href="<%= space.base %>/redirections">Réinitialiser</a><% } %></form>
     <% if (!q.rows.length) { %><div class="rd-empty"><strong><%= search ? "Aucun résultat" : "Aucune redirection" %></strong><p><%= search ? "Aucune redirection ne correspond à cette recherche." : "Ce site n'a aucune redirection." %><%= !search && can.create ? " Ajoutez-en une avec le formulaire ci-dessus." : "" %></p></div><% } else { %>
     <div class="mk-table-wrap"><table class="mk-table mk-cms-table" id="seo-redirects-table"><caption class="sr-only">Redirections du site</caption><thead><tr><th scope="col">Ancienne adresse</th><th scope="col">Nouvelle adresse</th><th scope="col">Type</th><th scope="col">État</th><th scope="col" class="mk-num">Visites</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>
