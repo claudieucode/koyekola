@@ -69,7 +69,7 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
   });
   after(async () => { if (browser) await browser.close(); await srv.stop(); });
 
-  test("zoom + / − : niveaux usuels de 10 à 400 %, limites, rafale, barre de zoom immobile, couche graphique libérée ; Navigator non chargé au démarrage", async () => {
+  test("zoom + / − : niveaux usuels de 10 à 500 %, limites, rafale, barre de zoom immobile, couche graphique libérée ; Navigator non chargé au démarrage", async () => {
     assert.equal(await page.evaluate(() => typeof window.pbNavigator), "undefined", "Navigator non chargé au démarrage");
     assert.equal(requests.some((u) => /page-builder-navigator\.js/.test(u)), false, "aucune requête du fichier avant le premier clic");
     await clickZoom("100");
@@ -80,10 +80,11 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
     for (let i = 0; i < 4; i++) { await clickZoom("+"); seen.push(await zoomNow()); }
     assert.deepEqual(seen, [1.25, 1.5, 2, 3], "niveaux usuels vers l'avant");
     await clickZoom("+"); assert.equal(await zoomNow(), 4);
-    assert.equal(await page.locator('[data-pb-zoom="+"]').isDisabled(), true, "400 % : bouton + désactivé");
+    await clickZoom("+"); assert.equal(await zoomNow(), 5);
+    assert.equal(await page.locator('[data-pb-zoom="+"]').isDisabled(), true, "500 % : bouton + désactivé");
     const down = [];
-    for (let i = 0; i < 6; i++) { await clickZoom("-"); down.push(await zoomNow()); }
-    assert.deepEqual(down, [3, 2, 1.5, 1.25, 1, 0.75], "niveaux usuels vers l'arrière");
+    for (let i = 0; i < 7; i++) { await clickZoom("-"); down.push(await zoomNow()); }
+    assert.deepEqual(down, [4, 3, 2, 1.5, 1.25, 1, 0.75], "niveaux usuels vers l'arrière");
     for (let i = 0; i < 5; i++) await clickZoom("-");
     assert.equal(await zoomNow(), 0.1, "10 % : plancher");
     assert.equal(await page.locator('[data-pb-zoom="-"]').isDisabled(), true);
@@ -96,9 +97,9 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
     await clickZoom("100");
   });
 
-  test("zoom personnalisé et valeurs intermédiaires : tapé dans le Navigator, 10 à 400 %, borné", async () => {
+  test("zoom personnalisé et valeurs intermédiaires : tapé dans le Navigator, 10 à 500 %, borné", async () => {
     await openNav();
-    for (const [typed, want] of [["150", 1.5], ["87", 0.87], ["5", 0.1], ["999", 4]]) {
+    for (const [typed, want] of [["150", 1.5], ["87", 0.87], ["5", 0.1], ["999", 5], ["400", 4]]) {
       await page.fill(".pb-nvs-zoom-input", typed); await page.press(".pb-nvs-zoom-input", "Enter"); await idle();
       assert.equal(await zoomNow(), want, `${typed} → ${want}`);
     }
@@ -291,7 +292,7 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
     const ratio = await page.evaluate(() => { const t = document.querySelector(".pb-nvs-thumbbox").getBoundingClientRect(), f = document.querySelector(".pb-nvs-frame"); return { box: t.width / t.height, doc: parseFloat(f.style.width) / parseFloat(f.style.height) }; });
     assert.ok(Math.abs(ratio.box - ratio.doc) / ratio.doc < 0.05, "proportions conservées après redimensionnement");
     const hd = await page.locator(".pb-nvs-head").boundingBox(), p0 = await pbox();
-    await page.mouse.move(hd.x + 60, hd.y + 10); await page.mouse.down(); await page.mouse.move(hd.x + 60 - 150, hd.y + 10 - 120, { steps: 6 }); await page.mouse.up(); await wait(150);
+    await page.mouse.move(hd.x + 8, hd.y + 10); await page.mouse.down(); await page.mouse.move(hd.x + 8 - 150, hd.y + 10 - 120, { steps: 6 }); await page.mouse.up(); await wait(150);
     const p1 = await pbox(); assert.ok(p1.x < p0.x - 100 && p1.y < p0.y - 80, "déplacement libre");
     await page.click('.pb-nvs-btn[data-nav="lock"]'); assert.equal(await page.getAttribute('.pb-nvs-btn[data-nav="lock"]', "aria-pressed"), "true");
     const hd2 = await page.locator(".pb-nvs-head").boundingBox();
@@ -327,15 +328,62 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
     await shotIf("navigator-ancre");
     await page.click('.pb-nvs-btn[data-nav="dock"]'); await wait(400);
     assert.equal(await page.evaluate(() => document.querySelector("[data-pb-canvas]").classList.contains("has-nav-dock")), false, "détaché : la place est rendue");
-    if (!(await page.evaluate(() => document.querySelector(".pb-nvs-adv").open))) await page.click(".pb-nvs-adv > summary");
     await page.click('.pb-nvs-btn[data-nav="reset"]'); await wait(300);
-    const d = await pbox(); assert.ok(Math.abs(d.width - 288) <= 2, "disposition par défaut rétablie");
+    const d = await pbox(); assert.ok(Math.abs(d.width - 320) <= 2, "disposition par défaut rétablie");
+    await closeNav();
+  });
+
+  test("zoom de la miniature : indépendant du canevas, cadre toujours exact, déplacement, retour à la vue globale ; focus discret", async () => {
+    await setDevice("desktop"); await clickZoom("100"); await openNav(); await thumbReady();
+    const snap = () => page.evaluate(() => {
+      const f = document.querySelector("[data-pb-frame]"), z = parseFloat(document.querySelector("[data-pb-zoom-value]").textContent) / 100, w = f.contentWindow, de = w.document.documentElement;
+      const tb = document.querySelector(".pb-nvs-thumbbox").getBoundingClientRect(), r = document.querySelector(".pb-nvs-rect").getBoundingClientRect(), th = document.querySelector(".pb-nvs-frame"), k = tb.width / parseFloat(th.style.width);
+      return { z, sy: w.scrollY, rx: (r.left - tb.left) / k, ry: (r.top - tb.top) / k, rw: r.width / k, rh: r.height / k, tw: tb.width, th: tb.height, view: document.querySelector(".pb-nvs-view").getBoundingClientRect().toJSON() };
+    });
+    const a = await snap();
+    await page.click('.pb-nvs-btn[data-nav="tz-in"]'); await page.click('.pb-nvs-btn[data-nav="tz-in"]'); await page.click('.pb-nvs-btn[data-nav="tz-in"]'); await wait(300);
+    const b = await snap();
+    assert.equal(b.z, a.z, "le zoom du canevas n'a pas bougé");
+    assert.ok(b.tw > a.tw * 1.7 && Math.abs(b.tw / b.th - a.tw / a.th) < 0.01, "miniature agrandie sans déformation");
+    assert.match(await page.locator(".pb-nvs-tzval").textContent(), /1(9|8)\d %|195 %/, "pourcentage de l'aperçu affiché");
+    assert.ok(Math.abs(b.rw - a.rw) < 2 && Math.abs(b.rh - a.rh) < 2, "rectangle : mêmes dimensions réelles");
+    assert.ok(Math.abs(b.ry - b.sy) < 3, `rectangle exact en coordonnées du document (${Math.round(b.ry)} / ${Math.round(b.sy)})`);
+    // Ctrl + molette sur la miniature : zoom de l'aperçu seulement
+    const vr = (await snap()).view;
+    await page.mouse.move(vr.x + vr.width / 2, vr.y + vr.height / 2); await page.keyboard.down("Control"); await page.mouse.wheel(0, -300); await page.keyboard.up("Control"); await wait(300);
+    const c = await snap(); assert.equal(c.z, a.z, "molette de l'aperçu : canevas inchangé"); assert.ok(c.tw > b.tw, "molette : aperçu agrandi");
+    // le canevas défile : le rectangle suit, l'aperçu reste lisible
+    await page.evaluate(() => document.querySelector("[data-pb-frame]").contentWindow.scrollTo(0, 1500)); await wait(500);
+    const d = await snap(); assert.ok(Math.abs(d.ry - d.sy) < 3 && Math.abs(d.sy - 1500) < 3, "le cadre suit le défilement même aperçu agrandi");
+    assert.ok(await page.evaluate(() => { const v = document.querySelector(".pb-nvs-view").getBoundingClientRect(), r = document.querySelector(".pb-nvs-rect").getBoundingClientRect(); return r.bottom > v.top && r.top < v.bottom; }), "le cadre reste visible dans l'aperçu agrandi");
+    // glisser le cadre dans l'aperçu agrandi
+    const rb = await page.evaluate(() => { const v = document.querySelector(".pb-nvs-view").getBoundingClientRect(), r = document.querySelector(".pb-nvs-rect").getBoundingClientRect(), t = Math.max(v.top, r.top), b = Math.min(v.bottom, r.bottom), l = Math.max(v.left, r.left), rr = Math.min(v.right, r.right); return { x: l, y: t, width: rr - l, height: b - t }; });
+    const hit = await page.evaluate(([x, y]) => { const n = document.elementFromPoint(x, y); return n ? n.className + "" : "rien"; }, [rb.x + rb.width / 2, rb.y + rb.height / 2]);
+    await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2); await page.mouse.down(); await page.mouse.move(rb.x + rb.width / 2, rb.y + rb.height / 2 - 40, { steps: 6 }); await page.mouse.up(); await wait(500);
+    const after = await snap();
+    assert.ok(after.sy < 1500 - 20, `glisser le cadre déplace le canevas (cible : ${hit}, sy=${after.sy}, rb=${JSON.stringify(rb)})`);
+    assert.equal((await snap()).z, a.z, "toujours le même zoom du canevas");
+    // centrer, réduire, vue globale
+    await page.click('.pb-nvs-btn[data-nav="tzcenter"]'); await wait(200);
+    await page.click('.pb-nvs-btn[data-nav="tz-out"]'); await wait(200); assert.ok((await snap()).tw < c.tw, "aperçu réduit");
+    await page.click('.pb-nvs-btn[data-nav="tzfit"]'); await wait(300);
+    const e = await snap(); assert.ok(Math.abs(e.tw - a.tw) < 2, "vue globale : retour à l'ajustement automatique"); assert.equal(await page.locator('.pb-nvs-btn[data-nav="tzfit"]').isDisabled(), true);
+    // le canevas zoome : l'aperçu garde son niveau, le cadre rétrécit
+    await page.click('.pb-nvs-btn[data-nav="tz-in"]'); await wait(200); const t1 = (await snap()).tw;
+    await clickZoom("+"); await wait(400); const f = await snap(); assert.ok(Math.abs(f.tw - t1) < 2, "zoom du canevas : aperçu inchangé"); assert.ok(f.rw < a.rw - 5, "le cadre rétrécit quand le canevas zoome");
+    await page.click('.pb-nvs-btn[data-nav="tzfit"]'); await clickZoom("100");
+    // focus discret : jamais de gros contour
+    for (const sel of ['.pb-nvs-secbtn', '.pb-nvs-zoom-input', '.pb-nvs-btn[data-nav="tz-in"]']) {
+      await page.locator(sel).focus();
+      const st = await page.evaluate((q) => { const n = document.querySelector(q), wrap = n.closest(".pb-nvs-zoomwrap") || n, s = getComputedStyle(n), w = getComputedStyle(wrap); return { ow: parseFloat(s.outlineWidth) || 0, os: s.outlineStyle, shadow: s.boxShadow + "|" + w.boxShadow }; }, sel);
+      assert.ok(st.os === "none" || st.ow === 0, `${sel} : pas de gros contour (${st.os} ${st.ow})`);
+    }
+    await shotIf("navigator-v2");
     await closeNav();
   });
 
   test("commandes du Navigator : ajustements, page entière, historique de vues, navigation rapide, sections", async () => {
     await setDevice("desktop"); await clickZoom("100"); await openNav(); await thumbReady();
-    if (!(await page.evaluate(() => document.querySelector(".pb-nvs-adv").open))) await page.click(".pb-nvs-adv > summary");
     await page.evaluate(() => document.querySelector("[data-pb-frame]").contentWindow.scrollTo(0, 0));
     await page.click('.pb-nvs-btn[aria-label="Aller à la fin de la page"]');
     await page.waitForFunction(() => { const w = document.querySelector("[data-pb-frame]").contentWindow; return w.scrollY > w.document.documentElement.scrollHeight - w.innerHeight - 5; }, null, { timeout: 8000 });
@@ -346,16 +394,26 @@ describe("zoom, main, zoom par zone et Navigator Studio (navigateur)", { skip: S
     assert.ok((await scrollY()) > 1000, "vue précédente : on retrouve la fin de page");
     await page.click('.pb-nvs-btn[aria-label="Vue suivante"]'); await wait(900);
     assert.ok((await scrollY()) < 50, "vue suivante : retour au début");
-    await page.click('.pb-nvs-btn[aria-label="Aller au milieu de la page"]'); await wait(2500);
-    const mid = await scrollY(); assert.ok(mid > 300 && mid < endY, "milieu de page");
-    assert.ok((await page.locator(".pb-nvs-select option").count()) >= 2, "liste des sections");
-    await page.selectOption(".pb-nvs-select", { index: 1 }); await wait(700);
-    await page.click('.pb-nvs-btn[aria-label="Ajuster à la largeur : la page remplit la largeur"]'); await idle();
-    await page.click('.pb-nvs-btn[aria-label="Afficher la page entière"]'); await wait(500);
+    await page.evaluate(() => document.querySelector('[data-pb-frame]').contentWindow.scrollTo(0, 0));
+    await page.click(".pb-nvs-secbtn"); await page.waitForSelector(".pb-nvs-secpop.is-open");
+    assert.ok((await page.locator(".pb-nvs-secitem").count()) >= 1, "liste des sections");
+    await page.fill(".pb-nvs-secsearch", "zzzz"); assert.equal(await page.locator(".pb-nvs-secitem").count(), 0, "recherche sans résultat"); assert.equal(await page.locator(".pb-nvs-secnone").count(), 1);
+    await page.fill(".pb-nvs-secsearch", "");
+    const before = await scrollY();
+    await page.locator(".pb-nvs-secitem").nth(0).click(); await wait(900);
+    assert.equal(await page.locator(".pb-nvs-secpop").isHidden(), true, "liste fermée après le choix");
+    await page.click(".pb-nvs-secbtn"); await page.waitForSelector(".pb-nvs-secgrp");
+    assert.match(await page.locator(".pb-nvs-secgrp").first().textContent(), /Récentes/, "sections récentes en tête");
+    await page.keyboard.press("Escape"); assert.equal(await page.locator(".pb-nvs-secpop").isHidden(), true, "Échap ferme");
+    void before;
+    await page.click('.pb-nvs-btn[data-nav="fit-width"]'); await idle();
+    await page.click('.pb-nvs-btn[data-nav="fit-height"]'); await idle();
+    await page.click('.pb-nvs-btn[data-nav="fit-window"]'); await wait(500);
     const whole = await page.evaluate(() => ({ h: document.querySelector("[data-pb-frame]").contentDocument.documentElement.scrollHeight, z: parseFloat(document.querySelector("[data-pb-zoom-value]").textContent) / 100, stageH: document.querySelector("[data-pb-stage]").clientHeight - 48 }));
     assert.ok(whole.z <= 0.11 || whole.h * whole.z <= whole.stageH + 4, `page entière visible (${Math.round(whole.h * whole.z)} ≤ ${whole.stageH}) ou 10 %`);
-    await page.click('.pb-nvs-btn[aria-label="Niveaux de zoom prédéfinis"]'); await page.waitForSelector(".pb-menu:not([hidden]) .pb-menu-item");
-    assert.ok((await page.locator(".pb-menu:not([hidden]) .pb-menu-item").count()) >= 16, "menu des niveaux : ajustements + 12 niveaux");
+    await page.click('.pb-nvs-btn[aria-label^="Niveaux de zoom prédéfinis"]'); await page.waitForSelector(".pb-menu:not([hidden]) .pb-menu-item");
+    assert.ok((await page.locator(".pb-menu:not([hidden]) .pb-menu-item").count()) >= 17, "menu des niveaux : ajustements + 13 niveaux");
+    assert.ok((await page.locator(".pb-menu:not([hidden]) .pb-menu-item").allTextContents()).some((t) => /500 %/.test(t)), "500 % proposé");
     await page.keyboard.press("Escape");
     await clickZoom("100"); await closeNav();
   });

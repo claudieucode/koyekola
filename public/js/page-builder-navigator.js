@@ -9,11 +9,12 @@
    (l'ancien rendu reste affiché jusqu'à ce que le nouveau soit prêt), et le cadre est RETIRÉ à la fermeture (aucune mémoire gardée). */
 (function (root) {
   "use strict";
-  var A = null, panel = null, view = null, box = null, rectEl = null, selEl = null, emptyEl = null, zoomInput = null, histBack = null, histFwd = null, secSel = null, adv = null;
+  var A = null, panel = null, view = null, box = null, rectEl = null, selEl = null, emptyEl = null, zoomInput = null, histBack = null, histFwd = null, secBtn = null, secPop = null, secSearch = null, secList = null, tzOut = null, tzMinus = null, tzPlus = null;
+  var tz = 1, TZ_MAX = 8, secOpen = false, secItems = [], secActive = 0;   // tz : zoom PROPRE à la miniature (1 = ajustée), indépendant du zoom du canevas
   var open = false, unsub = null, unsubContent = null, ro = null, frameEl = null, building = null, seq = 0;
   var lastGen = -1, lastBuildAt = 0, lastDocW = 0, lastDocH = 0, refreshTimer = 0, rafQueued = false, geom = null, dragging = false, resizing = false;
-  var UI_KEY = "navigator-ui", MIN_W = 224, MIN_H = 190, DEF_W = 288, DEF_H = 360, FRAME_MAX_H = 60000;
-  var ui = { mode: "float", x: null, y: null, w: DEF_W, h: DEF_H, locked: false, min: false, max: false, prev: null, adv: false, dockW: 280 };
+  var UI_KEY = "navigator-ui", MIN_W = 224, MIN_H = 190, DEF_W = 320, DEF_H = 360, FRAME_MAX_H = 60000;
+  var ui = { mode: "float", x: null, y: null, w: DEF_W, h: DEF_H, locked: false, min: false, max: false, prev: null, adv: false, dockW: 280, recent: [] };
 
   var el = function (tag, attrs) { var n = document.createElement(tag); Object.keys(attrs || {}).forEach(function (k) { if (k === "text") n.textContent = attrs[k]; else if (attrs[k] !== null && attrs[k] !== false) n.setAttribute(k, attrs[k] === true ? "" : attrs[k]); }); for (var i = 2; i < arguments.length; i++) if (arguments[i]) n.appendChild(arguments[i]); return n; };
   var SVG = "http://www.w3.org/2000/svg";
@@ -26,7 +27,7 @@
     dock: "M3 4h18v16H3z|M15 4v16", float: "M3 5h13v11H3z|M8 11h13v8H8z",
     min: "M5 19h14", max: "M4 4h16v16H4z", restore: "M8 4h12v12|M4 8h12v12H4z",
     chevron: "m6 9 6 6 6-6", back: "M15 18l-6-6 6-6", fwd: "M9 6l6 6-6 6",
-    top: "M5 4h14|M12 20V8|M7 13l5-5 5 5", mid: "M5 12h14|M12 5v14", end: "M5 20h14|M12 4v12|M7 11l5 5 5-5",
+    top: "M5 4h14|M12 20V8|M7 13l5-5 5 5", mid: "M4 8h16|M4 16h16|M12 10v4", height: "M12 4v16|M8 8l4-4 4 4|M8 16l4 4 4-4", list: "M8 6h13|M8 12h13|M8 18h13|M3 6h.01|M3 12h.01|M3 18h.01", search: "M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14z|M21 21l-4.3-4.3", globe: "M3 3h18v18H3z|M3 9h18|M9 9v12", end: "M5 20h14|M12 4v12|M7 11l5 5 5-5",
     sel: "M4 4h16v16H4z|M9 9h6v6H9z", hand: "M18 11V6a2 2 0 0 0-4 0|M14 10V4a2 2 0 0 0-4 0v2|M10 10.5V6a2 2 0 0 0-4 0v8|M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-6-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15",
     area: "M3 7V5a2 2 0 0 1 2-2h2|M17 3h2a2 2 0 0 1 2 2v2|M21 17v2a2 2 0 0 1-2 2h-2|M7 21H5a2 2 0 0 1-2-2v-2|M12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z|M16 16l-2-2", home: "M3 11 12 3l9 8|M5 10v10h14V10", reset: "M3 12a9 9 0 1 0 3-6.7L3 8|M3 3v5h5"
   };
@@ -37,7 +38,7 @@
   };
   var txtBtn = function (label, text, onclick) { var b = el("button", { type: "button", class: "pb-nvs-btn pb-nvs-txt", "aria-label": label, "data-tip": label, text: text }); b.addEventListener("click", onclick); return b; };
   var loadUi = function () { try { var v = A.store.get(UI_KEY, null); if (v && typeof v === "object") Object.keys(ui).forEach(function (k) { if (v[k] !== undefined) ui[k] = v[k]; }); } catch (e) { /* mémoire indisponible */ } };
-  var saveUi = function () { try { A.store.set(UI_KEY, { mode: ui.mode, x: ui.x, y: ui.y, w: ui.w, h: ui.h, locked: ui.locked, min: ui.min, max: ui.max, prev: ui.prev, adv: ui.adv, dockW: ui.dockW }); } catch (e) { /* mémoire indisponible */ } };
+  var saveUi = function () { try { A.store.set(UI_KEY, { mode: ui.mode, x: ui.x, y: ui.y, w: ui.w, h: ui.h, locked: ui.locked, min: ui.min, max: ui.max, prev: ui.prev, adv: ui.adv, dockW: ui.dockW, recent: ui.recent }); } catch (e) { /* mémoire indisponible */ } };
   var cbox = function () { return A.canvas().getBoundingClientRect(); };
   var clamp = function (v, lo, hi) { return Math.min(Math.max(v, lo), Math.max(lo, hi)); };
 
@@ -83,10 +84,13 @@
     if (!view || !frameEl) return;
     var cw = lastDocW || 1, dh = lastDocH || 1, vr = view.getBoundingClientRect(), pad = 12;
     var aw = Math.max(40, vr.width - pad * 2), ah = Math.max(40, vr.height - pad * 2);
-    var k = Math.min(aw / cw, ah / dh);
-    geom = { k: k, w: Math.max(2, cw * k), h: Math.max(2, dh * k), docW: cw, docH: dh };   // dimensions fractionnaires : aucune déformation même très petite
+    var k0 = Math.min(aw / cw, ah / dh), k = k0 * tz;
+    if (cw * k > 24000 || dh * k > 24000) { k = Math.min(24000 / cw, 24000 / dh); tz = Math.max(1, k / k0); }   // borne mémoire de la miniature agrandie
+    geom = { k: k, k0: k0, w: Math.max(2, cw * k), h: Math.max(2, dh * k), docW: cw, docH: dh };   // dimensions fractionnaires : aucune déformation même très petite
     box.style.width = geom.w + "px"; box.style.height = geom.h + "px";
     frameEl.style.transform = "scale(" + k + ")";
+    view.classList.toggle("is-zoomed", tz > 1.001);
+    syncTz();
     placeRect(A.viewState());
   }
 
@@ -104,6 +108,33 @@
     panel.querySelector(".pb-nvs-zoom").textContent = pct + " %";
     view.setAttribute("aria-valuetext", "Zone visible : " + Math.round(vs.y) + " px depuis le haut sur " + Math.round(vs.docH) + " px, zoom " + pct + " %"); void sx;
     var h = A.history(); if (histBack) { histBack.disabled = !h.back; histFwd.disabled = !h.forward; }
+    if (tz > 1.001 && !dragging && !panning) follow(vs);
+  }
+  // Miniature agrandie : le rectangle de navigation reste toujours visible (la miniature défile seulement s'il sort de l'espace disponible)
+  function follow(vs) {
+    var k = geom.k, vr = view.getBoundingClientRect(), br = box.getBoundingClientRect();
+    var rx = br.left - vr.left + vs.x * k, ry = br.top - vr.top + vs.y * k, rw = Math.min(geom.w, vs.w * k), rh = Math.min(geom.h, vs.h * k), dx = 0, dy = 0;
+    // si le cadre tient dans l'espace : il y reste entièrement ; sinon : on le recentre dès que son centre sort de l'espace
+    if (rw <= vr.width) { if (rx < 0) dx = rx; else if (rx + rw > vr.width) dx = rx + rw - vr.width; } else if (rx + rw / 2 < 0 || rx + rw / 2 > vr.width) dx = rx + rw / 2 - vr.width / 2;
+    if (rh <= vr.height) { if (ry < 0) dy = ry; else if (ry + rh > vr.height) dy = ry + rh - vr.height; } else if (ry + rh / 2 < 0 || ry + rh / 2 > vr.height) dy = ry + rh / 2 - vr.height / 2;
+    if (dx || dy) { view.scrollLeft += dx; view.scrollTop += dy; }
+  }
+  // Zoom de la miniature : autour d'un point (le point visé reste sous le curseur) ; ne touche JAMAIS au zoom du canevas
+  function setTz(next, cx, cy) {
+    next = clamp(Math.round(next * 100) / 100, 1, TZ_MAX);
+    if (!geom || Math.abs(next - tz) < 0.005) return;
+    var vr = view.getBoundingClientRect(), br = box.getBoundingClientRect();
+    var ax = cx === undefined ? vr.left + vr.width / 2 : cx, ay = cy === undefined ? vr.top + vr.height / 2 : cy;
+    var px = (ax - br.left) / geom.k, py = (ay - br.top) / geom.k;                       // point du DOCUMENT sous l'ancre
+    tz = next; fit();
+    var nb = box.getBoundingClientRect(), nr = view.getBoundingClientRect();
+    view.scrollLeft += nb.left + px * geom.k - ax + (nr.left - vr.left) * 0; view.scrollTop += nb.top + py * geom.k - ay;
+    placeRect(A.viewState());
+  }
+  function syncTz() {
+    if (!tzOut) return;
+    tzOut.textContent = Math.round(tz * 100) + " %"; tzMinus.disabled = tz <= 1.001; tzPlus.disabled = tz >= TZ_MAX - 0.001;
+    var g = panel.querySelector("[data-nav=tzfit]"); if (g) g.disabled = tz <= 1.001;
   }
   function sync() {
     if (!open || rafQueued) return;
@@ -125,7 +156,21 @@
     navTarget = { x: p.x - (grab ? grab.dx : vs.w / 2), y: p.y - (grab ? grab.dy : vs.h / 2), maxX: Math.max(0, vs.docW - vs.w), maxY: Math.max(0, vs.docH - vs.h) };
     if (!navQueued) { navQueued = true; requestAnimationFrame(function () { navQueued = false; var t = navTarget; A.viewTo(Math.min(t.maxX, Math.max(0, t.x)), Math.min(t.maxY, Math.max(0, t.y))); }); }
   }
+  var panning = false;
+  function onWheel(e) {
+    if (!geom) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) { e.preventDefault(); setTz(tz * Math.exp(-e.deltaY * 0.0028), e.clientX, e.clientY); }   // Ctrl / ⌘ / pincement : zoom de la miniature
+  }
+  function startPan(e) {                                                                                                          // bouton du milieu : déplacer la miniature agrandie
+    e.preventDefault(); if (tz <= 1.001) return;
+    var sx = e.clientX, sy = e.clientY, l0 = view.scrollLeft, t0 = view.scrollTop, id = e.pointerId; panning = true; view.classList.add("is-panning");
+    try { view.setPointerCapture(id); } catch (x) { /* capture indisponible */ }
+    var move = function (ev) { if (ev.pointerId === id) { view.scrollLeft = l0 - (ev.clientX - sx); view.scrollTop = t0 - (ev.clientY - sy); } };
+    var up = function (ev) { if (ev.pointerId !== id) return; view.removeEventListener("pointermove", move); view.removeEventListener("pointerup", up); view.removeEventListener("pointercancel", up); panning = false; view.classList.remove("is-panning"); };
+    view.addEventListener("pointermove", move); view.addEventListener("pointerup", up); view.addEventListener("pointercancel", up);
+  }
   function onDown(e) {
+    if (e.button === 1) { startPan(e); return; }
     if (e.button !== 0 || !geom) return;
     e.preventDefault();
     var p = toDoc(e), vs = A.viewState(), grab = null;
@@ -147,6 +192,7 @@
     else if (k === "ArrowRight") A.viewTo(Math.min(vs.docW - vs.w, vs.x + step), vs.y);
     else if (k === "ArrowLeft") A.viewTo(Math.max(0, vs.x - step), vs.y);
     else if (k === "Home") A.goTo("start"); else if (k === "End") A.goTo("end");
+    else if (k === "+" || k === "=") setTz(tz * 1.25); else if (k === "-") setTz(tz / 1.25); else if (k === "0") { tz = 1; fit(); view.scrollLeft = 0; view.scrollTop = 0; }
     else return;
     e.preventDefault();
   }
@@ -174,7 +220,7 @@
     set("[data-nav=max]", ui.max ? "Restaurer la taille précédente" : "Agrandir le panneau", ui.max ? "restore" : "max");
     panel.querySelector("[data-nav=lock]").setAttribute("aria-pressed", String(ui.locked)); panel.querySelector("[data-nav=lock]").hidden = dock;
     panel.querySelector("[data-nav=min]").hidden = dock; panel.querySelector("[data-nav=max]").hidden = dock;
-    adv.open = Boolean(ui.adv);
+    closeSections();
     requestAnimationFrame(fit);
   }
   function dragHead(e) {
@@ -230,49 +276,102 @@
     rectEl = el("div", { class: "pb-nvs-rect", "aria-hidden": "true" }); selEl = el("div", { class: "pb-nvs-sel", "aria-hidden": "true", hidden: "" });
     box.appendChild(selEl); box.appendChild(rectEl);
     view = el("div", { class: "pb-nvs-view", tabindex: "0", role: "slider", "aria-label": "Zone visible de la page : cliquez ou glissez dans la miniature, ou utilisez les flèches", "aria-orientation": "vertical", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": "0" }, box, emptyEl);
-    view.addEventListener("pointerdown", onDown); view.addEventListener("keydown", onKey);
+    view.addEventListener("pointerdown", onDown); view.addEventListener("keydown", onKey); view.addEventListener("wheel", onWheel, { passive: false });
+    view.addEventListener("auxclick", function (e) { if (e.button === 1) e.preventDefault(); });
+    tzMinus = btn("Réduire l'aperçu (la page ne change pas)", "minus", function () { setTz(tz / 1.25); }, "pb-nvs-mini", { "data-nav": "tz-out" });
+    tzPlus = btn("Agrandir l'aperçu (la page ne change pas)", "plus", function () { setTz(tz * 1.25); }, "pb-nvs-mini", { "data-nav": "tz-in" });
+    tzOut = el("output", { class: "pb-nvs-tzval", "aria-live": "off", "data-tip": "Zoom de l'aperçu" });
+    var tzFit = btn("Vue globale : ajuster l'aperçu", "fit", function () { tz = 1; fit(); view.scrollLeft = 0; view.scrollTop = 0; }, "pb-nvs-mini", { "data-nav": "tzfit" });
+    var tzCenter = btn("Centrer l'aperçu sur la zone visible", "sel", function () { var vs = A.viewState(); if (!vs || !geom) return; var vr = view.getBoundingClientRect(), br = box.getBoundingClientRect(); view.scrollLeft += br.left - vr.left + (vs.x + vs.w / 2) * geom.k - vr.width / 2; view.scrollTop += br.top - vr.top + (vs.y + vs.h / 2) * geom.k - vr.height / 2; }, "pb-nvs-mini", { "data-nav": "tzcenter" });
+    var resetBtn = btn("Rétablir la disposition par défaut du panneau", "reset", function () { ui = { mode: "float", x: null, y: null, w: DEF_W, h: DEF_H, locked: false, min: false, max: false, prev: null, adv: ui.adv, dockW: 280, recent: ui.recent }; saveUi(); applyLayout(); }, "pb-nvs-mini", { "data-nav": "reset" });
+    var mini = el("div", { class: "pb-nvs-mini-bar", role: "group", "aria-label": "Zoom de l'aperçu" }, tzOut, tzMinus, tzPlus, tzCenter, tzFit, el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }), resetBtn);
+    ['pointerdown', 'wheel'].forEach(function (t) { mini.addEventListener(t, function (e) { e.stopPropagation(); }); });
 
-    zoomInput = el("input", { class: "pb-nvs-zoom-input", type: "text", inputmode: "numeric", "aria-label": "Niveau de zoom en pourcentage (Entrée pour appliquer)", "data-tip": "Zoom personnalisé : tapez un pourcentage", size: "3", maxlength: "3" });
+    zoomInput = el("input", { class: "pb-nvs-zoom-input", type: "text", inputmode: "numeric", "aria-label": "Niveau de zoom du canevas en pourcentage (Entrée pour appliquer)", "data-tip": "Zoom du canevas : tapez un pourcentage (10 à 500)", size: "3", maxlength: "3" });
     zoomInput.addEventListener("keydown", function (e) {
       if (e.key !== "Enter") return;
       var n = parseFloat(zoomInput.value.replace(",", ".")); if (!isFinite(n)) return;
       A.rememberView(false); A.setZoom(clamp(n / 100, A.zoomMin, A.zoomMax), { animate: true }); zoomInput.blur();
     });
     zoomInput.addEventListener("blur", function () { placeRect(A.viewState()); });
-    var presets = btn("Niveaux de zoom prédéfinis", "chevron", function (e) { var r = e.currentTarget.getBoundingClientRect(); A.openZoomMenu(r); }, "pb-nvs-presets");
-    var row1 = el("div", { class: "pb-nvs-row" },
-      btn("Zoom arrière", "minus", function () { A.rememberView(true); A.setZoom(A.zoomStep(-1), { animate: true }); }),
-      el("span", { class: "pb-nvs-zoomwrap" }, zoomInput, el("span", { class: "pb-nvs-pct", text: "%", "aria-hidden": "true" })), presets,
-      btn("Zoom avant", "plus", function () { A.rememberView(true); A.setZoom(A.zoomStep(1), { animate: true }); }),
-      btn("Ajuster à l'écran : toute la largeur de la page", "fit", function () { A.rememberView(false); A.setZoom("fit", { animate: true }); }),
-      btn("Ajuster à la largeur : la page remplit la largeur", "width", function () { A.fitWidthFill(); }),
-      btn("Afficher la page entière", "whole", function () { A.rememberView(false); A.showWholePage(); }),
-      txtBtn("Taille réelle : 100 %", "1:1", function () { A.rememberView(false); A.setZoom(1, { animate: true }); }));
+    var presets = btn("Niveaux de zoom prédéfinis (10 % à 500 %)", "chevron", function (e) { var r = e.currentTarget.getBoundingClientRect(); A.openZoomMenu(r); }, "pb-nvs-presets");
+    var grp = function () { var g = el("span", { class: "pb-nvs-grp", role: "group" }); for (var i = 0; i < arguments.length; i++) g.appendChild(arguments[i]); return g; };
+    // Zoom du CANEVAS : − · pourcentage · + | ajustements
+    var row1 = el("div", { class: "pb-nvs-row", role: "toolbar", "aria-label": "Zoom du canevas" },
+      grp(btn("Zoom arrière", "minus", function () { A.rememberView(true); A.setZoom(A.zoomStep(-1), { animate: true }); }),
+        el("span", { class: "pb-nvs-zoomwrap" }, zoomInput, el("span", { class: "pb-nvs-pct", text: "%", "aria-hidden": "true" }), presets),
+        btn("Zoom avant", "plus", function () { A.rememberView(true); A.setZoom(A.zoomStep(1), { animate: true }); })),
+      el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }),
+      grp(btn("Ajuster à la fenêtre : toute la page visible", "whole", function () { A.rememberView(false); A.showWholePage(); }, "", { "data-nav": "fit-window" }),
+        btn("Ajuster à la largeur : la page remplit la largeur", "width", function () { A.fitWidthFill(); }, "", { "data-nav": "fit-width" }),
+        btn("Ajuster à la hauteur : la section en cours remplit la hauteur", "height", function () { A.fitHeightSection(); }, "", { "data-nav": "fit-height" }),
+        txtBtn("Affichage 100 %", "1:1", function () { A.rememberView(false); A.setZoom(1, { animate: true }); }),
+        btn("Réinitialiser la position : centrer le document", "home", function () { A.rememberView(false); A.centerDocument(); }, "", { "data-nav": "pos-reset" })));
     histBack = btn("Vue précédente", "back", function () { A.viewBack(); }); histFwd = btn("Vue suivante", "fwd", function () { A.viewForward(); });
-    secSel = el("select", { class: "pb-nvs-select", "aria-label": "Aller à une section" });
-    secSel.addEventListener("change", function () { if (secSel.value) A.goToSection(secSel.value); secSel.value = ""; });
-    var toolBtn = function (label, icon, tool) { var b = btn(label, icon, function () { A.setTool(A.tool() === tool ? "select" : tool); syncTools(); }, "pb-nvs-tool", { "data-nav-tool": tool }); return b; };
-    var row2 = el("div", { class: "pb-nvs-row" }, histBack, histFwd, el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }),
-      btn("Aller au début de la page", "top", function () { A.goTo("start"); }), btn("Aller au milieu de la page", "mid", function () { A.goTo("center"); }), btn("Aller à la fin de la page", "end", function () { A.goTo("end"); }),
-      btn("Centrer le document", "home", function () { A.centerDocument(); }),
-      btn("Zoom sur la sélection", "sel", function () { A.zoomToSelection(); }),
-      el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }), toolBtn("Outil Main (H)", "hand", "hand"), toolBtn("Zoom par zone (Z)", "area", "zoomarea"));
-    var row3 = el("div", { class: "pb-nvs-row pb-nvs-row-sel" }, secSel,
-      btn("Rétablir la disposition par défaut", "reset", function () { ui = { mode: "float", x: null, y: null, w: DEF_W, h: DEF_H, locked: false, min: false, max: false, prev: null, adv: ui.adv, dockW: 280 }; saveUi(); applyLayout(); }, "", { "data-nav": "reset" }));
-    adv = el("details", { class: "pb-nvs-adv" }, el("summary", { text: "Navigation avancée" }), row2, row3);
-    adv.addEventListener("toggle", function () { ui.adv = adv.open; saveUi(); requestAnimationFrame(fit); });
-    var body = el("div", { class: "pb-nvs-body" }, view, el("div", { class: "pb-nvs-ctl" }, row1, adv));
+    var toolBtn = function (label, icon, tool) { return btn(label, icon, function () { A.setTool(A.tool() === tool ? "select" : tool); syncTools(); }, "pb-nvs-tool", { "data-nav-tool": tool }); };
+    // Navigation : historique · début / milieu / fin · outils · sections
+    secBtn = el("button", { type: "button", class: "pb-nvs-secbtn", "aria-haspopup": "listbox", "aria-expanded": "false", "data-tip": "Aller à une section : rechercher et choisir", "aria-label": "Aller à une section" }, svg(ICON.list, 14), el("span", { class: "pb-nvs-seclabel", text: "Sections" }), svg(ICON.chevron, 12));
+    secBtn.addEventListener("click", function () { if (secOpen) closeSections(); else openSections(); });
+    var row2 = el("div", { class: "pb-nvs-row", role: "toolbar", "aria-label": "Navigation" },
+      grp(histBack, histFwd), el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }),
+      grp(btn("Aller au début de la page", "top", function () { A.goTo("start"); }), btn("Aller à la fin de la page", "end", function () { A.goTo("end"); })),
+      el("span", { class: "pb-nvs-sep", "aria-hidden": "true" }),
+      grp(toolBtn("Outil Main : déplacer le canevas (H)", "hand", "hand"), toolBtn("Zoom par zone (Z)", "area", "zoomarea"), btn("Zoom sur la sélection", "sel", function () { A.zoomToSelection(); }, "", { "data-nav": "zoom-sel" })),
+      el("span", { class: "pb-nvs-grow", "aria-hidden": "true" }), secBtn);
+    var body = el("div", { class: "pb-nvs-body" }, el("div", { class: "pb-nvs-vwrap" }, view, mini), el("div", { class: "pb-nvs-ctl" }, row1, row2));
     panel = el("div", { class: "pb-nvs", role: "group", "aria-labelledby": "pb-nvs-title", "data-pb-navigator-panel": "", hidden: "" }, head, body);
     DIRS.forEach(function (d) { var h = el("span", { class: "pb-nvs-rs pb-nvs-rs-" + d, "aria-hidden": "true" }); h.addEventListener("pointerdown", function (e) { startResize(e, d); }); panel.appendChild(h); });
     A.canvas().appendChild(panel);
     if (window.ResizeObserver) { ro = new ResizeObserver(function () { if (open && !resizing) requestAnimationFrame(fit); }); ro.observe(view); }
   }
   function syncTools() { if (!panel) return; Array.prototype.forEach.call(panel.querySelectorAll("[data-nav-tool]"), function (b) { b.setAttribute("aria-pressed", String(A.tool() === b.getAttribute("data-nav-tool"))); }); }
-  function fillSections() {
-    if (!secSel) return;
-    secSel.textContent = ""; secSel.appendChild(el("option", { value: "", text: "Aller à la section…" }));
-    A.sections().forEach(function (s) { secSel.appendChild(el("option", { value: s.id, text: s.name })); });
+  // ---------- Sections : recherche, liste, récentes ----------
+  function buildSecPop() {
+    secSearch = el("input", { class: "pb-nvs-secsearch", type: "text", role: "combobox", "aria-expanded": "true", "aria-controls": "pb-nvs-seclist", "aria-autocomplete": "list", placeholder: "Rechercher une section", "aria-label": "Rechercher une section", autocomplete: "off" });
+    secList = el("div", { class: "pb-nvs-seclist", id: "pb-nvs-seclist", role: "listbox", "aria-label": "Sections de la page" });
+    secPop = el("div", { class: "pb-nvs-secpop", hidden: "" }, el("div", { class: "pb-nvs-secsearchwrap" }, svg(ICON.search, 13), secSearch), secList);
+    secSearch.addEventListener("input", function () { renderSections(); });
+    secSearch.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowDown") { secActive = Math.min(secItems.length - 1, secActive + 1); markActive(); e.preventDefault(); }
+      else if (e.key === "ArrowUp") { secActive = Math.max(0, secActive - 1); markActive(); e.preventDefault(); }
+      else if (e.key === "Enter") { if (secItems[secActive]) pickSection(secItems[secActive].id); e.preventDefault(); }
+      else if (e.key === "Escape") { closeSections(); secBtn.focus(); e.preventDefault(); e.stopPropagation(); }
+    });
+    secList.addEventListener("click", function (e) { var o = e.target.closest("[data-sec]"); if (o) pickSection(o.getAttribute("data-sec")); });
+    secList.addEventListener("pointermove", function (e) { var o = e.target.closest("[data-sec]"); if (o) { var i = secItems.findIndex(function (x) { return x.id === o.getAttribute("data-sec"); }); if (i >= 0 && i !== secActive) { secActive = i; markActive(); } } });
+    panel.appendChild(secPop);
   }
+  function renderSections() {
+    var q = secSearch.value.trim().toLowerCase(), all = A.sections(), rec = (ui.recent || []).map(function (id) { return all.find(function (s) { return s.id === id; }); }).filter(Boolean);
+    var hit = function (s) { return !q || s.name.toLowerCase().indexOf(q) >= 0; };
+    secItems = []; secList.textContent = "";
+    var group = function (label, arr) { if (!arr.length) return; if (label) secList.appendChild(el("div", { class: "pb-nvs-secgrp", role: "presentation", text: label })); arr.forEach(function (s) { secItems.push(s); secList.appendChild(el("div", { class: "pb-nvs-secitem", role: "option", id: "pb-nvs-sec-" + secItems.length, "data-sec": s.id, text: s.name })); }); };
+    if (!q) group("Récentes", rec.filter(hit));
+    group(!q && rec.length ? "Toutes les sections" : "", all.filter(hit));
+    if (!secItems.length) secList.appendChild(el("div", { class: "pb-nvs-secnone", text: all.length ? "Aucune section ne correspond" : "Cette page n'a pas encore de section" }));
+    secActive = 0; markActive();
+  }
+  function markActive() {
+    Array.prototype.forEach.call(secList.querySelectorAll("[data-sec]"), function (n, i) { n.classList.toggle("is-active", i === secActive); n.setAttribute("aria-selected", String(i === secActive)); if (i === secActive) { secSearch.setAttribute("aria-activedescendant", n.id); n.scrollIntoView({ block: "nearest" }); } });
+  }
+  function pickSection(id) {
+    ui.recent = [id].concat((ui.recent || []).filter(function (x) { return x !== id; })).slice(0, 4); saveUi();
+    closeSections(); A.rememberView(false); A.goToSection(id);
+  }
+  function openSections() {
+    if (!secPop) buildSecPop();
+    secOpen = true; secBtn.setAttribute("aria-expanded", "true"); secSearch.value = ""; renderSections();
+    secPop.hidden = false; requestAnimationFrame(function () { secPop.classList.add("is-open"); });
+    secSearch.focus({ preventScroll: true });
+    setTimeout(function () { document.addEventListener("pointerdown", outside, true); }, 0);
+  }
+  function outside(e) { if (secPop && !secPop.contains(e.target) && !secBtn.contains(e.target)) closeSections(); }
+  function closeSections() {
+    if (!secOpen) return;
+    secOpen = false; secBtn.setAttribute("aria-expanded", "false"); secPop.classList.remove("is-open"); secPop.hidden = true;
+    document.removeEventListener("pointerdown", outside, true);
+  }
+  function fillSections() { if (secOpen) renderSections(); }
 
   // ---------- Ouverture / fermeture ----------
   function toggle(next) {
@@ -286,7 +385,7 @@
       A.window.addEventListener("resize", onWin);
       requestAnimationFrame(function () { panel.classList.add("is-open"); build(); placeRect(A.viewState()); });
     } else {
-      open = false; panel.classList.remove("is-open"); seq++;
+      closeSections(); tz = 1; open = false; panel.classList.remove("is-open"); seq++;
       if (unsub) unsub(); unsub = null; if (unsubContent) unsubContent(); unsubContent = null; clearTimeout(refreshTimer);
       A.window.removeEventListener("resize", onWin);
       A.canvas().classList.remove("has-nav-dock"); A.canvas().style.setProperty("--pb-nvs-dock-w", "0px");

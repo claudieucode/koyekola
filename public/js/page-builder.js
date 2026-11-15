@@ -6886,8 +6886,8 @@ function selectField(label, value, options, onChange, opts) {
   // Pourquoi c'était lourd : chaque changement de zoom recalculait la mise en page de la page entière, puis relisait les mesures plusieurs fois de suite
   // (règles, informations, barre d'actions), le tout sans transition. Désormais : mesures lues d'abord, styles écrits ensuite, UNE seule mise en page ;
   // la transition elle-même n'est qu'une transformation (échelle) jouée par le processeur graphique, sans nouvelle mise en page à chaque image.
-  var MAX_ZOOM = 4, MIN_ZOOM = 0.1; // 10 % à 400 %
-  var ZOOM_LEVELS = [0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4];
+  var MAX_ZOOM = 5, MIN_ZOOM = 0.1; // 10 % à 500 %
+  var ZOOM_LEVELS = [0.1, 0.25, 0.33, 0.5, 0.66, 0.75, 1, 1.25, 1.5, 2, 3, 4, 5];
   function zoomStep(dir) {   // niveau usuel suivant (dir > 0) ou précédent (dir < 0) à partir du zoom actuel, valeurs intermédiaires comprises
     var z = Math.round(zoom * 1000) / 1000, i;
     if (dir > 0) { for (i = 0; i < ZOOM_LEVELS.length; i++) if (ZOOM_LEVELS[i] > z + 0.004) return ZOOM_LEVELS[i]; return MAX_ZOOM; }
