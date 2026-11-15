@@ -2063,7 +2063,8 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-body .mk-panel form:not(.mk-inline-form) > .field-group + :is(button[type="submit"], .btn) { margin-top: 16px; }
 .mk-body .mk-panel > form:not(.mk-inline-form) > :is(button[type="submit"], .btn):last-child:not(:only-child) { margin-top: 16px; }
 .mk-body .mk-panel > form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; margin: 12px 0; }
-.mk-body .mk-panel > form.mk-inline-form :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 1 1 320px; max-width: 560px; min-height: var(--mk-field-h, 40px); }
+.mk-body .mk-panel > form.mk-inline-form > :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 1 1 320px; max-width: 560px; min-height: var(--mk-field-h, 40px); }
+.mk-body .mk-panel > form.mk-inline-form .field-group :is(input, select, textarea) { flex: 0 0 auto; }
 .mk-body .mk-panel > form.mk-inline-form :is(.btn, button) { flex: none; min-height: var(--mk-field-h, 40px); }
 .mk-body .mk-panel > .field-hint { margin-top: 8px; }
 .mk-body .mk-dom-add .field-group { margin: 0; }
@@ -2077,3 +2078,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-cmp-fset-title { font-size: 13px; font-weight: 600; color: var(--mk-muted, #5b6b7b); }
 .mk-cmp-fset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .mk-cmp-fset-actions { display: flex; gap: 8px; align-items: center; align-self: flex-end; margin-left: auto; }
+
+/* Tableaux : cellule qui ne revient jamais à la ligne (dates, montants) */
+.mk-body .mk-table td.mk-nowrap, .mk-body .mk-table th.mk-nowrap { white-space: nowrap; }
+.mk-body .mk-table td .mk-status { white-space: nowrap; }
+.mk-shop.mk-shop .mk-table :is(th, td) { padding-inline: 7px; }
+.mk-shop.mk-shop .mk-table :is(th, td):first-child { padding-inline-start: 10px; }
+.mk-shop .mk-table td.mk-num, .mk-shop .mk-table th.mk-num { white-space: nowrap; }
