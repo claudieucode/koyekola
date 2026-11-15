@@ -11,9 +11,9 @@ Aucun changement serveur, aucune dépendance ajoutée, rien de chargé sur le si
 4. **Collision de noms trouvée par les tests** : le préfixe `pb-nav-*` appartient au gestionnaire de menu de navigation (`page-builder-menu.css`) ; le panneau utilise donc `pb-nvs-*`.
 
 ## Zoom
-- **Niveaux** : 10 · 25 · 33 · 50 · 66 · 75 · 100 · 125 · 150 · 200 · 300 · 400 %, boutons +/−, Ctrl/⌘ + / −, menu du pourcentage (qui propose aussi les ajustements). **Valeurs intermédiaires** : champ « zoom personnalisé » du Navigator, molette.
+- **Niveaux** : 10 · 25 · 33 · 50 · 66 · 75 · 100 · 125 · 150 · 200 · 300 · 400 · 500 %, boutons +/−, Ctrl/⌘ + / −, menu du pourcentage (qui propose aussi les ajustements). **Valeurs intermédiaires** : champ « zoom personnalisé » du Navigator, molette.
 - **Molette** (Ctrl/⌘ + molette, pincement) : zoom **progressif**, le point sous le curseur reste sous le curseur (vérifié en largeur fixe : tablette, mobile, ou ordinateur au-delà de ~127 %).
-- **Ajustements** : à l'écran (≤ 100 %), à la largeur (remplit la largeur, jusqu'à 400 %), à la hauteur (la section en cours remplit la hauteur), page entière, 100 %, centrer le document, zoom sur la sélection.
+- **Ajustements** : à l'écran (≤ 100 %), à la largeur (remplit la largeur, jusqu'à 500 %), à la hauteur (la section en cours remplit la hauteur), page entière, 100 %, centrer le document, zoom sur la sélection.
 - **Zoom par zone** (outil Z, bouton de la barre du bas, ou barre d'outils de gauche) : on dessine un rectangle (visible, aligné sur le pointeur), la zone se centre et remplit la vue ; clic = un niveau, Alt + clic = un niveau en arrière, Échap annule.
 - **Historique de vues** (20 au plus) : Précédent / Suivant ; début, milieu, fin de page ; liste des sections.
 
@@ -27,6 +27,15 @@ Aucun changement serveur, aucune dépendance ajoutée, rien de chargé sur le si
 - **Panneau** : redimensionnable par les 8 bords et coins (bornes minimale et maximale), déplaçable, **verrouillable**, réduire / agrandir / restaurer, rétablir la disposition par défaut, **mode flottant** ou **mode ancré** (colonne à droite du canevas qui RÉSERVE sa place : le canevas se réduit, rien n'est masqué, la barre de zoom se décale). Disposition mémorisée (< 400 octets, jamais de capture). La miniature se redimensionne sans déformation.
 - **Apparence** : uniquement les jetons de l'éditeur (`--editor-card`, `--editor-border`, `--editor-text`…), donc clair, sombre et personnalisé sans palette propre. La barre de zoom du bas suit désormais aussi le mode sombre (elle restait blanche).
 - **Responsive** : la miniature représente la page à la largeur réelle de l'écran en cours (ordinateur, tablette, mobile), indépendamment du zoom de l'éditeur.
+
+## Navigator Studio v2 (refonte du panneau)
+- **Deux zooms indépendants** : le zoom du CANEVAS (−, pourcentage, +, ajustements, menu 10 → 500 %) et le zoom de l'APERÇU (barre en bas à gauche de la miniature : −, pourcentage de l'aperçu, +, vue globale, centrer ; Ctrl/⌘ + molette ou pincement ; touches + − 0 dans l'aperçu ; bouton du milieu pour le déplacer). Le zoom de l'aperçu ne touche jamais au canevas (testé). Le cadre reste exact et reste visible : l'aperçu défile tout seul s'il sort de l'espace.
+- **Commandes regroupées** : ligne « Zoom du canevas » (− · % ▾ · + | fenêtre · largeur · hauteur · 1:1 · réinitialiser la position) et ligne « Navigation » (vue précédente/suivante | début · milieu · fin | main · zoom par zone · zoom sur la sélection | Sections ▾ | disposition par défaut). Plus de bloc « Navigation avancée » dépliant.
+- **Sections** : un petit bouton ouvre une liste avec recherche, navigation au clavier (↑ ↓ Entrée, Échap) et sections récentes en tête (4 mémorisées, quelques octets).
+- **Focus discret** : fine bordure + léger halo bleu ; le gros contour global est neutralisé dans le panneau.
+- **Adaptation** : requêtes de conteneur — sous 300 px le libellé « Sections » disparaît, sous 250 px les commandes secondaires se masquent (accessibles par le menu et le clavier).
+- **Moteur** : le zoom maximal passe à 500 %.
+- Non fait : « repères » (aucune fonction de repère de vue n'existe dans l'éditeur, rien d'inventé).
 
 ## Mesures (même banc, 336 éléments, un élément sélectionné)
 | | Avant | Après |
