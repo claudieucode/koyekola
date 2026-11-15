@@ -35,8 +35,8 @@
       <% } %>
       <% if (canWrite) { %>
         <form method="post" action="/marketing/domaines" class="mk-form mk-dom-add">
-          <div class="field-group"><label for="dom-name">Ajouter un domaine</label><input id="dom-name" type="text" name="domain" maxlength="253" required placeholder="kolakisa.com" value="<%= sender && !sender.free && !sender.status ? sender.domain : "" %>" autocomplete="off" spellcheck="false"></div>
-          <button type="submit" class="btn btn-primary btn-sm">Ajouter</button>
+          <div class="field-group"><label for="dom-name">Ajouter un domaine</label><p class="field-hint" id="dom-hint">Le nom seul, sans « https:// » ni « www ».</p><input aria-describedby="dom-hint" id="dom-name" type="text" name="domain" maxlength="253" required placeholder="kolakisa.com" value="<%= sender && !sender.free && !sender.status ? sender.domain : "" %>" autocomplete="off" spellcheck="false"></div>
+          <button type="submit" class="btn btn-primary">Ajouter le domaine</button>
         </form>
       <% } %>
     </section>
