@@ -2029,82 +2029,28 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-nav-group + .mk-nav-group, .mk-nav-head + .mk-nav-head { margin-top: 2px; }
 .mk-nav-head { min-height: 36px; }
 
-/* Sourcing produit : l'application occupe tout l'espace sous le titre, dans un cadre à filet unique (charte : rayon de panneau, sans ombre) */
-.mk-body .mk-sourcing { display: block; margin: 0; }
-.mk-body .mk-sourcing-frame {
-  display: block; width: 100%; height: max(640px, calc(100dvh - 190px)); border: 1px solid var(--kb-rule, var(--border));
-  border-radius: var(--kb-r-panel, 12px); background: var(--kb-canvas, var(--bg)); color-scheme: normal;
+/* ---- Réglages SMS : une seule colonne de lecture, cartes de même largeur, grilles alignées en haut, barre d'enregistrement séparée ---- */
+.mk-sms-set { max-width: 980px; display: grid; gap: 20px; padding-bottom: 32px; }
+.mk-sms-set > .mk-head, .mk-sms-set > .mk-panel, .mk-sms-set > form { margin: 0; min-width: 0; }
+.mk-sms-set .mk-form { max-width: none; display: grid; gap: 20px; }
+.mk-sms-set .mk-panel { margin: 0; padding: 24px 28px; }
+.mk-sms-set .mk-panel > h2 { margin: 0 0 6px; font-size: 1.05rem; }
+.mk-sms-set .mk-panel > .field-hint { margin: 0 0 16px; max-width: 72ch; }
+.mk-sms-set .field-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px 24px; align-items: start; }
+.mk-sms-set .field-row + .field-row { margin-top: 18px; }
+.mk-sms-set .field-group { margin: 0; min-width: 0; }
+.mk-sms-set .field-group + .field-group { margin-top: 16px; }
+.mk-sms-set .field-row > .field-group { margin-top: 0; }
+.mk-sms-set .field-group label { display: block; margin-bottom: 6px; }
+.mk-sms-set .field-group input:not([type="checkbox"]), .mk-sms-set .field-group select { width: 100%; }
+.mk-sms-set .field-hint { display: block; margin-top: 6px; line-height: 1.5; }
+.mk-sms-set .mk-inline-form { display: grid; grid-template-columns: minmax(0, 360px) auto; gap: 10px; align-items: center; justify-content: start; margin: 4px 0 0; }
+.mk-sms-set .mk-inline-form.mk-create { grid-template-columns: minmax(0, 240px) minmax(0, 1fr) auto; padding: 0; margin: 4px 0 12px; background: none; border: 0; }
+.mk-sms-set .mk-inline-form input, .mk-sms-set .mk-inline-form .btn { width: 100%; margin: 0; }
+.mk-sms-set .mk-inline-form .btn { width: auto; white-space: nowrap; }
+.mk-sms-set-save { display: flex; justify-content: flex-end; padding-top: 4px; }
+@media (max-width: 640px) {
+  .mk-sms-set .mk-panel { padding: 18px 16px; }
+  .mk-sms-set .mk-inline-form, .mk-sms-set .mk-inline-form.mk-create { grid-template-columns: minmax(0, 1fr); }
+  .mk-sms-set .mk-inline-form .btn, .mk-sms-set-save .btn { width: 100%; }
 }
-@media (max-width: 640px) { .mk-body .mk-sourcing-frame { height: max(560px, calc(100dvh - 150px)); border-radius: var(--kb-r-ctl, 8px); } }
-
-/* Finitions d'espacement (audit global) : groupes de boutons et réseaux autorisés */
-.mk-ev-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-.mk-ev-actions form { margin: 0; }
-.mk-soc-grant { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; }
-.mk-soc-grant .checkbox-row { margin: 0; }
-.mk-soc-grant .btn { margin-left: auto; }
-
-/* Parcours tout prêts : miniature réelle du premier e-mail (cadre isolé, mis à l'échelle) et aperçu ordinateur / mobile */
-.mk-jp-thumb { display: block; position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--mk-border); background: var(--mk-surface-2, #f4f7fa); contain: paint; }
-.mk-jp-frame { position: absolute; top: 0; left: 0; width: 200%; height: 200%; border: 0; background: #fff; transform-origin: 0 0; transform: scale(.5); pointer-events: none; }
-.mk-jp-sms { display: flex; align-items: center; padding: 16px 20px; }
-.mk-jp-bubble { text-decoration: none; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 85%; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: #fff; border: 1px solid var(--mk-border); color: var(--mk-text); font-size: 13px; line-height: 1.45; }
-.mk-jp-bar { display: flex; gap: 8px; margin: 12px 0 16px; }
-.mk-jp-bar .btn[aria-pressed="true"] { background: var(--mk-hover); border-color: var(--mk-navy, #0f2a5c); color: var(--mk-navy, #0f2a5c); }
-.mk-jp-list { list-style: none; padding: 0; display: grid; gap: 24px; }
-.mk-jp-list li > p { margin: 0 0 8px; }
-.mk-jp-stage { max-width: 680px; padding: 0; border: 1px solid var(--mk-border); border-radius: 12px; overflow: hidden; background: var(--mk-surface-2, #f4f7fa); transition: max-width 180ms cubic-bezier(.22, .8, .3, 1); }
-.mk-jp-stage.is-mobile { max-width: 375px; }
-.mk-jp-full { display: block; width: 100%; height: 520px; border: 0; background: #fff; }
-@media (prefers-reduced-motion: reduce) { .mk-jp-stage { transition: none; } }
-
-/* Boutons d'enregistrement et formulaires en ligne (audit global) : jamais collés aux champs ni aux panneaux qui les précèdent */
-.mk-body form.mk-form:not(.mk-dom-add):not(.mk-inline-form):not(.mk-form-row):not(.mk-filterbar):not(.mk-toolbar):not(.mk-cms-toolbar):not(.mk-cms-filters):not(.mk-row-actions) > :is(button[type="submit"], .btn-primary):last-child { margin-top: 24px; }
-.mk-body .mk-panel form:not(.mk-inline-form):not(.mk-filterbar):not(.mk-toolbar):not(.mk-cms-toolbar):not(.mk-cms-filters):not(.mk-row-actions) > .field-group + :is(button[type="submit"], .btn) { margin-top: 16px; }
-.mk-body .mk-panel > form:not(.mk-inline-form):not(.mk-filterbar):not(.mk-toolbar):not(.mk-cms-toolbar):not(.mk-cms-filters):not(.mk-row-actions) > :is(button[type="submit"], .btn):last-child:not(:only-child) { margin-top: 16px; }
-.mk-body .mk-panel > form.mk-inline-form { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 12px; margin: 12px 0; }
-.mk-body .mk-panel > form.mk-inline-form > :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]), select) { flex: 1 1 320px; max-width: 560px; min-height: var(--mk-field-h, 40px); }
-.mk-body .mk-panel > form.mk-inline-form .field-group :is(input, select, textarea) { flex: 0 0 auto; }
-.mk-body .mk-panel > form.mk-inline-form :is(.btn, button) { flex: none; min-height: var(--mk-field-h, 40px); }
-.mk-body .mk-panel > .field-hint { margin-top: 8px; }
-.mk-body .mk-dom-add .field-group { margin: 0; }
-.mk-body .mk-dom-add .field-group > input { margin-bottom: 0; }
-.mk-body .mk-dom-add > .btn { min-height: var(--mk-field-h, 40px); margin: 0; }
-.mk-body .mk-panel form.mk-dom-add .field-group { margin: 0; }
-
-/* Rapports comparatifs : filtres regroupés en familles (période, campagnes, affichage) */
-.mk-body .mk-filterbar:has(.mk-cmp-fset) { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--mk-border); border-radius: 12px; }
-.mk-cmp-fset { display: grid; gap: 8px; min-width: 0; padding-left: 12px; border-left: 3px solid var(--mk-border); }
-.mk-cmp-fset-title { font-size: 13px; font-weight: 600; color: var(--mk-muted, #5b6b7b); }
-.mk-cmp-fset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.mk-cmp-fset-actions { display: flex; gap: 8px; align-items: center; align-self: flex-end; margin-left: auto; }
-
-/* Tableaux : cellule qui ne revient jamais à la ligne (dates, montants) */
-.mk-body .mk-table td.mk-nowrap, .mk-body .mk-table th.mk-nowrap { white-space: nowrap; }
-.mk-body .mk-table td .mk-status { white-space: nowrap; }
-.mk-shop.mk-shop .mk-table :is(th, td) { padding-inline: 7px; }
-.mk-shop.mk-shop .mk-table :is(th, td):first-child { padding-inline-start: 10px; }
-.mk-shop .mk-table td.mk-num, .mk-shop .mk-table th.mk-num { white-space: nowrap; }
-
-/* Boutons « Exporter … (CSV) » sous un tableau : espacés du tableau au-dessus et du formulaire ou de la section en dessous */
-.mk-body .mk-panel .mk-export-row { margin: 20px 0 24px; padding: 0; }
-.mk-body .mk-panel .mk-export-row:last-child { margin-bottom: 4px; }
-.mk-body .mk-panel .mk-export-row + :is(.mk-filterbar, form, .mk-panel, h3) { margin-top: 0; }
-
-/* Rapports comparatifs : étiquetage sous le tableau et enregistrement d'un rapport (alignement et respiration) */
-.mk-body .mk-panel .mk-cmp-actions { align-items: flex-end; gap: 12px 16px; }
-.mk-body .mk-panel .mk-cmp-actions .field-group { margin: 0; }
-.mk-body .mk-panel .mk-cmp-actions :is(.btn, input[type="text"]) { box-sizing: border-box; height: 40px; min-height: 40px; }
-.mk-body .mk-panel .mk-cmp-actions .btn { padding-block: 0; display: inline-flex; align-items: center; justify-content: center; }
-.mk-body .mk-panel.mk-cmp-side { padding-bottom: 24px; }
-.mk-body .mk-cmp-side .mk-cmp-side-body { padding-bottom: 4px; }
-.mk-body .mk-cmp-side-body form.mk-form > .btn { margin-top: 4px; }
-.mk-body .mk-cmp-side-body form.mk-form > .field-group { margin-bottom: 8px; }
-.mk-body .mk-panel .mk-cmp-actions .field-group { min-width: 280px; }
-
-/* Réglages d'envoi : le bouton d'enregistrement respire avant le panneau suivant ; le fuseau a la même largeur que les réglages au-dessus */
-.mk-body form.mk-form[action="/marketing/envoi"] > button[type="submit"] { margin-bottom: 28px; }
-.mk-body .mk-panel#fuseau { max-width: 760px; }
-.mk-body .mk-panel#fuseau form > .btn { margin-top: 4px; }
-/* Un formulaire (avec son bouton) suivi d'un panneau : jamais collés */
-.mk-body .mk-content > form + :is(.mk-panel, section), .mk-body .mk-content > form.mk-form + :is(.mk-panel, section) { margin-top: 24px; }
