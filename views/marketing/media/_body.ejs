@@ -15,6 +15,10 @@
 %>
 
 
+<% if (view === "colonnes" && !section && !f.trashed) { %>
+  <%# Navigation en colonnes : le conteneur est vide, public/js/media-columns.js le remplit (arbre des dossiers + fichiers du dossier choisi, à la demande). %>
+  <div class="mc-host" data-mx-columns data-start="<%= f.adv.folder || "" %>"><p class="mx-loading" role="status">Chargement…</p></div>
+<% } else { %>
 <% if (section === "accueil" || section === "stockage" || section === "doublons") { %>
   <div class="mx-section" data-mx-section="<%= section %>" aria-live="polite"><p class="mx-loading" role="status">Chargement…</p></div>
 <% } else if (f.trashed) { %>
@@ -73,4 +77,5 @@
         <% if (found.page < found.pages) { %><a class="btn btn-ghost btn-sm" href="<%= h.keep({ page: found.page + 1 }) %>" data-mx-next rel="next">Suivant</a><% } %></span><% } %>
     </nav>
   <% } %>
+<% } %>
 <% } %>

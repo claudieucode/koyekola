@@ -185,10 +185,10 @@ function collectionsOf(ctx, ids) {
 }
 
 // ---------- Préférences d'affichage (par personne et par médiathèque) ----------
-const VIEWS = ["grille", "liste", "details", "icones", "compacte"];
+const VIEWS = ["grille", "liste", "details", "icones", "compacte", "colonnes"];
 const COLUMNS = ["type", "size", "dims", "folder", "modified", "created", "author", "tags"];
 const SORT_KEYS = ["recent", "ancien", "nom", "nom_desc", "taille", "modifie", "type"];
-const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], sort: "recent", sortDir: "", sidebar: "open", info: "closed", infoWidth: 340, foldersFirst: true, theme: { mode: "clair", colors: {}, radius: 8, space: 100, iconSize: 16 } };
+const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], sort: "recent", sortDir: "", sidebar: "open", info: "closed", infoWidth: 340, foldersFirst: true, colWidth: 240, colMeta: true, colExt: true, theme: { mode: "clair", colors: {}, radius: 8, space: 100, iconSize: 16 } };
 const THEME_MODES = ["clair", "sombre", "personnalise"];
 const THEME_KEYS = ["sideBg", "mainBg", "text", "textSoft", "icon", "sep", "sel", "hover", "folder", "accent", "border", "badge"];
 const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(Math.max(Math.round(Number(v)), lo), hi) : d);
@@ -212,6 +212,9 @@ function sanitizePrefs(input) {
   if (["open", "closed"].includes(p.info)) out.info = p.info;
   if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 560);
   if (typeof p.foldersFirst === "boolean") out.foldersFirst = p.foldersFirst;
+  if (Number.isFinite(Number(p.colWidth))) out.colWidth = Math.min(Math.max(Math.round(Number(p.colWidth)), 180), 420); // vue en colonnes : largeur par défaut
+  if (typeof p.colMeta === "boolean") out.colMeta = p.colMeta;
+  if (typeof p.colExt === "boolean") out.colExt = p.colExt;
   return out;
 }
 function getPrefs(ctx) {
