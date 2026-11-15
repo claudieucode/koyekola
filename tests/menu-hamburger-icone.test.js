@@ -20,3 +20,13 @@ describe("hamburger : icône", () => {
     assert.equal(menuOf({ mobileToggle: false, burgerAnim: "spin" }).burgerAnim, undefined);
   });
 });
+
+describe("visibilité par écran d'un lien du menu", () => {
+  const hideOf = (hide) => { const p = menuOf({ itemStyles: { p1: { hide } } }); return p.itemStyles && p.itemStyles.p1 && p.itemStyles.p1.hide; };
+  test("écrans valides conservés, doublons et inconnus ignorés", () => {
+    assert.deepEqual(hideOf(["mobile", "tablet", "mobile", "wide", "x"]), ["mobile", "tablet"]);
+  });
+  test("liste vide ou invalide : aucune règle", () => {
+    assert.equal(hideOf([]), undefined); assert.equal(hideOf("mobile"), undefined);
+  });
+});

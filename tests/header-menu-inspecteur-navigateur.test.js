@@ -49,6 +49,17 @@ describe("Header Builder : inspecteur du menu (navigateur)", { skip: SKIP }, () 
     assert.equal(menu.props.menuMotion.enter, "slide-up"); assert.equal(menu.props.menuMotion.closeDelay, 350);
     assert.equal(menu.props.itemStyles.p2.link.styles.desktop.color, "#c2410c", "couleurs collées sur le lien 3");
     assert.equal(menu.props.itemStyles.p0, undefined, "les autres liens ne sont pas touchés");
+    // visibilité par écran : cases à cocher du lien « Services » (p1)
+    await insp.getByLabel("Lien", { exact: true }).selectOption("p1"); await page.waitForTimeout(600);
+    await insp.getByLabel("Masquer sur mobile (moins de 768 px)").check(); await page.waitForTimeout(600);
+    await insp.getByLabel("Masquer sur tablette (768 à 1023 px)").check(); await page.waitForTimeout(600);
+    await insp.getByLabel("Masquer sur tablette (768 à 1023 px)").uncheck(); await page.waitForTimeout(600);
+    await page.locator("[data-pb-save-now]").click(); await page.waitForTimeout(2000);
+    const d3 = JSON.parse(env.db.prepare("SELECT draft FROM mk_web_components WHERE id = ?").get(componentId).draft);
+    let menu3 = null; const w3 = (l) => (l || []).forEach((x) => { if (x.type === "menu") menu3 = x; w3(x.children); }); w3(d3.children || d3.sections || []);
+    assert.deepEqual(menu3.props.itemStyles.p1.hide, ["mobile"], "masqué sur mobile seulement");
+    assert.equal(menu3.props.itemStyles.p1.link.styles.desktop.color, "#c2410c", "le style du lien est conservé");
+    assert.equal(menu3.props.itemStyles.p0, undefined, "les autres liens ne sont pas touchés");
     assert.deepEqual(logs.filter((l) => /^(error|PAGEERROR)/.test(l)), [], "aucune erreur de script");
   });
 });

@@ -2108,6 +2108,20 @@ function selectField(label, value, options, onChange, opts) {
       var k = sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp; if (!create && !e.states) return null; e.states = e.states || {}; return (e.states[k] = e.states[k] || {});
     };
     var read = function (k) { var e = isPanel ? (p.panelStyles || {})[sel.part] : entries[sel.key] && entries[sel.key][sel.part]; if (!e) return ""; var set = sel.state === "base" ? e.styles && e.styles[sel.bp] : sel.state === "current" ? e.current && e.current[sel.bp] : e.states && e.states[sel.bp === "desktop" ? sel.state : sel.state + "@" + sel.bp]; return set && set[k] !== undefined ? String(set[k]) : ""; };
+    if (!isPanel) {
+      var hidden = (entries[sel.key] && entries[sel.key].hide) || [];
+      box.appendChild(h("p", { class: "pb-hint", text: "Visibilité de ce lien : cochez les écrans où il doit être MASQUÉ (il reste dans le menu, rien n'est supprimé)." }));
+      [["desktop", "Masquer sur ordinateur (1024 px et plus)"], ["tablet", "Masquer sur tablette (768 à 1023 px)"], ["mobile", "Masquer sur mobile (moins de 768 px)"]].forEach(function (b) {
+        box.appendChild(checkField(b[1], hidden.indexOf(b[0]) >= 0, function (v) {
+          if (probing) return;
+          change(function () {
+            var x = byId(it.id).props; x.itemStyles = x.itemStyles || {}; var e = x.itemStyles[sel.key] = x.itemStyles[sel.key] || {}; var list = (e.hide || []).filter(function (k) { return k !== b[0]; });
+            if (v) list.push(b[0]); if (list.length) e.hide = list; else delete e.hide;
+            if (!Object.keys(e).length) delete x.itemStyles[sel.key]; if (!Object.keys(x.itemStyles).length) delete x.itemStyles;
+          });
+        }, { disabled: disabled }));
+      });
+    }
     var prune = function (x) { if (isPanel) { var pe = x.panelStyles || {}; Object.keys(pe).forEach(function (pp) { var t = pe[pp]; ["styles", "states"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete pe[pp]; }); if (!Object.keys(pe).length) delete x.panelStyles; return; } var e = x.itemStyles; Object.keys(e).forEach(function (kk) { Object.keys(e[kk]).forEach(function (pp) { var t = e[kk][pp]; ["styles", "states", "current"].forEach(function (g) { if (t[g]) { Object.keys(t[g]).forEach(function (b) { if (!Object.keys(t[g][b]).length) delete t[g][b]; }); if (!Object.keys(t[g]).length) delete t[g]; } }); if (!Object.keys(t).length) delete e[kk][pp]; }); if (!Object.keys(e[kk]).length) delete e[kk]; }); if (!Object.keys(e).length) delete x.itemStyles; };
     LINK_STYLE_FIELDS.forEach(function (f) {
       box.appendChild(textField(f[1], read(f[0]), function (v) {
