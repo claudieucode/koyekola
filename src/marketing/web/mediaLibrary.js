@@ -104,13 +104,15 @@ module.exports = () => {
     const scoped = Boolean(folders.scopeOf(ctx));
     if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
     const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
-    const listed = !section || section === "dossiers" ? section === "dossiers" ? { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE } : search(ctx, f) : { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
+    const prefs = manager.getPrefs(ctx);
+    const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
+    // Vue en colonnes : le navigateur charge la liste dossier par dossier (liste.json), le serveur ne rend aucune ligne
+    const noRows = { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
+    const listed = !section || section === "dossiers" ? section === "dossiers" || view === "colonnes" ? noRows : search(ctx, f) : noRows;
     const found = listed;
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
     const tree = folders.listFolders(ctx);
-    const prefs = manager.getPrefs(ctx);
     const starredFolders = new Set(manager.starredSet(ctx, "folder"));
-    const view = manager.VIEWS.includes(req.query.vue) ? req.query.vue : prefs.view;
     const current = f.adv.folder || null;
     const otherFilters = Boolean(f.q || f.period || f.month || f.recents || f.adv.ext || f.adv.minSize || f.adv.maxSize || f.adv.minWidth || f.adv.maxWidth || f.adv.duplicates || f.adv.large || f.adv.tagId || f.adv.collectionId || f.adv.starred || f.adv.usedOnly);
     const filtered = Boolean(f.type) || otherFilters;
