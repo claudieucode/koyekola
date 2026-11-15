@@ -311,24 +311,26 @@
   function starFiles(items, on) { return Promise.all(items.map(function (m) { return K.api("POST", BASE + "/favoris", { kind: "media", id: m.id, on: on }); })).then(function () { toast(on ? "Ajoutés aux favoris." : "Retirés des favoris.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }
 
   // ---- Dossiers
-  var folderById = function (id) { return (cfg.folders || []).filter(function (f) { return f.id === id; })[0] || null; };
+  var folderById = function (id) { id = Number(id); return (cfg.folders || []).filter(function (f) { return Number(f.id) === id; })[0] || null; };
   function descendantsOf(id) { var out = new Set([id]), grew = true; while (grew) { grew = false; (cfg.folders || []).forEach(function (f) { if (f.parentId && out.has(f.parentId) && !out.has(f.id)) { out.add(f.id); grew = true; } }); } return out; }
   function folderPath(id) { var out = [], cur = folderById(id), n = 0; while (cur && n++ < 12) { out.unshift(cur.name); cur = cur.parentId ? folderById(cur.parentId) : null; } return "Médiathèque / " + out.join(" / "); }
   function newFolder(parentId) {
     return askText("Nouveau dossier", { label: "Nom du dossier", placeholder: "Ex. Photos produits" }).then(function (name) { if (!name) return; return K.folderCreate(name, parentId === undefined ? cfg.folder : parentId).then(function (f) { toast("Dossier « " + f.name + " » créé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
   }
-  function renameFolder(id) { var f = folderById(id); if (!f) return; return askText("Renommer le dossier", { value: f.name }).then(function (name) { if (!name || name === f.name) return; return K.folderRename(id, name).then(function () { toast("Dossier renommé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }); }
+  function renameFolder(id) { var f = folderById(id); if (!f) { toast("Ce dossier n'est plus dans la liste : actualisation.", "error"); return refresh(); } return askText("Renommer le dossier", { value: f.name }).then(function (name) { if (!name || name === f.name) return; return K.folderRename(id, name).then(function () { toast("Dossier renommé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }); }
   function folderProps(id) {
     var f = folderById(id); if (!f) return;
     return K.api("GET", BASE + "/dossiers/" + id + "/proprietes.json").then(function (r) {
       var p = r.properties, color = f.color || "", desc = h("textarea", { id: "mx-fdesc", rows: "3", maxlength: "300", text: p.description || "" }); desc.value = p.description || "";
       var sw = ["", "bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"].map(function (c) { return h("label", { class: "mx-swatch", "data-color": c || null, title: c || "Aucune" }, [h("input", { type: "radio", name: "mx-fcolor", value: c, checked: c === color ? "" : null }), h("span", { class: "sr-only", text: c || "Aucune couleur" })]); });
+      var nameIn = h("input", { type: "text", id: "mx-fname", maxlength: "120", autocomplete: "off" }); nameIn.value = f.name;
       var body = h("div", {}, [
+        h("div", { class: "field-group" }, [h("label", { for: "mx-fname", text: "Nom du dossier" }), nameIn]),
         h("dl", { class: "mx-dl" }, [h("dt", { text: "Chemin" }), h("dd", { text: p.path }), h("dt", { text: "Contenu" }), h("dd", { text: plural(p.files, "fichier", "fichiers") + " (" + plural(p.subfolders, "sous-dossier", "sous-dossiers") + ")" }), h("dt", { text: "Taille" }), h("dd", { text: K.fmtSize(p.bytes) }), h("dt", { text: "Créé le" }), h("dd", { text: K.fmtDate(p.createdAt) })]),
         h("div", { class: "field-group" }, [h("label", { text: "Couleur" }), h("div", { class: "mx-swatches" }, sw)]),
         h("div", { class: "field-group" }, [h("label", { for: "mx-fdesc", text: "Description" }), desc]),
       ]);
-      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { color: c ? c.value : color, description: desc.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
+      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { name: nameIn.value, color: c ? c.value : color, description: desc.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
     }).catch(function (e) { toast(errMsg(e), "error"); });
   }
   function trashFolder(id) {
@@ -774,6 +776,7 @@
     var cur = e.target.closest("[data-ml-item]") || (sel.size === 1 ? itemEl(Array.from(sel)[0]) : null);
     if (e.key === "Enter" && cur && !e.target.closest("button, a")) { e.preventDefault(); openPreview(Number(cur.getAttribute("data-id"))); return; }
     if (e.key === " " && cur && e.target.closest("[data-ml-item]") && !e.target.closest("button, input")) { e.preventDefault(); toggle(Number(cur.getAttribute("data-id"))); return; }
+    if (e.key === "F2" && cfg.canWrite && !sel.size && selF.size === 1) { e.preventDefault(); renameFolder(Array.from(selF)[0]); return; }
     if (e.key === "F2" && cfg.canWrite && sel.size === 1) { e.preventDefault(); renameFile(selectedData()[0]); return; }
     if ((e.key === "Delete" || e.key === "Backspace") && cfg.canWrite && sel.size && e.target.closest("[data-mx-scroll], [data-ml-item]")) { e.preventDefault(); var its = selectedData(); if (trashedView()) { if (cfg.canDelete) purgeFiles(its); } else trashFiles(its); return; }
     if ((e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) && cur) { e.preventDefault(); var r = cur.getBoundingClientRect(), id = Number(cur.getAttribute("data-id")); if (!sel.has(id)) selectOnly(id); openMenu(r.left + 24, r.top + 24, fileEntries(selectedData()), "Actions du fichier"); return; }

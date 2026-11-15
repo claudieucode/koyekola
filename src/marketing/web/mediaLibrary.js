@@ -304,7 +304,7 @@ module.exports = () => {
   router.post(`${base}/collections/:cid(\\d+)/ajouter`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.addToCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
   router.post(`${base}/collections/:cid(\\d+)/retirer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.removeFromCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
   // Dossiers enrichis : couleur, description, propriétés, corbeille
-  router.post(`${base}/dossiers/:fid(\\d+)/meta`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.updateFolder(ctxOf(req), Number(req.params.fid), { color: body(req).color, description: body(req).description }) })));
+  router.post(`${base}/dossiers/:fid(\\d+)/meta`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.updateFolder(ctxOf(req), Number(req.params.fid), { name: body(req).name, color: body(req).color, description: body(req).description }) })));
   router.get(`${base}/dossiers/:fid(\\d+)/proprietes.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ properties: manager.folderProperties(ctxOf(req), Number(req.params.fid)) })));
   router.post(`${base}/dossiers/:fid(\\d+)/corbeille`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.trashFolder(ctxOf(req), Number(req.params.fid)))));
   router.post(`${base}/dossiers/:fid(\\d+)/restaurer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.restoreFolder(ctxOf(req), Number(req.params.fid)) })));

@@ -228,11 +228,12 @@ function setPrefs(ctx, patch) {
 }
 
 // ---------- Dossiers enrichis ----------
-function updateFolder(ctx, id, { color, description } = {}) {
+function updateFolder(ctx, id, { name, color, description } = {}) {
   needScope(ctx);
-  const f = folders.getFolder(ctx, Number(id));
+  let f = folders.getFolder(ctx, Number(id));
   if (!f) throw missing("Dossier introuvable.");
   if (color !== undefined && !COLORS.includes(color)) throw bad("Couleur inconnue.");
+  if (name !== undefined && String(name) !== f.name) f = folders.renameFolder(ctx, f.id, name); // même identifiant : le dossier n'est jamais recréé
   ctx.db.prepare("UPDATE mk_media_folders SET color = ?, description = ? WHERE id = ?").run(color === undefined ? f.color : color, description === undefined ? f.description : clip(description, 300), f.id);
   return folders.getFolder(ctx, f.id);
 }
