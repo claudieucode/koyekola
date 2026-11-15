@@ -116,6 +116,7 @@ const shape = (ctx, row) => (row ? {
   id: row.id, kind: row.kind, type: row.type || (row.kind === "image" ? "image" : "document"), name: row.name, title: row.title || "", alt: row.alt, caption: row.caption || "", description: row.description || "",
   mime: row.mime, size: row.size, width: row.width, height: row.height, path: row.path, url: publicUrl(ctx, row.path), createdAt: row.created_at, createdBy: row.created_by ?? null, deletedAt: row.deleted_at || null,
   folderId: row.folder_id ?? null, sha256: row.sha256 || null, // Explorateur : dossier logique et empreinte du contenu
+  updatedAt: row.updated_at || null, lastUsedAt: row.last_used_at || null, trashedWithFolder: row.trashed_with_folder ?? null, // gestionnaire : modification, dernière utilisation, corbeille avec un dossier
   reach: row.reach || "shared", siteId: row.site_id ?? null, // R5 : médiathèque commune (shared) ou propre à un site
 } : null);
 
@@ -225,10 +226,10 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
 }
 
 const LARGE_BYTES = 5 * 1024 * 1024; // « fichier volumineux » : 5 Mo et plus
-const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC" };
+const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC", modifie: "COALESCE(updated_at, created_at) DESC, id DESC", type: "type ASC, name COLLATE NOCASE ASC, id DESC", utilise: "last_used_at DESC, id DESC" };
 // type : un des TYPES, ou « documents » (PDF + documents Office). kind (historique, e-mails) : « image » ou « document »
 // (PDF et documents Office : jamais les vidéos ni l'audio). trashed : la corbeille. from : date (AAAA-MM-JJ HH:MM:SS) minimale.
-function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId, folder, ext = "", minSize, maxSize, minWidth, maxWidth, duplicates = false, large = false } = {}) {
+function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId, folder, ext = "", minSize, maxSize, minWidth, maxWidth, duplicates = false, large = false, tagId, collectionId, starredBy, usedOnly = false, standalone = false } = {}) {
   checkCtx(ctx);
   const where = ["organization_id = ?", trashed ? "deleted_at IS NOT NULL" : "deleted_at IS NULL"];
   const args = [ctx.organizationId];
@@ -254,12 +255,19 @@ function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = 
   if (num(minWidth) !== null) { where.push("width >= ?"); args.push(num(minWidth)); }
   if (num(maxWidth) !== null) { where.push("width <= ?"); args.push(num(maxWidth)); }
   if (large) { where.push("size >= ?"); args.push(LARGE_BYTES); }
+  // Gestionnaire : tag, collection, favoris de la personne, fichiers déjà utilisés par un éditeur, corbeille sans les fichiers entraînés par un dossier
+  if (Number.isInteger(tagId)) { where.push("id IN (SELECT media_id FROM mk_media_tag_links WHERE tag_id = ?)"); args.push(tagId); }
+  if (Number.isInteger(collectionId)) { where.push("id IN (SELECT media_id FROM mk_media_collection_items WHERE collection_id = ?)"); args.push(collectionId); }
+  if (Number.isInteger(starredBy)) { where.push("id IN (SELECT target_id FROM mk_media_stars WHERE user_id = ? AND kind = 'media' AND organization_id = ?)"); args.push(starredBy, ctx.organizationId); }
+  if (usedOnly) where.push("last_used_at IS NOT NULL");
+  if (standalone) where.push("(trashed_with_folder IS NULL OR trashed_with_folder NOT IN (SELECT id FROM mk_media_folders))");
   if (duplicates) { where.push(`sha256 IN (SELECT sha256 FROM mk_media WHERE organization_id = ? AND sha256 IS NOT NULL AND deleted_at IS NULL AND ${vis.sql} GROUP BY sha256 HAVING COUNT(*) > 1)`); args.push(ctx.organizationId, ...vis.params); }
   const text = String(q || "").trim().slice(0, 100);
   if (text) {
     const like = `%${text.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-    where.push("(name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR alt LIKE ? ESCAPE '\\' OR caption LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')");
-    args.push(like, like, like, like, like);
+    // nom, titre, texte alternatif, légende, description, extension, tags et nom du dossier
+    where.push("(name LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' OR alt LIKE ? ESCAPE '\\' OR caption LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\' OR path LIKE ? ESCAPE '\\' OR id IN (SELECT l.media_id FROM mk_media_tag_links l JOIN mk_media_tags t ON t.id = l.tag_id WHERE t.name LIKE ? ESCAPE '\\') OR folder_id IN (SELECT id FROM mk_media_folders WHERE name LIKE ? ESCAPE '\\'))");
+    args.push(like, like, like, like, like, `%${text.replace(/^\./, "").replace(/[\\%_]/g, (c) => `\\${c}`)}`, like, like);
   }
   const n = Math.min(Math.max(Number(limit) || 40, 1), 100);
   const o = Math.max(Number(offset) || 0, 0);
@@ -307,7 +315,7 @@ function updateMedia(ctx, id, { name, alt, title, caption, description } = {}) {
     caption: caption === undefined ? current.caption : clip(caption, 300),
     description: description === undefined ? current.description : clip(description, 1000),
   };
-  ctx.db.prepare("UPDATE mk_media SET name = ?, alt = ?, title = ?, caption = ?, description = ? WHERE id = ? AND organization_id = ?").run(next.name, next.alt, next.title, next.caption, next.description, id, ctx.organizationId);
+  ctx.db.prepare("UPDATE mk_media SET name = ?, alt = ?, title = ?, caption = ?, description = ?, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(next.name, next.alt, next.title, next.caption, next.description, id, ctx.organizationId);
   return getMedia(ctx, id);
 }
 

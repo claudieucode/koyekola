@@ -33,6 +33,9 @@ function sinceOf(period) {
 const spaceBase = (ctx) => { const site = siteContent.siteParam(ctx); return site ? `/marketing/site-web/sites/${site}/medias` : "/marketing/site-web/mediatheque"; };
 const libraryUrl = (ctx) => spaceBase(ctx);
 const folders = require("../media/folders");
+const manager = require("../media/manager");
+const { writeZip, MAX_TOTAL } = require("../../utils/zipStream");
+const { exifOf } = require("../media/exif");
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
 // Filtres lus dans l'adresse (liste, page et API)
@@ -44,6 +47,7 @@ function filtersOf(query) {
   const sort = Object.hasOwn(media.SORTS, query.tri) ? query.tri : "recent";
   const period = Object.hasOwn(PERIODS, query.periode) ? String(query.periode) : "";
   const q = String(query.q || "").trim().slice(0, 100);
+  const recents = query.recents === "1";
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(String(query.mois || "")) ? String(query.mois) : ""; // mois d'ajout (AAAA-MM), proposé par la médiathèque elle-même
   const page = Math.max(1, Number(query.page) || 1);
   // Explorateur : dossier (racine ou numéro), extension, taille (Ko) et largeur (px) minimales / maximales, doublons, fichiers volumineux
@@ -51,11 +55,16 @@ function filtersOf(query) {
   const ext = String(query.ext || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8);
   const kb = (v) => { const n = intOrNull(v); return n === null ? undefined : n * 1024; };
   const px = (v) => { const n = intOrNull(v); return n === null ? undefined : n; };
-  const adv = { folder, ext, minSize: kb(query.tmin), maxSize: kb(query.tmax), minWidth: px(query.lmin), maxWidth: px(query.lmax), duplicates: query.doublons === "1", large: query.volumineux === "1" };
-  return { type, trashed, sort, period, q, page, reach, month, portee, adv, raw: { dossier: query.dossier === "racine" ? "racine" : folder ? String(folder) : "", ext, tmin: query.tmin || "", tmax: query.tmax || "", lmin: query.lmin || "", lmax: query.lmax || "", doublons: query.doublons === "1" ? "1" : "", volumineux: query.volumineux === "1" ? "1" : "" } };
+  const tag = intOrNull(query.tag) || undefined, collection = intOrNull(query.collection) || undefined;
+  const adv = { tagId: tag, collectionId: collection, starred: query.favoris === "1", usedOnly: query.utilise === "1", folder, ext, minSize: kb(query.tmin), maxSize: kb(query.tmax), minWidth: px(query.lmin), maxWidth: px(query.lmax), duplicates: query.doublons === "1", large: query.volumineux === "1" };
+  return { type, trashed, sort, period, q, page, reach, month, portee, recents, adv, raw: { dossier: query.dossier === "racine" ? "racine" : folder ? String(folder) : "", ext, tmin: query.tmin || "", tmax: query.tmax || "", lmin: query.lmin || "", lmax: query.lmax || "", doublons: query.doublons === "1" ? "1" : "", volumineux: query.volumineux === "1" ? "1" : "", tag: tag ? String(tag) : "", collection: collection ? String(collection) : "", favoris: query.favoris === "1" ? "1" : "", utilise: query.utilise === "1" ? "1" : "", recents: query.recents === "1" ? "1" : "" } };
 }
 function search(ctx, f, perPage = PER_PAGE) {
-  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, sort: f.sort, from: sinceOf(f.period), month: f.month, reach: f.reach, ...f.adv, limit: perPage, offset: (f.page - 1) * perPage });
+  const { starred, ...adv } = f.adv;
+  const from = f.recents ? new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 19).replace("T", " ") : sinceOf(f.period);
+  const sort = f.adv.usedOnly && f.sort === "recent" ? "utilise" : f.sort;
+  const found = media.listMedia(ctx, { q: f.q, type: f.type, trashed: f.trashed, standalone: f.trashed, sort, from, month: f.month, reach: f.reach, ...adv, starredBy: starred ? ctx.userId : undefined, limit: perPage, offset: (f.page - 1) * perPage });
+  found.items = manager.decorate(ctx, found.items);
   return { ...found, pages: Math.max(1, Math.ceil(found.total / perPage)), page: f.page, perPage };
 }
 
@@ -79,7 +88,9 @@ module.exports = () => {
     const vis = media.visibleSql(ctx);
     const twins = m.sha256 ? ctx.db.prepare(`SELECT id, name FROM mk_media WHERE organization_id = ? AND sha256 = ? AND id <> ? AND deleted_at IS NULL AND ${vis.sql} ORDER BY id LIMIT 20`).all(ctx.organizationId, m.sha256, m.id, ...vis.params) : [];
     const folder = m.folderId ? folders.getFolder(ctx, m.folderId) : null;
-    return { media: { ...m, author: authorsOf(ctx, [m.createdBy])[m.createdBy] || null }, usage, duplicates: twins, folder: folder ? { id: folder.id, name: folder.name } : null, analysis: { scanned: ["modèles d'e-mail", "pages et tunnels", "composants", "modèles de page", "réglages de site", "articles"], notScanned: ["cours (LMS)", "produits et téléchargements", "formulaires", "e-mails déjà envoyés"] } };
+    const where = media.parsePublicPath(ctx, m.path);
+    const [rich] = manager.decorate(ctx, [m]);
+    return { exif: m.type === "image" && /jpe?g$/i.test(m.path) && where ? exifOf(where.absolute) : null, media: { ...rich, author: authorsOf(ctx, [m.createdBy])[m.createdBy] || null }, usage, duplicates: twins, folder: folder ? { id: folder.id, name: folder.name } : null, analysis: { scanned: ["modèles d'e-mail", "pages et tunnels", "composants", "modèles de page", "réglages de site", "articles"], notScanned: ["cours (LMS)", "produits et téléchargements", "formulaires", "e-mails déjà envoyés"] } };
   };
 
   // ----- Page -----
@@ -147,7 +158,8 @@ module.exports = () => {
       if (uploadError) return res.status(422).json({ error: { code: "invalid_field", message: uploadError.code === "LIMIT_FILE_SIZE" ? `Le fichier dépasse la taille maximale autorisée (${media.MAX_UPLOAD / 1048576} Mo).` : "Envoi impossible : fichier illisible." } });
       try {
         if (!req.file) throw new MarketingError("invalid_field", "Aucun fichier reçu.");
-        const originalName = originalNameOf(req.file);
+        const requested = String((req.body && req.body.nom) || "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 150); // nom choisi après un conflit de noms (« garder les deux »)
+        const originalName = requested || originalNameOf(req.file);
         let saved = media.saveUpload(ctxOf(req), { buffer: req.file.buffer, originalName, declaredType: req.file.mimetype, siteId: media.siteOfUpload(ctxOf(req)) });
         const toFolder = intOrNull(req.body && req.body.dossier); // dossier de destination choisi dans l'explorateur (vérifié : même médiathèque)
         if (toFolder) { const r = folders.moveMedia(ctxOf(req), [saved.id], toFolder); if (r.failed.length) throw new MarketingError("invalid_field", r.failed[0].message); saved = media.getMedia(ctxOf(req), saved.id); saved.duplicateOf = saved.duplicateOf || []; }
@@ -231,5 +243,78 @@ module.exports = () => {
   router.post(`${base}/:id(\\d+)/supprimer`, need("media.delete"), (req, res, next) => {
     try { res.json({ ok: media.purgeMedia(ctxOf(req), Number(req.params.id)) }); } catch (error) { fail(res, next, error); }
   });
+
+  // ===================== Gestionnaire de fichiers (lot 1) =====================
+  const rec = (res, next, fn) => { try { fn(); } catch (error) { fail(res, next, error); } };
+  const num = (v) => intOrNull(v);
+  const body = (req) => req.body || {};
+  // Tout ce dont l'écran a besoin au démarrage, en un seul appel (une seule médiathèque : celle du site courant)
+  router.get(`${base}/gestionnaire.json`, need("media.read"), (req, res, next) => rec(res, next, () => {
+    const ctx = ctxOf(req, { overview: true });
+    const tree = folders.listFolders(ctx), starredFolders = [...manager.starredSet(ctx, "folder")];
+    const scoped = Boolean(folders.scopeOf(ctx));
+    res.set("Cache-Control", "no-store").json({ counts: manager.sidebarCounts(ctx), prefs: manager.getPrefs(ctx), folders: tree.folders.map((fo) => ({ ...fo, starred: starredFolders.includes(fo.id) })), rootCount: tree.rootCount, foldersEnabled: tree.enabled,
+      tags: scoped ? manager.listTags(ctx) : [], collections: scoped ? manager.listCollections(ctx) : [], retention: scoped ? manager.getRetention(ctx) : 0, colors: manager.COLORS });
+  }));
+  // Favoris et préférences : propres à la personne
+  router.post(`${base}/favoris`, need("media.read"), (req, res, next) => rec(res, next, () => res.json({ starred: manager.setStar(ctxOf(req), String(body(req).kind), num(body(req).id), body(req).on !== false && body(req).on !== "0") })));
+  router.get(`${base}/preferences.json`, need("media.read"), (req, res) => res.set("Cache-Control", "no-store").json({ prefs: manager.getPrefs(ctxOf(req, { overview: true })) }));
+  router.post(`${base}/preferences`, need("media.read"), (req, res, next) => rec(res, next, () => res.json({ prefs: manager.setPrefs(ctxOf(req, { overview: true }), body(req)) })));
+  router.post(`${base}/utilise`, need("media.read"), (req, res, next) => rec(res, next, () => res.json({ updated: manager.touchUsed(ctxOf(req), Array.isArray(body(req).ids) ? body(req).ids.map(num) : []) })));
+  // Tags
+  router.get(`${base}/tags.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ tags: manager.listTags(ctxOf(req)) })));
+  router.post(`${base}/tags`, need("media.write"), (req, res, next) => rec(res, next, () => res.status(201).json({ tag: manager.createTag(ctxOf(req), { name: body(req).name, color: body(req).color }) })));
+  router.post(`${base}/tags/:tid(\\d+)`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ tag: manager.renameTag(ctxOf(req), Number(req.params.tid), { name: body(req).name, color: body(req).color }) })));
+  router.post(`${base}/tags/:tid(\\d+)/supprimer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ ok: manager.deleteTag(ctxOf(req), Number(req.params.tid)) })));
+  router.post(`${base}/etiqueter`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.tagMedia(ctxOf(req), Array.isArray(body(req).ids) ? body(req).ids.map(num) : [], { add: body(req).add, remove: body(req).remove }))));
+  router.post(`${base}/:id(\\d+)/tags`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ tags: manager.setMediaTags(ctxOf(req), Number(req.params.id), Array.isArray(body(req).tags) ? body(req).tags : []) })));
+  // Collections
+  router.get(`${base}/collections.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ collections: manager.listCollections(ctxOf(req)) })));
+  router.post(`${base}/collections`, need("media.write"), (req, res, next) => rec(res, next, () => res.status(201).json({ collection: manager.createCollection(ctxOf(req), { name: body(req).name, description: body(req).description }) })));
+  router.post(`${base}/collections/:cid(\\d+)`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ collection: manager.renameCollection(ctxOf(req), Number(req.params.cid), { name: body(req).name, description: body(req).description }) })));
+  router.post(`${base}/collections/:cid(\\d+)/supprimer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ ok: manager.deleteCollection(ctxOf(req), Number(req.params.cid)) })));
+  router.post(`${base}/collections/:cid(\\d+)/ajouter`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.addToCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
+  router.post(`${base}/collections/:cid(\\d+)/retirer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.removeFromCollection(ctxOf(req), Number(req.params.cid), body(req).ids))));
+  // Dossiers enrichis : couleur, description, propriétés, corbeille
+  router.post(`${base}/dossiers/:fid(\\d+)/meta`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.updateFolder(ctxOf(req), Number(req.params.fid), { color: body(req).color, description: body(req).description }) })));
+  router.get(`${base}/dossiers/:fid(\\d+)/proprietes.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ properties: manager.folderProperties(ctxOf(req), Number(req.params.fid)) })));
+  router.post(`${base}/dossiers/:fid(\\d+)/corbeille`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.trashFolder(ctxOf(req), Number(req.params.fid)))));
+  router.post(`${base}/dossiers/:fid(\\d+)/restaurer`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ folder: manager.restoreFolder(ctxOf(req), Number(req.params.fid)) })));
+  router.post(`${base}/dossiers/:fid(\\d+)/supprimer-definitivement`, need("media.delete"), (req, res, next) => rec(res, next, () => res.json(manager.purgeFolder(ctxOf(req), Number(req.params.fid)))));
+  // Corbeille : contenu, vidage, conservation
+  router.get(`${base}/corbeille.json`, need("media.read"), (req, res, next) => rec(res, next, () => { const ctx = ctxOf(req); manager.sweepTrash(ctx); res.set("Cache-Control", "no-store").json({ ...manager.listTrash(ctx, { q: req.query.q }), retention: manager.getRetention(ctx) }); }));
+  router.post(`${base}/corbeille/vider`, need("media.delete"), (req, res, next) => rec(res, next, () => res.json(manager.emptyTrash(ctxOf(req)))));
+  router.post(`${base}/corbeille/conservation`, need("media.delete"), (req, res, next) => rec(res, next, () => res.json({ days: manager.setRetention(ctxOf(req), Number(body(req).days)) })));
+  // Fichiers : copie, stockage, doublons, suggestions, téléchargement groupé
+  router.post(`${base}/:id(\\d+)/copier`, need("media.upload"), (req, res, next) => rec(res, next, () => res.status(201).json({ media: manager.copyMedia(ctxOf(req), Number(req.params.id), { folderId: Object.hasOwn(body(req), "folder_id") ? num(body(req).folder_id) : undefined }) })));
+  router.get(`${base}/stockage.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json(manager.storageStats(ctxOf(req, { overview: true })))));
+  router.get(`${base}/doublons/:sha([0-9a-f]{64}).json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ items: manager.duplicateDetail(ctxOf(req, { overview: true }), req.params.sha) })));
+  router.post(`${base}/doublons/resoudre`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.resolveDuplicates(ctxOf(req), { sha256: body(req).sha256, keepId: num(body(req).keep_id), action: body(req).action, folderId: num(body(req).folder_id), ids: Array.isArray(body(req).ids) ? body(req).ids.map(num) : undefined }))));
+  router.get(`${base}/suggestions.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ items: manager.suggest(ctxOf(req, { overview: true }), String(req.query.q || "")) })));
+  // Téléchargement groupé : archive ZIP des fichiers choisis (ceux de CETTE médiathèque seulement ; 200 fichiers et 1 Go au plus)
+  router.get(`${base}/telecharger.zip`, need("media.read"), (req, res, next) => {
+    try {
+      const ctx = ctxOf(req), ids = String(req.query.ids || "").split(",").map(num).filter(Boolean).slice(0, 200);
+      if (!ids.length) throw new MarketingError("invalid_field", "Sélectionnez au moins un fichier.");
+      const entries = []; let total = 0;
+      for (const id of ids) { const m = manager.ownMedia(ctx, id, { trashed: true }), where = media.parsePublicPath(ctx, m.path); if (!where) continue; entries.push({ name: m.name, absolute: where.absolute, mtime: new Date(String(m.createdAt).replace(" ", "T") + "Z") }); total += m.size; }
+      if (!entries.length) throw new MarketingError("not_found", "Aucun de ces fichiers n'est disponible sur le stockage.");
+      if (total > MAX_TOTAL) throw new MarketingError("invalid_field", `La sélection pèse ${(total / 1048576).toFixed(0)} Mo : 1 Go au plus par archive. Téléchargez en plusieurs fois.`);
+      res.set({ "Content-Type": "application/zip", "Content-Disposition": `attachment; filename="mediatheque-${new Date().toISOString().slice(0, 10)}.zip"`, "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
+      writeZip(entries, res).catch(() => res.destroy());
+    } catch (error) { fail(res, next, error); }
+  });
+  // Avant un envoi : parmi ces fichiers (nom, taille, empreinte), lesquels existent déjà dans la médiathèque ? (aucune écriture)
+  router.post(`${base}/verifier`, need("media.upload"), (req, res, next) => rec(res, next, () => {
+    const ctx = ctxOf(req), vis = media.visibleSql(ctx), out = [];
+    for (const it of (Array.isArray(body(req).files) ? body(req).files : []).slice(0, 200)) {
+      const name = String(it.name || "").slice(0, 150), sha = /^[0-9a-f]{64}$/.test(String(it.sha256 || "")) ? String(it.sha256) : null;
+      const folder = num(it.folder_id);
+      const same = sha ? ctx.db.prepare(`SELECT id, name FROM mk_media WHERE organization_id = ? AND sha256 = ? AND deleted_at IS NULL AND ${vis.sql} LIMIT 3`).all(ctx.organizationId, sha, ...vis.params) : [];
+      const named = ctx.db.prepare(`SELECT id, name FROM mk_media WHERE organization_id = ? AND name = ? COLLATE NOCASE AND deleted_at IS NULL AND ${vis.sql} AND folder_id IS ? LIMIT 3`).all(ctx.organizationId, name, ...vis.params, folder);
+      out.push({ name, sameContent: same, sameName: named });
+    }
+    res.json({ files: out });
+  }));
   return router;
 };
