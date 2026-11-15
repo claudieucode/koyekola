@@ -21,6 +21,9 @@ const CONTENT = { sections: [{ id: "sect00000001", type: "layout", children: [{ 
 ] }] }] };
 // La liste d'origine (avant la refonte de la boîte), dans l'ordre : rien ne doit être perdu, ajouté, ni modifié
 const ORIGINAL = [["Ctrl/⌘ + S", "Enregistrer"], ["Ctrl/⌘ + Z / Maj + Z", "Annuler / rétablir"], ["Ctrl/⌘ + K", "Commandes et recherche"], ["Ctrl/⌘ + Maj + Y", "Afficher / masquer le panneau Structure"], ["Ctrl/⌘ + Maj + E", "Éditeur visuel / Éditeur en blocs"], ["Ctrl/⌘ + C / X / V", "Copier, couper, coller"], ["Ctrl/⌘ + Alt + C / V", "Copier / coller le style"], ["Ctrl/⌘ + Maj + V", "Coller le style (fusion : les autres réglages de la cible sont conservés)"], ["Ctrl/⌘ + D", "Dupliquer"], ["Suppr", "Supprimer"], ["Ctrl/⌘ + G / Maj + G", "Grouper / dissocier"], ["Ctrl/⌘ + Maj + H / L", "Masquer / verrouiller"], ["Alt + ↑ / ↓", "Monter / descendre"], ["Entrée", "Écrire dans le texte sélectionné"], ["Échap", "Désélectionner"], ["Ctrl/⌘ + + / − / 0", "Zoom"], ["Maj + 1", "Ajuster à l'écran"], ["R", "Règles"], ["V / H", "Sélection / main"], ["T / I / B", "Ajouter un texte, une image, un bouton"]];
+// Raccourcis des panneaux (gestionnaire de panneaux) : ajoutés dans « Panneaux et modes », juste après les raccourcis d'origine de ce groupe ; les 20 d'origine restent, dans le même ordre
+const PANNEAUX = [["Ctrl/⌘ + Alt + 1", "Afficher / masquer le panneau de gauche"], ["Ctrl/⌘ + Alt + 2", "Afficher / masquer le panneau de droite"], ["Ctrl/⌘ + Alt + 0", "Afficher / masquer les deux panneaux"], ["Ctrl/⌘ + Alt + F", "Conception étendue (panneaux masqués) / retour"], ["Ctrl/⌘ + Alt + R", "Rétablir la disposition par défaut"]];
+const EXPECTED = ORIGINAL.slice(0, 5).concat(PANNEAUX, ORIGINAL.slice(5));
 const CONTRAST = `(a, b) => { const p = (c) => c.match(/[\\d.]+/g).slice(0, 3).map(Number); const L = (c) => { const v = p(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]; }; const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }`;
 
 describe("boîte « Raccourcis clavier » (navigateur)", { skip: SKIP }, () => {
@@ -57,7 +60,8 @@ describe("boîte « Raccourcis clavier » (navigateur)", { skip: SKIP }, () => {
   test("contenu : les 20 raccourcis, même ordre, mêmes touches et mêmes descriptions ; regroupés sans changer l'ordre ; structure en-tête / liste / pied accessible", async () => {
     await openViaMenu();
     const rows = await page.evaluate(() => [...document.querySelectorAll("[data-pb-shortcuts] .pb-sc-list dt")].map((dt) => [[...dt.childNodes].map((n) => n.dataset && n.dataset.k ? n.dataset.k : n.textContent).join(" ").replace(/\s+/g, " ").trim(), dt.nextElementSibling.textContent.trim()]));
-    assert.deepEqual(rows, ORIGINAL, "liste fonctionnelle strictement conservée");
+    assert.deepEqual(rows, EXPECTED, "les 20 raccourcis d'origine conservés dans le même ordre + les 5 raccourcis des panneaux");
+    assert.deepEqual(rows.filter((r) => ORIGINAL.some((o) => o[0] === r[0] && o[1] === r[1])), ORIGINAL);
     assert.ok((await dlg().locator("section.pb-sc-group").count()) >= 4, "groupes");
     const titles = await dlg().locator(".pb-sc-group h3").allInnerTexts(); assert.ok(titles.length >= 4);
     // chaque touche est une pastille <kbd>, les « + » et « / » entre deux touches sont des séparateurs ; la touche « + » du zoom reste une touche
@@ -168,12 +172,12 @@ describe("boîte « Raccourcis clavier » (navigateur)", { skip: SKIP }, () => {
     const visible = () => page.evaluate(() => [...document.querySelectorAll("[data-pb-shortcuts] dd")].filter((d) => !d.hidden).map((d) => d.textContent));
     const groups = () => page.evaluate(() => [...document.querySelectorAll("[data-pb-shortcuts] .pb-sc-group")].filter((g) => !g.hidden).map((g) => g.querySelector("h3").textContent));
     const type = async (q) => { await dlg().locator("[data-sc-search]").fill(q); await wait(60); };
-    assert.equal((await visible()).length, 20);
+    assert.equal((await visible()).length, 25);
     await type("enregistrer"); assert.deepEqual(await visible(), ["Enregistrer"]); assert.deepEqual(await groups(), ["Général"], "les catégories sans résultat disparaissent");
     await type("ZOOM"); assert.deepEqual(await visible(), ["Zoom"]);
     await type("copier"); assert.deepEqual(await visible(), ["Copier, couper, coller", "Copier / coller le style"]);
     await type("echap"); assert.deepEqual(await visible(), ["Désélectionner"], "recherche par nom de touche, sans accent");
-    const ctrl = await (async () => { await type("ctrl"); return visible(); })(); assert.equal(ctrl.length, ORIGINAL.filter((k) => k[0].includes("Ctrl/⌘")).length, "« ctrl » : tous les raccourcis qui utilisent Ctrl/⌘, et eux seuls"); assert.ok(ctrl.includes("Enregistrer") && !ctrl.includes("Règles"));
+    const ctrl = await (async () => { await type("ctrl"); return visible(); })(); assert.equal(ctrl.length, EXPECTED.filter((k) => k[0].includes("Ctrl/⌘")).length, "« ctrl » : tous les raccourcis qui utilisent Ctrl/⌘, et eux seuls"); assert.ok(ctrl.includes("Enregistrer") && !ctrl.includes("Règles"));
     await type("cmd"); assert.deepEqual(await visible(), ctrl, "« cmd » = « ctrl » (même touche)");
     await type("⌘"); assert.deepEqual(await visible(), ctrl);
     await type("maj z"); assert.deepEqual(await visible(), ["Annuler / rétablir"], "plusieurs mots : tous doivent correspondre");
@@ -185,7 +189,7 @@ describe("boîte « Raccourcis clavier » (navigateur)", { skip: SKIP }, () => {
     assert.equal(await dlg().locator(".pb-sc-cols").isVisible(), false);
     await page.keyboard.press("Escape"); await gone();
     await openViaMenu();
-    assert.equal(await dlg().locator("[data-sc-search]").inputValue(), "", "recherche remise à zéro"); assert.equal((await visible()).length, 20);
+    assert.equal(await dlg().locator("[data-sc-search]").inputValue(), "", "recherche remise à zéro"); assert.equal((await visible()).length, 25);
     assert.equal(await page.evaluate(() => document.querySelectorAll("[data-pb-shortcuts] mark").length), 0);
     await page.keyboard.press("Escape"); await gone();
   });
