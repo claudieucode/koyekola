@@ -73,8 +73,41 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () { var p = pending; pending = {}; K.api("POST", BASE + "/preferences", p).catch(function () { /* préférence non enregistrée : l'affichage reste correct pour cette session */ }); }, 350);
   }
+
+  // ----- Apparence (couleurs libres, rayon, espacement, taille d'icônes) : enregistrée par personne et par site -----
+  var PRESETS = {
+    clair: { sideBg: "#0d2238", mainBg: "#ffffff", text: "#0b2a40", textSoft: "#5b6b7b", icon: "#9fb0c4", sep: "#2a4058", sel: "#e3eefa", hover: "#eaf1f8", folder: "#4f8fd6", accent: "#0a74b5", border: "#dbe3ec", badge: "#2a4058" },
+    sombre: { sideBg: "#08131f", mainBg: "#0f1b2a", text: "#e6edf6", textSoft: "#9fb0c4", icon: "#9fb0c4", sep: "#22364b", sel: "#1d4670", hover: "#16283b", folder: "#6fb4ff", accent: "#6fb4ff", border: "#22364b", badge: "#22364b" }
+  };
+  function themeOf() { var t = prefs.theme || {}; return { mode: t.mode === "sombre" || t.mode === "personnalise" ? t.mode : "clair", colors: t.colors || {}, radius: t.radius == null ? 8 : t.radius, space: t.space == null ? 100 : t.space, iconSize: t.iconSize == null ? 16 : t.iconSize }; }
+  function themeColor(t, k) { return t.colors[k] || (PRESETS[t.mode] || PRESETS.clair)[k]; }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16), r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255; return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255; }
+  function applyTheme() {
+    var t = themeOf(), st = rootEl.style, c = function (k) { return themeColor(t, k); };
+    var custom = t.mode !== "clair" || Object.keys(t.colors).length > 0, vars = {};
+    if (custom) {
+      var darkSide = lum(c("sideBg")) < 0.55;
+      vars = { "--mx-bg": c("mainBg"), "--mx-text": c("text"), "--mx-muted": c("textSoft"), "--mx-sel": c("sel"), "--mx-hover": c("hover"), "--mx-folder": c("folder"), "--mx-accent": c("accent"), "--mx-accent-ink": c("accent"), "--mx-line": c("border"), "--mx-badge": c("badge"),
+        "--mxs-bg": c("sideBg"), "--mxs-icon": c("icon"), "--mxs-sep": c("sep"), "--mxs-folder": c("folder"), "--mxs-text": darkSide ? "#e6edf6" : c("text"), "--mxs-muted": darkSide ? "#9fb0c4" : c("textSoft") };
+      // survol, sélection et accent de la barre latérale : seulement si la personne les a choisis elle-même (les valeurs du thème clair sont pensées pour la zone centrale)
+      if (t.colors.hover) vars["--mxs-hover"] = t.colors.hover; if (t.colors.sel) vars["--mxs-sel"] = t.colors.sel; if (t.colors.accent) vars["--mxs-accent"] = t.colors.accent;
+    }
+    var sideEl = $("[data-mx-side]", rootEl);
+    ["--mx-bg", "--mx-text", "--mx-muted", "--mx-sel", "--mx-hover", "--mx-folder", "--mx-accent", "--mx-accent-ink", "--mx-line", "--mx-badge"].forEach(function (k) { if (vars[k]) st.setProperty(k, vars[k]); else st.removeProperty(k); });
+    ["--mxs-bg", "--mxs-icon", "--mxs-sep", "--mxs-folder", "--mxs-text", "--mxs-muted", "--mxs-hover", "--mxs-sel", "--mxs-accent"].forEach(function (k) { if (!sideEl) return; if (vars[k]) sideEl.style.setProperty(k, vars[k]); else sideEl.style.removeProperty(k); });
+    st.setProperty("--mx-radius", t.radius + "px"); st.setProperty("--mx-space", String(t.space / 100)); st.setProperty("--mx-icon", t.iconSize + "px");
+  }
+  function themeSave(patch) { var t = themeOf(); var next = { mode: t.mode, colors: Object.assign({}, t.colors), radius: t.radius, space: t.space, iconSize: t.iconSize }; patch(next); savePrefs({ theme: next }); applyTheme(); syncThemeUi(); }
+  function syncThemeUi() {
+    var pop = $("[data-mx-theme]", rootEl); if (!pop) return; var t = themeOf();
+    $$("[data-mx-theme-color]", pop).forEach(function (i) { i.value = themeColor(t, i.getAttribute("data-mx-theme-color")); });
+    $$("[data-mx-theme-mode]", pop).forEach(function (b) { b.setAttribute("aria-pressed", b.getAttribute("data-mx-theme-mode") === t.mode ? "true" : "false"); });
+    ["radius", "space", "iconSize"].forEach(function (k) { var r = $("[data-mx-theme-range=" + k + "]", pop), o = $("[data-mx-theme-out=" + k + "]", pop); if (r) r.value = t[k]; if (o) o.textContent = k === "space" ? t[k] + " %" : t[k] + " px"; });
+  }
+  var themeSnapshot = null;
   function applyPrefs() {
-    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
+    if (prefs.sidebar === "hidden") prefs.sidebar = "rail";
+    rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); syncCollapse(); applyTheme(); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
     rootEl.style.setProperty("--mx-size", (prefs.size || 160) + "px"); rootEl.style.setProperty("--mx-info-w", (prefs.infoWidth || 340) + "px");
     var cols = prefs.columns || [];
     rootEl.className = rootEl.className.replace(/\bhas-c-\w+/g, "").replace(/\s+/g, " ").trim();
@@ -341,7 +374,7 @@
     document.addEventListener("keydown", menuKeys, true);
     var first = $("button:not(:disabled)", m); if (first) first.focus();
   }
-  var ICONS = { eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", download: "M12 3v12M7 10l5 5 5-5M5 21h14", link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z", copy: "M9 9h11v11H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1", star: "M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z", moveTo: "M5 12h14M13 6l6 6-6 6M3 5v14", folder: "M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", undo: "M3 7v6h6M3 13a9 9 0 1 0 3-7", info: "M12 8h.01M11 12h1v5h1M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", plus: "M12 5v14M5 12h14", refresh: "M21 12a9 9 0 1 1-3-6.7M21 3v6h-6", upload: "M12 15V3M7 8l5-5 5 5M5 21h14", check: "M5 12l5 5 9-10", gallery: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" };
+  var ICONS = { panelLeft: "M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM9 4v16", eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z", download: "M12 3v12M7 10l5 5 5-5M5 21h14", link: "M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1", edit: "M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z", copy: "M9 9h11v11H9zM5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1", star: "M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z", moveTo: "M5 12h14M13 6l6 6-6 6M3 5v14", folder: "M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", tag: "M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01", trash: "M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14", undo: "M3 7v6h6M3 13a9 9 0 1 0 3-7", info: "M12 8h.01M11 12h1v5h1M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", plus: "M12 5v14M5 12h14", refresh: "M21 12a9 9 0 1 1-3-6.7M21 3v6h-6", upload: "M12 15V3M7 8l5-5 5 5M5 21h14", check: "M5 12l5 5 9-10", gallery: "M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z" };
   function iconEl(name) { var d = ICONS[name]; var s = document.createElementNS("http://www.w3.org/2000/svg", "svg"); s.setAttribute("class", "icon"); s.setAttribute("width", "16"); s.setAttribute("height", "16"); s.setAttribute("viewBox", "0 0 24 24"); s.setAttribute("fill", "none"); s.setAttribute("stroke", "currentColor"); s.setAttribute("stroke-width", "2"); s.setAttribute("stroke-linecap", "round"); s.setAttribute("stroke-linejoin", "round"); s.setAttribute("aria-hidden", "true"); var p = document.createElementNS("http://www.w3.org/2000/svg", "path"); p.setAttribute("d", d || ""); s.appendChild(p); return s; }
   function trashedView() { return Boolean(cfg.trashed); }
   function fileEntries(items) {
@@ -533,8 +566,12 @@
 
   // =============================================================== Barre latérale, vues, tailles, colonnes
   document.addEventListener("click", function (e) {
-    var t = e.target.closest("[data-mx-side-toggle]"); if (t && rootEl.contains(t)) { if (small()) { if (rootEl.getAttribute("data-drawer") === "open") rootEl.removeAttribute("data-drawer"); else rootEl.setAttribute("data-drawer", "open"); return; } savePrefs({ sidebar: prefs.sidebar === "hidden" ? "open" : "hidden" }); applyPrefs(); return; }
-    var c = e.target.closest("[data-mx-side-collapse]"); if (c && rootEl.contains(c)) { savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
+    var t = e.target.closest("[data-mx-side-toggle]"); if (t && rootEl.contains(t)) { if (small()) { if (rootEl.getAttribute("data-drawer") === "open") rootEl.removeAttribute("data-drawer"); else rootEl.setAttribute("data-drawer", "open"); return; } savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
+    var tm = e.target.closest("[data-mx-theme-mode]"); if (tm && rootEl.contains(tm)) { var m = tm.getAttribute("data-mx-theme-mode"); themeSave(function (n) { n.mode = m; if (m !== "personnalise") n.colors = {}; }); return; }
+    if (e.target.closest("[data-mx-theme-reset]")) { themeSave(function (n) { n.mode = "clair"; n.colors = {}; n.radius = 8; n.space = 100; n.iconSize = 16; }); return; }
+    if (e.target.closest("[data-mx-theme-undo]") && themeSnapshot) { var snap = themeSnapshot; themeSave(function (n) { n.mode = snap.mode; n.colors = Object.assign({}, snap.colors); n.radius = snap.radius; n.space = snap.space; n.iconSize = snap.iconSize; }); return; }
+    var ts = e.target.closest("[data-mx-theme] > summary"); if (ts && rootEl.contains(ts)) { var cur = themeOf(); themeSnapshot = { mode: cur.mode, colors: Object.assign({}, cur.colors), radius: cur.radius, space: cur.space, iconSize: cur.iconSize }; syncThemeUi(); }
+    var c = e.target.closest("[data-mx-side-collapse]"); if (c && rootEl.contains(c)) { if (small()) { rootEl.removeAttribute("data-drawer"); return; } savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
     var v = e.target.closest("[data-mx-view]"); if (v && rootEl.contains(v)) { setView(v.getAttribute("data-mx-view")); return; }
     var tg = e.target.closest("[data-mx-tree-toggle]"); if (tg && rootEl.contains(tg)) { e.preventDefault(); var li = tg.closest(".mx-tree-item"), grp = $(".mx-tree-group", li), open = li.getAttribute("aria-expanded") !== "true"; li.setAttribute("aria-expanded", String(open)); if (grp) grp.hidden = !open; var openIds = $$('.mx-tree-item[aria-expanded="true"]', rootEl).map(function (x) { return x.getAttribute("data-mx-folder-node"); }); try { sessionStorage.setItem("mxTree", JSON.stringify(openIds)); } catch (x) { /* sans stockage */ } return; }
     if (e.target.closest("[data-mx-new-folder]")) { newFolder(); return; }
@@ -730,7 +767,7 @@
     if (!rootEl.isConnected) return;
     var mod = e.metaKey || e.ctrlKey, typing = e.target.closest("input, textarea, select, [contenteditable]");
     if (mod && (e.key === "i" || e.key === "I") && !typing) { e.preventDefault(); openInfo(prefs.info !== "open"); return; }
-    if (mod && (e.key === "b" || e.key === "B") && !typing) { e.preventDefault(); savePrefs({ sidebar: prefs.sidebar === "hidden" ? "open" : "hidden" }); applyPrefs(); return; }
+    if (mod && (e.key === "b" || e.key === "B") && !typing) { e.preventDefault(); savePrefs({ sidebar: prefs.sidebar === "rail" ? "open" : "rail" }); applyPrefs(); return; }
     if (typing || document.querySelector("dialog[open]") || (document.getElementById("mx-preview") && !document.getElementById("mx-preview").hidden)) return;
     if (e.key === "Escape") { if (menuEl) return; if (sel.size || selF.size) { clearSelection(); return; } if (prefs.info === "open") { openInfo(false); return; } }
     if (mod && (e.key === "a" || e.key === "A") && e.target.closest("[data-mx-scroll], [data-ml-item]")) { e.preventDefault(); selectAll(); return; }
@@ -808,7 +845,12 @@
     if (window.MXPreview && window.MXPreview.refreshList) window.MXPreview.refreshList();
   }
   // Rubrique de la barre latérale : bouton de repli (ajouté une fois)
-  (function () { var side = $("[data-mx-side]", rootEl); if (side && !$("[data-mx-side-collapse]", side)) { var b = h("button", { type: "button", class: "mx-iconbtn is-small mx-side-collapse", "data-mx-side-collapse": "", "aria-label": "Réduire ou déployer la barre latérale", title: "Réduire / déployer" }, [iconEl("moveTo")]); b.style.transform = "scaleX(-1)"; side.appendChild(b); } })();
+    rootEl.addEventListener("input", function (e) {
+    var ci = e.target.closest && e.target.closest("[data-mx-theme-color]"); if (ci) { var k = ci.getAttribute("data-mx-theme-color"), v = ci.value; themeSave(function (n) { n.mode = "personnalise"; n.colors[k] = v; }); return; }
+    var ri = e.target.closest && e.target.closest("[data-mx-theme-range]"); if (ri) { var rk = ri.getAttribute("data-mx-theme-range"), rv = Number(ri.value); themeSave(function (n) { n[rk] = rv; }); }
+  });
+  function syncCollapse() { var b = $("[data-mx-side-collapse]", rootEl); if (!b) return; var open = (prefs.sidebar || "open") === "open"; b.setAttribute("aria-expanded", open ? "true" : "false"); b.setAttribute("aria-label", open ? "Replier la barre latérale" : "Déployer la barre latérale"); b.setAttribute("title", (open ? "Replier" : "Déployer") + " la barre latérale (Cmd/Ctrl + B)"); }
+  (function () { var side = $("[data-mx-side]", rootEl); if (side && !$("[data-mx-side-collapse]", side)) { var b = h("button", { type: "button", class: "mx-iconbtn mx-side-collapse", "data-mx-side-collapse": "", "aria-controls": "mx-side" }, [iconEl("panelLeft")]); side.appendChild(b); syncCollapse(); } })();
   window.addEventListener("resize", fitHeight);
   try { var flash = sessionStorage.getItem("mlFlash"); if (flash) { sessionStorage.removeItem("mlFlash"); var fl = JSON.parse(flash); toast(fl.text, fl.type); } } catch (x) { /* ignoré */ }
 

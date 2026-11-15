@@ -187,7 +187,16 @@ function collectionsOf(ctx, ids) {
 const VIEWS = ["grille", "liste", "details", "icones", "compacte"];
 const COLUMNS = ["type", "size", "dims", "folder", "modified", "created", "author", "tags"];
 const SORT_KEYS = ["recent", "ancien", "nom", "nom_desc", "taille", "modifie", "type"];
-const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], sort: "recent", sortDir: "", sidebar: "open", info: "closed", infoWidth: 340, foldersFirst: true };
+const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], sort: "recent", sortDir: "", sidebar: "open", info: "closed", infoWidth: 340, foldersFirst: true, theme: { mode: "clair", colors: {}, radius: 8, space: 100, iconSize: 16 } };
+const THEME_MODES = ["clair", "sombre", "personnalise"];
+const THEME_KEYS = ["sideBg", "mainBg", "text", "textSoft", "icon", "sep", "sel", "hover", "folder", "accent", "border", "badge"];
+const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(Math.max(Math.round(Number(v)), lo), hi) : d);
+function sanitizeTheme(t) {
+  const o = t && typeof t === "object" ? t : {};
+  const colors = {};
+  if (o.colors && typeof o.colors === "object") THEME_KEYS.forEach((k) => { if (typeof o.colors[k] === "string" && /^#[0-9a-fA-F]{6}$/.test(o.colors[k])) colors[k] = o.colors[k].toLowerCase(); });
+  return { mode: THEME_MODES.includes(o.mode) ? o.mode : "clair", colors, radius: clampInt(o.radius, 0, 20, 8), space: clampInt(o.space, 80, 140, 100), iconSize: clampInt(o.iconSize, 14, 26, 16) };
+}
 function sanitizePrefs(input) {
   const p = input && typeof input === "object" ? input : {};
   const out = {};
@@ -197,7 +206,8 @@ function sanitizePrefs(input) {
   if (Array.isArray(p.columns)) out.columns = COLUMNS.filter((c) => p.columns.includes(c));
   if (SORT_KEYS.includes(p.sort)) out.sort = p.sort;
   if (["", "asc", "desc"].includes(p.sortDir)) out.sortDir = p.sortDir;
-  if (["open", "rail", "hidden"].includes(p.sidebar)) out.sidebar = p.sidebar;
+  if (["open", "rail", "hidden"].includes(p.sidebar)) out.sidebar = p.sidebar === "hidden" ? "rail" : p.sidebar; // « masquée » n'existe plus : la barre se réduit toujours à une bande qui garde son bouton
+  if (p.theme && typeof p.theme === "object") out.theme = sanitizeTheme(p.theme);
   if (["open", "closed"].includes(p.info)) out.info = p.info;
   if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 560);
   if (typeof p.foldersFirst === "boolean") out.foldersFirst = p.foldersFirst;
