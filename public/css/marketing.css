@@ -464,7 +464,7 @@ html:has(.mk-dialog[open]) { overflow: hidden; } /* la page derrière ne défile
 .mk-cell-email { min-width: 230px; overflow-wrap: anywhere; }
 .mk-filter-more { flex: 1 1 100%; }
 .mk-filter-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--primary); }
-.mk-filter-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding-top: 8px; }
+.mk-cmp-fset-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; padding-top: 8px; }
 @media (min-width: 721px) { .mk-filter-more > summary { display: none; } }
 
 /* ===== Segments, listes, étiquettes, propriétés ===== */
@@ -2070,3 +2070,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-body .mk-dom-add .field-group > input { margin-bottom: 0; }
 .mk-body .mk-dom-add > .btn { min-height: var(--mk-field-h, 40px); margin: 0; }
 .mk-body .mk-panel form.mk-dom-add .field-group { margin: 0; }
+
+/* Rapports comparatifs : filtres regroupés en familles (période, campagnes, affichage) */
+.mk-body .mk-filterbar:has(.mk-cmp-fset) { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--mk-border); border-radius: 12px; }
+.mk-cmp-fset { display: grid; gap: 8px; min-width: 0; padding-left: 12px; border-left: 3px solid var(--mk-border); }
+.mk-cmp-fset-title { font-size: 13px; font-weight: 600; color: var(--mk-muted, #5b6b7b); }
+.mk-cmp-fset-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.mk-cmp-fset-actions { display: flex; gap: 8px; align-items: center; align-self: flex-end; margin-left: auto; }
