@@ -43,14 +43,44 @@ describe("Comptes : mise en page (navigateur)", { skip: SKIP }, () => {
       }
     });
   }
-  test("ajout : les deux cartes sont côte à côte en grand écran ; permissions : catégories sur deux colonnes", async () => {
+  test("ajout : les deux cartes sont côte à côte en grand écran", async () => {
     await page.setViewportSize({ width: 1920, height: 1000 });
     await page.goto(`${env.srv.base}${S}/equipe-ajouter`);
     const cards = await page.locator(".ac-card").evaluateAll((l) => l.map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y })));
     assert.ok(cards.length >= 2 && Math.abs(cards[0].y - cards[1].y) < 2 && cards[1].x > cards[0].x + 400, JSON.stringify(cards));
+    assert.equal(env.errors.length, 0, env.errors.join(" | "));
+  });
+
+  test("permissions : accordéons verticaux pleine largeur, en-tête gris bleuté, compteurs justes, ouverture/fermeture, état conservé au changement de rôle", async () => {
+    await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto(`${env.srv.base}${S}/equipe-permissions`);
-    const g = await page.locator(".mk-su-group").evaluateAll((l) => l.slice(0, 2).map((e) => e.getBoundingClientRect().x));
-    assert.ok(g.length === 2 && g[1] > g[0] + 400, JSON.stringify(g));
+    const geo = await page.locator("[data-perm-acc] > details").evaluateAll((l) => l.map((e) => { const r = e.getBoundingClientRect(), sm = getComputedStyle(e.querySelector("summary")); return { x: Math.round(r.x), w: Math.round(r.width), y: r.y, bg: sm.backgroundColor }; }));
+    assert.ok(geo.length >= 8, "toutes les catégories");
+    assert.ok(geo.every((g) => g.x === geo[0].x && g.w === geo[0].w), "même colonne, même largeur");
+    assert.ok(geo.every((g, i) => i === 0 || g.y > geo[i - 1].y), "empilées verticalement");
+    assert.ok(geo[0].bg !== "rgb(255, 255, 255)", "en-tête teinté : " + geo[0].bg);
+    // compteurs = nombre réel de ✓ dans la catégorie
+    const ok = await page.locator("[data-perm-acc] > details").evaluateAll((l) => l.every((d) => { const m = d.querySelector(".mk-su-count").textContent.match(/(\d+)\s*\/\s*(\d+)/); return +m[1] === d.querySelectorAll("li.is-on").length && +m[2] === d.querySelectorAll("li").length; }));
+    assert.ok(ok, "compteurs cohérents avec les permissions affichées");
+    // ouverture / fermeture
+    const first = page.locator("[data-perm-acc] > details").first(), sum = first.locator("summary");
+    const was = await first.evaluate((d) => d.open);
+    await sum.click(); assert.equal(await first.evaluate((d) => d.open), !was);
+    await sum.click(); assert.equal(await first.evaluate((d) => d.open), was);
+    // tout replier puis changement de rôle : l'état est conservé
+    await page.getByRole("button", { name: "Tout replier" }).click();
+    assert.equal(await page.locator("[data-perm-acc] > details[open]").count(), 0);
+    const other = await page.locator("#su-pr option:not(:checked)").last().getAttribute("value");
+    await Promise.all([page.waitForNavigation(), page.selectOption("#su-pr", other)]);
+    assert.equal(await page.locator("[data-perm-acc] > details[open]").count(), 0, "catégories restées repliées après changement de rôle");
+    await page.getByRole("button", { name: "Tout déplier" }).click();
+    assert.equal(await page.locator("[data-perm-acc] > details:not([open])").count(), 0);
+    await page.waitForTimeout(600);
+    if (process.env.CP_SHOTS) await page.screenshot({ path: `${process.env.CP_SHOTS}/perm-accordeons.png`, fullPage: false });
+    // mobile : une seule colonne interne
+    await page.setViewportSize({ width: 390, height: 900 });
+    const cols = await page.locator("[data-perm-acc] ul").first().evaluate((u) => getComputedStyle(u).gridTemplateColumns.split(" ").length);
+    assert.equal(cols, 1);
     assert.equal(env.errors.length, 0, env.errors.join(" | "));
   });
 });

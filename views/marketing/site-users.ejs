@@ -3,6 +3,7 @@
   rien d'un autre site n'est jamais affiché. Les droits affichés sont ceux de la personne SUR CE SITE ; « Retirer » n'enlève que l'accès à ce site.
 %><%- include("partials/top", { title, active }) %>
 <link rel="stylesheet" href="/css/comptes.css">
+<script src="/js/permissions-acc.js" defer></script>
 <%
   const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
   const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 16) + " UTC" : "—");
@@ -104,11 +105,13 @@
 
 <% } else if (mode === "permissions") { %>
   <div class="mk-head"><div class="mk-head-main"><h1>Permissions</h1><p class="mk-head-sub">Ce que permet chaque rôle (lecture). Votre propre accès sur <%= SITE.name %> : <strong><%= mine.size %> permission<%= mine.size > 1 ? "s" : "" %></strong>.</p></div></div>
-  <form class="mk-cms-toolbar" method="get" action="<%= frameUrl("permissions") %>" aria-label="Choisir un rôle">
-    <label for="su-pr">Rôle</label><select id="su-pr" name="role" data-us-autosubmit><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.key === roleKey ? " selected" : "" %>><%= r.name %></option><% }) %></select><button type="submit" class="btn btn-outline btn-sm">Afficher</button></form>
-  <p class="mk-sub"><%= role.description %> <%= role.permissions.size %> permission<%= role.permissions.size > 1 ? "s" : "" %>.</p>
-  <div class="mk-pv-acc-group mk-su-perms"><% groups.forEach((g) => { const has = g.perms.filter((p) => role.permissions.has(p[0])); %>
-    <details class="mk-su-group"<%= has.length ? " open" : "" %>><summary><span><%= g.label %></span><span class="mk-sub"><%= has.length %> / <%= g.perms.length %></span></summary>
+  <div class="cp-rolebar">
+    <form class="cp-rolebar-form" method="get" action="<%= frameUrl("permissions") %>" aria-label="Choisir un rôle">
+      <label for="su-pr">Rôle</label><select id="su-pr" name="role" data-us-autosubmit><% roles.forEach((r) => { %><option value="<%= r.key %>"<%= r.key === roleKey ? " selected" : "" %>><%= r.name %></option><% }) %></select><button type="submit" class="btn btn-outline btn-sm">Afficher</button></form>
+    <p class="cp-rolebar-desc"><%= role.description %> <strong><%= role.permissions.size %> permission<%= role.permissions.size > 1 ? "s" : "" %></strong></p>
+  </div>
+  <div class="mk-pv-acc-group mk-su-perms" data-perm-acc><% groups.forEach((g) => { const has = g.perms.filter((p) => role.permissions.has(p[0])); %>
+    <details class="mk-su-group" data-k="<%= g.label %>"<%= has.length ? " open" : "" %>><summary><span><%= g.label %></span><span class="mk-su-count"><%= has.length %> / <%= g.perms.length %></span></summary>
       <ul><% g.perms.forEach((p) => { %><li class="<%= role.permissions.has(p[0]) ? "is-on" : "is-off" %>"><span class="mk-su-tick" aria-hidden="true"><%= role.permissions.has(p[0]) ? "✓" : "–" %></span><%= p[1] %><span class="sr-only"><%= role.permissions.has(p[0]) ? " (autorisé)" : " (non autorisé)" %></span><% if (role.permissions.has(p[0]) && !mine.has(p[0])) { %><span class="mk-sub"> · vous ne l'avez pas</span><% } %></li><% }) %></ul></details>
   <% }) %></div>
 <% } %>
