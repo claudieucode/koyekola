@@ -72,7 +72,7 @@ describe("médiathèque : gestionnaire de fichiers dans Chrome", { skip: SKIP },
     await open();
     for (const v of ["liste", "details", "icones", "compacte", "grille"]) { await page.click(`[data-mx-view="${v}"]`); assert.equal(await page.locator("[data-mx]").getAttribute("data-view"), v); }
     await page.click('[data-mx-view="liste"]'); await page.waitForTimeout(600);
-    await page.locator("[data-mx-cols] summary").click(); await page.locator('[data-mx-col][value="author"]').check(); await page.waitForTimeout(500);
+    await page.locator("[data-mx-cols] summary").click(); await page.locator('[data-colrow="author"] input[type=checkbox]').check(); await page.waitForTimeout(500); // panneau « Colonnes et affichage » (colonnes personnalisables)
     await page.locator("[data-mx-size]").evaluate((el) => { el.value = "230"; el.dispatchEvent(new Event("input", { bubbles: true })); }); await page.waitForTimeout(700);
     await page.reload(); await page.waitForSelector("[data-mx]");
     assert.equal(await page.locator("[data-mx]").getAttribute("data-view"), "liste"); assert.equal(await page.locator("[data-mx-items]").getAttribute("data-view"), "liste");
