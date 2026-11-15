@@ -9,7 +9,7 @@ const fs = require("fs");
     const ctx = await env.browser.newContext({ viewport: { width: Number(width), height: 900 } });
     await ctx.addCookies([...env.boss.cookies].map(([name, value]) => ({ name, value, url: env.srv.base })));
     for (const p of paths) {
-      const path = p.replace("{site}", env.site);
+      const path = p.replace("{site}", env.site).replace("{page}", env.pageId);
       const page = await ctx.newPage();
       const res = await page.goto(env.srv.base + path); await page.waitForLoadState("networkidle");
       const over = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1);

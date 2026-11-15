@@ -412,3 +412,10 @@ html[data-kola-theme="dark"] .tb-star[aria-pressed="true"] { color: #fbbf24; }
   .tb .tb-side li.tb-grp { display: none; }
   .tb .tb-side .tb-ico { --sb-chip: 28px; width: 28px; height: 28px; padding: 5px; }
 }
+
+/* Icônes en traits des boutons et champs (« + », loupe, « ? ») : sans ces réglages le navigateur remplit les formes en noir */
+.tb-bi { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; width: 16px; height: 16px; }
+.tb-search { position: relative; }
+.tb-search > .tb-bi { position: absolute; left: 12px; bottom: 12px; color: var(--tb-muted, #64748b); pointer-events: none; }
+.tb .tb-search > input#tb-q { padding-left: 38px !important; } /* !important : une règle globale des champs du CMS impose 10px */
+.tb .btn:has(> .tb-bi) { display: inline-flex; align-items: center; gap: 8px; }
