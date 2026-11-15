@@ -39,7 +39,7 @@ function listFolders(ctx) {
   if (!s) return { enabled: false, folders: [], rootCount: 0 };
   const c = siteCond(s);
   const vis = media.visibleSql(ctx);
-  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, f.color, f.description, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} AND f.deleted_at IS NULL ORDER BY f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
+  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, f.color, f.description, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} AND f.deleted_at IS NULL ORDER BY f.sort_order IS NULL, f.sort_order, f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
   const rootCount = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IS NULL AND ${vis.sql}`).get(ctx.organizationId, ...vis.params).n;
   return { enabled: true, folders, rootCount };
 }
@@ -167,4 +167,4 @@ function duplicateGroups(ctx, { limit = 50 } = {}) {
   return sums.map((g) => ({ sha256: g.sha256, count: g.n, wastedBytes: g.bytes - g.bytes / g.n, items: ctx.db.prepare(`SELECT id, name, path, size, folder_id AS folderId, created_at AS createdAt FROM mk_media WHERE organization_id = ? AND sha256 = ? AND deleted_at IS NULL AND ${vis.sql} ORDER BY id`).all(ctx.organizationId, g.sha256, ...vis.params) }));
 }
 
-module.exports = { scopeOf, getFolder, listFolders, breadcrumb, createFolder, renameFolder, moveFolder, deleteFolder, moveMedia, computeMissingHashes, duplicateGroups, MAX_DEPTH };
+module.exports = { needScope, siteCond, depthOf, clip, scopeOf, getFolder, listFolders, breadcrumb, createFolder, renameFolder, moveFolder, deleteFolder, moveMedia, computeMissingHashes, duplicateGroups, MAX_DEPTH };

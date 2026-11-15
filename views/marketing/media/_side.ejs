@@ -9,7 +9,7 @@
   const node = (fo) => {
     const sub = kids(fo.id), here = pageKey === "dossier:" + fo.id, open = openIds.has(fo.id);
     return `<li class="mx-tree-item" role="treeitem"${sub.length ? ` aria-expanded="${open}"` : ""}${here ? ' aria-selected="true"' : ""} data-mx-folder-node="${fo.id}">`
-      + `<div class="mx-tree-row${here ? " is-current" : ""}" data-mx-folder="${fo.id}" data-name="${h.esc(fo.name)}"${COLOR(fo.color)}>`
+      + `<div class="mx-tree-row${here ? " is-current" : ""}" data-mx-folder="${fo.id}" data-mx-draggable="folder" data-name="${h.esc(fo.name)}"${COLOR(fo.color)}>`
       + (sub.length ? `<button type="button" class="mx-tree-toggle" data-mx-tree-toggle aria-label="${open ? "Replier" : "Déplier"} « ${h.esc(fo.name)} »">${icon("chevronRight", { size: 14 })}</button>` : `<span class="mx-tree-toggle is-empty" aria-hidden="true"></span>`)
       + `<a class="mx-tree-link" href="${h.esc(h.url({ dossier: String(fo.id) }))}"${here ? ' aria-current="page"' : ""} title="${h.esc(fo.name)}"><span class="mx-folder-ico"${COLOR(fo.color)}>${icon("folder", { size: 18 })}</span><span class="mx-nav-label">${h.esc(fo.name)}</span><span class="mx-nav-count">${fo.count}</span></a></div>`
       + (sub.length ? `<ul class="mx-tree-group" role="group"${open ? "" : " hidden"}>${sub.map(node).join("")}</ul>` : "") + `</li>`;

@@ -33,6 +33,7 @@ function sinceOf(period) {
 const spaceBase = (ctx) => { const site = siteContent.siteParam(ctx); return site ? `/marketing/site-web/sites/${site}/medias` : "/marketing/site-web/mediatheque"; };
 const libraryUrl = (ctx) => spaceBase(ctx);
 const folders = require("../media/folders");
+const organiser = require("../media/organiser");
 const manager = require("../media/manager");
 const { writeZip, MAX_TOTAL } = require("../../utils/zipStream");
 const { exifOf } = require("../media/exif");
@@ -240,6 +241,13 @@ module.exports = () => {
       if (!ids.length) throw new MarketingError("invalid_field", "Sélectionnez au moins un fichier.");
       res.json(folders.moveMedia(ctxOf(req), ids, intOrNull(req.body.folder_id)));
     } catch (error) { fail(res, next, error); }
+  });
+  // Glisser-déposer : déplacer OU réordonner (fichiers ou dossiers), conflits de noms, Annuler / Rétablir
+  router.post(`${base}/organiser`, need("media.write"), (req, res, next) => {
+    try { const b = req.body || {}; res.json(organiser.organize(ctxOf(req), { kind: b.kind, ids: b.ids, to: b.to, before: b.before, after: b.after, policy: b.policy })); } catch (error) { fail(res, next, error); }
+  });
+  router.post(`${base}/organiser/restaurer`, need("media.write"), (req, res, next) => {
+    try { res.json(organiser.restore(ctxOf(req), (req.body || {}).rows)); } catch (error) { fail(res, next, error); }
   });
   router.get(`${base}/doublons.json`, need("media.read"), (req, res, next) => {
     try { res.set("Cache-Control", "no-store").json({ groups: folders.duplicateGroups(ctxOf(req, { overview: true })) }); } catch (error) { fail(res, next, error); }

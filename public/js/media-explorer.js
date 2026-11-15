@@ -277,7 +277,7 @@
   }
   function restoreFiles(items) { return bulkRun("restaurer", items.map(function (m) { return m.id; }), "restaurés."); }
   function moveFiles(items, to) {
-    var go2 = function (dest) { if (dest === undefined) return; return K.move(items.map(function (m) { return m.id; }), dest).then(function (r) { var msg = plural(r.done.length, "fichier déplacé", "fichiers déplacés") + "."; if (r.failed.length) msg += " Refusé : " + r.failed.map(function (f) { return "« " + f.name + " » : " + f.message; }).join(" · "); toast(msg, r.failed.length ? "error" : "ok"); clearSelection(); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); };
+    var ids = items.map(function (m) { return m.id; }), go2 = function (dest) { if (dest === undefined) return; return runMove("file", ids, { to: dest, into: true }); };
     if (to !== undefined) return go2(to);
     return pickFolder(items.length === 1 ? "Déplacer « " + items[0].name + " »" : "Déplacer " + plural(items.length, "fichier", "fichiers"), { current: items[0] && items.every(function (m) { return m.folderId === items[0].folderId; }) ? items[0].folderId : undefined }).then(go2);
   }
@@ -342,7 +342,7 @@
     return confirmDialog("Supprimer le dossier sans ses fichiers ?", "Le dossier « " + f.name + " » disparaît ; ses fichiers et sous-dossiers remontent d'un niveau. Aucun fichier n'est supprimé.", "Supprimer le dossier", true).then(function (ok) { if (!ok) return; return K.folderDelete(id).then(function () { toast("Dossier supprimé ; ses fichiers sont conservés.", "ok"); if (cfg.folder && descendantsOf(id).has(cfg.folder)) return go(spaceBase); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
   }
   function moveFolders(ids, to) {
-    var run = function (dest) { if (dest === undefined) return; return Promise.all(ids.map(function (id) { return K.api("POST", BASE + "/dossiers/" + id, { parent_id: dest }); })).then(function () { toast(plural(ids.length, "dossier déplacé", "dossiers déplacés") + ".", "ok"); selF.clear(); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); };
+    var run = function (dest) { if (dest === undefined) return; return runMove("folder", ids, { to: dest, into: true }); };
     if (to !== undefined) return run(to);
     var ex = new Set(); ids.forEach(function (id) { descendantsOf(id).forEach(function (d) { ex.add(d); }); });
     return pickFolder("Déplacer " + (ids.length === 1 ? "le dossier « " + (folderById(ids[0]) || {}).name + " »" : plural(ids.length, "dossier", "dossiers")), { exclude: ex }).then(run);
@@ -591,64 +591,280 @@
     if (e.target.closest("[data-mx-import-folder]")) { var fi = $("[data-mx-folder-input]"); if (fi) fi.click(); return; }
   });
 
-  // =============================================================== Glisser-déposer : fichiers et dossiers (déplacement), fichiers du bureau (importation)
-  var drag = null, ghost = null, blankImg = null;
+  // =============================================================== Glisser-déposer : déplacer, réordonner, annuler / rétablir (fichiers du bureau : voir plus bas)
+  // Trois gestes distincts, jamais confondus : DÉPLACER (déposer SUR un dossier : sa fiche change de dossier), RÉORDONNER (déposer ENTRE deux éléments : ordre personnalisé enregistré),
+  // TRIER (menu « Trier par » : automatique, n'écrit rien). Le serveur décide de tout (droits, cycles, conflits) ; ici : le retour visuel et les mises à jour ciblées.
+  var drag = null, ghost = null, blankImg = null, dropLine = null, dropD = null, springEl = null, springTimer = 0, scrollRaf = 0, lastPt = { x: 0, y: 0 }, barTimer = 0;
+  var hist = { undo: [], redo: [] }, MAX_HIST = 30, CONFIRM_ABOVE = 25;
   function dropTargetOf(el) { return el && el.closest ? el.closest("[data-mx-folder], [data-mx-folder-root]") : null; }
   function targetId(t) { return t.hasAttribute("data-mx-folder-root") ? null : Number(t.getAttribute("data-mx-folder")); }
   function targetName(t) { return t.hasAttribute("data-mx-folder-root") ? "Sans dossier" : (folderById(targetId(t)) || {}).name || t.getAttribute("data-name") || "ce dossier"; }
-  function canDrop(t) {
-    if (!drag) return { ok: false };
-    var to = targetId(t);
-    if (drag.kind === "folder") { var banned = new Set(); drag.ids.forEach(function (id) { descendantsOf(id).forEach(function (d) { banned.add(d); }); }); if (to !== null && banned.has(to)) return { ok: false, why: "Un dossier ne peut pas entrer dans lui-même ni dans un de ses sous-dossiers." }; if (drag.ids.every(function (id) { var f = folderById(id); return f && (f.parentId || null) === to; })) return { ok: false, why: "Déjà dans ce dossier." }; return { ok: true }; }
-    if (drag.ids.every(function (id) { var el = itemEl(id); return el && (Number(el.getAttribute("data-folder")) || null) === to; })) return { ok: false, why: "Déjà dans ce dossier." };
-    return { ok: true };
+  function destName(id) { return id ? (folderById(id) || {}).name || "ce dossier" : "Sans dossier"; }
+  function containerView() { var k = String(cfg.pageKey || ""); return k.indexOf("dossier:") === 0 || k === "racine" || k === "dossiers"; }
+  function container() { return cfg.folder || null; }
+  function whatOf(kind, n) { return kind === "folder" ? plural(n, "dossier", "dossiers") : plural(n, "fichier", "fichiers"); }
+  function banned(ids) { var b = new Set(); ids.forEach(function (id) { descendantsOf(id).forEach(function (d) { b.add(d); }); }); return b; }
+  var NO_CYCLE = "Un dossier ne peut pas entrer dans lui-même ni dans un de ses sous-dossiers.";
+
+  // Où tomberait l'élément ici ? { mode: into | before | after, el, to, before, after, reorder, ok, why, label }
+  function resolve(e) {
+    if (!drag) return null;
+    var el = e.target && e.target.closest ? e.target : (e.target && e.target.parentElement), n = drag.ids.length, what = whatOf(drag.kind, n);
+    if (!el) return null;
+    var t = dropTargetOf(el), item = drag.kind === "file" && el.closest ? el.closest("[data-ml-item]") : null;
+    if (t) {
+      var isRoot = t.hasAttribute("data-mx-folder-root"), r = t.getBoundingClientRect(), tree = t.classList.contains("mx-tree-row"), card = t.classList.contains("mx-folder");
+      var mode = "into";
+      if (drag.kind === "folder" && !isRoot && (tree || card)) { var f = tree ? (e.clientY - r.top) / r.height : (e.clientX - r.left) / r.width; if (f < 0.25) mode = "before"; else if (f > 0.75) mode = "after"; }
+      var id = targetId(t), D = { mode: mode, el: t, axis: tree ? "y" : "x", kind: drag.kind };
+      if (mode === "into") {
+        D.to = id;
+        if (drag.kind === "folder" && id !== null && banned(drag.ids).has(id)) { D.ok = false; D.why = NO_CYCLE; }
+        else if (drag.kind === "folder" && drag.ids.every(function (x) { var fo = folderById(x); return fo && (fo.parentId || null) === id; })) { D.ok = false; D.why = "Déjà dans ce dossier."; }
+        else if (drag.kind === "file" && drag.ids.every(function (x) { var it = itemEl(x); return it && (Number(it.getAttribute("data-folder")) || null) === id; })) { D.ok = false; D.why = "Déjà dans ce dossier."; }
+        else D.ok = true;
+        D.label = D.ok ? "Déplacer " + what + " vers « " + targetName(t) + " »" : D.why;
+      } else {
+        var tf = folderById(id), parent = tf ? (tf.parentId || null) : null; D.to = parent; D.reorder = true;
+        if (drag.ids.indexOf(id) >= 0) { D.ok = false; D.why = "Déjà à cette place."; }
+        else if (parent !== null && banned(drag.ids).has(parent)) { D.ok = false; D.why = NO_CYCLE; }
+        else D.ok = true;
+        if (mode === "before") D.before = id; else D.after = id;
+        var sameParent = drag.kind === "folder" && drag.ids.every(function (x) { return ((folderById(x) || {}).parentId || null) === parent; });
+        D.label = D.ok ? "Placer " + what + (mode === "before" ? " avant « " : " après « ") + (tf ? tf.name : "") + " »" + (sameParent ? "" : " (dans « " + destName(parent) + " »)") : D.why;
+      }
+      return D;
+    }
+    if (item) {   // fichiers : réordonner dans le dossier affiché
+      var here = container(), sameBox = drag.ids.every(function (x) { var it = itemEl(x); return it && (Number(it.getAttribute("data-folder")) || null) === here; });
+      var D2 = { el: item, kind: "file", reorder: true, to: here, axis: item.closest("[data-ml-list]") ? "y" : "x" };
+      var id2 = Number(item.getAttribute("data-id"));
+      if (!sameBox || !containerView()) { D2.ok = false; D2.why = "Pour réorganiser, ouvrez le dossier concerné."; }
+      else if (cfg.hasFilter) { D2.ok = false; D2.why = "Un filtre est actif : retirez-le pour réorganiser."; }
+      else if (cfg.sort !== "perso") { D2.ok = false; D2.why = "Tri automatique actif : choisissez « Ordre personnalisé » dans « Trier par » pour réorganiser."; D2.needSort = true; }
+      else if (drag.ids.indexOf(id2) >= 0) { D2.ok = false; D2.why = "Déjà à cette place."; }
+      else {
+        var r2 = item.getBoundingClientRect(), f2 = D2.axis === "y" ? (e.clientY - r2.top) / r2.height : (e.clientX - r2.left) / r2.width;
+        D2.mode = f2 < 0.5 ? "before" : "after"; if (D2.mode === "before") D2.before = id2; else D2.after = id2; D2.ok = true;
+      }
+      D2.label = D2.ok ? "Placer " + what + (D2.mode === "before" ? " avant « " : " après « ") + (item.getAttribute("data-name") || "") + " »" : D2.why;
+      return D2;
+    }
+    var main = el.closest ? el.closest('[data-frag="body"]') : null;   // zone principale : déposer dans le dossier affiché (depuis la barre latérale, par exemple)
+    if (main && containerView()) {
+      var here2 = container(), D3 = { mode: "into", el: main, to: here2, kind: drag.kind, main: true };
+      var already = drag.kind === "folder" ? drag.ids.every(function (x) { var fo = folderById(x); return fo && (fo.parentId || null) === here2; }) : drag.ids.every(function (x) { var it = itemEl(x); return it && (Number(it.getAttribute("data-folder")) || null) === here2; });
+      if (drag.kind === "folder" && here2 !== null && banned(drag.ids).has(here2)) { D3.ok = false; D3.why = NO_CYCLE; } else if (already) { D3.ok = false; D3.why = "Déjà dans ce dossier."; } else D3.ok = true;
+      D3.label = D3.ok ? "Déplacer " + what + " vers « " + destName(here2) + " »" : D3.why;
+      return D3;
+    }
+    return null;
   }
-  function ghostText(t) {
-    var n = drag.ids.length, what = drag.kind === "folder" ? plural(n, "dossier", "dossiers") : plural(n, "fichier", "fichiers");
-    if (!t) return what;
-    var c = canDrop(t); return c.ok ? "Déplacer " + what + " vers « " + targetName(t) + " »" : (c.why || "Déplacement impossible");
+
+  function buildGhost() {
+    var stack = h("div", { class: "mx-ghost-stack" }), n = drag.ids.length;
+    drag.ids.slice(0, 3).forEach(function (id, i) {
+      var src = drag.kind === "file" ? itemEl(id) : (folderEl(id) || $('.mx-tree-row[data-mx-folder="' + id + '"]', rootEl)), card = h("span", { class: "mx-ghost-card", style: "--i:" + i });
+      var img = src && $("img", src); var ico = src && $(".mx-folder-ico", src);
+      if (img && img.getAttribute("src")) card.appendChild(h("img", { src: img.getAttribute("src"), alt: "" }));
+      else if (ico) { var c = ico.cloneNode(true); card.appendChild(c); }
+      stack.appendChild(card);
+    });
+    if (n > 1) stack.appendChild(h("span", { class: "mx-ghost-count", text: String(n) }));
+    return h("div", { class: "mx-drag-ghost", role: "presentation" }, [stack, h("span", { class: "mx-ghost-label", text: whatOf(drag.kind, n) })]);
   }
+  function moveGhost() { if (ghost) { ghost.style.left = lastPt.x + "px"; ghost.style.top = lastPt.y + "px"; } }
+  function clearMarks() { $$(".is-drop, .is-nodrop, .is-drop-main", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop", "is-drop-main"); }); if (dropLine) dropLine.hidden = true; }
+  function paint(D) {
+    clearMarks();
+    if (!D) { if (ghost) { $(".mx-ghost-label", ghost).textContent = whatOf(drag.kind, drag.ids.length); ghost.classList.remove("is-no"); } return; }
+    if (ghost) { $(".mx-ghost-label", ghost).textContent = D.label; ghost.classList.toggle("is-no", !D.ok); }
+    if (D.mode === "before" || D.mode === "after") {
+      if (!D.ok) { D.el.classList.add("is-nodrop"); return; }
+      var r = D.el.getBoundingClientRect();
+      if (!dropLine) { dropLine = h("div", { class: "mx-drop-line", "aria-hidden": "true" }); document.body.appendChild(dropLine); }
+      dropLine.hidden = false; dropLine.setAttribute("data-axis", D.axis);
+      if (D.axis === "y") { dropLine.style.cssText = "left:" + r.left + "px;width:" + r.width + "px;top:" + ((D.mode === "before" ? r.top : r.bottom) - 1) + "px;height:3px"; }
+      else { var gap = 4; dropLine.style.cssText = "top:" + r.top + "px;height:" + r.height + "px;left:" + ((D.mode === "before" ? r.left - gap : r.right + gap) - 1) + "px;width:3px"; }
+    } else if (D.main) D.el.classList.add(D.ok ? "is-drop-main" : "is-nodrop");
+    else D.el.classList.add(D.ok ? "is-drop" : "is-nodrop");
+  }
+  // Un dossier replié s'ouvre quand on s'y attarde (comme le Finder) : on peut viser un sous-dossier sans lâcher
+  function spring(D) {
+    var li = D && D.el && D.el.classList.contains("mx-tree-row") && D.mode === "into" ? D.el.closest(".mx-tree-item") : null;
+    var closed = li && li.getAttribute("aria-expanded") === "false" ? li : null;
+    if (closed === springEl) return; clearTimeout(springTimer); springEl = closed;
+    if (closed) springTimer = setTimeout(function () { var b = $("[data-mx-tree-toggle]", closed); if (b && drag) b.click(); springEl = null; }, 650);
+  }
+  function autoScroll() {
+    var sc = $("[data-mx-scroll]", rootEl); if (!sc || !drag) { scrollRaf = 0; return; }
+    var r = sc.getBoundingClientRect(), edge = 64, dy = 0;
+    if (lastPt.x >= r.left && lastPt.x <= r.right) { if (lastPt.y < r.top + edge && lastPt.y > r.top - 40) dy = -Math.ceil((r.top + edge - lastPt.y) / 4); else if (lastPt.y > r.bottom - edge && lastPt.y < r.bottom + 40) dy = Math.ceil((lastPt.y - (r.bottom - edge)) / 4); }
+    if (dy) sc.scrollTop += dy;
+    scrollRaf = requestAnimationFrame(autoScroll);
+  }
+
   rootEl.addEventListener("dragstart", function (e) {
     var el = e.target.closest("[data-mx-draggable]"); if (!el || !cfg.canWrite || cfg.trashed) { return; }
     var kind = el.getAttribute("data-mx-draggable"), ids;
     // La sélection est mise à jour APRÈS le début du glisser : changer la mise en page pendant « dragstart » fait échouer le glisser natif dans Chrome
     if (kind === "file") { var id = Number(el.getAttribute("data-id")); ids = sel.has(id) ? Array.from(sel) : [id]; if (!sel.has(id)) setTimeout(function () { selF.clear(); selectOnly(id); }, 0); } else { var fid = Number(el.getAttribute("data-mx-folder")); ids = selF.has(fid) ? Array.from(selF) : [fid]; }
-    drag = { kind: kind, ids: ids };
+    drag = { kind: kind, ids: ids }; lastPt = { x: e.clientX, y: e.clientY }; dropD = null;
     e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", "kw-media:" + kind + ":" + ids.join(","));
-    // Image de glisser invisible : l'indication de destination est notre bulle (suit le pointeur et dit où le fichier ira). L'élément doit être dans le document pendant le glisser.
+    // Image de glisser invisible : l'aperçu est notre carte (miniatures empilées, compteur, destination) qui suit le pointeur. L'élément doit être dans le document pendant le glisser.
     blankImg = h("div", { style: "position:fixed;top:-20px;left:-20px;width:1px;height:1px;opacity:0;pointer-events:none", "aria-hidden": "true" }); document.body.appendChild(blankImg); e.dataTransfer.setDragImage(blankImg, 0, 0);
-    ghost = h("div", { class: "mx-drag-ghost", text: ghostText(null) }); document.body.appendChild(ghost); moveGhost(e.clientX, e.clientY);
+    ghost = buildGhost(); document.body.appendChild(ghost); moveGhost(); rootEl.setAttribute("data-dragging", kind);
     setTimeout(function () { if (!drag) return; $$("[data-ml-item].is-selected, .mx-folder.is-selected", rootEl).forEach(function (x) { x.classList.add("is-dragging"); }); el.classList.add("is-dragging"); }, 0);
+    if (!scrollRaf) scrollRaf = requestAnimationFrame(autoScroll);
   });
-  function moveGhost(x, y) { if (ghost) { ghost.style.left = x + "px"; ghost.style.top = y + "px"; } }
-  function clearDropMarks() { $$(".is-drop, .is-nodrop", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop"); }); }
-  function endDrag() { drag = null; if (blankImg) { blankImg.remove(); blankImg = null; } if (ghost) { ghost.remove(); ghost = null; } clearDropMarks(); $$(".is-dragging", rootEl).forEach(function (x) { x.classList.remove("is-dragging"); }); }
+  function endDrag() {
+    drag = null; if (blankImg) { blankImg.remove(); blankImg = null; } if (ghost) { ghost.remove(); ghost = null; }
+    clearMarks(); clearTimeout(springTimer); springEl = null; rootEl.removeAttribute("data-dragging");
+    $$(".is-dragging", rootEl).forEach(function (x) { x.classList.remove("is-dragging"); });
+  }
   document.addEventListener("dragover", function (e) {
     if (!drag) return;
-    moveGhost(e.clientX, e.clientY);
-    var t = dropTargetOf(e.target); clearDropMarks();
-    if (t) { var c = canDrop(t); t.classList.add(c.ok ? "is-drop" : "is-nodrop"); if (c.ok) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } else e.dataTransfer.dropEffect = "none"; if (ghost) { ghost.textContent = ghostText(t); ghost.classList.toggle("is-no", !c.ok); } }
-    else if (ghost) { ghost.textContent = ghostText(null); ghost.classList.remove("is-no"); }
+    lastPt = { x: e.clientX, y: e.clientY }; moveGhost();
+    var D = resolve(e); dropD = D; paint(D); spring(D);
+    if (D && D.ok) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } else if (D) e.dataTransfer.dropEffect = "none";
   });
   document.addEventListener("drop", function (e) {
     if (!drag) return;
-    var t = dropTargetOf(e.target); if (!t) { endDrag(); return; }
-    var c = canDrop(t); e.preventDefault();
-    if (!c.ok) { if (c.why) toast(c.why, "error"); endDrag(); return; }
-    var d = drag, to = targetId(t); endDrag();
-    if (d.kind === "folder") moveFolders(d.ids, to); else { moveFiles(d.ids.map(function (id) { var el = itemEl(id); return el ? dataOf(el) : { id: id, name: "#" + id }; }), to); }
+    var D = resolve(e), d = drag; if (D) e.preventDefault(); endDrag();
+    if (!D || !D.ok) return;
+    runMove(d.kind, d.ids, D);
   });
-  document.addEventListener("dragend", endDrag);
+  document.addEventListener("dragend", function (e) {
+    var bad = drag && dropD && !dropD.ok ? dropD : null;   // lâché sur un emplacement refusé : on explique pourquoi
+    endDrag();
+    if (bad && bad.why) { if (bad.needSort) showBar(bad.why, { label: "Activer l'ordre personnalisé", run: function () { var u = new URL(location.href); u.searchParams.set("tri", "perso"); go(u.pathname + u.search); } }); else toast(bad.why, "error"); }
+  });
+
+  // ----- Exécuter : confirmation des gros lots, conflits de noms, instantané pour Annuler / Rétablir, mises à jour ciblées
+  function send(body) {
+    return K.api("POST", BASE + "/organiser", body).then(function (r) {
+      if (r.conflicts && r.conflicts.length && !body.policy) return askConflict(r, body).then(function (policy) { if (!policy) return { cancelled: true }; body.policy = policy; return send(body); });
+      return r;
+    });
+  }
+  function askConflict(r, body) {
+    var picked = null, names = r.conflicts.slice(0, 4).map(function (c) { return "« " + c.name + " »"; }).join(", ") + (r.conflicts.length > 4 ? " et " + (r.conflicts.length - 4) + " autre(s)" : "");
+    var lead = r.conflicts.length === 1 ? names + " existe déjà dans « " + destName(body.to) + " »." : plural(r.conflicts.length, "élément porte", "éléments portent") + " déjà le même nom dans « " + destName(body.to) + " » : " + names + ".";
+    var choice = function (key, title, text, cls) { return h("button", { type: "submit", class: "mx-conflict-opt" + (cls ? " " + cls : ""), onclick: function () { picked = key; } }, [h("strong", { text: title }), h("span", { text: text })]); };
+    var opts = [choice("keep", "Conserver les deux", "Le fichier déplacé reçoit un nom du type « nom (2) ». Rien n'est écrasé.")];
+    if (r.canReplace) opts.push(choice("replace", "Remplacer", "L'ancien fichier va à la corbeille (restaurable). Refusé s'il est encore utilisé.", "is-warn"));
+    opts.push(choice("skip", "Ignorer", "Ces éléments restent où ils sont ; les autres sont déplacés."));
+    var body2 = h("div", { class: "mx-conflict" }, [h("p", { text: lead })].concat(opts));
+    return openDialog("Ce nom existe déjà", body2, { noOk: true, cancel: "Annuler l'opération", collect: function () { return picked || undefined; } });
+  }
+  function runMove(kind, ids, D) {
+    var body = { kind: kind, ids: ids, to: D.to === undefined ? null : D.to };
+    if (D.before) body.before = D.before; else if (D.after) body.after = D.after;
+    var what = whatOf(kind, ids.length);
+    var go1 = function () {
+      return send(body).then(function (r) {
+        if (r.cancelled) { toast("Déplacement annulé : rien n'a changé.", "ok"); return; }
+        var moved = r.done.length;
+        if (moved && JSON.stringify(r.undo) === JSON.stringify(r.redo)) { toast("Déjà à cette place.", "ok"); return; }
+        var label = !moved ? "" : D.reorder ? "Ordre enregistré" : plural(moved, kind === "folder" ? "dossier déplacé" : "fichier déplacé", kind === "folder" ? "dossiers déplacés" : "fichiers déplacés") + " vers « " + destName(body.to) + " »";
+        if (moved) { hist.undo.push({ label: label, undo: r.undo, redo: r.redo }); if (hist.undo.length > MAX_HIST) hist.undo.shift(); hist.redo = []; syncHist(); }
+        var extra = [];
+        if (r.skipped && r.skipped.length) extra.push(plural(r.skipped.length, "élément ignoré", "éléments ignorés"));
+        if (r.failed.length) extra.push("Refusé : " + r.failed.slice(0, 3).map(function (f) { return "« " + f.name + " » : " + f.message; }).join(" · "));
+        if (moved) showBar(label + (extra.length ? ". " + extra.join(". ") : "") + ".", { label: "Annuler", run: doUndo, kind: r.failed.length ? "warn" : "ok" });
+        else toast(extra.join(" ") || "Rien n'a été déplacé.", "error");
+        if (moved) applyMove(kind, r, D, body);
+      }, function (e) { toast(errMsg(e), "error"); refresh(); });
+    };
+    if (ids.length >= CONFIRM_ABOVE && !D.reorder) return confirmDialog("Déplacer " + what + " ?", "Vers « " + destName(body.to) + " ». Vous pourrez annuler juste après.", "Déplacer", false).then(function (ok) { if (ok) return go1(); });
+    return go1();
+  }
+  // Mises à jour ciblées : on déplace / retire seulement les cartes concernées ; la barre latérale (compteurs, arbre) se relit seule, sans toucher au contenu ni au défilement
+  function applyMove(kind, r, D, body) {
+    var done = r.done;
+    if (kind === "file") {
+      var ul = $("[data-mx-items]", rootEl), els = done.map(itemEl).filter(Boolean);
+      if (D.reorder && ul) {
+        var anchorEl = body.before ? itemEl(body.before) : body.after ? (itemEl(body.after) || {}).nextElementSibling : null;
+        els.forEach(function (el) { ul.insertBefore(el, anchorEl || null); el.classList.remove("is-new"); void el.offsetWidth; el.classList.add("is-new"); setTimeout(function () { el.classList.remove("is-new"); }, 500); });
+      } else els.forEach(function (el) {
+        if (containerView()) { el.classList.add("is-leaving"); setTimeout(function () { el.remove(); }, 180); }
+        else { el.setAttribute("data-folder", body.to ? String(body.to) : ""); }
+      });
+      selF.clear(); sel.clear(); anchor = null; setTimeout(paintSelection, 190);
+    } else {
+      done.forEach(function (id) { var f = folderById(id); if (f && !D.reorder) f.parentId = body.to; });
+      var list = $("[data-mx-folders]", rootEl);
+      done.forEach(function (id) {
+        var card = folderEl(id); if (!card) return;
+        var stays = D.reorder ? (body.to || null) === container() : false;
+        if (stays && list && (body.before || body.after)) { var ref = folderEl(body.before || body.after); if (ref) list.insertBefore(card, body.before ? ref : ref.nextElementSibling); }
+        else if (D.main || (container() !== (body.to || null))) { card.classList.add("is-leaving"); setTimeout(function () { card.remove(); }, 180); }
+      });
+      selF.clear();
+    }
+    refreshSide();
+    if (kind === "folder" && !D.reorder && (body.to || null) === container()) setTimeout(refresh, 200);   // une carte arrive dans le dossier affiché : on la relit (rendu serveur)
+  }
+  function refreshSide() {
+    var u = new URL(location.href); u.searchParams.set("fragment", "1");
+    return fetch(u.toString(), { credentials: "same-origin", headers: { Accept: "text/html" } }).then(function (r) { return r.ok ? r.text() : Promise.reject(); }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, "text/html"), src = $('[data-frag="side"]', doc), dst = $('[data-frag="side"]', rootEl), next = readCfg(doc);
+      if (src && dst && !drag) { var keep = dst.scrollTop; dst.innerHTML = src.innerHTML; dst.scrollTop = keep; initItems(dst); }
+      if (next) { cfg.folders = next.folders; cfgEl.textContent = JSON.stringify(cfg); }
+      try { var open = JSON.parse(sessionStorage.getItem("mxTree") || "[]"); open.forEach(function (id) { var li = $('.mx-tree-item[data-mx-folder-node="' + id + '"]', rootEl); if (li && $(".mx-tree-group", li)) { li.setAttribute("aria-expanded", "true"); var g = $(".mx-tree-group", li); if (g) g.hidden = false; } }); } catch (x) { /* arbre : état non restauré */ }
+    }).catch(function () { /* barre latérale non relue : le prochain affichage la corrige */ });
+  }
+
+  // ----- Annuler / Rétablir (cette session) : le serveur revérifie chaque ligne, et n'applique RIEN si l'organisation a changé entre-temps
+  function syncHist() {
+    var u = $("[data-mx-undo]", rootEl), r = $("[data-mx-redo]", rootEl);
+    if (u) { u.disabled = !hist.undo.length; u.title = hist.undo.length ? "Annuler : " + hist.undo[hist.undo.length - 1].label + " (Ctrl+Z)" : "Annuler (Ctrl+Z)"; }
+    if (r) { r.disabled = !hist.redo.length; r.title = hist.redo.length ? "Rétablir : " + hist.redo[hist.redo.length - 1].label + " (Ctrl+Maj+Z)" : "Rétablir (Ctrl+Maj+Z)"; }
+  }
+  function restoreRows(rows) {
+    var sc = $("[data-mx-scroll]", rootEl), top = sc ? sc.scrollTop : 0;
+    return K.api("POST", BASE + "/organiser/restaurer", { rows: rows }).then(function () { return refresh().then(function () { var s2 = $("[data-mx-scroll]", rootEl); if (s2) s2.scrollTop = top; return true; }); }, function (e) { toast(errMsg(e), "error"); return false; });
+  }
+  function doUndo() {
+    var e = hist.undo[hist.undo.length - 1]; if (!e) return Promise.resolve();
+    hideBar();
+    return restoreRows(e.undo).then(function (ok) { hist.undo.pop(); if (ok) { hist.redo.push(e); showBar("Annulé : " + e.label + ".", { label: "Rétablir", run: doRedo }); } syncHist(); });
+  }
+  function doRedo() {
+    var e = hist.redo[hist.redo.length - 1]; if (!e) return Promise.resolve();
+    hideBar();
+    return restoreRows(e.redo).then(function (ok) { hist.redo.pop(); if (ok) { hist.undo.push(e); showBar("Rétabli : " + e.label + ".", { label: "Annuler", run: doUndo }); } syncHist(); });
+  }
+  function hideBar() { clearTimeout(barTimer); var b = $(".mx-undobar", document); if (b) b.remove(); }
+  function showBar(text, act) {
+    hideBar(); act = act || {};
+    var bar = h("div", { class: "mx-undobar" + (act.kind === "warn" ? " is-warn" : ""), role: "status", "aria-live": "polite" }, [h("span", { class: "mx-undobar-text", text: text })]);
+    if (act.label) bar.appendChild(h("button", { type: "button", class: "mx-undobar-btn", text: act.label, onclick: function () { hideBar(); act.run(); } }));
+    bar.appendChild(h("button", { type: "button", class: "mx-undobar-x", "aria-label": "Fermer", text: "×", onclick: hideBar }));
+    document.body.appendChild(bar); barTimer = setTimeout(hideBar, 9000);
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("[data-mx-undo]")) { e.preventDefault(); doUndo(); } else if (e.target.closest("[data-mx-redo]")) { e.preventDefault(); doRedo(); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (!rootEl.isConnected || !(e.metaKey || e.ctrlKey) || e.altKey || !cfg.canWrite) return;
+    if (e.target.closest && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
+    if (document.querySelector("dialog[open]")) return;
+    var k = String(e.key).toLowerCase();
+    if (k === "z" && !e.shiftKey) { if (hist.undo.length) { e.preventDefault(); doUndo(); } } else if ((k === "z" && e.shiftKey) || k === "y") { if (hist.redo.length) { e.preventDefault(); doRedo(); } }
+  });
+  syncHist();
   // Fichiers venant du bureau : voile de dépôt avec la destination, puis file d'importation (même file que « Ajouter un fichier média »)
   var veil = $("[data-mx-dropveil]", rootEl), veilDepth = 0;
   var hasFiles = function (e) { return e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], "Files") >= 0; };
   function destOf(el) { var t = dropTargetOf(el); if (t) return { id: targetId(t), name: targetName(t) }; return { id: cfg.folder || null, name: cfg.folder ? (folderById(cfg.folder) || {}).name : "la médiathèque" }; }
   rootEl.addEventListener("dragenter", function (e) { if (!cfg.canUpload || cfg.trashed || !hasFiles(e) || e.target.closest("#ml-upload")) return; veilDepth++; if (veil) { veil.hidden = false; $("[data-mx-dropveil-dest]", veil).textContent = "Destination : « " + destOf(e.target).name + " »"; } });
-  rootEl.addEventListener("dragover", function (e) { if (!cfg.canUpload || cfg.trashed || !hasFiles(e) || e.target.closest("#ml-upload")) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; var t = dropTargetOf(e.target); clearDropMarks(); if (t) t.classList.add("is-drop"); if (veil) $("[data-mx-dropveil-dest]", veil).textContent = "Destination : « " + destOf(e.target).name + " »"; });
+  rootEl.addEventListener("dragover", function (e) { if (!cfg.canUpload || cfg.trashed || !hasFiles(e) || e.target.closest("#ml-upload")) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; var t = dropTargetOf(e.target); clearMarks(); if (t) t.classList.add("is-drop"); if (veil) $("[data-mx-dropveil-dest]", veil).textContent = "Destination : « " + destOf(e.target).name + " »"; });
   rootEl.addEventListener("dragleave", function (e) { if (!hasFiles(e)) return; veilDepth = Math.max(0, veilDepth - 1); if (!veilDepth && veil) veil.hidden = true; });
   rootEl.addEventListener("drop", function (e) {
     if (!cfg.canUpload || cfg.trashed || !hasFiles(e) || e.target.closest("#ml-upload")) return;
-    e.preventDefault(); e.stopPropagation(); veilDepth = 0; if (veil) veil.hidden = true; clearDropMarks();
+    e.preventDefault(); e.stopPropagation(); veilDepth = 0; if (veil) veil.hidden = true; clearMarks();
     var dest = destOf(e.target);
     importDropped(e.dataTransfer, dest.id);
   });
