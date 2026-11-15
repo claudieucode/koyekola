@@ -144,6 +144,7 @@ function createMarketingRouters({ db }) {
   admin.use(require("./imports")({ db }));
   admin.use(require("./analytics")({ db }));
   admin.use(require("./revenue")({ db }));
+  admin.use(require("./sourcing")());
   admin.use(require("./apiKeys")({ db }));
   admin.use(require("./webhooksOut")({ db }));
   admin.use(require("./mailchimp")({ db })); // Intégration Mailchimp (API Marketing v3 et Transactional)

@@ -17,9 +17,10 @@
     </div>
 
     <form class="mk-filterbar" method="get" action="/marketing/analytics/comparer" aria-label="Filtres du rapport">
-      <div class="field-group"><label for="cmp-from">Du</label><input id="cmp-from" type="date" name="from" value="<%= f.from %>" required></div>
+      <div class="mk-cmp-fset" role="group" aria-label="Période"><span class="mk-cmp-fset-title" aria-hidden="true">Période</span><div class="mk-cmp-fset-row"><div class="field-group"><label for="cmp-from">Du</label><input id="cmp-from" type="date" name="from" value="<%= f.from %>" required></div>
       <div class="field-group"><label for="cmp-to">Au</label><input id="cmp-to" type="date" name="to" value="<%= f.to %>" required></div>
-      <div class="field-group"><label for="cmp-channel">Canal</label>
+      </div></div>
+      <div class="mk-cmp-fset" role="group" aria-label="Quelles campagnes"><span class="mk-cmp-fset-title" aria-hidden="true">Quelles campagnes</span><div class="mk-cmp-fset-row"><div class="field-group"><label for="cmp-channel">Canal</label>
         <select id="cmp-channel" name="channel"><% Object.entries(CHANNELS).forEach(([k, l]) => { %><option value="<%= k %>"<%= f.channel === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
       <div class="field-group"><label for="cmp-target">Audience</label>
         <select id="cmp-target" name="target">
@@ -31,13 +32,15 @@
       <div class="field-group"><label for="cmp-tag">Étiquette</label>
         <select id="cmp-tag" name="tag"><option value="">Toutes</option><% r.tags.forEach((t) => { %><option value="<%= t %>"<%= f.tag.toLowerCase() === t.toLowerCase() ? " selected" : "" %>><%= t %></option><% }) %><% if (f.tag && !r.tags.some((t) => t.toLowerCase() === f.tag.toLowerCase())) { %><option value="<%= f.tag %>" selected><%= f.tag %></option><% } %></select></div>
       <div class="mk-search"><%- icon("search", { size: 16 }) %><label class="sr-only" for="cmp-q">Nom de campagne</label><input id="cmp-q" type="search" name="q" value="<%= f.q %>" placeholder="Nom de campagne" maxlength="80"></div>
-      <div class="field-group"><label for="cmp-group">Comparer par</label>
+      </div></div>
+      <div class="mk-cmp-fset" role="group" aria-label="Affichage"><span class="mk-cmp-fset-title" aria-hidden="true">Affichage</span><div class="mk-cmp-fset-row"><div class="field-group"><label for="cmp-group">Comparer par</label>
         <select id="cmp-group" name="groupBy"><% Object.entries(GROUPS).forEach(([k, l]) => { %><option value="<%= k %>"<%= f.groupBy === k ? " selected" : "" %>><%= l %></option><% }) %></select></div>
       <div class="field-group"><label for="cmp-metric">Graphique</label>
         <select id="cmp-metric" name="metric"><% Object.entries(METRICS).forEach(([k, m]) => { %><option value="<%= k %>"<%= f.metric === k ? " selected" : "" %>><%= m.label %></option><% }) %></select></div>
+      </div></div>
       <% if (f.ids.length) { %><input type="hidden" name="ids" value="<%= f.ids.join(",") %>"><% } %>
-      <button type="submit" class="btn btn-primary btn-sm">Comparer</button>
-      <a href="/marketing/analytics/comparer" class="btn btn-ghost btn-sm">Réinitialiser</a>
+      <div class="mk-cmp-fset-actions"><button type="submit" class="btn btn-primary btn-sm">Comparer</button>
+      <a href="/marketing/analytics/comparer" class="btn btn-ghost btn-sm">Réinitialiser</a></div>
     </form>
     <% if (f.warning) { %><p class="mk-note" role="status"><%= f.warning %></p><% } %>
     <% if (f.ids.length) { %>

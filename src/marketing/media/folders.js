@@ -28,7 +28,7 @@ function getFolder(ctx, id) {
   const s = scopeOf(ctx);
   if (!s || !Number.isInteger(id)) return null;
   const c = siteCond(s);
-  return ctx.db.prepare(`SELECT * FROM mk_media_folders WHERE id = ? AND organization_id = ? AND ${c.sql}`).get(id, ctx.organizationId, ...c.args) || null;
+  return ctx.db.prepare(`SELECT * FROM mk_media_folders WHERE id = ? AND organization_id = ? AND ${c.sql} AND deleted_at IS NULL`).get(id, ctx.organizationId, ...c.args) || null;
 }
 const depthOf = (ctx, id) => { let d = 0; for (let cur = id; cur && d <= MAX_DEPTH + 1; d++) cur = ctx.db.prepare("SELECT parent_id FROM mk_media_folders WHERE id = ?").get(cur)?.parent_id; return d; };
 
@@ -39,7 +39,7 @@ function listFolders(ctx) {
   if (!s) return { enabled: false, folders: [], rootCount: 0 };
   const c = siteCond(s);
   const vis = media.visibleSql(ctx);
-  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} ORDER BY f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
+  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, f.color, f.description, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} AND f.deleted_at IS NULL ORDER BY f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
   const rootCount = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IS NULL AND ${vis.sql}`).get(ctx.organizationId, ...vis.params).n;
   return { enabled: true, folders, rootCount };
 }

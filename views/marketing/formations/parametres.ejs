@@ -1,0 +1,24 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: "Publication et paiement" }) %>
+<section class="mk-panel">
+  <h2>Publication</h2>
+  <div class="lm-facts">
+    <div class="lm-fact"><span class="lm-k">Extension</span><span class="lm-v">Kolakisa LMS<%= version ? " " + version : "" %> <span class="mk-status mk-status-ok">Activée pour ce site</span></span></div>
+    <div class="lm-fact"><span class="lm-k">Catalogue public</span><span class="lm-v"><a href="/catalogue" target="_blank" rel="noopener">/catalogue</a> <span class="mk-sub">sur le domaine de ce site</span></span></div>
+    <div class="lm-fact"><span class="lm-k">Formations en ligne</span><span class="lm-v"><%= ov.published %> sur <%= ov.courses %> <% if (ov.drafts) { %><span class="mk-sub">(<%= ov.drafts %> en brouillon)</span><% } %></span></div>
+    <div class="lm-fact"><span class="lm-k">Espace étudiant</span><span class="lm-v"><a href="/mes-cours" target="_blank" rel="noopener">/mes-cours</a> <span class="mk-sub">les étudiants s'y connectent avec leur compte</span></span></div>
+    <div class="lm-fact"><span class="lm-k">Vérification des certificats</span><span class="lm-v"><a href="/verifier-certificat" target="_blank" rel="noopener">/verifier-certificat</a></span></div>
+  </div>
+  <p class="mk-sub">Chaque formation se publie depuis la liste des formations. Le catalogue et les pages du site peuvent aussi afficher vos formations avec le bloc « Catalogue de formations » du constructeur de pages.</p>
+</section>
+<section class="mk-panel">
+  <h2>Paiement</h2>
+  <div class="lm-facts">
+    <div class="lm-fact"><span class="lm-k">Formations payantes</span><span class="lm-v"><%= ov.paidCourses %></span></div>
+    <div class="lm-fact"><span class="lm-k">Paiement en ligne</span><span class="lm-v"><% if (checkoutOpen) { %><span class="mk-status mk-status-ok">Ouvert</span><% } else { %><span class="mk-status mk-status-warn">Fermé</span> <span class="mk-sub">les formations payantes ne peuvent pas encore être achetées</span><% } %></span></div>
+    <div class="lm-fact"><span class="lm-k">Compte de paiement (Stripe)</span><span class="lm-v"><% if (stripeOn) { %><span class="mk-status mk-status-ok">Configuré</span><% } else { %><span class="mk-status mk-status-warn">Non configuré</span><% } %> <span class="mk-sub">réglé au niveau de la plateforme</span></span></div>
+    <div class="lm-fact"><span class="lm-k">Revenus enregistrés</span><span class="lm-v"><%= amount(ov.revenueCents) %> <span class="mk-sub"><%= ov.orders %> commande<%= ov.orders > 1 ? "s" : "" %></span></span></div>
+  </div>
+  <p class="mk-sub">Les formations utilisent le paiement du LMS (commandes de formations). Il n'est pas relié à la boutique Kolakisa Commerce : les deux modules gardent leurs propres commandes.</p>
+</section>
+<%- include("../partials/bottom") %>

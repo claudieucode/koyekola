@@ -62,7 +62,7 @@
       if (!matches(c)) return; shown++;
       var st = stateOf(c), pa = primary(c), open = openId === c.id, pid = "cn-p-" + c.id;
       var head = h("button", { type: "button", class: "mk-cn-row-btn", "aria-expanded": String(open), "aria-controls": pid, "data-cn-open": c.id }, [
-        h("span", { class: "mk-cn-mark", "aria-hidden": "true", text: c.mark || c.name.slice(0, 1) }),
+        c.logo ? h("span", { class: "mk-cn-mark mk-cn-mark--logo", "aria-hidden": "true" }, [h("img", { src: c.logo, alt: "", width: "24", height: "24", loading: "lazy", decoding: "async" })]) : h("span", { class: "mk-cn-mark", "aria-hidden": "true", text: c.mark || c.name.slice(0, 1) }),
         h("span", { class: "mk-cn-row-main" }, [h("span", { class: "mk-cn-name", text: c.name }), h("span", { class: "mk-cn-desc", text: c.description }),
           h("span", { class: "mk-cn-tags" }, [h("span", { class: "mk-cn-tag", text: c.categoryLabel })].concat(c.capabilities.map(function (k) { var x = S.capabilities.filter(function (y) { return y.key === k; })[0]; return h("span", { class: "mk-cn-tag mk-cn-tag--cap", text: x ? x.label : k }); })))]),
         h("span", { class: "mk-cn-state is-" + st[0], text: st[1] }),

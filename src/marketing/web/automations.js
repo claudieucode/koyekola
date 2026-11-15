@@ -81,6 +81,15 @@ module.exports = ({ db }) => {
     res.render("marketing/journeys", { title: "Parcours tout prêts", active: "journeys", lib, qs: libraryQuery });
   });
   // Favori (personnel) : bascule puis retour sur la liste, filtres conservés. N'écrit que dans mk_journey_favorites.
+  // Aperçu réel d'un e-mail du parcours (HTML d'exemple, sans script) : affiché dans un cadre isolé (sandbox) par les cartes et la fiche.
+  router.get("/automatisations/parcours/:key/email/:n(\\d{1,2})", need("automations.read"), (req, res, next) => {
+    try {
+      const html = journeys.emailPreview(req.mk.ctx, req.params.key, Number(req.params.n));
+      if (html === null) return res.status(404).type("text/plain").send("Aperçu introuvable.");
+      res.set({ "Content-Security-Policy": "default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; font-src https: data:; sandbox", "X-Frame-Options": "SAMEORIGIN", "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" });
+      res.type("html").send(html);
+    } catch (error) { next(error); }
+  });
   router.post("/automatisations/parcours/:key/favori", need("automations.read"), (req, res, next) => {
     try {
       if (!journeys.byKey(req.params.key)) return res.status(404).render("error", { message: "Parcours introuvable." });

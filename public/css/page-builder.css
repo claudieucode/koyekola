@@ -203,7 +203,7 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 /* Panneaux latéraux */
 .pb-left, .pb-right { background: var(--card, #fff); min-height: 0; min-width: 0; }
 .pb-left { overflow-y: auto; }
-.pb-right { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--pb-layers-h, 46%) 6px minmax(0, 1fr); overflow: hidden; }
+.pb-right { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto var(--pb-layers-h, 46%) 6px minmax(0, 1fr); overflow: hidden; }
 .pb-resizer { cursor: col-resize; background: var(--border); background-clip: content-box; padding: 0 2px; touch-action: none; }
 .pb-resizer:hover, .pb-resizer:focus-visible { background-color: var(--accent); outline: none; }
 .pb-hsplit { cursor: row-resize; background: var(--border); background-clip: content-box; padding: 2px 0; touch-action: none; }
@@ -267,12 +267,12 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
 .pb-panel-toggle:hover { background: var(--accent-light); color: var(--primary); }
 .pb-panel-toggle:active { background: #dbeaf5; }
 .pb-panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.pb-right.is-layers-collapsed { grid-template-rows: auto 0 minmax(0, 1fr); }
+.pb-right.is-layers-collapsed { grid-template-rows: auto auto 0 minmax(0, 1fr); }
 .pb-right.is-layers-collapsed .pb-tree, .pb-right.is-layers-collapsed .pb-hsplit { display: none; }
 /* Chaque bloc garde sa rangée (un bloc masqué ne décale pas l'inspecteur dans la rangée de la séparation) */
-.pb-layers-panel { grid-row: 1; }
-.pb-hsplit { grid-row: 2; }
-.pb-inspector { grid-row: 3; }
+.pb-layers-panel { grid-row: 2; }
+.pb-hsplit { grid-row: 3; }
+.pb-inspector { grid-row: 4; }
 .pb-tree { list-style: none; margin: 0; padding: 4px; overflow: auto; flex: 1 1 auto; min-height: 0; }
 .pb-tree-group { list-style: none; margin: 0; padding: 0; }
 .pb-tree-empty { padding: 8px; }
@@ -410,7 +410,7 @@ dialog[open]::backdrop { animation: kol-fade-in var(--kol-motion-normal) var(--k
   .pb-body { height: auto; min-height: 100vh; overflow: visible; }
   .pb-main, .pb-main.is-left-hidden, .pb-main.is-right-hidden, .pb-main.is-left-hidden.is-right-hidden { grid-template-columns: var(--pb-tools-w) minmax(0, 1fr); grid-template-rows: minmax(420px, 72vh) auto auto; }
   .pb-left { grid-column: 2; grid-row: 2; max-height: 34vh; border-top: 1px solid var(--border); }
-  .pb-right { grid-column: 1 / -1; grid-row: 3; max-height: 40vh; grid-template-rows: minmax(120px, 40%) 6px minmax(0, 1fr); border-top: 1px solid var(--border); }
+  .pb-right { grid-column: 1 / -1; grid-row: 3; max-height: 40vh; grid-template-rows: auto minmax(120px, 40%) 6px minmax(0, 1fr); border-top: 1px solid var(--border); }
   .pb-canvas { grid-column: 2; grid-row: 1; }
   .pb-tools { grid-row: 1 / span 2; }
   .pb-resizer { display: none; }
@@ -823,9 +823,9 @@ dialog.pb-shortcuts .pb-sc-search:focus { outline: none; border-color: var(--edi
 .pb-page-row .pb-flag { width: 24px; height: 24px; }
 .is-layers-collapsed .pb-page-row { display: none; }
 .pb-layers-panel.is-closed { display: none; }
-.pb-right.is-layers-detached { grid-template-rows: 0 0 minmax(0, 1fr); }
+.pb-right.is-layers-detached { grid-template-rows: auto 0 0 minmax(0, 1fr); }
 .pb-right.is-layers-detached .pb-hsplit { display: none; }
-.pb-right.is-layers-detached .pb-inspector { grid-row: 3; }
+.pb-right.is-layers-detached .pb-inspector { grid-row: 4; }
 .pb-layers-panel.is-floating { position: fixed; z-index: 70; display: flex; flex-direction: column; min-width: 240px; min-height: 180px; background: var(--card, #fff); border: 1px solid var(--border); border-radius: var(--pb-radius-lg); box-shadow: 0 16px 48px rgba(11, 42, 64, 0.32); overflow: hidden; }
 .pb-layers-panel.is-floating .pb-panel-head { cursor: grab; background: var(--bg, #f4f8fb); user-select: none; touch-action: none; }
 .pb-layers-panel.is-floating.is-moving { box-shadow: 0 20px 56px rgba(11, 42, 64, 0.4); }
@@ -1803,7 +1803,7 @@ label.pb-check.pb-has-restore > .pb-restore { position: absolute; top: 50%; righ
 .pb-part-reset { justify-self: start; height: 26px; padding: 0 8px; font-size: 12px; color: var(--editor-text-secondary, var(--text)); }
 
 /* Main (près du zoom) : même état que l'outil H ; curseur « main » dans la zone grise autour de la page */
-.pb-gizmo .pb-icon-btn[data-pb-pan][aria-pressed="true"] { background: var(--editor-active); color: var(--editor-accent-text); }
+.pb-gizmo .pb-icon-btn[aria-pressed="true"]:is([data-pb-pan], [data-pb-zoomarea], [data-pb-navigator]) { background: var(--editor-active); color: var(--editor-accent-text); }
 [data-pb-stage].is-hand { cursor: grab; }
 body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 
@@ -2528,3 +2528,82 @@ body.is-panning [data-pb-stage].is-hand { cursor: grabbing; }
 .pb-ctx-pref-row:hover { background: var(--accent-light); }
 .pb-ctx-pref-row .icon { width: 16px; height: 16px; color: var(--primary); }
 .pb-menu-item.is-on::before { content: "✓"; margin-right: -6px; color: var(--accent-dark); font-weight: 700; }
+
+/* ---- Navigation du canevas : transition de zoom, zoom par zone et panneau « Navigator Studio » ----
+   Zoom : l'échelle est jouée par transformation seulement (aucune mise en page par image) ; la couche (will-change) n'existe que pendant le geste.
+   Aucun flou : une transformation d'échelle donne déjà la sensation de rapprochement, un filtre sur toute la page coûterait cher à chaque image.
+   Le panneau n'utilise AUCUNE palette propre : uniquement les jetons de l'éditeur (clair, sombre, personnalisé). */
+.pb-frame-wrap.is-zooming { will-change: transform; }
+.pb-canvas:has(.pb-frame-wrap.is-zooming) .pb-cbar { opacity: 0; pointer-events: none; }
+[data-pb-stage].is-zoomarea { cursor: zoom-in; }
+.pb-area { position: fixed; left: 0; top: 0; z-index: 60; box-sizing: border-box; pointer-events: none; border: 1px solid var(--editor-accent, #0277b6); border-radius: 2px;
+  background: color-mix(in srgb, var(--editor-accent, #0277b6) 14%, transparent); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); will-change: transform; }
+.pb-area[hidden] { display: none; }
+@media (max-width: 860px) { .pb-gizmo [data-pb-zoom="100"] { display: none; } }
+
+.pb-nvs { position: absolute; z-index: 7; box-sizing: border-box; display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--editor-border, #dde6ed); border-radius: 10px; background: var(--editor-card, #fff); color: var(--editor-text, #0f1f33);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.14); opacity: 0; transform: translate3d(0, 6px, 0) scale(var(--kol-motion-scale, 0.97)); transform-origin: 100% 100%;
+  transition: opacity var(--kol-motion-normal, 150ms) var(--kol-motion-ease, ease), transform var(--kol-motion-normal, 150ms) var(--kol-motion-ease, ease); }
+.pb-nvs[hidden] { display: none; }
+.pb-nvs.is-open { opacity: 1; transform: none; }
+.pb-nvs.is-resizing, .pb-nvs.is-resizing * { transition: none !important; }
+.pb-nvs-head { display: flex; align-items: center; gap: 2px; flex: none; height: 36px; padding: 0 5px 0 12px; border-bottom: 1px solid var(--editor-border, #dde6ed); cursor: grab; user-select: none; touch-action: none; }
+.pb-nvs-head:active { cursor: grabbing; }
+.pb-nvs.is-locked .pb-nvs-head, .pb-nvs.is-dock .pb-nvs-head { cursor: default; }
+.pb-nvs-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; font-weight: 650; }
+.pb-nvs-zoom { margin-right: 4px; font-size: 12px; font-weight: 650; color: var(--editor-muted, #5b6b7c); font-variant-numeric: tabular-nums; }
+.pb-nvs-btn { display: inline-grid; place-items: center; flex: none; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--pb-radius-md); background: none; color: inherit; cursor: pointer; transition: background var(--kol-motion-fast, 100ms) ease; }
+.pb-nvs-btn[hidden] { display: none; }
+.pb-nvs-btn:hover:not(:disabled) { background: var(--editor-active, #e8f1f8); }
+.pb-nvs-btn[aria-pressed="true"] { background: var(--editor-active, #e8f1f8); color: var(--editor-accent-text, #0277b6); }
+.pb-nvs-btn:disabled { opacity: 0.35; cursor: default; }
+.pb-nvs-btn:focus-visible { outline: 2px solid var(--editor-accent, #0277b6); outline-offset: 1px; }
+.pb-nvs-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; border-radius: 0 0 9px 9px; overflow: hidden; }
+.pb-nvs.is-min { height: auto !important; }
+.pb-nvs.is-min .pb-nvs-body { display: none; }
+.pb-nvs-view { position: relative; flex: 1 1 auto; min-height: 80px; display: grid; place-items: center; overflow: hidden; outline: none; touch-action: none; cursor: crosshair; background: var(--editor-panel-secondary, #f4f8fb); }
+.pb-nvs-view:focus-visible { box-shadow: inset 0 0 0 2px var(--editor-accent, #0277b6); }
+.pb-nvs-thumbbox { position: relative; overflow: hidden; background: #fff; box-shadow: 0 0 0 1px var(--editor-border, #dde6ed), 0 2px 8px rgba(15, 23, 42, 0.12); }
+.pb-nvs-frame { position: absolute; left: 0; top: 0; border: 0; background: #fff; transform-origin: 0 0; pointer-events: none; transition: opacity var(--kol-motion-fast, 100ms) ease; }
+.pb-nvs-rect { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1.5px solid var(--editor-accent, #0277b6); border-radius: 2px; pointer-events: none; will-change: transform;
+  background: color-mix(in srgb, var(--editor-accent, #0277b6) 13%, transparent); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6); }
+.pb-nvs-sel { position: absolute; left: 0; top: 0; box-sizing: border-box; border: 1px solid #fff; border-radius: 1px; pointer-events: none; box-shadow: 0 0 0 1px var(--editor-accent, #0277b6); }
+.pb-nvs-sel[hidden] { display: none; }
+.pb-nvs-empty { position: absolute; margin: 0; font-size: 12px; color: var(--editor-muted, #5b6b7c); }
+.pb-nvs-empty[hidden] { display: none; }
+.pb-nvs.is-dragging .pb-nvs-view { cursor: grabbing; }
+.pb-nvs-ctl { display: flex; flex-direction: column; flex: none; gap: 4px; padding: 6px; border-top: 1px solid var(--editor-border, #dde6ed); background: var(--editor-card, #fff); }
+.pb-nvs-row { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; }
+.pb-nvs-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--editor-border, #dde6ed); }
+.pb-nvs .pb-nvs-zoomwrap { display: inline-flex; flex: none; align-items: center; gap: 1px; height: 26px; padding: 0 6px; border: 1px solid var(--editor-border, #dde6ed); border-radius: var(--pb-radius-md); background: var(--editor-card, #fff); }
+.pb-nvs-zoomwrap:focus-within { border-color: var(--editor-accent, #0277b6); box-shadow: 0 0 0 2px color-mix(in srgb, var(--editor-accent, #0277b6) 22%, transparent); }
+.pb-nvs .pb-nvs-zoomwrap .pb-nvs-zoom-input { width: 30px; min-width: 0 !important; min-height: 0 !important; height: 22px !important; margin: 0; padding: 0; border: 0; border-radius: 0; box-shadow: none; outline: none; background: none; color: inherit; font: inherit; font-size: 12px; font-weight: 650; line-height: 22px; text-align: right; font-variant-numeric: tabular-nums; }
+.pb-nvs-pct { font-size: 12px; color: var(--editor-muted, #5b6b7c); }
+.pb-nvs-presets { width: 18px; }
+.pb-nvs-btn.pb-nvs-txt { width: auto; min-width: 26px; padding: 0 5px; font: inherit; font-size: 11.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.pb-nvs-adv > summary { padding: 2px 4px; font-size: 12px; color: var(--editor-muted, #5b6b7c); cursor: pointer; border-radius: var(--pb-radius-md); }
+.pb-nvs-adv > summary:hover { color: var(--editor-text, #0f1f33); }
+.pb-nvs-adv > summary:focus-visible { outline: 2px solid var(--editor-accent, #0277b6); outline-offset: 1px; }
+.pb-nvs-adv[open] > .pb-nvs-row { margin-top: 4px; }
+.pb-nvs-row-sel { flex-wrap: nowrap; }
+.pb-nvs .pb-nvs-select { flex: 1 1 auto; width: auto; min-width: 0; height: 26px; margin: 0; padding: 0 6px; font-size: 12px; color: inherit; border: 1px solid var(--editor-border, #dde6ed); border-radius: var(--pb-radius-md); background: var(--editor-card, #fff); }
+.pb-nvs-rs { position: absolute; z-index: 2; touch-action: none; }
+.pb-nvs-rs-n, .pb-nvs-rs-s { left: 12px; right: 12px; height: 8px; cursor: ns-resize; } .pb-nvs-rs-n { top: -4px; } .pb-nvs-rs-s { bottom: -4px; }
+.pb-nvs-rs-e, .pb-nvs-rs-w { top: 12px; bottom: 12px; width: 8px; cursor: ew-resize; } .pb-nvs-rs-e { right: -4px; } .pb-nvs-rs-w { left: -4px; }
+.pb-nvs-rs-ne, .pb-nvs-rs-nw, .pb-nvs-rs-se, .pb-nvs-rs-sw { width: 14px; height: 14px; }
+.pb-nvs-rs-ne { top: -5px; right: -5px; cursor: nesw-resize; } .pb-nvs-rs-sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.pb-nvs-rs-nw { top: -5px; left: -5px; cursor: nwse-resize; } .pb-nvs-rs-se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+.pb-nvs.is-min .pb-nvs-rs-n, .pb-nvs.is-min .pb-nvs-rs-s, .pb-nvs.is-min .pb-nvs-rs-ne, .pb-nvs.is-min .pb-nvs-rs-nw, .pb-nvs.is-min .pb-nvs-rs-se, .pb-nvs.is-min .pb-nvs-rs-sw { display: none; }
+/* Ancré : colonne à droite du canevas, qui RÉSERVE sa place (le canevas se réduit, rien n'est masqué) */
+.pb-nvs.is-dock { top: 0; right: 0; bottom: 0; left: auto; width: var(--pb-nvs-dock-w, 280px); height: auto; border-width: 0 0 0 1px; border-radius: 0; box-shadow: none; transform-origin: 100% 50%; }
+.pb-nvs.is-dock .pb-nvs-body { border-radius: 0; }
+.pb-nvs.is-dock .pb-nvs-rs { display: none; }
+.pb-nvs.is-dock .pb-nvs-rs-w { display: block; top: 0; bottom: 0; left: -4px; }
+.pb-canvas.has-nav-dock .pb-stage { margin-right: var(--pb-nvs-dock-w, 0px); }
+.pb-canvas.has-nav-dock .pb-gizmo { right: calc(var(--pb-nvs-dock-w, 0px) + 14px); }
+@media (prefers-reduced-motion: reduce) { .pb-nvs, .pb-nvs-btn, .pb-nvs-frame { transition: none; } }
+/* La barre de zoom du bas suit elle aussi le mode de l'éditeur (clair, sombre, personnalisé) */
+.pb-gizmo { border-color: var(--editor-border, var(--border)); background: var(--editor-card, var(--card, #fff)); color: var(--editor-text, inherit); }
+.pb-gizmo .pb-icon-btn, .pb-gizmo .pb-gizmo-btn, .pb-gizmo .pb-zoom-value { color: var(--editor-text, var(--primary)); }
+.pb-gizmo-sep { background: var(--editor-border, var(--border)); }
+.pb-gizmo .pb-icon-btn:hover, .pb-gizmo .pb-gizmo-btn:hover { background: var(--editor-active, var(--accent-light)); color: var(--editor-accent-text, var(--accent-dark)); }

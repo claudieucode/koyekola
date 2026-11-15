@@ -13,6 +13,7 @@ const { recordAudit } = require("../../marketing/audit");
 const primarySite = require("../primarySite");
 const { UserError } = require("../../utils/errors");
 const { transaction } = require("../../marketing/db/tx");
+const { logoOf } = require("./logos");
 const http = require("./http");
 const { ConnectorError, scrub, CODES } = require("./errors");
 const { CAPABILITIES } = require("./capabilities");
@@ -90,10 +91,10 @@ function catalog(ctx, scope = { siteId: null }) {
     const av = availability(a);
     if (a.kind === "external") {
       let st = { state: "unknown", detail: "" }; try { st = a.status(ctx); } catch { /* état inconnu */ }
-      return { id: a.id, kind: "external", name: a.name, provider: a.provider, category: a.category, categoryLabel: CATEGORIES[a.category], mark: a.mark, description: a.description, docsUrl: a.docsUrl || "", capabilities: [], available: true, availabilityReason: "", managedBy: a.managedBy, manage: a.manage, external: { state: st.state, detail: st.detail }, connection: null, source: null };
+      return { id: a.id, kind: "external", name: a.name, provider: a.provider, category: a.category, categoryLabel: CATEGORIES[a.category], mark: a.mark, logo: logoOf(a.id), description: a.description, docsUrl: a.docsUrl || "", capabilities: [], available: true, availabilityReason: "", managedBy: a.managedBy, manage: a.manage, external: { state: st.state, detail: st.detail }, connection: null, source: null };
     }
     const eff = effective(ctx, scope, a.id);
-    return { id: a.id, kind: "native", name: a.name, provider: a.provider, category: a.category, categoryLabel: CATEGORIES[a.category], mark: a.mark, version: a.version, description: a.description, longDescription: a.longDescription || "", docsUrl: a.docsUrl, credentialsUrl: a.credentialsUrl || "",
+    return { id: a.id, kind: "native", name: a.name, provider: a.provider, category: a.category, categoryLabel: CATEGORIES[a.category], mark: a.mark, logo: logoOf(a.id), version: a.version, description: a.description, longDescription: a.longDescription || "", docsUrl: a.docsUrl, credentialsUrl: a.credentialsUrl || "",
       auth: a.auth.method, capabilities: Object.keys(a.capabilities), requirements: a.requirements || [], costNote: a.costNote || "", privacyNote: a.privacyNote || "",
       fields: a.fields.map((f) => ({ key: f.key, label: f.label, type: f.type, required: Boolean(f.required), help: f.help || "", default: f.default ?? "", options: f.options || null })),
       available: av.available, availabilityReason: av.reason, connection: publicView(eff.row), source: eff.source };

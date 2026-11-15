@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nakewenze Product Hunter</title>
+<style>
+:root{
+  --navy:#091225;--navy2:#060b17;--navyline:#16233b;--navytxt:#c9d4e5;--navymut:#7f8fa8;
+  --bg:#f3f5f9;--panel:#ffffff;--panel2:#f1f4f8;--line:#e3e8ef;--txt:#0f1e36;--mut:#5f6f86;--soft:#94a1b5;
+  --acc:#142342;--acc2:#254580;--accbg:rgba(37,69,128,.10);--link:#22437b;--gold:#f5b301;
+  --go:#15803d;--gobg:rgba(21,128,61,.10);--test:#b45309;--testbg:rgba(217,119,6,.12);--no:#dc2626;--nobg:rgba(220,38,38,.09);
+  --shadow:0 1px 2px rgba(15,30,54,.04),0 2px 10px rgba(15,30,54,.04);
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+[data-theme=dark]{
+  --navy:#080f1e;--navy2:#050912;--navyline:#152035;
+  --bg:#060b16;--panel:#0b1322;--panel2:#111b2e;--line:#1a253a;--txt:#e6ecf5;--mut:#93a2ba;--soft:#64748b;
+  --acc:#2c4b8a;--acc2:#2c4b8a;--accbg:rgba(44,75,138,.28);--link:#8eaadb;
+  --go:#22c55e;--gobg:rgba(34,197,94,.12);--test:#f5b301;--testbg:rgba(245,179,1,.12);--no:#f87171;--nobg:rgba(248,113,113,.12);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.25);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-feature-settings:"tnum"}
+button{font-family:inherit}
+a{color:var(--link)}
+/* ===== Icônes flat ===== */
+.ico{display:inline-grid;place-items:center;flex:none;border-radius:9px;width:34px;height:34px;color:#fff}
+.ico svg{width:18px;height:18px}
+.ico.sm{width:26px;height:26px;border-radius:7px}.ico.sm svg{width:14px;height:14px}
+.ico.xs{width:20px;height:20px;border-radius:6px}.ico.xs svg{width:12px;height:12px}
+.t-blue{background:#2f62c4}.t-navy{background:#1b3566}.t-green{background:#16a34a}.t-amber{background:#e59a0b}.t-red{background:#e0453a}
+.t-teal{background:#0e9f8e}.t-violet{background:#6d4fd8}.t-pink{background:#d9468f}.t-slate{background:#56657d}.t-gold{background:#e0a400}
+.svgi{width:16px;height:16px;flex:none}
+/* ===== Top bar ===== */
+header{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:14px;height:58px;padding:0 20px;background:var(--navy2);color:#fff;border-bottom:1px solid var(--navyline)}
+.brand{display:flex;align-items:center;gap:12px;height:100%}
+.logo{width:30px;height:30px;border-radius:7px;background:var(--acc2);color:#fff;display:grid;place-items:center;font-weight:800;font-size:15px}
+.brand .name{font-weight:800;letter-spacing:.06em;font-size:15px}
+.brand .div{width:1px;height:28px;background:var(--navyline);margin:0 6px}
+.brand .ctx{line-height:1.15}
+.brand .ctx small{display:block;font-size:10.5px;color:var(--navymut);letter-spacing:.06em;text-transform:uppercase}
+.brand .ctx b{font-size:14px;font-weight:600}
+.hright{display:flex;gap:10px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px 5px 6px;border-radius:8px;border:1px solid var(--navyline);font-size:12px;color:var(--navytxt)}
+.pill b{color:#fff}
+.iconbtn{width:34px;height:34px;border-radius:8px;border:0;background:transparent;color:var(--navytxt);cursor:pointer;display:grid;place-items:center;transition:background .2s}
+.iconbtn:hover{background:var(--navyline)}
+.iconbtn svg{width:18px;height:18px}
+.drawer .iconbtn,.modal .iconbtn{color:var(--txt);border:1px solid var(--line)}
+.avatar{display:flex;align-items:center;gap:9px}
+.avatar i{width:32px;height:32px;border-radius:50%;background:var(--acc2);display:grid;place-items:center;font-style:normal;font-weight:700}
+.avatar div{line-height:1.2;font-size:13px;font-weight:600}
+.avatar small{display:block;color:var(--navymut);font-weight:400;font-size:11.5px}
+.btn{text-decoration:none;display:inline-flex;align-items:center;gap:7px;background:var(--acc);color:#fff;border:0;border-radius:8px;padding:9px 15px;font-weight:600;cursor:pointer;font-size:13px;transition:filter .2s,transform .2s}
+.btn:hover{filter:brightness(1.15)}
+.btn:active{transform:scale(.97)}
+.btn svg{width:15px;height:15px}
+.btn.blue{background:var(--acc2)}
+.btn.white{background:#fff;color:#0f1e36}
+.btn.outline{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn.outline:hover{background:rgba(255,255,255,.07)}
+.btn.ghost{background:var(--panel);color:var(--txt);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--acc2)}
+.btn.sm{padding:6px 11px;font-size:12px}
+/* ===== Layout ===== */
+.wrap{display:grid;grid-template-columns:330px 1fr}
+aside{background:var(--navy);color:var(--navytxt);position:sticky;top:58px;height:calc(100vh - 58px);overflow:auto;padding:16px 16px 40px;border-right:1px solid var(--navyline)}
+aside::-webkit-scrollbar{width:6px}aside::-webkit-scrollbar-thumb{background:var(--navyline);border-radius:3px}
+main{padding:0 28px 60px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.nav{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+.navitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;color:var(--navytxt);font-weight:600;text-decoration:none;border:1px solid transparent;transition:background .2s,border-color .2s}
+.navitem:hover{background:rgba(255,255,255,.04)}
+.navitem.on{background:rgba(37,69,128,.30);border-color:rgba(37,69,128,.75);color:#fff}
+.navitem .cnt{margin-left:auto;background:rgba(34,197,94,.18);color:#4ade80;font-size:11px;padding:2px 8px;border-radius:999px}
+.side-h{display:flex;justify-content:space-between;align-items:center;margin:18px 0 6px}
+.side-h h2{margin:0;font-size:13.5px;font-weight:700;color:#fff}
+.mode{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px}
+.mode.strict{background:rgba(34,197,94,.15);color:#4ade80}
+.mode.custom{background:rgba(245,179,1,.15);color:var(--gold)}
+.side-sub{font-size:12px;color:var(--navymut);margin:0 0 6px;line-height:1.55}
+.grp{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--navymut);margin:20px 0 10px;font-weight:500}
+.grp::after{content:"";flex:1;height:1px;background:var(--navyline)}
+.field{margin-bottom:14px}
+.flab{display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--navytxt);margin-bottom:7px;gap:6px}
+.flab .v{color:#fff;font-weight:600}
+.flab .r{margin-left:auto}
+.rst{border:0;background:rgba(37,69,128,.55);color:#b3c7ea;border-radius:6px;width:22px;height:22px;cursor:pointer;display:none;place-items:center;padding:0;animation:pop .25s var(--ease)}
+.rst svg{width:12px;height:12px}
+.rst.show{display:inline-grid}
+.hint{font-size:11px;color:var(--navymut);margin-top:5px}
+input[type=range]{width:100%;accent-color:var(--acc2);height:4px}
+input[type=number],input[type=text],select{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+aside input[type=number],aside select{background:var(--navy2);border-color:var(--navyline);color:#fff}
+input:focus,select:focus{border-color:var(--acc2)}
+.duo{display:flex;gap:8px}
+.tg{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--navytxt);margin-bottom:11px;cursor:pointer}
+.tg input{display:none}
+.sw{width:32px;height:18px;border-radius:999px;background:var(--navyline);position:relative;flex:none;transition:background .2s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:left .25s var(--ease)}
+.tg input:checked + .sw{background:var(--acc2)}
+.tg input:checked + .sw::after{left:16px}
+.tg .rst{margin-left:auto}
+.resetall{width:100%;justify-content:center;margin-top:16px;background:var(--acc2)}
+.crit-card{margin-top:18px;padding:14px;border:1px solid var(--navyline);border-radius:12px;font-size:12px;line-height:1.6;color:var(--navymut)}
+.crit-card b{color:#fff}
+.crit-card table{width:100%;border-collapse:collapse;margin-top:6px}
+.crit-card td{padding:3px 0;font-size:12px}
+.crit-card td:last-child{text-align:right;color:#fff;font-weight:600}
+/* ===== Views + animations ===== */
+.view{display:none}
+.view.on{display:block;animation:fadeUp .3s var(--ease)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes pop{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.stag{animation:fadeUp .35s var(--ease) both}
+.rows,.tablewrap{contain:content}
+.goitem:not(.open),.list tr.r{content-visibility:auto;contain-intrinsic-size:auto 72px}
+/* Breadcrumb + hero */
+.crumb{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 -28px 22px;padding:14px 28px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.crumb .l{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:13.5px}
+.crumb .l b{color:var(--txt);font-size:15px}
+.crumb .r{font-size:13px;color:var(--mut);display:flex;gap:8px;align-items:center}
+.status{display:inline-flex;align-items:center;gap:5px;background:var(--accbg);color:var(--link);border-radius:7px;padding:4px 9px;font-weight:600;font-size:12px}
+.status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.hero{position:relative;overflow:hidden;border-radius:16px;padding:30px 34px;margin-bottom:22px;color:#fff;background:linear-gradient(120deg,#030810 0%,#091324 55%,#14294b 100%)}
+.hero small{font-size:12.5px;font-weight:600;color:#dbe4f2}
+.hero h1{margin:8px 0 10px;font-size:32px;letter-spacing:-.02em;font-weight:800;padding-left:16px;border-left:4px solid var(--gold);line-height:1.05}
+.hero p{margin:0 0 16px;color:#c3cee0;font-size:15px;max-width:720px}
+.hero .upd{margin:-4px 0 18px;font-size:12.5px;color:#9fb0cc}
+.hero .acts{display:flex;gap:10px;flex-wrap:wrap}
+.hero svg.ill{position:absolute;right:30px;top:50%;transform:translateY(-50%)}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px}
+.kpi{padding:18px}
+.kpi .h{display:flex;align-items:center;gap:10px;color:var(--txt);font-size:13px;font-weight:500}
+.kpi div.n{font-size:30px;font-weight:800;margin-top:14px;letter-spacing:-.02em}
+.sec{display:flex;align-items:flex-end;justify-content:space-between;margin:6px 0 12px;gap:10px;flex-wrap:wrap}
+.sec h3{margin:0;font-size:17px;font-weight:700;display:flex;align-items:center;gap:10px}
+.sec p{margin:4px 0 0;color:var(--mut);font-size:12.5px}
+.lnk{color:var(--link);font-weight:600;font-size:13px;background:none;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.lnk svg{width:14px;height:14px}
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:7px;font-size:10.5px;font-weight:800;letter-spacing:.05em;white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.b-GO{background:var(--gobg);color:var(--go)}
+.b-TEST{background:var(--testbg);color:var(--test)}
+.b-NO{background:var(--nobg);color:var(--no)}
+.b-READY{background:var(--gobg);color:var(--go)}
+.b-CHECK{background:var(--accbg);color:var(--link)}
+.cap{font-size:10.5px;color:var(--test);margin-left:6px;font-weight:600}
+.new{display:inline-block;background:var(--gold);color:#1a1300;font-size:9.5px;font-weight:800;padding:2px 6px;border-radius:5px;margin-right:6px;vertical-align:2px;letter-spacing:.04em}
+/* Rows (liste) */
+.rows{overflow:hidden;margin-bottom:28px}
+.row{display:grid;grid-template-columns:34px 46px minmax(0,1fr) 90px 150px 80px 110px 28px;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .2s}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--panel2)}
+.row .rk{font-weight:800;color:var(--soft);font-size:13px}
+.row .nm b{font-weight:650}
+.row .sub{color:var(--mut);font-size:11.5px;margin-top:2px}
+.row .num{text-align:right;font-size:12.5px}
+.row .num small{display:block;color:var(--soft);font-size:10.5px;font-family:inherit}
+.chev{transition:transform .35s var(--ease);color:var(--soft)}
+.chev svg{width:16px;height:16px}
+.sc{font-size:19px;font-weight:800;letter-spacing:-.02em}
+/* Photos produit */
+.thumb{width:46px;height:46px;border-radius:10px;object-fit:cover;background:#fff;border:1px solid var(--line);flex:none;display:block}
+.thumb.ph{display:grid;place-items:center;background:var(--panel2);color:var(--soft)}
+.thumb.ph svg{width:20px;height:20px}
+.thumb.sm{width:38px;height:38px;border-radius:8px}
+.dhead{display:flex;gap:16px;align-items:center;margin-top:12px}
+.dhead .thumb{width:112px;height:112px;border-radius:14px;box-shadow:var(--shadow)}
+.ali{display:flex;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;margin:12px 0 4px;text-decoration:none;color:var(--txt);transition:border-color .2s}
+.ali:hover{border-color:var(--acc2)}
+.ali .ext{width:14px;height:14px;color:var(--soft);flex:none}
+.ali small{display:block;color:var(--mut);font-size:11.5px;margin-top:2px}
+/* Table */
+.toolbar{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.toolbar input{max-width:300px}
+.toolbar select{max-width:200px}
+.tablewrap{overflow:hidden}
+table.list{width:100%;border-collapse:collapse}
+.list th,.list td{padding:13px 16px;text-align:left;border-bottom:1px solid var(--line);font-size:13px}
+.list th{color:var(--soft);font-size:11px;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;white-space:nowrap;font-weight:600;user-select:none}
+.list th:hover{color:var(--txt)}
+.list tr:last-child td{border-bottom:0}
+.list tr.r{cursor:pointer;transition:background .2s}
+.list tr.r:hover td{background:var(--panel2)}
+.sub{color:var(--mut);font-size:11.5px;margin-top:2px}
+.bar{height:5px;border-radius:4px;background:var(--panel2);overflow:hidden;width:56px;display:inline-block;vertical-align:middle;margin-left:8px}
+.bar i{display:block;height:100%;border-radius:4px;transition:width .6s var(--ease)}
+.empty{padding:22px;color:var(--mut);text-align:center}
+/* GO space */
+.warnbox{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;margin-bottom:18px;border-radius:14px;background:var(--testbg);color:var(--txt);font-size:13px;line-height:1.6}
+.warnbox b{color:var(--test)}
+.goitem{border-bottom:1px solid var(--line)}
+.goitem:last-child{border-bottom:0}
+.goitem .row{border-bottom:0}
+.goitem.open .chev{transform:rotate(180deg)}
+.gobody{display:none}
+.goitem.open .gobody{display:block;animation:fadeUp .25s var(--ease)}
+.goinner{padding:4px 18px 22px 72px}
+.gostats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:6px 0 16px}
+.box{background:var(--panel2);border-radius:12px;padding:11px 13px}
+.box span{font-size:11px;color:var(--mut);display:block;margin-bottom:3px}
+.box b{font-size:15.5px;font-weight:700}
+.kwbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;font-size:12.5px;color:var(--mut)}
+.kwbar code{background:var(--panel2);border:1px solid var(--line);padding:5px 9px;border-radius:7px;color:var(--txt);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px}
+.lgroup{margin:14px 0}
+.lgroup .t{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;margin-bottom:9px}
+.lgroup .t small{font-weight:500;color:var(--soft);font-size:11.5px}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:7px}
+.lk{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--txt);background:var(--panel);font-size:12.5px;transition:border-color .2s,transform .2s,box-shadow .2s;min-width:0}
+.lk:hover{border-color:var(--acc2);transform:translateY(-1px);box-shadow:var(--shadow)}
+.lk span.nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk small{display:block;font-size:10.5px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lk .ext{width:13px;height:13px;color:var(--soft);flex:none}
+.pl{width:24px;height:24px;border-radius:6px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:11px;flex:none}
+.check{margin-top:16px;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--panel2)}
+.check .t{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;font-size:13px;margin-bottom:8px}
+.ck{display:flex;align-items:flex-start;gap:10px;font-size:12.5px;padding:6px 0;cursor:pointer;color:var(--txt)}
+.ck input{display:none}
+.ck .bx{width:18px;height:18px;border-radius:5px;border:2px solid var(--soft);flex:none;display:grid;place-items:center;transition:background .2s,border-color .2s;margin-top:1px}
+.ck .bx svg{width:12px;height:12px;color:#fff;opacity:0;transform:scale(.5);transition:.25s var(--ease)}
+.ck input:checked + .bx{background:var(--go);border-color:var(--go)}
+.ck input:checked + .bx svg{opacity:1;transform:none}
+.progress{height:6px;border-radius:4px;background:var(--line);overflow:hidden;margin:4px 0 6px}
+.progress i{display:block;height:100%;background:var(--go);transition:width .5s var(--ease)}
+/* Drawer */
+.dbg{position:fixed;inset:0;background:rgba(6,11,23,.55);z-index:10;opacity:0;pointer-events:none;transition:opacity .35s var(--ease)}
+.dbg.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(640px,100%);background:var(--panel);border-left:1px solid var(--line);z-index:11;transform:translateX(104%);transition:transform .38s var(--ease);will-change:transform;contain:layout paint;overflow:auto;padding:24px 26px 40px}
+.drawer.open{transform:none}
+.drawer h2{margin:12px 0 4px;font-size:21px;letter-spacing:-.02em;padding-left:12px;border-left:4px solid var(--gold)}
+.dmeta{color:var(--mut);font-size:12.5px}
+.g4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+.note{border-radius:12px;padding:11px 14px;font-size:12.5px;margin:10px 0;line-height:1.55;display:flex;gap:10px;align-items:flex-start}
+.n-info{background:var(--panel2);color:var(--mut)}
+.n-warn{background:var(--testbg);color:var(--test)}
+.n-bad{background:var(--nobg);color:var(--no)}
+h5{margin:24px 0 10px;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--soft);font-weight:600}
+.step{display:grid;grid-template-columns:22px 1fr 90px 34px 36px;align-items:center;gap:10px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line)}
+.step .n{width:22px;height:22px;border-radius:6px;background:var(--accbg);color:var(--link);display:grid;place-items:center;font-size:11px;font-weight:700}
+.step .bar{width:100%;margin:0}
+.step .w{color:var(--soft);font-size:11px;text-align:right}
+.step .est{font-size:10px;color:var(--soft);display:block}
+ul.rules{margin:0;padding-left:18px;font-size:13px;line-height:1.75}
+.src{font-size:11.5px;color:var(--soft);margin-top:26px;line-height:1.7}
+/* Kit pub */
+#kitM .inner{width:min(980px,96%);max-height:92vh;padding:0;display:flex;flex-direction:column}
+#kitBody{overflow:auto;padding:20px 24px 28px}
+.khead{display:flex;align-items:center;gap:14px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.khead .thumb{width:64px;height:64px}
+.ktabs{display:flex;gap:6px;flex-wrap:wrap;background:var(--panel2);padding:5px;border-radius:12px;margin-bottom:16px;position:sticky;top:-20px;z-index:2}
+.ktabs button{flex:1;min-width:140px;display:flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;color:var(--mut);padding:9px 10px;border-radius:9px;font-weight:600;font-size:13px;cursor:pointer;transition:background .25s,color .25s}
+.ktabs button svg{width:15px;height:15px}
+.ktabs button.on{background:var(--panel);color:var(--txt);box-shadow:var(--shadow)}
+.kpane{display:none}.kpane.on{display:block;animation:fadeUp .25s var(--ease)}
+.kgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.kblk{margin:8px 0}
+.kh{position:relative;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--panel)}
+.kh>span{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--soft);font-weight:600}
+.kh pre{margin:6px 0 0;white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.55;color:var(--txt)}
+.cpb{position:absolute;top:8px;right:8px;display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:7px;padding:4px 8px;font-size:11.5px;font-weight:600;cursor:pointer;transition:border-color .2s}
+.cpb:hover{border-color:var(--acc2)}.cpb svg{width:12px;height:12px}
+.pcard{border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;background:var(--panel2)}
+.pcard .pt small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.script{display:grid;gap:6px;margin-bottom:8px}
+.script>div{display:grid;grid-template-columns:130px 1fr;gap:10px;font-size:13px;padding:8px 10px;border-radius:10px;background:var(--panel2)}
+.script b{color:var(--link)}
+.kitbtn{margin-left:8px}
+@media(max-width:760px){.kgrid{grid-template-columns:1fr 1fr}.script>div{grid-template-columns:1fr}}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(6,11,23,.55);display:grid;place-items:center;z-index:20;opacity:0;pointer-events:none;transition:opacity .3s var(--ease)}
+.modal.on{opacity:1;pointer-events:auto}
+.modal .inner{width:min(560px,94%);max-height:90vh;overflow:auto;padding:22px;transform:translateY(12px) scale(.98);transition:transform .3s var(--ease);will-change:transform}
+.modal.on .inner{transform:none}
+.modal h3{margin:0 0 4px;display:flex;align-items:center;gap:10px}
+.modal .g{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.modal label{font-size:12px;color:var(--mut);display:block;margin-bottom:5px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;background:var(--navy);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:30;font-size:13px;transition:.35s var(--ease);pointer-events:none;display:flex;gap:8px;align-items:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media(max-width:1180px){.kpis{grid-template-columns:repeat(3,1fr)}.hero svg.ill{display:none}.gostats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:980px){.wrap{grid-template-columns:1fr}aside{position:static;height:auto}main{padding:0 14px 50px}.crumb{margin:0 -14px 18px;padding:12px 14px}.kpis{grid-template-columns:repeat(2,1fr)}.hide-m,.pill,.avatar div{display:none}header{padding:0 12px}.hero{padding:22px}.hero h1{font-size:25px}.row{grid-template-columns:24px 40px minmax(0,1fr) 60px 20px}.row .hm{display:none}.goinner{padding:4px 14px 20px}.gostats{grid-template-columns:repeat(2,1fr)}}
+
+/* Galerie photos */
+.gal{margin:14px 0 6px}
+.gal .gmain{position:relative;width:100%;aspect-ratio:1/1;max-height:420px;border-radius:16px;background:#fff;border:1px solid var(--line);overflow:hidden;cursor:zoom-in;display:grid;place-items:center}
+.gal .gmain img{width:100%;height:100%;object-fit:contain;display:block;transition:opacity .25s ease}
+.gal .gmain img.ld{opacity:0}
+.gal .gmain .zoom{position:absolute;right:10px;bottom:10px;background:rgba(9,18,37,.78);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;display:flex;gap:6px;align-items:center;pointer-events:none}
+.gal .gmain .zoom svg{width:14px;height:14px}
+.gstrip{display:flex;gap:8px;margin-top:8px;overflow-x:auto;scrollbar-width:thin;padding-bottom:2px}
+.gstrip button{flex:none;width:58px;height:58px;padding:0;border-radius:10px;border:2px solid transparent;background:#fff;overflow:hidden;cursor:pointer;transition:border-color .15s ease,transform .15s ease}
+.gstrip button:hover{transform:translateY(-1px)}
+.gstrip button.on{border-color:var(--gold)}
+.gstrip img{width:100%;height:100%;object-fit:cover;display:block}
+.goinner .gal{max-width:460px}
+.gblock{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1px dashed var(--line);border-radius:12px;background:var(--panel2)}
+.gnote{font-size:12px;color:var(--soft);margin-top:6px}
+#lbx{position:fixed;inset:0;z-index:90;background:rgba(3,8,16,.94);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;box-sizing:border-box}
+#lbx.on{display:flex;animation:fadeIn .18s ease}
+#lbx .lstage{position:relative;width:min(92vw,880px);height:min(76vh,880px);display:grid;place-items:center}
+#lbx .lstage img{position:absolute;inset:0;margin:auto;max-width:100%;max-height:100%;object-fit:contain;border-radius:12px;background:#fff;transition:opacity .2s ease}
+#lbx .lstage img.ld{opacity:.6}
+#lbx .lnav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:grid;place-items:center}
+#lbx .lnav:hover{background:rgba(255,255,255,.26)}
+#lbx .lnav svg{width:22px;height:22px}
+#lbx .lprev{left:-8px}#lbx .lnext{right:-8px}
+#lbx .lclose{position:absolute;top:16px;right:16px;width:44px;height:44px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:grid;place-items:center}
+#lbx .lclose svg{width:20px;height:20px}
+#lbx .lcount{color:#c9d3e4;font-size:13px}
+#lbx .gstrip{max-width:min(92vw,880px)}
+#lbx .gstrip button{width:64px;height:64px}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* Sélecteur de pays */
+.cpick{display:flex;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:0 4px 0 6px;height:36px}
+.cpick select{border:0;background:transparent;color:var(--txt);font-weight:600;font-size:13px;font-family:inherit;padding:0 4px;height:34px;cursor:pointer;outline:none;max-width:190px}
+.cbanner{display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);margin:0 0 16px;font-size:13px;color:var(--mut)}
+.cbanner b{color:var(--txt)}
+.cbanner .chips{display:flex;gap:6px;flex-wrap:wrap}
+.cbanner .chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--txt);font-family:inherit;transition:background .15s,color .15s}
+.cbanner .chip:hover{border-color:var(--acc2)}
+.cbanner .chip.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cbanner .chip small{opacity:.7;margin-left:4px}
+/* ===== Mode intégré Kolakisa (?embed=1) — charte docs/KOLAKISA_DESIGN_CHARTE.md ===== */
+@font-face{font-family:"Figtree";src:url(/fonts/figtree-latin.woff2) format("woff2");font-weight:300 900;font-display:swap}
+@font-face{font-family:"Bricolage Grotesque";src:url(/fonts/bricolage-grotesque-latin.woff2) format("woff2");font-weight:200 800;font-display:swap}
+html.kx-embed{
+  --kb-navy:#0b2a40;--kb-action:#0277b6;--kb-action-h:#02639a;--kb-live:#0e7490;--kb-alert:#c4161f;--kb-canvas:#f4f8fb;--kb-rule:#dde6ed;
+  --kb-ink:#0f1f33;--kb-ink-2:#44596b;--kb-ink-3:#5b6b7c;--kb-live-bg:#e3f3f6;--kb-draft:#8a5a00;--kb-draft-bg:#fff4d6;--kb-alert-bg:#fdeced;
+  --surface:#ffffff;--surface-alt:#eef2f8;--kb-on-action:#ffffff;--kb-act-bg:rgba(2,119,182,.10);--kb-photo:#ffffff;--kb-scrim:rgba(6,25,42,.55);
+  --kb-display:"Bricolage Grotesque",system-ui,sans-serif;--kb-ui:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --kb-fast:120ms;--kb-mid:180ms;--kb-slow:260ms;
+  --navy:var(--surface);--navy2:var(--surface-alt);--navyline:var(--kb-rule);--navytxt:var(--kb-ink-2);--navymut:var(--kb-ink-3);
+  --bg:var(--kb-canvas);--panel:var(--surface);--panel2:var(--surface-alt);--line:var(--kb-rule);--txt:var(--kb-ink);--mut:var(--kb-ink-2);--soft:var(--kb-ink-3);
+  --acc:var(--kb-action);--acc2:var(--kb-action);--accbg:var(--kb-act-bg);--link:var(--kb-action);--gold:var(--kb-draft);
+  --go:var(--kb-live);--gobg:var(--kb-live-bg);--test:var(--kb-draft);--testbg:var(--kb-draft-bg);--no:var(--kb-alert);--nobg:var(--kb-alert-bg);
+  --shadow:none;--ease:cubic-bezier(.22,.8,.3,1);
+}
+html.kx-embed[data-theme=dark]{
+  --kb-navy:#e8eef7;--kb-action:#1c78bd;--kb-action-h:#166aa8;--kb-live:#5fc4d8;--kb-alert:#f06670;--kb-canvas:#0d1524;--kb-rule:#243349;
+  --kb-ink:#e6edf6;--kb-ink-2:#b3c1d3;--kb-ink-3:#8fa1b6;--kb-live-bg:rgba(95,196,216,.14);--kb-draft:#f1c766;--kb-draft-bg:rgba(240,180,60,.15);--kb-alert-bg:rgba(240,102,112,.14);
+  --surface:#131d30;--surface-alt:#18243a;--kb-act-bg:rgba(28,120,189,.22);--kb-photo:#f4f8fb;--kb-scrim:rgba(3,10,20,.7);
+}
+html.kx-embed,html.kx-embed body{background:var(--kb-canvas);color:var(--kb-ink);font-family:var(--kb-ui);font-size:14px}
+html.kx-embed header{display:none}
+html.kx-embed :is(.sec h3,.drawer h2,.modal h3,.kx-h,.kpi div.n,.box b,.side-h h2){font-family:var(--kb-display);letter-spacing:-.015em}
+html.kx-embed :focus-visible{outline:2px solid var(--kb-action);outline-offset:2px}
+/* Colonne des critères */
+html.kx-embed aside{top:0;height:100vh;background:var(--surface);color:var(--kb-ink-2);border-right:1px solid var(--kb-rule);padding:16px 16px 40px}
+html.kx-embed :is(.side-h h2,.flab .v,.crit-card b,.crit-card td:last-child,.navitem.on){color:var(--kb-ink)}
+html.kx-embed .side-h h2{font-size:1rem;font-weight:700;color:var(--kb-navy)}
+html.kx-embed .navitem{border-radius:8px;color:var(--kb-ink-2);transition:background-color var(--kb-fast) var(--ease),color var(--kb-fast) var(--ease)}
+html.kx-embed .navitem:hover{background:var(--surface-alt)}
+html.kx-embed .navitem.on{background:var(--kb-act-bg);border-color:transparent;color:var(--kb-action)}
+html.kx-embed .navitem .cnt{background:var(--kb-live-bg);color:var(--kb-live);font-weight:650}
+html.kx-embed .mode{font-size:.78rem;font-weight:650;letter-spacing:0}
+html.kx-embed .mode.strict{background:var(--kb-live-bg);color:var(--kb-live)}
+html.kx-embed .mode.custom{background:var(--kb-draft-bg);color:var(--kb-draft)}
+html.kx-embed .grp{font-size:.8rem;font-weight:650;color:var(--kb-ink-3)}
+html.kx-embed .crit-card{border-color:var(--kb-rule);border-radius:12px;background:var(--surface-alt)}
+html.kx-embed .rst{background:var(--kb-act-bg);color:var(--kb-action);border-radius:8px;animation:none}
+html.kx-embed input[type=range]{accent-color:var(--kb-action)}
+html.kx-embed :is(input[type=number],input[type=text],select),html.kx-embed aside :is(input[type=number],select){min-height:36px;background:var(--surface);border:1px solid var(--kb-rule);color:var(--kb-ink);border-radius:8px;transition:border-color var(--kb-fast) var(--ease)}
+html.kx-embed :is(input,select):focus{border-color:var(--kb-action)}
+html.kx-embed .sw{background:var(--kb-rule);transition:background-color var(--kb-fast) var(--ease)}
+html.kx-embed .sw::after{background:var(--surface);transition:transform var(--kb-mid) var(--ease);left:2px}
+html.kx-embed .tg input:checked + .sw{background:var(--kb-action)}
+html.kx-embed .tg input:checked + .sw::after{left:2px;transform:translateX(14px)}
+html.kx-embed .tg input:focus-visible + .sw{outline:2px solid var(--kb-action);outline-offset:2px}
+/* Icônes : à plat, monochromes, teinte selon le sens fixe */
+html.kx-embed .ico{background:var(--surface-alt);color:var(--kb-navy);border-radius:8px}
+html.kx-embed .ico.t-green{background:var(--kb-live-bg);color:var(--kb-live)}
+html.kx-embed :is(.ico.t-amber,.ico.t-gold){background:var(--kb-draft-bg);color:var(--kb-draft)}
+html.kx-embed .ico.t-red{background:var(--kb-alert-bg);color:var(--kb-alert)}
+html.kx-embed .ico.t-blue{background:var(--kb-act-bg);color:var(--kb-action)}
+/* Boutons : 36 px, bleu d'action, aucun effet de géométrie */
+html.kx-embed .btn{min-height:36px;padding:0 14px;border-radius:8px;background:var(--kb-action);color:var(--kb-on-action);font-weight:600;font-size:.86rem;transition:background-color var(--kb-fast) var(--ease),border-color var(--kb-fast) var(--ease)}
+html.kx-embed .btn:hover{filter:none;background:var(--kb-action-h)}
+html.kx-embed .btn:active{transform:none}
+html.kx-embed :is(.btn.blue,.btn.white,.resetall){background:var(--kb-action);color:var(--kb-on-action)}
+html.kx-embed :is(.btn.blue,.btn.white,.resetall):hover{background:var(--kb-action-h)}
+html.kx-embed :is(.btn.ghost,.btn.outline){background:var(--surface);color:var(--kb-ink);border:1px solid var(--kb-rule)}
+html.kx-embed :is(.btn.ghost,.btn.outline):hover{background:var(--surface-alt);border-color:var(--kb-action)}
+html.kx-embed .btn.sm{min-height:36px;padding:0 12px;font-size:.82rem}
+html.kx-embed .lnk{color:var(--kb-action);min-height:36px}
+html.kx-embed a{color:var(--kb-action)}
+/* Barre d'outils (remplace l'en-tête de l'app) */
+html.kx-embed .crumb{background:var(--surface);border-bottom:1px solid var(--kb-rule)}
+html.kx-embed .crumb .r > :not(.kx-tools){display:none}
+html.kx-embed .kx-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+html.kx-embed .cpick{background:var(--surface);border:1px solid var(--kb-rule);border-radius:8px;height:36px}
+html.kx-embed .cpick select{border:0;min-height:34px;background:transparent}
+html.kx-embed .status{background:var(--kb-act-bg);color:var(--kb-action);border-radius:999px;font-weight:650}
+/* En-tête de vue : à plat, texte seul (comme .kx-hero) */
+html.kx-embed .hero{background:none;color:var(--kb-ink);border-radius:0;padding:4px 0 18px;margin:0 0 18px;border-bottom:1px solid var(--kb-rule);overflow:visible}
+html.kx-embed .hero svg.ill{display:none}
+html.kx-embed .hero small{color:var(--kb-live);font-size:.78rem;font-weight:650;letter-spacing:0;text-transform:none}
+html.kx-embed .hero .kx-h{margin:6px 0 8px;font-size:1.45rem;font-weight:700;line-height:1.12;color:var(--kb-navy)}
+html.kx-embed .hero p{color:var(--kb-ink-2);max-width:62ch;font-size:.95rem;line-height:1.55}
+html.kx-embed .hero .upd{color:var(--kb-ink-3)}
+html.kx-embed .hero .upd b[style]{color:var(--kb-ink)!important}
+/* Panneaux : filet unique, rayon 12 px, sans ombre */
+html.kx-embed :is(.panel,.cbanner,.warnbox){border-radius:12px;box-shadow:none}
+html.kx-embed .warnbox{border:1px solid var(--kb-rule);background:var(--kb-draft-bg)}
+html.kx-embed .cbanner .chip{min-height:32px;transition:background-color var(--kb-fast) var(--ease),border-color var(--kb-fast) var(--ease)}
+html.kx-embed .cbanner .chip.on{background:var(--kb-action);border-color:var(--kb-action);color:var(--kb-on-action)}
+/* Chiffres clés : un registre d'un seul tenant, à filets */
+html.kx-embed .kpis{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:0;background:var(--surface);border:1px solid var(--kb-rule);border-radius:12px;overflow:hidden}
+html.kx-embed .kpis .kpi{border:0;border-right:1px solid var(--kb-rule);border-bottom:1px solid var(--kb-rule);margin:0 -1px -1px 0;border-radius:0;background:var(--surface);animation:none}
+html.kx-embed .kpi .h{color:var(--kb-ink-2);font-size:.82rem;font-weight:650}
+html.kx-embed .kpi div.n{font-weight:700;font-size:1.9rem;color:var(--kb-navy)}
+@media (max-width:640px){html.kx-embed .kpis{grid-template-columns:1fr 1fr}html.kx-embed .kpis .kpi:last-child:nth-child(odd){grid-column:1/-1}}
+/* Étiquettes : minuscules grasses, jamais de capitales espacées */
+html.kx-embed :is(.list th,h5,.kh>span,.brand .ctx small){text-transform:none;letter-spacing:0;font-size:.78rem;font-weight:650;color:var(--kb-ink-3)}
+html.kx-embed .badge{letter-spacing:0;font-weight:650;font-size:.78rem;border-radius:999px}
+html.kx-embed .new{background:var(--kb-draft-bg);color:var(--kb-draft);letter-spacing:0;font-weight:650;font-size:.72rem;border-radius:999px}
+html.kx-embed .row{transition:background-color var(--kb-fast) var(--ease)}
+html.kx-embed .row:hover{background:var(--surface-alt)}
+html.kx-embed .box{border-radius:8px}
+/* Tiroir, fenêtre, galerie */
+html.kx-embed .drawer{background:var(--surface);border-left:1px solid var(--kb-rule);transition:transform var(--kb-slow) var(--ease)}
+html.kx-embed .drawer h2{border-left:3px solid var(--kb-action);color:var(--kb-navy)}
+html.kx-embed :is(.dbg,.modal){background:var(--kb-scrim);transition:opacity var(--kb-mid) var(--ease)}
+html.kx-embed .modal .inner{border-radius:12px;transition:transform var(--kb-mid) var(--ease)}
+html.kx-embed :is(.drawer .iconbtn,.modal .iconbtn){border-radius:8px;border-color:var(--kb-rule);color:var(--kb-ink)}
+html.kx-embed .gal .gmain{background:var(--kb-photo);border-color:var(--kb-rule);border-radius:12px}
+html.kx-embed .dhead .thumb{border-radius:12px;box-shadow:none}
+html.kx-embed #lbx{background:rgba(6,25,42,.94)}
+html.kx-embed #lbx .lstage img{background:var(--kb-photo)}
+html.kx-embed .toast{background:var(--kb-navy);color:var(--surface);border-radius:8px}
+html.kx-embed .view.on{animation:fadeIn var(--kb-mid) var(--ease)}
+html.kx-embed .stag{animation:fadeIn var(--kb-slow) var(--ease) both}
+html.kx-embed .goitem.open .gobody{animation:fadeIn var(--kb-mid) var(--ease)}
+html.kx-embed .src{color:var(--kb-ink-3)}
+@media (pointer:coarse){html.kx-embed :is(.btn,.btn.sm,.lnk,.cpick,input[type=number],input[type=text],select){min-height:44px;font-size:16px}}
+/* Disposition selon la largeur du contenu (iframe) */
+@media (min-width:981px){html.kx-embed .wrap{grid-template-columns:300px 1fr}}
+html.kx-embed main{container-type:inline-size}
+@container (max-width:820px){html.kx-embed .row{grid-template-columns:34px 46px minmax(0,1fr) 70px 120px 28px}html.kx-embed .row > :is(:nth-child(5),:nth-child(6)){display:none}html.kx-embed .goinner{padding-left:18px}}
+html.kx-embed .kx-crit > summary{display:none}
+@media (max-width:980px){
+  html.kx-embed aside{height:auto;border-right:0;border-bottom:1px solid var(--kb-rule)}
+  html.kx-embed .kx-crit > summary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;padding:0 12px;margin-top:8px;border:1px solid var(--kb-rule);border-radius:8px;cursor:pointer;font-weight:650;color:var(--kb-ink);list-style:none}
+  html.kx-embed .kx-crit > summary::-webkit-details-marker{display:none}
+  html.kx-embed .kx-crit > summary::after{content:"";width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform var(--kb-mid) var(--ease)}
+  html.kx-embed .kx-crit[open] > summary::after{transform:rotate(225deg)}
+}
+html.kx-embed[data-kb-motion="off"] *{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){html.kx-embed *{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">N</div><span class="name">NAKEWENZE</span>
+    <span class="div"></span>
+    <div class="ctx"><small>Outil</small><b>Product Hunter</b></div>
+  </div>
+  <div class="hright">
+    <label class="cpick" title="Pays ciblé"><select id="country" aria-label="Pays ciblé"></select></label>
+    <span class="pill"><span class="ico xs t-gold" data-i="cart"></span><span id="evl">Black Friday</span> <b id="bf">–</b></span>
+    <button class="btn blue sm" onclick="openAdd()"><span data-i="plus" class="svgw"></span>Scorer un produit</button>
+    <button class="iconbtn" id="themeBtn" title="Mode jour / nuit" onclick="toggleTheme()"></button>
+    <div class="avatar"><i>C</i><div>Claudieu<small id="avCountry">Nakewenze · US</small></div></div>
+  </div>
+</header>
+
+<div class="wrap">
+<aside>
+  <nav class="nav">
+    <a class="navitem" href="#dashboard" data-v="dashboard"><span class="ico sm t-blue" data-i="grid"></span>Tableau de bord</a>
+    <a class="navitem" href="#produits-go" data-v="produits-go"><span class="ico sm t-green" data-i="checkc"></span>Produits GO<span class="cnt" id="navGo">0</span></a>
+  </nav>
+
+  <div class="side-h"><h2>Critères de validation</h2><span class="mode strict" id="modeBadge">Mode strict</span></div>
+  <p class="side-sub">Par défaut : tes critères stricts Nakewenze. Si tu modifies un réglage, l'icône de réinitialisation apparaît à côté.</p>
+
+  <div class="grp">Règles de marge</div>
+  <div class="field"><div class="flab">Règle COGS minimum <span class="v" id="v-mult"></span><button class="rst r" data-k="mult" title="Revenir au critère strict"></button></div>
+    <input type="range" id="mult" min="2" max="5" step="0.1"><div class="hint">Prix de vente ≥ X × (produit + livraison)</div></div>
+  <div class="field"><div class="flab">CPA cible (% de la marge brute) <span class="v" id="v-cpa"></span><button class="rst r" data-k="cpa"></button></div>
+    <input type="range" id="cpa" min="40" max="100" step="1"><div class="hint">Critère : 60–70 % de la marge brute</div></div>
+
+  <div class="grp">Verdict</div>
+  <div class="field"><div class="flab">Seuil GO <span class="v" id="v-go"></span><button class="rst r" data-k="go"></button></div><input type="range" id="go" min="6" max="9" step="0.1"></div>
+  <div class="field"><div class="flab">Seuil TEST <span class="v" id="v-test"></span><button class="rst r" data-k="test"></button></div><input type="range" id="test" min="4" max="7" step="0.1"></div>
+
+  <div class="grp">Marché</div>
+  <div class="field"><div class="flab">Saturation maximum <span class="v" id="v-sat"></span><button class="rst r" data-k="sat"></button></div>
+    <input type="range" id="sat" min="1" max="5" step="1"><div class="hint">Au-delà d'environ 20 boutiques sur le même angle = saturé</div></div>
+  <div class="field"><div class="flab">Niche verrouillée <button class="rst r" data-k="niche"></button></div><select id="niche"></select><div class="hint">Cohérence boutique (étape 2)</div></div>
+  <div class="field"><div class="flab">Fourchette prix de vente <span class="v" id="v-price"></span><button class="rst r" data-k="price"></button></div><div class="duo"><input type="number" id="pmin"><input type="number" id="pmax"></div></div>
+
+  <div class="grp">Hypothèses de calcul</div>
+  <div class="field"><div class="flab">Livraison US si non incluse <span class="v" id="v-ship"></span><button class="rst r" data-k="ship"></button></div><input type="range" id="ship" min="0" max="12" step="0.5"></div>
+  <div class="field"><div class="flab">Taux EUR → USD <span class="v" id="v-fx"></span><button class="rst r" data-k="fx"></button></div><input type="range" id="fx" min="1" max="1.3" step="0.01"></div>
+  <div class="field"><div class="flab">Budget test / produit <span class="v" id="v-bud"></span><button class="rst r" data-k="bud"></button></div><input type="range" id="bud" min="60" max="400" step="10"></div>
+
+  <div class="grp">Filtres bloquants</div>
+  <label class="tg"><input type="checkbox" id="strict3"><span class="sw"></span>Masquer sous la règle COGS<button class="rst" data-k="strict3"></button></label>
+  <label class="tg"><input type="checkbox" id="noBulky"><span class="sw"></span>Exclure les encombrants<button class="rst" data-k="noBulky"></button></label>
+  <label class="tg"><input type="checkbox" id="noHealth"><span class="sw"></span>Exclure les allégations santé<button class="rst" data-k="noHealth"></button></label>
+  <label class="tg"><input type="checkbox" id="onlyNow"><span class="sw"></span>Vendable maintenant uniquement<button class="rst" data-k="onlyNow"></button></label>
+  <label class="tg"><input type="checkbox" id="vogue"><span class="sw"></span>En vogue dans le pays uniquement<button class="rst" data-k="vogue"></button></label>
+  <label class="tg"><input type="checkbox" id="hideNo"><span class="sw"></span>Masquer les NO-GO<button class="rst" data-k="hideNo"></button></label>
+
+  <button class="btn resetall" onclick="resetAll()"><span data-i="reset" class="svgw"></span>Revenir aux critères stricts</button>
+
+  <div class="crit-card">
+    <b>Pondération du protocole</b>
+    <table>
+      <tr><td>1 · Identification / effet waouh</td><td>15 %</td></tr>
+      <tr><td>2 · Marché & cohérence boutique</td><td>10 %</td></tr>
+      <tr><td>3 · Tendance & saison</td><td>10 %</td></tr>
+      <tr><td>4 · Concurrence Amazon</td><td>10 %</td></tr>
+      <tr><td>5 · Marges (règle 3×)</td><td>25 %</td></tr>
+      <tr><td>6 · Paysage pubs Meta</td><td>15 %</td></tr>
+      <tr><td>7 · Faisabilité du lancement</td><td>15 %</td></tr>
+    </table>
+    <div style="margin-top:8px">GO ≥ 7,0 · TEST 5,5–6,9 · NO-GO &lt; 5,5<br>Un critère bloquant plafonne le verdict à TEST.</div>
+  </div>
+</aside>
+
+<main>
+  <div class="crumb">
+    <div class="l"><span class="ico sm t-navy" data-i="target"></span>Vous êtes dans la boutique <b>Nakewenze</b> · marché <span class="cname">États-Unis</span></div>
+    <div class="r"><span>Recherche produit</span> › <b style="color:var(--txt)" id="crumbView">Tableau de bord</b> <span class="status">Protocole 7 étapes</span></div>
+  </div>
+
+  <!-- ===== VUE TABLEAU DE BORD ===== -->
+  <section class="view" id="v-dashboard">
+    <div class="hero">
+      <small>Nakewenze · Meta Ads</small>
+      <h1>Chasseur de produits</h1>
+      <p>Les produits réels du moment, passés au crible de tes critères stricts de validation.</p>
+      <div class="upd" id="upd">Chargement des produits…</div>
+      <div class="acts">
+        <a class="btn white" href="#produits-go"><span data-i="checkc" class="svgw"></span>Voir les produits GO</a>
+        <button class="btn outline" onclick="openAdd()"><span data-i="plus" class="svgw"></span>Scorer un produit AutoDS</button>
+        <button class="btn outline" onclick="resetAll()"><span data-i="reset" class="svgw"></span>Critères stricts</button>
+      </div>
+      <svg class="ill" width="210" height="130" viewBox="0 0 210 130" fill="none"><circle cx="110" cy="66" r="62" fill="#ffffff" fill-opacity=".06"/><rect x="40" y="22" width="120" height="82" rx="10" fill="#e9eef7"/><rect x="40" y="22" width="120" height="14" rx="7" fill="#c9d5e8"/><circle cx="50" cy="29" r="2.5" fill="#3d5c99"/><circle cx="58" cy="29" r="2.5" fill="#3d5c99" fill-opacity=".5"/><rect x="56" y="70" width="10" height="24" rx="2" fill="#8ea6cf"/><rect x="72" y="58" width="10" height="36" rx="2" fill="#8ea6cf"/><rect x="88" y="64" width="10" height="30" rx="2" fill="#8ea6cf"/><rect x="104" y="44" width="10" height="50" rx="2" fill="#3d5c99"/><path d="M54 62 L76 50 L92 56 L110 38 L130 44" stroke="#3d5c99" stroke-width="2" stroke-dasharray="3 3"/><rect x="128" y="62" width="58" height="40" rx="8" fill="#fff"/><circle cx="146" cy="82" r="9" stroke="#3d5c99" stroke-width="4" stroke-dasharray="40 20"/><rect x="160" y="76" width="18" height="4" rx="2" fill="#c9d5e8"/><rect x="160" y="84" width="12" height="4" rx="2" fill="#c9d5e8"/><rect x="150" y="8" width="34" height="18" rx="9" fill="#fff"/><path d="M158 20 L165 14 L170 18 L177 12" stroke="#16a34a" stroke-width="2"/></svg>
+    </div>
+
+    <div class="cbanner" id="cban1"></div>
+
+    <div class="kpis">
+      <div class="panel kpi stag"><div class="h"><span class="ico t-slate" data-i="box"></span>Produits scannés</div><div class="n" id="k-all">0</div></div>
+      <div class="panel kpi stag" style="animation-delay:.05s"><div class="h"><span class="ico t-blue" data-i="filter"></span>Passent tes critères</div><div class="n" id="k-pass">0</div></div>
+      <div class="panel kpi stag" style="animation-delay:.1s"><div class="h"><span class="ico t-green" data-i="checkc"></span>GO</div><div class="n" id="k-go" style="color:var(--go)">0</div></div>
+      <div class="panel kpi stag" style="animation-delay:.15s"><div class="h"><span class="ico t-amber" data-i="flask"></span>TEST</div><div class="n" id="k-test" style="color:var(--test)">0</div></div>
+      <div class="panel kpi stag" style="animation-delay:.2s"><div class="h"><span class="ico t-teal" data-i="dollar"></span>Budget top 5</div><div class="n mono" id="k-bud">$0</div></div>
+    </div>
+
+    <div class="sec">
+      <div><h3><span class="ico sm t-red" data-i="flame"></span>Top 5 à tester en premier</h3><p>Les 5 meilleurs scores qui passent tous tes critères. Clique sur une ligne pour la fiche complète.</p></div>
+      <button class="lnk" onclick="copyBatch()"><span data-i="copy" class="svgw"></span>Copier le top 5</button>
+    </div>
+    <div class="panel rows" id="top5"></div>
+
+    <div class="sec"><div><h3><span class="ico sm t-navy" data-i="list"></span>Tous les produits</h3><p>Clique sur une colonne pour trier.</p></div></div>
+    <div class="toolbar">
+      <input type="text" id="q" placeholder="Rechercher un produit…">
+      <select id="season"><option value="">Toutes saisons</option><option value="nov">Pic novembre</option><option value="q4">Q4 / cadeaux</option><option value="dec">Décembre</option><option value="all">Toute l'année</option><option value="jan">Janvier</option></select>
+    </div>
+    <div class="panel tablewrap">
+    <table class="list">
+      <thead><tr>
+        <th data-k="score">Score</th><th data-k="name">Produit</th><th data-k="verdict">Verdict</th>
+        <th data-k="cost" class="hide-m">COGS</th><th data-k="price" class="hide-m">Prix</th><th data-k="mult">Ratio</th>
+        <th data-k="profit" class="hide-m">Profit / vente</th><th data-k="cpaMax" class="hide-m">CPA max</th>
+      </tr></thead>
+      <tbody id="tb"></tbody>
+    </table>
+    </div>
+    <div class="src">
+      COGS = produit + livraison US. Marge brute = prix − COGS − frais (3 % + 0,30 $). CPA max rentable = marge brute. Profit / vente = marge brute − CPA cible. Calculé sur le milieu des fourchettes.<br>
+      <b>Sources des données :</b> <span id="srclist">—</span>. Les notes d'effet waouh, de problème résolu et de saturation sont des estimations Nakewenze.
+    </div>
+  </section>
+
+  <!-- ===== VUE PRODUITS GO ===== -->
+  <section class="view" id="v-produits-go">
+    <div class="hero">
+      <small>Nakewenze · Espace GO</small>
+      <h1>Produits GO</h1>
+      <p>Uniquement les produits qui passent 100 % de tes critères stricts. Pour chacun : fournisseurs, concurrents et pubs actives, puis la checklist à cocher avant de mettre de l'argent.</p>
+      <div class="upd" id="upd2"></div>
+    </div>
+    <div class="cbanner" id="cban2"></div>
+    <div class="warnbox"><span class="ico t-amber" data-i="shield"></span>
+      <div><b>Vérifié pour toi :</b> pour chaque produit GO, j'ai contrôlé moi-même la marge, la vraie annonce fournisseur AliExpress (note et ventes) et les pubs Facebook actives dans le pays choisi (<span class="cname">États-Unis</span>). <b style="color:var(--go)">Prêt à tester</b> = tu peux lancer ta pub directement. <b style="color:var(--no)">Non prêt</b> = un contrôle a échoué, la raison est affichée.</div>
+    </div>
+    <div class="sec"><div><h3><span class="ico sm t-green" data-i="checkc"></span><span id="goTitle">Liste GO</span></h3><p>Clique sur un produit pour ouvrir ses liens et sa checklist.</p></div>
+      <button class="lnk" onclick="copyGo()"><span data-i="copy" class="svgw"></span>Copier la liste GO</button></div>
+    <div class="panel rows" id="golist"></div>
+    <div class="src">
+      <b>À propos des liens :</b> chaque lien ouvre une recherche en direct sur le site officiel, avec le mot-clé du produit déjà rempli. Les résultats sont donc toujours à jour.<br>
+      • <b>Facebook / Instagram</b> : la Meta Ad Library affiche directement les pubs actives dans le pays choisi (<span class="cname">États-Unis</span>), avec le mot-clé dans la langue du pays.<br>
+      • <b>TikTok et Google</b> ne permettent pas d'ouvrir une recherche de pubs déjà remplie par lien : l'outil s'ouvre, et tu colles le mot-clé avec le bouton « Copier ». La TikTok Ad Library ne couvre que les pubs diffusées en Europe.
+    </div>
+  </section>
+</main>
+</div>
+
+<div class="dbg" id="dbg" onclick="closeD()"></div>
+<div class="drawer" id="drawer"></div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeAdd()"><div class="panel inner">
+  <h3><span class="ico sm t-blue" data-i="plus"></span>Scorer un produit AutoDS</h3>
+  <div class="side-sub" style="margin:4px 0 0;color:var(--mut)">Entre le coût réel trouvé sur AutoDS : l'app applique le même protocole en 7 étapes.</div>
+  <div class="g">
+    <div style="grid-column:1/3"><label>Nom du produit (en anglais, pour les recherches)</label><input type="text" id="a-name" placeholder="ex. Heated Car Seat Cushion"></div>
+    <div><label>Coût produit ($)</label><input type="number" id="a-cost" value="10"></div>
+    <div><label>Livraison US ($)</label><input type="number" id="a-shipc" value="0"></div>
+    <div><label>Prix de vente ($)</label><input type="number" id="a-price" value="34.99"></div>
+    <div><label>Catégorie</label><select id="a-cat"></select></div>
+    <div><label>Saturation (1 vierge → 5 saturé)</label><input type="number" id="a-sat" min="1" max="5" value="3"></div>
+    <div><label>Effet waouh en vidéo (1-5)</label><input type="number" id="a-d" min="1" max="5" value="3"></div>
+    <div><label>Problème résolu (1-5)</label><input type="number" id="a-p" min="1" max="5" value="3"></div>
+    <div><label>Saison</label><select id="a-s"><option value="nov">Pic novembre</option><option value="q4">Q4 / cadeaux</option><option value="dec">Décembre</option><option value="all">Toute l'année</option><option value="jan">Janvier</option></select></div>
+    <div><label>Encombrant ?</label><select id="a-b"><option value="0">Non</option><option value="1">Oui</option></select></div>
+    <div><label>Allégation santé ?</label><select id="a-h"><option value="0">Non</option><option value="1">Oui</option></select></div>
+    <div style="grid-column:1/3"><label>Kit pub (optionnel, en anglais) · le problème du client</label><input type="text" id="a-pain" placeholder="ex. Freezing car seats every winter morning"></div>
+    <div style="grid-column:1/3"><label>La promesse du produit</label><input type="text" id="a-prom" placeholder="ex. A warm seat in 60 seconds"></div>
+    <div style="grid-column:1/3"><label>La scène de démo à filmer</label><input type="text" id="a-scene" placeholder="ex. plugging the cushion in and a hand feeling the warmth"></div>
+    <div style="grid-column:1/3" class="sub">Vide = l'app rédige automatiquement le kit à partir du nom du produit.</div>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+    <button class="btn ghost" onclick="closeAdd()">Annuler</button><button class="btn" onclick="saveAdd()">Scorer</button>
+  </div>
+</div></div>
+<div class="modal kitm" id="kitM" onclick="if(event.target===this)closeKit()"><div class="panel inner"><div id="kitBody"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script id="nkw-data" type="application/json">{}</script>
+<script>
+/* ===== ICÔNES FLAT (SVG) ===== */
+const IP={
+ grid:'<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+ checkc:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16.5 9.5"/>',
+ check:'<path d="M5 12.5l4.2 4.2L19 7"/>',
+ target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
+ box:'<path d="M3.5 7.5L12 3l8.5 4.5v9L12 21l-8.5-4.5z"/><path d="M3.5 7.5L12 12l8.5-4.5M12 12v9"/>',
+ filter:'<path d="M4 5h16l-6 7.5V19l-4 1.5v-8z"/>',
+ flask:'<path d="M9 3h6M10 3v6L4.8 18.2A1.8 1.8 0 006.4 21h11.2a1.8 1.8 0 001.6-2.8L14 9V3"/><path d="M7.5 15h9"/>',
+ dollar:'<path d="M12 2.5v19"/><path d="M16.5 6.5c-.8-1.3-2.4-2-4.5-2-2.6 0-4.5 1.3-4.5 3.4 0 4.6 9.5 2.4 9.5 7.6 0 2.1-2 3.6-5 3.6-2.3 0-4.1-.9-5-2.4"/>',
+ flame:'<path d="M12 21c3.9 0 6.5-2.6 6.5-6.2 0-4-3.2-6-4.3-10.3-2.2 1.6-3.2 3.7-3.2 5.8-1.3-.7-2-2-2.2-3.4C6.9 8.6 5.5 11 5.5 14.8 5.5 18.4 8.1 21 12 21z"/>',
+ list:'<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+ copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h8"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ reset:'<path d="M4 12a8 8 0 108-8H8"/><path d="M8 1.5L5 4l3 2.5"/>',
+ moon:'<path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z"/>',
+ sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+ truck:'<path d="M2.5 6h11v10h-11zM13.5 9.5h4l3 3.5v3h-7"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+ store:'<path d="M3.5 9.5L5 4h14l1.5 5.5"/><path d="M3.5 9.5a2.8 2.8 0 005.6 0 2.8 2.8 0 005.8 0 2.8 2.8 0 005.6 0"/><path d="M5 12v8h14v-8M10 20v-5h4v5"/>',
+ mega:'<path d="M3.5 10v4h3l9 4.5v-13l-9 4.5z"/><path d="M6.5 14l1.5 5.5h2.5L9 14.8M19 9.5a3.5 3.5 0 010 5"/>',
+ trend:'<path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/>',
+ star:'<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+ chev:'<path d="M6 9l6 6 6-6"/>',
+ ext:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/>',
+ shield:'<path d="M12 3l8 3v6c0 4.6-3.3 7.9-8 9-4.7-1.1-8-4.4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+ info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/>',
+ alert:'<path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.5"/>',
+ cart:'<path d="M3 4h2.5l2.2 11h10.6l2.2-8H7"/><circle cx="9.5" cy="19" r="1.5"/><circle cx="17" cy="19" r="1.5"/>',
+ key:'<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14.5 8.5l2 2"/>',
+ film:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/>'
+};
+const svg=(n,cls="")=>`<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${IP[n]||""}</svg>`;
+const ico=(n,tone="t-blue",size="")=>`<span class="ico ${size} ${tone}">${svg(n)}</span>`;
+function paintIcons(root=document){
+  root.querySelectorAll("[data-i]").forEach(el=>{if(!el.dataset.done){el.innerHTML=svg(el.dataset.i,el.classList.contains("svgw")?"":"");el.dataset.done=1;if(el.classList.contains("svgw"))el.style.display="inline-flex";}});
+  root.querySelectorAll(".rst").forEach(b=>{if(!b.innerHTML)b.innerHTML=svg("reset");});
+}
+
+/* ===== DONNÉES ===== */
+let DATA=null,BASE=[],FIRST=true,REMOTE_OK=false,ALLSAME=false,VIEW="dashboard";
+let SRC={USER:{name:"Ajouté par toi (AutoDS)",url:""}};
+const SEASON={nov:"Pic novembre",q4:"Q4 / cadeaux",dec:"Décembre",all:"Toute l'année",jan:"Janvier"};
+const SAT=["","Vierge","Faible","Moyenne","Élevée","Saturé"];
+let CATS=[];
+
+/* ===== CRITÈRES STRICTS NAKEWENZE ===== */
+const STRICT={mult:3,cpa:65,go:7,test:5.5,sat:4,niche:"",pmin:0,pmax:200,ship:4,fx:1.10,bud:150,strict3:true,noBulky:true,noHealth:true,onlyNow:true,hideNo:false,vogue:true};
+/* ===== PAYS CIBLES ===== */
+const COUNTRIES={
+ US:{n:"États-Unis",f:"🇺🇸",cur:"USD",loc:"en-US",vat:0,lang:"en",amz:"amazon.com",tax:"Taxes ajoutées au paiement"},
+ CA:{n:"Canada",f:"🇨🇦",cur:"CAD",loc:"en-CA",vat:0,lang:"en",amz:"amazon.ca",tax:"Taxes ajoutées au paiement"},
+ GB:{n:"Royaume-Uni",f:"🇬🇧",cur:"GBP",loc:"en-GB",vat:.20,lang:"en",amz:"amazon.co.uk",tax:"TVA 20 % incluse dans le prix"},
+ AU:{n:"Australie",f:"🇦🇺",cur:"AUD",loc:"en-AU",vat:.10,lang:"en",amz:"amazon.com.au",tax:"GST 10 % incluse dans le prix"},
+ FR:{n:"France",f:"🇫🇷",cur:"EUR",loc:"fr-FR",vat:.20,lang:"fr",amz:"amazon.fr",tax:"TVA 20 % incluse dans le prix"},
+ BE:{n:"Belgique",f:"🇧🇪",cur:"EUR",loc:"fr-BE",vat:.21,lang:"fr",amz:"amazon.com.be",tax:"TVA 21 % incluse dans le prix"},
+ CH:{n:"Suisse",f:"🇨🇭",cur:"CHF",loc:"fr-CH",vat:.081,lang:"de",amz:"amazon.de",tax:"TVA 8,1 % incluse dans le prix"},
+ DE:{n:"Allemagne",f:"🇩🇪",cur:"EUR",loc:"de-DE",vat:.19,lang:"de",amz:"amazon.de",tax:"TVA 19 % incluse dans le prix"},
+ NL:{n:"Pays-Bas",f:"🇳🇱",cur:"EUR",loc:"nl-NL",vat:.21,lang:"nl",amz:"amazon.nl",tax:"TVA 21 % incluse dans le prix"},
+ ES:{n:"Espagne",f:"🇪🇸",cur:"EUR",loc:"es-ES",vat:.21,lang:"es",amz:"amazon.es",tax:"TVA 21 % incluse dans le prix"},
+ IT:{n:"Italie",f:"🇮🇹",cur:"EUR",loc:"it-IT",vat:.22,lang:"it",amz:"amazon.it",tax:"TVA 22 % incluse dans le prix"}};
+const LANGN={en:"anglais",fr:"français",de:"allemand",nl:"néerlandais",es:"espagnol",it:"italien"};
+let FXR={USD:1,CAD:1.42563,GBP:0.755149,AUD:1.468309,EUR:0.903491,CHF:0.83437};
+let COUNTRY=(()=>{try{const u=new URLSearchParams(location.search).get("pays");if(u&&COUNTRIES[u.toUpperCase()])return u.toUpperCase();}catch(e){}const c=(()=>{try{return JSON.parse(localStorage.getItem("nkw_country"))}catch(e){return null}})();return COUNTRIES[c]?c:"US";})();
+const CT=()=>COUNTRIES[COUNTRY];
+const KX=()=>FXR[CT().cur]||1;
+let _nf={};
+const $=id=>document.getElementById(id);
+const fmt=n=>{const c=CT();const k=c.cur+c.loc;if(!_nf[k])_nf[k]=new Intl.NumberFormat(c.loc,{style:"currency",currency:c.cur,minimumFractionDigits:2,maximumFractionDigits:2});return (n<0?"−":"")+_nf[k].format(Math.abs(n));};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(x,x0,x1,y0,y1)=>y0+(clamp(x,x0,x1)-x0)*(y1-y0)/(x1-x0);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+
+let custom=store.get("nkw_custom2",[]);
+let checks=store.get("nkw_checks",{});
+let sortK="score",sortDir=-1,current=[],openGo=null;
+const all=()=>BASE.concat(custom);
+
+function readS(){return{mult:+$("mult").value,cpa:+$("cpa").value,go:+$("go").value,test:+$("test").value,sat:+$("sat").value,niche:$("niche").value,pmin:+$("pmin").value,pmax:+$("pmax").value,ship:+$("ship").value,fx:+$("fx").value,bud:+$("bud").value,strict3:$("strict3").checked,noBulky:$("noBulky").checked,noHealth:$("noHealth").checked,onlyNow:$("onlyNow").checked,hideNo:$("hideNo").checked,vogue:$("vogue").checked};}
+function writeS(o){for(const k in o){const el=$(k);if(!el)continue;if(el.type==="checkbox")el.checked=!!o[k];else el.value=o[k];}}
+
+/* ===== PROTOCOLE 7 ÉTAPES ===== */
+const STEPS=[["wow","Identification / effet waouh",.15],["market","Marché & cohérence boutique",.10],["trend","Tendance & saison",.10],["amazon","Concurrence Amazon",.10,true],["marge","Marges (règle COGS)",.25],["meta","Paysage pubs Meta",.15,true],["launch","Faisabilité du lancement",.15]];
+
+function analyse(p,s){
+  const K=KX(), VAT=CT().vat, fx=(p.cur==="EUR"?s.fx:1)*K, shipAdd=p.shipIncl?0:s.ship*K;
+  const costLo=p.cLo*fx+shipAdd,costHi=p.cHi*fx+shipAdd,priceLo=p.pLo*fx,priceHi=p.pHi*fx;
+  const cost=(costLo+costHi)/2, price=(priceLo+priceHi)/2, priceNet=price/(1+VAT), priceUsd=price/K;
+  const fees=price*0.03+0.30*K, mult=priceNet/cost, gross=priceNet-cost-fees;
+  const cpaTarget=gross*s.cpa/100, profit=gross-cpaTarget, floor=s.mult*cost*(1+VAT);
+  const late=/Trop tard/.test(p.flag||""), bundle=/Bundle/.test(p.flag||"");
+  const marge = mult>=4?lerp(mult,4,5,9,10):mult>=3?lerp(mult,3,4,7,8):mult>=2.5?lerp(mult,2.5,3,4,6):lerp(mult,1.5,2.5,0,3);
+  const market = !s.niche?6:(s.niche===p.cat?10:3);
+  const trend = ({nov:9,q4:8,dec:7,all:6,jan:3})[p.season]-(late?6:0);
+  const priceOk=(priceUsd>=25&&priceUsd<=80)?10:(priceUsd>=20&&priceUsd<=130)?7:4;
+  const amazon = ({1:6,2:7,3:6,4:4,5:2})[p.sat]*0.7+priceOk*0.3;
+  const meta = ({1:6,2:8,3:6,4:4,5:2})[p.sat];
+  let launch=9; const lnotes=[];
+  if(p.bulky){launch-=3;lnotes.push("Encombrant : livraison et retours coûteux");}
+  if(p.health){launch-=2.5;lnotes.push("Allégations santé : risque de refus des pubs Meta");}
+  if(bundle){launch-=3;lnotes.push("Pas vendable seul : à garder pour un bundle ou un upsell");}
+  if(/retours/.test(p.flag||"")){launch-=2;lnotes.push("Risque de retours élevé");}
+  if(/qualité/.test(p.flag||"")){launch-=1.5;lnotes.push("Qualité fournisseur à vérifier");}
+  if(late){launch-=8;lnotes.push("Fenêtre de vente dépassée");}
+  if(p.d<4){launch-=1;lnotes.push("Peu démonstratif en UGC");}
+  launch=clamp(launch,0,10);
+  const wow=clamp(((p.d*0.6+p.p*0.4)-1)/4*10,0,10);
+  const c={wow,market,trend,amazon,marge,meta,launch};
+  const score=clamp(STEPS.reduce((a,[k,,w])=>a+c[k]*w,0),0,10);
+  const flags=[];
+  if(mult<s.mult) flags.push({b:true,t:`Ratio ${mult.toFixed(2)}× sous la règle ${s.mult}× COGS${VAT?" (calculé hors "+(COUNTRY==="AU"?"GST":"TVA")+")":""} : bloquant sauf renégociation fournisseur`});
+  if(VAT) flags.push({b:false,t:`${CT().tax} : ${fmt(price-priceNet)} reviennent à l'État sur chaque vente, la marge est calculée hors taxe`});
+  if(profit<=0) flags.push({b:true,t:"Aucun profit au CPA cible"});
+  if(late) flags.push({b:true,t:"Fenêtre de vente dépassée"});
+  if(s.niche&&s.niche!==p.cat) flags.push({b:false,t:"Hors niche verrouillée : aggrave l'incohérence de la boutique"});
+  if(p.sat>=4) flags.push({b:false,t:"Marché chargé : angle différencié obligatoire"});
+  if(!p.shipIncl) flags.push({b:false,t:`Livraison non incluse dans la source : +${fmt(shipAdd)} estimés`});
+  let verdict=score>=s.go?"GO":score>=s.test?"TEST":"NO", capped=false;
+  if(flags.some(f=>f.b)&&verdict==="GO"){verdict="TEST";capped=true;}
+  if(late||profit<=0) verdict="NO";
+  const fails=[];
+  if(s.niche&&s.niche!==p.cat) fails.push("niche");
+  if(priceUsd<s.pmin||priceUsd>s.pmax) fails.push("prix");
+  if(s.vogue&&!inVogue(p)) fails.push("vogue");
+  if(p.sat>s.sat) fails.push("saturation");
+  if(s.strict3&&mult<s.mult) fails.push("3x");
+  if(s.noBulky&&p.bulky) fails.push("bulky");
+  if(s.noHealth&&p.health) fails.push("health");
+  if(s.onlyNow&&(p.season==="jan"||late)) fails.push("saison");
+  if(s.hideNo&&verdict==="NO") fails.push("no");
+  return{...p,cost,price,priceNet,vat:VAT,costLo,costHi,priceLo,priceHi,fees,mult,gross,cpaMax:gross,cpaTarget,profit,floor,c,score,verdict,capped,flags,lnotes,pass:!fails.length,shipAdd,daily:Math.round(s.bud/9)};
+}
+
+/* ===== LIENS (tous en recherche directe sur les sites officiels) ===== */
+function LINKS(p){
+  const k=p.en, e=encodeURIComponent(k), g=q=>"https://www.google.com/search?q="+encodeURIComponent(q);
+  const kl=kwOf(p), el=encodeURIComponent(kl);
+  const meta=(pf,exact)=>"https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country="+COUNTRY+"&media_type=all&q="+(exact?encodeURIComponent('"'+kl+'"')+"&search_type=keyword_exact_phrase":el+"&search_type=keyword_unordered")+(pf?"&publisher_platforms%5B0%5D="+pf:"");
+  return {
+    suppliers:[
+      ["AliExpress","Recherche produit","#e43225","A","https://www.aliexpress.com/wholesale?SearchText="+e],
+      ["AliExpress · plus vendus","Trié par commandes","#e43225","A","https://www.aliexpress.com/wholesale?SearchText="+e+"&SortType=total_tranpro_desc"],
+      ["Alibaba","Fabricants, prix de gros","#ff6a00","A","https://www.alibaba.com/trade/search?SearchText="+e],
+      ["AliExpress · stock US","Expédié depuis les États-Unis","#e43225","A",g("site:aliexpress.com "+k+" ships from United States")],
+      ["DHgate","Gros petites quantités","#f4511e","D","https://www.dhgate.com/wholesale/search.do?searchkey="+e],
+      ["Temu","Prix plancher marché","#fb7701","T","https://www.temu.com/search_result.html?search_key="+e],
+      ["CJdropshipping","Stock US possible","#1f6feb","C",g("site:cjdropshipping.com "+k)],
+      ["Zendrop","Fournisseur dropshipping US","#5b3cc4","Z",g("site:zendrop.com "+k)],
+      ["Spocket","Fournisseurs US/EU","#3d63dd","S",g("site:spocket.co "+k)],
+      ["AutoDS","Ton compte (catalogue)","#1452f0","A","https://platform.autods.com/"],
+      ["Syncee","Catalogue fournisseurs","#1aa37a","S",g("site:syncee.com "+k)],
+      ["HyperSKU","Sourcing dropshipping","#0c7bdc","H",g("site:hypersku.com "+k)],
+      ["EPROLO","Sourcing + branding","#16a34a","E",g("site:eprolo.com "+k)],
+      ["Made-in-China","Fabricants vérifiés","#c8102e","M",g("site:made-in-china.com "+k)],
+      ["Global Sources","Fabricants asiatiques","#0a4ea2","G",g("site:globalsources.com "+k)],
+      ["Banggood","Gadgets & électronique","#ff6e26","B",g("site:banggood.com "+k)],
+      ["Faire","Grossistes US","#222222","F","https://www.faire.com/search?q="+e],
+      ["Stock US (Google)","Entrepôts aux États-Unis","#4285f4","G",g(k+" dropshipping supplier US warehouse")],
+      ["Grossistes USA (Google)","Wholesale USA","#4285f4","G",g(k+" wholesale supplier USA")]
+    ],
+    competitors:[
+      ["Amazon "+CT().n,"Prix & avis","#ff9900","a","https://www."+CT().amz+"/s?k="+el],
+      ["Amazon · meilleures ventes","Trié par popularité","#ff9900","a","https://www."+CT().amz+"/s?k="+el+"&s=exact-aware-popularity-rank"],
+      ["Amazon · mieux notés","Trié par avis","#ff9900","a","https://www."+CT().amz+"/s?k="+el+"&s=review-rank"],
+      ["Walmart","Grande distribution","#0071ce","W","https://www.walmart.com/search?q="+e],
+      ["Target","Grande distribution","#cc0000","T","https://www.target.com/s?searchTerm="+e],
+      ["eBay","Marketplace","#e53238","e","https://www.ebay.com/sch/i.html?_nkw="+e],
+      ["Etsy","Marketplace","#f1641e","E","https://www.etsy.com/search?q="+e],
+      ["Temu","Marketplace low-cost","#fb7701","T","https://www.temu.com/search_result.html?search_key="+e],
+      ["SHEIN","Marketplace low-cost","#111111","S","https://us.shein.com/pdsearch/"+e+"/"],
+      ["Wish","Marketplace low-cost","#2fb7ec","W","https://www.wish.com/search/"+e],
+      ["Wayfair","Maison & déco","#7f187f","W","https://www.wayfair.com/keyword.php?keyword="+e],
+      ["Best Buy","Électronique","#0046be","B","https://www.bestbuy.com/site/searchpage.jsp?st="+e],
+      ["eBay · vendus récemment","Preuve de demande réelle","#e53238","e","https://www.ebay.com/sch/i.html?_nkw="+e+"&LH_Sold=1&LH_Complete=1"],
+      ["Walmart · meilleures ventes","Trié par ventes","#0071ce","W","https://www.walmart.com/search?q="+e+"&sort=best_seller"],
+      ["Costco","Gros volume","#e31837","C","https://www.costco.com/s?keyword="+e],
+      ["Sam's Club","Gros volume","#0067a0","S","https://www.samsclub.com/search?q="+e],
+      ["Amazon · nouveautés","Nouveaux concurrents","#ff9900","a","https://www.amazon.com/s?k="+e+"&s=date-desc-rank"],
+      ["TikTok Shop","Vendeurs TikTok","#111111","TT",g("site:tiktok.com/shop "+k)],
+      ["Newegg","Tech","#f7a500","N","https://www.newegg.com/p/pl?d="+e],
+      ["Google Shopping","Tous les vendeurs","#4285f4","G","https://www.google.com/search?tbm=shop&q="+e],
+      ["Boutiques Shopify","Concurrents dropshipping","#5e8e3e","S",g("site:myshopify.com "+k)],
+      ["Boutiques en ligne (Google)","Sites concurrents US","#4285f4","G",g("buy "+k+" -amazon -walmart -ebay")]
+    ],
+    ads:[
+      ["Facebook Ads","Pubs actives US · expression exacte","#1877f2","f",meta("facebook",1),1],
+      ["Instagram Ads","Pubs actives US · expression exacte","#d6249f","IG",meta("instagram",1),1],
+      ["Meta · Messenger","Pubs actives US · expression exacte","#0084ff","m",meta("messenger",1),1],
+      ["Meta · recherche large","Tous les mots, toutes plateformes","#0866ff","M",meta("",0),1],
+      ["TikTok Top Ads","Creative Center US · colle le mot-clé","#111111","TT","https://ads.tiktok.com/business/creativecenter/inspiration/topads/pc/en?period=30&region=US",0],
+      ["TikTok · vidéos produit","Recherche TikTok directe","#111111","TT","https://www.tiktok.com/search?q="+e,1],
+      ["TikTok · TikTokMadeMeBuyIt","Vidéos virales du produit","#111111","TT","https://www.tiktok.com/search?q="+encodeURIComponent(k+" tiktokmademebuyit"),1],
+      ["TikTok Ad Library","Pubs diffusées en Europe · colle le mot-clé","#111111","TT","https://library.tiktok.com/ads",0],
+      ["Google Ads Transparency","Pubs Google US · cherche un annonceur","#4285f4","G","https://adstransparency.google.com/?region=US",0],
+      ["Google · annonces Search","Annonces sponsorisées en haut des résultats","#4285f4","G",g("buy "+k),1],
+      ["Google Shopping Ads","Annonces produits sponsorisées","#34a853","G","https://www.google.com/search?tbm=shop&q="+e,1],
+      ["YouTube","Pubs & avis vidéo","#ff0000","▶","https://www.youtube.com/results?search_query="+encodeURIComponent(k+" review"),1],
+      ["Pinterest","Pins & pubs","#e60023","P","https://www.pinterest.com/search/pins/?q="+e,1]
+    ],
+    trends:[
+      ["Google Trends US","12 derniers mois","#4285f4","G","https://trends.google.com/trends/explore?geo=US&date=today%2012-m&q="+e],
+      ["Google Trends US · 5 ans","Saisonnalité","#4285f4","G","https://trends.google.com/trends/explore?geo=US&date=today%205-y&q="+e],
+      ["Reddit","Avis réels d'acheteurs","#ff4500","R","https://www.reddit.com/search/?q="+e],
+      ["YouTube · avis","Tests et retours","#ff0000","▶","https://www.youtube.com/results?search_query="+encodeURIComponent(k+" review")]
+    ]
+  };
+}
+function linkGrid(arr){
+  return `<div class="lgrid">${arr.map(([n,sub,c,l,u])=>`<a class="lk" href="${u}" target="_blank" rel="noopener noreferrer" title="${esc(n)}"><span class="pl" style="background:${c}">${l}</span><span class="nm">${esc(n)}<small>${esc(sub)}</small></span>${svg("ext","ext")}</a>`).join("")}</div>`;
+}
+function linkBlocks(p){
+  const L=LINKS(p);
+  return `
+   <div class="lgroup"><div class="t">${ico("truck","t-teal","sm")}Fournisseurs <small>${L.suppliers.length} liens</small></div>${linkGrid(L.suppliers)}</div>
+   <div class="lgroup"><div class="t">${ico("store","t-violet","sm")}Sites concurrents <small>${L.competitors.length} liens</small></div>${linkGrid(L.competitors)}</div>
+   <div class="lgroup"><div class="t">${ico("mega","t-pink","sm")}Pubs actives : Facebook, Instagram, TikTok, Google <small>${L.ads.length} liens</small></div>${linkGrid(L.ads)}</div>
+   <div class="lgroup"><div class="t">${ico("trend","t-blue","sm")}Tendance & avis <small>${L.trends.length} liens</small></div>${linkGrid(L.trends)}</div>`;
+}
+
+/* ===== VÉRIFICATION AUTOMATIQUE (faite par Claude, aucune étape pour toi) ===== */
+function metaOf(p){return (p.mk&&p.mk[COUNTRY])||(COUNTRY==="US"&&p.auto&&p.auto.meta)||null;}
+function inVogue(p){const m=metaOf(p);return !!(m&&m.ads>=3&&m.old30>=1);}
+function kwOf(p){const m=metaOf(p);return (m&&m.kw)||(p.kwl&&p.kwl[CT().lang])||p.en;}
+function autoCheck(p){
+  const out=[]; const s=S;
+  // 1. Marge
+  out.push({k:"Marge (règle "+s.mult+"× COGS)",st:p.mult>=s.mult?"ok":"bad",t:`${p.mult.toFixed(2)}× calculé sur COGS ${fmt(p.cost)} → prix ${fmt(p.price)}`});
+  // 2. Fournisseur réel AliExpress
+  const a=p.ali; if(!a) out.push({k:"Fournisseur AliExpress",st:"wait",t:"Annonce pas encore relevée"});
+  else{const sold=a.sold?parseFloat(a.sold.replace(/[^\d.]/g,""))*(/k/i.test(a.sold)?1000:1):0;const r=parseFloat(a.rating)||0;
+    const st=a.approx?"bad":(r>=4.6&&sold>=500?"ok":"bad");
+    out.push({k:"Fournisseur (≥ 4,6 ★ et ≥ 500 ventes)",st,t:a.approx?"L'annonce la plus vendue ne correspond pas au bon produit":`${a.sold||"0 vente"} · ${a.rating||"?"} ★ · relevé le ${fmtDate(a.date)}`});}
+  // 3. Meta Ad Library
+  const m=metaOf(p), cn=CT().f+" "+CT().n;
+  if(!m) out.push({k:"Pubs Facebook actives ("+cn+")",st:"wait",t:"Pas encore vérifié pour ce pays : vérification à la prochaine mise à jour"});
+  else{let st="ok",t=`${m.ads.toLocaleString("fr-FR")} pubs actives sur « ${m.kw} » · ${m.old30} pub(s) de plus de 30 jours dans l'échantillon (la plus ancienne : ${m.maxDays} j)${m.date?" · relevé le "+fmtDate(m.date):""}`;
+    if(m.ads<3||m.old30<1){st="bad";t+=" · marché non prouvé";}
+    else if(m.ads>150&&!(m.advSample!=null&&m.advSample<=5)){st="warn";t+=" · marché chargé : utilise un angle différent des pubs existantes";}
+    out.push({k:"Pubs Facebook actives ("+cn+")",st,t});}
+  // 4. Saison
+  out.push({k:"Tendance / saison",st:p.season==="jan"?"warn":"ok",t:SEASON[p.season]+(p.season==="jan"?" : pic en janvier":" : bon moment pour vendre")});
+  // 5-6. Non automatisables
+  out.push({k:"Délai de livraison ("+CT().n+")",st:"info",t:"Non lisible automatiquement : dans AutoDS, choisis l'option d'expédition la plus rapide (« Choice » ou entrepôt US)."});
+  out.push({k:"Prix Amazon",st:"info",t:"Non vérifiable : Amazon interdit l'accès aux agents IA. Ton prix est déjà calé sur le prix marché observé."});
+  return out;
+}
+function readyState(p){const c=autoCheck(p);if(c.some(x=>x.st==="wait"))return "wait";if(c.some(x=>x.st==="bad"))return "no";if(c.some(x=>x.st==="warn"))return "warn";return "ok";}
+const ready=id=>{const p=current.find(x=>x.id===id);return p&&["ok","warn"].includes(p._rs||readyState(p));};
+const RS={ok:["b-READY","Prêt à tester"],warn:["b-READY","PRÊT · angle différent"],no:["b-NO","Non prêt"],wait:["b-CHECK","VÉRIF. EN ATTENTE"]};
+const ICO={ok:["checkc","var(--go)"],warn:["alert","var(--test)"],bad:["x","var(--no)"],wait:["info","var(--soft)"],info:["info","var(--soft)"]};
+function checklist(p){
+  const c=autoCheck(p),rs=readyState(p);
+  return `<div class="check"><div class="t"><span style="display:flex;align-items:center;gap:9px">${ico("shield","t-green","sm")}Vérification automatique${p.auto?` <small style="color:var(--soft);font-weight:500">· ${fmtDate(p.auto.date)}</small>`:""}</span><span class="badge ${RS[rs][0]}">${RS[rs][1]}</span></div>
+   ${c.map(x=>`<div class="ck" style="cursor:default"><span style="color:${ICO[x.st][1]};flex:none;margin-top:1px">${svg(ICO[x.st][0],"svgi")}</span><span><b>${x.k}</b><br><span class="sub">${esc(x.t)}</span></span></div>`).join("")}
+   <div class="sub" style="margin-top:6px">Vérifié par Claude, sans action de ta part. Refait automatiquement chaque lundi.</div></div>`;
+}
+const statusBadge=id=>{const p=current.find(x=>x.id===id);const rs=p?(p._rs||readyState(p)):"wait";return `<span class="badge ${RS[rs][0]}">${rs==="warn"?"PRÊT":RS[rs][1].replace(" À TESTER","")}</span>`;};
+
+/* ===== RENDU ===== */
+const badge=v=>`<span class="badge b-${v}">${v==="NO"?"NO-GO":v}</span>`;
+let S=STRICT;
+const colr=sc=>sc>=S.go?"var(--go)":sc>=S.test?"var(--test)":"var(--no)";
+const col10=v=>v>=7?"var(--go)":v>=5.5?"var(--test)":"var(--no)";
+const useImg=p=>p.img&&(REMOTE_OK||!/^https?:/.test(p.img));
+const thumb=(p,c="")=>useImg(p)?`<img class="thumb ${c}" src="${p.img}" alt="${esc(p.name)}" loading="lazy" onerror="this.outerHTML=phThumb('${c}')">`:phThumb(c);
+function phThumb(c){return `<span class="thumb ph ${c}">${svg("box")}</span>`;}
+const newTag=p=>isNew(p)?'<span class="new">Nouveau</span>':"";
+function same(a,b){return typeof a==="number"?Math.abs(a-b)<1e-9:a===b;}
+
+function rowHTML(p,i,go){
+  return `<div class="row${FIRST?" stag":""}" style="${FIRST?`animation-delay:${Math.min(i,10)*.03}s`:""}" onclick="${go?`toggleGo('${p.id}')`:`openD('${p.id}')`}">
+    <span class="rk">#${i+1}</span>
+    ${thumb(p)}
+    <div class="nm"><b>${newTag(p)}${esc(p.name)}</b><div class="sub">${esc(p.en)} · ${p.cat} · ${SEASON[p.season]}</div></div>
+    <div class="num"><span class="sc" style="color:${colr(p.score)}">${p.score.toFixed(1)}</span><small>/ 10</small></div>
+    <div class="num hm mono">${fmt(p.cost)} → ${fmt(p.price)}<small>COGS → prix</small></div>
+    <div class="num hm mono" style="color:var(--go)">${p.mult.toFixed(2)}×<small>ratio</small></div>
+    <div class="num hm">${go?statusBadge(p.id):`<span class="mono" style="color:var(--go)">${fmt(p.profit)}</span><small>profit / vente</small>`}</div>
+    <span class="chev">${svg(go?"chev":"ext")}</span>
+  </div>`;
+}
+
+function render(){
+  const s=readS(); S=s; store.set("nkw_settings2",s);
+  $("v-mult").textContent=s.mult.toFixed(1)+"×";$("v-cpa").textContent=s.cpa+" %";$("v-go").textContent=s.go.toFixed(1);$("v-test").textContent=s.test.toFixed(1);
+  $("v-sat").textContent=SAT[s.sat];$("v-price").textContent="$"+s.pmin+" – $"+s.pmax;$("v-ship").textContent="$"+s.ship.toFixed(1);$("v-fx").textContent=s.fx.toFixed(2);$("v-bud").textContent="$"+s.bud;
+  let modified=0;
+  document.querySelectorAll(".rst").forEach(b=>{const k=b.dataset.k;const diff=k==="price"?(!same(s.pmin,STRICT.pmin)||!same(s.pmax,STRICT.pmax)):!same(s[k],STRICT[k]);b.classList.toggle("show",diff);if(diff)modified++;});
+  const mb=$("modeBadge");mb.className="mode "+(modified?"custom":"strict");mb.textContent=modified?`${modified} réglage${modified>1?"s":""} modifié${modified>1?"s":""}`:"Mode strict";
+
+  const cb=cbannerHTML();["cban1","cban2"].forEach(id=>{const el=$(id);if(el&&el.dataset.k!==COUNTRY+BASE.length){el.innerHTML=cb;el.dataset.k=COUNTRY+BASE.length;}});
+  document.querySelectorAll(".cname").forEach(x=>x.textContent=CT().n);$("avCountry").textContent="Nakewenze · "+CT().f+" "+COUNTRY;
+  const list=all().map(p=>analyse(p,s)); current=list; list.forEach(p=>p._rs=readyState(p));
+  const pass=list.filter(p=>p.pass);
+  const RANK={ok:0,warn:1,wait:2,no:3};const gos=pass.filter(p=>p.verdict==="GO").sort((a,b)=>(RANK[a._rs]-RANK[b._rs])||(b.score-a.score));
+  $("k-all").textContent=list.length;$("k-pass").textContent=pass.length;
+  $("k-go").textContent=gos.length;$("k-test").textContent=pass.filter(p=>p.verdict==="TEST").length;$("navGo").textContent=gos.length;
+  const top=pass.filter(p=>p.verdict!=="NO").sort((a,b)=>b.score-a.score).slice(0,5);
+  $("k-bud").textContent=fmt(top.length*s.bud*KX());
+  if(VIEW==="dashboard"){
+  $("top5").innerHTML=top.length?top.map((p,i)=>rowHTML(p,i,false)).join(""):`<div class="empty">Aucun produit ne passe tes critères. Assouplis un réglage ou reviens aux critères stricts.</div>`;
+
+  }
+  // Espace GO
+  if(VIEW==="produits-go"){
+  $("goTitle").textContent=`${CT().f} ${gos.length} produit${gos.length>1?"s":""} GO en vogue (${CT().n}) · ${gos.filter(p=>ready(p.id)).length} prêt${gos.filter(p=>ready(p.id)).length>1?"s":""} à tester`;
+  $("golist").innerHTML=gos.length?gos.map((p,i)=>`<div class="goitem ${openGo===p.id?"open":""}" id="go-${p.id}">${rowHTML(p,i,true)}<div class="gobody"><div>${openGo===p.id?goInner(p):""}</div></div></div>`).join(""):`<div class="empty">Aucun produit GO en vogue pour ${CT().n} avec ces critères stricts. Les pays sont vérifiés produit par produit à chaque mise à jour.</div>`;
+  }
+  if(VIEW!=="dashboard"){FIRST=false;return;}
+
+  const q=$("q").value.toLowerCase(),se=$("season").value,ord={GO:3,TEST:2,NO:1};
+  const rows=pass.filter(p=>(!q||(p.name+" "+p.en).toLowerCase().includes(q))&&(!se||p.season===se));
+  rows.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(sortK==="verdict"){x=ord[x];y=ord[y];}return typeof x==="string"?x.localeCompare(y)*sortDir:(x-y)*sortDir;});
+  $("tb").innerHTML=rows.map(p=>`
+    <tr class="r" onclick="openD('${p.id}')">
+      <td><b class="mono" style="color:${colr(p.score)}">${p.score.toFixed(1)}</b><span class="bar"><i style="width:${p.score*10}%;background:${colr(p.score)}"></i></span></td>
+      <td><div style="display:flex;gap:12px;align-items:center">${thumb(p,"sm")}<div><b style="font-weight:600">${newTag(p)}${esc(p.name)}</b><div class="sub">${p.cat} · ${SEASON[p.season]} · ${SAT[p.sat]}${p.src==="USER"?" · ajouté par toi":""}</div></div></div></td>
+      <td>${badge(p.verdict)}${p.capped?'<span class="cap">plafonné</span>':""}</td>
+      <td class="mono hide-m">${fmt(p.cost)}</td><td class="mono hide-m">${fmt(p.price)}</td>
+      <td class="mono" style="color:${p.mult>=s.mult?'var(--go)':'var(--no)'}">${p.mult.toFixed(2)}×</td>
+      <td class="mono hide-m" style="color:${p.profit>0?'var(--go)':'var(--no)'}">${fmt(p.profit)}</td>
+      <td class="mono hide-m">${fmt(p.cpaMax)}</td>
+    </tr>`).join("")||`<tr><td colspan="8" class="empty">Rien à afficher avec ces critères.</td></tr>`;
+  FIRST=false;
+}
+let _rt=null;function scheduleRender(){clearTimeout(_rt);_rt=setTimeout(()=>requestAnimationFrame(render),70);}
+
+function aliRef(p){if(!p.ali)return "";const a=p.ali;
+  return `<a class="ali" href="https://www.aliexpress.com/item/${a.pid}.html" target="_blank" rel="noopener noreferrer">${ico("store","t-red","sm")}<span style="flex:1;min-width:0"><b>Annonce AliExpress de la photo</b>${a.sold?` · ${esc(a.sold)}`:""}${a.rating?` · ${esc(a.rating)} ★`:""}${a.approx?` <span class="badge b-TEST">À vérifier</span>`:""}<small>${esc(a.title||"Annonce AliExpress")}</small></span>${svg("ext","ext")}</a>
+  <div class="sub" style="margin:0 0 4px">${a.approx?"⚠️ L'annonce la plus vendue ne correspond pas exactement au produit (variante différente ou peu de ventes) : cherche une meilleure annonce avec les liens fournisseurs. ":""}Photo et annonce relevées sur AliExpress le ${fmtDate(a.date)} : la plus vendue parmi les 6 premiers résultats. Vérifie que c'est bien la variante que tu vendras.</div>`;}
+function goInner(p){
+  const s=S;
+  return `<div class="goinner">
+   <div class="gostats">
+     <div class="box"><span>COGS (produit + livraison)</span><b class="mono">${fmt(p.cost)}</b></div>
+     <div class="box"><span>Prix conseillé</span><b class="mono">${fmt(Math.max(p.floor,p.price))}</b></div>
+     <div class="box"><span>Ratio (cible ${s.mult}×)</span><b class="mono" style="color:var(--go)">${p.mult.toFixed(2)}×</b></div>
+     <div class="box"><span>CPA max rentable</span><b class="mono">${fmt(p.cpaMax)}</b></div>
+     <div class="box"><span>Profit / vente (CPA cible)</span><b class="mono" style="color:var(--go)">${fmt(p.profit)}</b></div>
+   </div>
+   ${galHTML(p)}
+   ${aliRef(p)}
+   <div class="kwbar" style="margin-top:12px">${ico("key","t-gold","xs")}Mot-clé de recherche (${CT().n}) : <code>${esc(kwOf(p))}</code><button class="btn ghost sm" onclick="event.stopPropagation();copyText('${esc(kwOf(p)).replace(/'/g,"\\'")}')">${svg("copy")}Copier</button><button class="btn ghost sm" onclick="event.stopPropagation();openD('${p.id}')">${svg("info")}Fiche complète</button><button class="btn sm" onclick="event.stopPropagation();openKit('${p.id}')">${svg("mega")}Kit pub complet</button></div>
+   ${linkBlocks(p)}
+   ${checklist(p)}
+  </div>`;
+}
+function toggleGo(id){
+  const el=$("go-"+id);if(!el)return;
+  const wasOpen=el.classList.contains("open");
+  document.querySelectorAll(".goitem.open").forEach(x=>{x.classList.remove("open");});
+  if(wasOpen){openGo=null;return;}
+  openGo=id;const p=current.find(x=>x.id===id);
+  el.querySelector(".gobody>div").innerHTML=goInner(p);
+  requestAnimationFrame(()=>{el.classList.add("open");el.scrollIntoView({block:"start"});});
+}
+
+function openD(id){
+  const p=current.find(x=>x.id===id);if(!p)return;const s=readS();
+  const short=p.en.split(" ").slice(-2).join(" ");
+  $("drawer").innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center"><div>${badge(p.verdict)}${p.capped?'<span class="cap">plafonné à TEST par un critère bloquant</span>':""}</div><button class="iconbtn" onclick="closeD()" title="Fermer">${svg("x")}</button></div>
+    <div class="dhead">${thumb(p)}<div><h2 style="margin-top:0">${newTag(p)}${esc(p.name)}</h2>
+    <div class="dmeta">${esc(p.en)} · ${p.cat} · ${SEASON[p.season]} · saturation ${SAT[p.sat].toLowerCase()}</div></div></div>
+    ${galHTML(p)}
+    ${aliRef(p)}
+    <div class="g4">
+      <div class="box"><span>Score protocole</span><b style="color:${colr(p.score)}">${p.score.toFixed(1)} / 10</b></div>
+      <div class="box"><span>Ratio prix / COGS (cible ${s.mult}×)</span><b class="mono" style="color:${p.mult>=s.mult?'var(--go)':'var(--no)'}">${p.mult.toFixed(2)}×</b></div>
+      <div class="box"><span>COGS (produit + livraison)</span><b class="mono">${fmt(p.costLo)} – ${fmt(p.costHi)}</b></div>
+      <div class="box"><span>Prix plancher ${s.mult}×</span><b class="mono">${fmt(p.floor)}</b></div>
+      <div class="box"><span>Prix marché observé</span><b class="mono">${fmt(p.priceLo)} – ${fmt(p.priceHi)}</b></div>
+      <div class="box"><span>Marge brute = CPA max</span><b class="mono">${fmt(p.gross)}</b></div>
+      <div class="box"><span>CPA cible (${s.cpa} %)</span><b class="mono">${fmt(p.cpaTarget)}</b></div>
+      <div class="box"><span>Profit / vente au CPA cible</span><b class="mono" style="color:${p.profit>0?'var(--go)':'var(--no)'}">${fmt(p.profit)}</b></div>
+    </div>
+    ${p.flags.length?p.flags.map(f=>`<div class="note ${f.b?'n-bad':'n-warn'}">${svg(f.b?"alert":"info","svgi")}<span>${f.b?'<b>Bloquant</b> · ':''}${f.t}</span></div>`).join(""):`<div class="note n-info">${svg("checkc","svgi")}<span>Aucun red flag sur les données disponibles.</span></div>`}
+    <h5>Protocole en 7 étapes</h5>
+    ${STEPS.map(([k,l,w,est],i)=>`<div class="step"><span class="n">${i+1}</span><span>${l}${est?'<span class="est">estimé, à confirmer</span>':""}</span><span class="bar"><i style="width:${p.c[k]*10}%;background:${col10(p.c[k])}"></i></span><b class="mono">${p.c[k].toFixed(1)}</b><span class="w">${Math.round(w*100)} %</span></div>`).join("")}
+    ${p.lnotes.length?`<div class="note n-info" style="margin-top:12px">${svg("info","svgi")}<span>Lancement : ${p.lnotes.join(" · ")}</span></div>`:""}
+    <h5>Angle pub (trafic froid US)</h5>
+    <button class="btn blue sm" style="margin-bottom:10px" onclick="openKit('${p.id}')">${svg("mega")}Ouvrir le kit pub : fiche Facebook, scripts, prompts vidéo & image IA</button>
+    <div class="box" style="font-size:13.5px;line-height:1.55">${esc(p.angle)}</div>
+    <div class="sub" style="margin-top:8px">Signal marché : ${esc(p.signal)}</div>
+    <h5>Plan de test Meta Ads</h5>
+    <ul class="rules">
+      <li>Offre : prix conseillé <b class="mono">${fmt(Math.max(p.floor,p.price))}</b> + bundle ×2 à −10/−15 % pour monter le panier moyen.</li>
+      <li>Budget : <b>$${s.bud}</b> → 3 ad sets × ~$${p.daily}/jour × 3 jours, broad US.</li>
+      <li>3 créas UGC : démo en 3 s, problème → solution, avant/après.</li>
+      <li><b style="color:var(--no)">KILL</b> si ${fmt(Math.max(p.cpaMax,10))} dépensés sans vente.</li>
+      <li><b style="color:var(--test)">ITERATE</b> si CPA entre ${fmt(p.cpaTarget)} et ${fmt(p.cpaMax)} : change le hook, pas le produit.</li>
+      <li><b style="color:var(--go)">SCALE</b> si CPA ≤ ${fmt(p.cpaTarget)} sur 3 jours : +20 % de budget par jour.</li>
+    </ul>
+    <h5>Mots-clés Ad Library</h5>
+    <div class="kwbar">${[p.en,short,p.en+" gift","best "+short].map(k=>`<code>${esc(k)}</code>`).join("")}</div>
+    <h5>Liens de vérification</h5>
+    ${linkBlocks(p)}
+    ${checklist(p)}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      <button class="btn sm" onclick="openKit('${p.id}')">${svg("mega")}Kit pub complet</button><button class="btn ghost sm" onclick="copyOne('${p.id}')">${svg("copy")}Copier la fiche</button>
+      ${p.src==="USER"?`<button class="btn ghost sm" onclick="delCustom('${p.id}')">${svg("trash")}Supprimer</button>`:""}
+    </div>
+    <div class="src">Source : ${SRC[p.src]&&SRC[p.src].url?`<a href="${SRC[p.src].url}" target="_blank" rel="noopener">${esc(SRC[p.src].name)}</a>`:esc((SRC[p.src]||{name:p.src}).name)}</div>`;
+  $("drawer").scrollTop=0;$("drawer").classList.remove("open");void $("drawer").offsetWidth;
+  $("drawer").classList.add("open");$("dbg").classList.add("on");
+}
+function closeD(){$("drawer").classList.remove("open");$("dbg").classList.remove("on");}
+
+
+/* ===== GALERIE PHOTOS (chargée seulement à l'ouverture) ===== */
+const CDN="https://ae-pic-a1.aliexpress-media.com/kf/";
+let CDN_OK=null;
+function regal(){document.querySelectorAll(".gal[data-id]").forEach(g=>{const p=BASE.find(x=>x.id===g.dataset.id);if(p)g.outerHTML=galHTML(p);});}
+(function(){const im=new Image();const to=setTimeout(()=>{if(CDN_OK===null){CDN_OK=false;im.src="";regal();}},4000);im.onload=()=>{clearTimeout(to);CDN_OK=true;regal();};im.onerror=()=>{clearTimeout(to);CDN_OK=false;regal();};im.src=CDN+"S99dfb7c2d4e74c96b6a93fe477d45360N.jpg_220x220q80.jpg";})();
+function galList(p){const g=(p.gal&&p.gal.length?p.gal:(p.ali&&p.ali.hd?[p.ali.hd.split("/kf/")[1]]:[])).slice(0,8);return g;}
+const gBig=f=>CDN+f;
+const gMid=f=>CDN+f+"_960x960q90.jpg";
+const gSm=f=>CDN+f+"_220x220q80.jpg";
+function galHTML(p){
+  const g=galList(p);
+  if(!CDN_OK||!g.length){
+    if(!g.length)return "";
+    return `<div class="gal" data-id="${p.id}"><div class="gblock">${ico("info","t-gold","sm")}<div><b>${g.length} photos HD de ce produit</b><div class="sub">${CDN_OK===null?"Chargement de la galerie…":"L'aperçu Claude bloque toutes les images venant d'autres sites (sécurité). La galerie HD s'affiche en grand, ici même dans l'app, quand tu l'ouvres depuis le fichier <code>index.html</code> du zip ou depuis ton site."}</div></div></div></div>`;
+  }
+  return `<div class="gal" data-id="${p.id}">
+   <div class="gmain" onclick="event.stopPropagation();openLbx('${p.id}',+this.dataset.i||0)" data-i="0" title="Agrandir"><img src="${gMid(g[0])}" alt="${esc(p.name)}" decoding="async" fetchpriority="high"><span class="zoom">${svg("ext")}Plein écran · ${g.length} photos</span></div>
+   ${g.length>1?`<div class="gstrip">${g.map((f,i)=>`<button type="button" class="${i?"":"on"}" aria-label="Photo ${i+1}" onclick="event.stopPropagation();galPick(this,'${p.id}',${i})"><img src="${gSm(f)}" alt="" loading="lazy" decoding="async"></button>`).join("")}</div>`:""}
+  </div>`;
+}
+function galPick(btn,id,i){
+  const gal=btn.closest(".gal");const p=BASE.find(x=>x.id===id);if(!p)return;const f=galList(p)[i];
+  gal.querySelectorAll(".gstrip button").forEach((b,k)=>b.classList.toggle("on",k===i));
+  const m=gal.querySelector(".gmain");m.dataset.i=i;const im=m.querySelector("img");
+  im.classList.add("ld");const n=new Image();n.decoding="async";n.onload=()=>{im.src=n.src;im.classList.remove("ld");};n.src=gMid(f);
+}
+let LB={id:null,i:0,n:0};
+function openLbx(id,i){
+  const p=BASE.find(x=>x.id===id);if(!p)return;const g=galList(p);if(!g.length)return;
+  LB={id,i,n:g.length};
+  let el=$("lbx");if(!el){el=document.createElement("div");el.id="lbx";el.setAttribute("role","dialog");el.setAttribute("aria-modal","true");document.body.appendChild(el);
+    el.addEventListener("click",e=>{if(e.target===el)closeLbx();});
+    let x0=null;el.addEventListener("touchstart",e=>{x0=e.touches[0].clientX;},{passive:true});
+    el.addEventListener("touchend",e=>{if(x0==null)return;const dx=e.changedTouches[0].clientX-x0;if(Math.abs(dx)>40)lbxGo(dx<0?1:-1);x0=null;},{passive:true});}
+  el.innerHTML=`<button type="button" class="lclose" aria-label="Fermer" onclick="closeLbx()">${svg("x")}</button>
+   <div class="lstage">${g.length>1?`<button type="button" class="lnav lprev" aria-label="Photo précédente" onclick="lbxGo(-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>`:""}
+   <img id="lbimg" alt="${esc(p.name)}" decoding="async">
+   ${g.length>1?`<button type="button" class="lnav lnext" aria-label="Photo suivante" onclick="lbxGo(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>`:""}</div>
+   <div class="lcount" id="lbcount"></div>
+   ${g.length>1?`<div class="gstrip">${g.map((f,k)=>`<button type="button" aria-label="Photo ${k+1}" onclick="lbxSet(${k})"><img src="${gSm(f)}" alt="" loading="lazy" decoding="async"></button>`).join("")}</div>`:""}`;
+  el.classList.add("on");lbxSet(i);
+}
+function lbxSet(i){
+  const p=BASE.find(x=>x.id===LB.id);if(!p)return;const g=galList(p);LB.i=(i+g.length)%g.length;
+  const im=$("lbimg");im.classList.add("ld");const n=new Image();n.decoding="async";const want=LB.i;n.onload=()=>{if(LB.i!==want)return;im.src=n.src;im.classList.remove("ld");const o=new Image();o.decoding="async";o.onload=()=>{if(LB.i===want)im.src=o.src;};o.src=gBig(g[want]);};n.src=gMid(g[LB.i]);
+  $("lbcount").textContent=`${esc(p.name)} · photo ${LB.i+1} / ${g.length}`;
+  $("lbx").querySelectorAll(".gstrip button").forEach((b,k)=>b.classList.toggle("on",k===LB.i));
+  const nx=new Image();nx.src=gMid(g[(LB.i+1)%g.length]);
+}
+function lbxGo(d){lbxSet(LB.i+d);}
+function closeLbx(){const el=$("lbx");if(el)el.classList.remove("on");LB.id=null;}
+document.addEventListener("keydown",e=>{if(!LB.id)return;if(e.key==="ArrowRight")lbxGo(1);else if(e.key==="ArrowLeft")lbxGo(-1);else if(e.key==="Escape"){e.stopImmediatePropagation();closeLbx();}},true);
+
+/* ===== KIT PUB PAR PRODUIT ===== */
+const CATP={
+ "Animaux":{age:"25–65+",gender:"Toutes (≈70 % femmes chez les acheteurs)",int:["Dogs","Cats","Pet lovers","Chewy","Petco","BarkBox"],who:"a woman in her early 30s in a cozy hoodie, with her medium-size dog",set:"a cozy suburban American living room with hardwood floors",net:["tiktok","reels","pinterest"]},
+ "Auto":{age:"25–65+",gender:"Toutes (≈60 % hommes)",int:["Car accessories","AutoZone","Road trips","Pickup trucks","Car enthusiasts"],who:"a man in his early 40s in a winter jacket",set:"a snowy suburban driveway at dusk next to an SUV",net:["tiktok","shorts","reels"]},
+ "Cuisine":{age:"25–65+",gender:"Toutes (≈65 % femmes)",int:["Cooking","Food Network","Kitchen gadgets","Home cooking","Thanksgiving"],who:"a woman in her mid 30s in a casual sweater",set:"a bright modern American kitchen with a white marble counter and morning window light",net:["tiktok","reels","pinterest"]},
+ "Maison":{age:"22–55",gender:"Toutes (≈65 % femmes)",int:["Home decor","Interior design","Wayfair","Target","Cozy home"],who:"a woman in her late 20s in loungewear",set:"a cozy modern bedroom at night with warm ambient light",net:["tiktok","pinterest","reels"]},
+ "Gadgets":{age:"22–55",gender:"Toutes",int:["Gadgets","Technology","Best Buy","Gifts for men","Amazon Prime"],who:"a man in his early 30s in a plain t-shirt",set:"a clean modern home desk with soft daylight",net:["tiktok","shorts","reels"]},
+ "Bien-être":{age:"30–65+",gender:"Toutes (≈70 % femmes)",int:["Self-care","Massage","Spa","Wellness","Relaxation"],who:"a woman in her late 30s in comfortable loungewear",set:"a calm minimalist living room with soft evening light",net:["reels","tiktok","pinterest"]},
+ "Fitness":{age:"20–45",gender:"Toutes",int:["Home workout","Fitness","Gym","CrossFit","Planet Fitness"],who:"a fit man in his late 20s in workout clothes",set:"a small apartment living room turned home gym",net:["tiktok","shorts","reels"]},
+ "Voyage":{age:"22–55",gender:"Toutes",int:["Travel","Frequent travelers","Airbnb","Backpacking","Southwest Airlines"],who:"a woman in her early 30s in travel clothes",set:"a bright hotel room with an open suitcase on the bed",net:["tiktok","reels","pinterest"]},
+ "Hiver":{age:"25–65+",gender:"Toutes",int:["Winter sports","Outdoor recreation","Hiking","Cold weather gear","Snow"],who:"a man in his late 30s in a winter parka",set:"a snowy suburban street on a bright cold morning",net:["tiktok","reels","shorts"]},
+ "Sport":{age:"20–50",gender:"Toutes",int:["Skiing","Snowboarding","Winter sports","Outdoor recreation"],who:"a skier in her late 20s in a bright ski jacket",set:"a sunny ski slope with fresh snow",net:["tiktok","reels","shorts"]},
+ "Beauté":{age:"20–50",gender:"Femmes (ou hommes pour la barbe)",int:["Skin care","Beauty","Sephora","Ulta Beauty","Gifts"],who:"a woman in her late 20s with natural makeup",set:"a bright bathroom with a round mirror and soft daylight",net:["tiktok","reels","pinterest"]},
+ "Cadeaux":{age:"25–60",gender:"Toutes (≈70 % femmes)",int:["Gifts","Christmas shopping","DIY crafts","Etsy","Holiday season"],who:"a woman in her early 30s in a cozy knit sweater",set:"a warm living room decorated for the holidays",net:["pinterest","reels","tiktok"]}
+};
+const NET={
+ tiktok:["TikTok Ads","https://ads.tiktok.com/","#111111","TT","Vidéo 9:16, 15–30 s, hook visuel dans la 1re seconde, son tendance, sous-titres. Lance en Spark Ads sur une vidéo organique qui marche."],
+ reels:["Instagram Reels","https://adsmanager.facebook.com/","#d6249f","IG","Même vidéo que Facebook, 9:16, 15–25 s, texte à l'écran dès la 1re seconde. Se gère dans Ads Manager (placements Advantage+)."],
+ pinterest:["Pinterest Ads","https://ads.pinterest.com/","#e60023","P","Épingle 2:3 (1000×1500) style lifestyle + mots-clés dans le titre. Idéal maison, cuisine, cadeaux : intention d'achat forte en novembre-décembre."],
+ shorts:["YouTube Shorts","https://ads.google.com/","#ff0000","▶","Vidéo 9:16 ≤ 60 s, démo concrète, campagne Demand Gen dans Google Ads. Fonctionne bien pour auto, tech et fitness."]
+};
+const ADM=[
+ ["Meta Ads Manager","https://adsmanager.facebook.com/","#1877f2","f","Créer la campagne"],
+ ["Meta Business Suite","https://business.facebook.com/","#1877f2","f","Page + Instagram"],
+ ["Gestionnaire d'événements","https://business.facebook.com/events_manager2","#1877f2","f","Vérifier le pixel Purchase"],
+ ["Règles pub Meta","https://transparency.meta.com/policies/ad-standards/","#0866ff","M","Éviter les refus"]
+];
+const AIV=[
+ ["Higgsfield","https://higgsfield.ai/","#111111","H","Veo 3.1, Kling, Seedance…"],
+ ["Google Flow (Veo)","https://labs.google/fx/tools/flow","#4285f4","G","Vidéo Veo 3 avec son"],
+ ["Kling AI","https://klingai.com/","#0f172a","K","Image → vidéo réaliste"],
+ ["Runway","https://runwayml.com/","#111111","R","Montage + génération"],
+ ["Arcads","https://www.arcads.ai/","#5b3cc4","A","Avatars UGC IA"],
+ ["Creatify","https://creatify.ai/","#2f6fd0","C","Pubs vidéo depuis un lien produit"],
+ ["CapCut","https://www.capcut.com/","#111111","C","Montage, sous-titres auto"]
+];
+const AII=[
+ ["Higgsfield","https://higgsfield.ai/","#111111","H","Nano Banana Pro, GPT Image 2"],
+ ["Adobe Firefly","https://firefly.adobe.com/","#e1251b","Fi","Inclus dans ton Creative Cloud"],
+ ["ChatGPT Images","https://chatgpt.com/","#10a37f","G","Texte lisible sur l'image"],
+ ["Midjourney","https://www.midjourney.com/","#111111","M","Lifestyle haut de gamme"],
+ ["Ideogram","https://ideogram.ai/","#111111","I","Visuels avec titres"],
+ ["Canva","https://www.canva.com/","#00c4cc","C","Assemblage final des créas"]
+];
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+function kitData(p){
+  const c=CATP[p.cat]||CATP.Gadgets, a=p.ad||{pain:"Still struggling without a "+p.en.toLowerCase(),promise:"The "+p.en.toLowerCase()+" makes it simple",scene:"a clear close-up demo of the "+p.en.toLowerCase()+" working"};
+  const short=p.en.split(" ").slice(-2).join(" ").toLowerCase(), name=p.en.toLowerCase();
+  const price=Math.max(p.floor,p.price), bundle=price*2*0.85, pr=v=>fmt(Math.ceil(v)-0.01);
+  const hooks=[
+    `POV: ${a.pain.charAt(0).toLowerCase()+a.pain.slice(1)}… not anymore 👀`,
+    `${cap(a.promise)}. Watch this.`,
+    `I wish I'd found this ${short} sooner.`
+  ];
+  const textA=`${a.pain}? 😩\n\nMeet the ${name}: ${a.promise.charAt(0).toLowerCase()+a.promise.slice(1)}.\n\n✅ Works in seconds\n✅ Easy to use, no learning curve\n🎁 Buy 2 and save 15% — perfect for gifting\n\nTap "Shop Now" to grab yours 👇`;
+  const textB=`${cap(a.promise)} 🙌\n\nSimple to use, made for everyday life, and a great gift idea this season.\n👉 ${pr(price)} today — or 2 for ${pr(bundle)}\n\nShop now 👇`;
+  const hp=cap(a.promise);const headline=hp.length<=40?hp:(()=>{let s="";for(const w of hp.split(" ")){if((s+" "+w).trim().length>37)break;s=(s+" "+w).trim();}return s.replace(/[,—-]$/,"")+"…";})();
+  const script=[
+    ["0–3 s · Hook",`Gros plan sur le problème + texte à l'écran : « ${hooks[0]} »`],
+    ["3–8 s · Problème",`Montrer la galère : ${a.pain.toLowerCase()}.`],
+    ["8–18 s · Démo",`Le produit en action : ${a.scene}.`],
+    ["18–24 s · Preuve",`Refaire la démo une 2e fois en gros plan + réaction sincère (« wow, ça marche vraiment »).`],
+    ["24–30 s · CTA",`Produit en main face caméra : « Get yours, 2 for ${pr(bundle)} this week — link below ».`]
+  ];
+  const ref=`Use the real supplier photo of the product as the reference image so the product looks exactly like what customers will receive.`;
+  const vids=[
+    {t:"UGC face caméra",m:"Veo 3.1 (Higgsfield) · 9:16 · 8 s · image → vidéo",
+     p:`${cap(c.who)} in ${c.set}, holding the ${name} close to a smartphone camera and showing how it works: ${a.scene}. Handheld vertical selfie framing with slight natural shake, soft natural daylight, authentic TikTok UGC style, realistic skin texture, genuine surprised smile. ${/\bwoman\b/.test(c.who)?"She":"He"} says in a casual American voice: "${hooks[1]}" No on-screen text, no logos. ${ref}`},
+    {t:"Problème → solution",m:"Kling 3.0 (Higgsfield) · 9:16 · 10 s · avec son",
+     p:`Vertical 9:16 commercial in ${c.set}. First half: ${a.pain.toLowerCase()} — show the frustration in a realistic everyday moment, slightly desaturated look. Second half: the ${name} solves it: ${a.scene}; colors warm up, the person relaxes and smiles. Single slow push-in camera move, natural ambient sound, photorealistic, no text, no logos. ${ref}`},
+    {t:"Plan produit « hero »",m:"Cinematic Studio / Veo 3.1 · 9:16 et 1:1 · 6–8 s",
+     p:`Premium product hero shot of the ${name} on a clean surface with a soft gradient background matching its colors. Slow 180° orbit around the product, then a gentle push-in on its key feature. Soft studio key light from the left, subtle rim light, glossy realistic reflections, shallow depth of field, 4K commercial look, no text, no logos. ${ref}`}
+  ];
+  const imgs=[
+    {t:"Packshot studio",m:"Nano Banana Pro (Higgsfield) · 1:1 et 4:5",
+     p:`Professional e-commerce product photo of the ${name}, centered on a seamless off-white background, soft diffused studio lighting with a gentle shadow underneath, 100mm macro lens look, ultra sharp, true-to-life colors, no text, no props. ${ref}`},
+    {t:"Lifestyle en situation",m:"Nano Banana Pro (Higgsfield) · 4:5 (fil Facebook / Instagram)",
+     p:`${cap(c.who)} using the ${name} in ${c.set}: ${a.scene}. Candid lifestyle photo, natural window light, 35mm lens at f/2, eye level, warm realistic color grade, the product clearly visible and in focus. ${ref}`},
+    {t:"Visuel pub avec titre",m:"GPT Image 2 (Higgsfield) · 1:1 et 9:16 (stories)",
+     p:`Clean, modern ad creative for the ${name}. Product photo on the right, large bold headline on the left reading exactly: "${cap(a.promise).slice(0,48)}". Small badge in the corner reading "2 for ${pr(bundle)}". Navy and white color palette, plenty of white space, crisp legible sans-serif typography, no other text.`}
+  ];
+  const flags=[];
+  flags.push("Prompts vidéo et image verrouillés sur la vraie photo fournisseur (lien HD fourni dans les onglets Vidéos IA et Images IA) : le produit montré = le produit livré.");
+  flags.push("Textes de pub conformes : aucun faux avis, aucun faux chiffre de ventes, aucune fausse rupture de stock ni fausse urgence.");
+  if(p.health) flags.push("Produit bien-être : les textes parlent de confort et de détente, sans promesse médicale (règle Meta).");
+  if(p.cat==="Fitness") flags.push("Fitness : pas d'avant/après corporel ni de question sur le physique (règle Meta sur les attributs personnels).");
+  return {c,a,short,hooks,textA,textB,headline,script,vids,imgs,flags,price,bundle,pr};
+}
+function refPhoto(p){
+  const a=p.ali||{};const e=encodeURIComponent(p.en);
+  return `<div class="pcard" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${thumb(p)}<div style="flex:1;min-width:200px"><b>Photo fournisseur de référence</b><div class="sub">À importer comme image de départ dans Higgsfield : l'IA garde ainsi exactement le produit livré.</div></div>
+   ${a.hd?`<a class="btn sm" href="${a.hd}" target="_blank" rel="noopener noreferrer">${svg("ext")}Ouvrir la photo HD</a>`:""}
+   ${a.pid?`<a class="btn ghost sm" href="https://www.aliexpress.com/item/${a.pid}.html" target="_blank" rel="noopener noreferrer">${svg("store")}Toutes les photos de l'annonce</a>`:`<a class="btn ghost sm" href="https://www.aliexpress.com/wholesale?SearchText=${e}&SortType=total_tranpro_desc" target="_blank" rel="noopener noreferrer">${svg("store")}Trouver la photo</a>`}</div>
+   ${a.approx?`<div class="note n-warn">${svg("alert","svgi")}<span>Cette annonce ne correspond pas exactement au produit : utilise une photo de l'annonce que tu vends réellement.</span></div>`:""}`;}
+function cpBtn(txt){return `<button class="cpb" onclick="copyText(this.nextElementSibling.textContent)">${svg("copy")}Copier</button>`;}
+function kitHTML(p){
+  const k=kitData(p), s=S, e=encodeURIComponent(p.en);
+  const block=(label,txt)=>`<div class="kblk"><div class="kh"><span>${label}</span>${cpBtn()}<pre>${esc(txt)}</pre></div></div>`;
+  const tab1=`
+    <div class="kgrid">
+      <div class="box"><span>Objectif</span><b>Ventes · conversion Achat</b></div>
+      <div class="box"><span>Pays / âge</span><b>${CT().f} ${CT().n} · ${k.c.age}</b></div>
+      <div class="box"><span>Structure de test</span><b>ABO · 3 ad sets × 3 créas</b></div>
+      <div class="box"><span>Budget</span><b>$${s.bud} sur 3 jours (~$${p.daily}/jour/ad set)</b></div>
+      <div class="box"><span>Prix conseillé</span><b class="mono">${k.pr(k.price)}</b></div>
+      <div class="box"><span>Offre bundle</span><b class="mono">2 pour ${k.pr(k.bundle)}</b></div>
+    </div>
+    <h5>Ad sets à créer</h5>
+    <ul class="rules"><li><b>Ad set 1 · Broad</b> : ${CT().n}, ${k.c.age}, aucun intérêt, placements Advantage+.</li>
+      <li><b>Ad set 2 · Intérêts</b> : ${k.c.int.join(", ")}.</li>
+      <li><b>Ad set 3 · Advantage+ audience</b> : laisse Meta chercher, avec les intérêts ci-dessus comme suggestion.</li>
+      <li>Public : ${k.c.gender}. Placements : Advantage+ (Facebook, Instagram, Reels, Stories).</li></ul>
+    <h5>3 hooks (anglais US, ≤ 3 s)</h5>
+    ${k.hooks.map((h,i)=>block("Hook "+(i+1),h)).join("")}
+    <h5>Textes de la pub</h5>
+    ${block("Texte principal A · douleur",k.textA)}
+    ${block("Texte principal B · offre",k.textB)}
+    ${block("Titre (≤ 40 caractères)",k.headline)}
+    ${block("Description","Gift-ready · Shop the holiday deal")}
+    <div class="note n-info">${svg("info","svgi")}<span>Bouton d'appel à l'action : <b>Shop Now</b>.</span></div>
+    <h5>Script UGC 20–30 s</h5>
+    <div class="script">${k.script.map(([t,d])=>`<div><b>${t}</b><span>${esc(d)}</span></div>`).join("")}</div>
+    ${block("Script complet à copier",k.script.map(([t,d])=>t+" — "+d).join("\n"))}
+    <h5>Règles KILL / ITERATE / SCALE</h5>
+    <ul class="rules"><li><b style="color:var(--no)">KILL</b> un ad set qui dépense ${fmt(Math.max(p.cpaMax,10))} sans vente.</li><li><b style="color:var(--test)">ITERATE</b> si CPA entre ${fmt(p.cpaTarget)} et ${fmt(p.cpaMax)} : change le hook.</li><li><b style="color:var(--go)">SCALE</b> si CPA ≤ ${fmt(p.cpaTarget)} 3 jours de suite : +20 % de budget par jour.</li></ul>
+    <h5>Liens directs</h5>
+    ${linkGrid(ADM.concat([["Pubs concurrentes FB","https://www.facebook.com/ads/library/?active_status=active&ad_type=all&country=US&media_type=all&q="+e+"&search_type=keyword_unordered","#1877f2","f","Pour t'inspirer des angles"]]))}`;
+  const tab2=`${refPhoto(p)}
+    <div class="note n-info">${svg("info","svgi")}<span>Dans Higgsfield, choisis le modèle indiqué, mets le format 9:16, et ajoute la <b>vraie photo fournisseur</b> comme image de départ (image → vidéo). Monte ensuite les 3 clips dans CapCut avec sous-titres.</span></div>
+    ${k.vids.map((v,i)=>`<div class="pcard"><div class="pt"><b>${i+1}. ${v.t}</b><small>${v.m}</small></div>${block("Prompt vidéo (anglais)",v.p)}</div>`).join("")}
+    <h5>Plateformes vidéo IA</h5>${linkGrid(AIV)}`;
+  const tab3=`${refPhoto(p)}
+    <div class="note n-info">${svg("info","svgi")}<span>Formats Meta : <b>1:1</b> (fil), <b>4:5</b> (fil mobile, le plus efficace) et <b>9:16</b> (stories / reels). Génère en partant de la vraie photo produit, puis assemble dans Canva si besoin.</span></div>
+    ${k.imgs.map((v,i)=>`<div class="pcard"><div class="pt"><b>${i+1}. ${v.t}</b><small>${v.m}</small></div>${block("Prompt image (anglais)",v.p)}</div>`).join("")}
+    <h5>Plateformes image IA</h5>${linkGrid(AII)}
+    `;
+  const nets=k.c.net;
+  const tab4=`
+    <p class="sub" style="margin:0 0 10px">Réseaux recommandés pour un produit « ${p.cat} », dans l'ordre de priorité :</p>
+    ${nets.map((n,i)=>{const [nm,u,col,l,tip]=NET[n];return `<div class="pcard"><div class="pt" style="display:flex;align-items:center;gap:10px"><span class="pl" style="background:${col}">${l}</span><b>${i+1}. ${nm}</b><a class="lnk" style="margin-left:auto" href="${u}" target="_blank" rel="noopener noreferrer">Ouvrir ${svg("ext")}</a></div><div style="font-size:13px;line-height:1.6;margin-top:8px">${tip}</div>${block("Hook adapté",n==="pinterest"?cap(k.a.promise)+" | "+cap(k.short)+" gift idea":k.hooks[i%3])}</div>`;}).join("")}
+    <h5>Recherche d'inspiration</h5>${linkGrid([["TikTok · vidéos produit","Vidéos qui marchent déjà","#111111","TT","https://www.tiktok.com/search?q="+e],["TikTok Creative Center","Top pubs US · colle le mot-clé","#111111","TT","https://ads.tiktok.com/business/creativecenter/inspiration/topads/pc/en?period=30&region=US"],["Pinterest","Idées visuelles","#e60023","P","https://www.pinterest.com/search/pins/?q="+e],["YouTube","Avis et démos","#ff0000","▶","https://www.youtube.com/results?search_query="+encodeURIComponent(p.en+" review")]])}`;
+  return `<div class="kit">
+    <div class="ktabs"><button class="on" data-t="0">${svg("mega")}Fiche pub Facebook</button><button data-t="1">${svg("film")}Vidéos IA</button><button data-t="2">${svg("star")}Images IA</button><button data-t="3">${svg("trend")}Autres réseaux</button></div>
+    <div class="kpane on">${tab1}</div><div class="kpane">${tab2}</div><div class="kpane">${tab3}</div><div class="kpane">${tab4}</div>
+    <h5>Déjà réglé pour toi</h5>${k.flags.map(f=>`<div class="note n-info" style="background:var(--gobg);color:var(--txt)"><span style="color:var(--go)">${svg("checkc","svgi")}</span><span>${f}</span></div>`).join("")}
+  </div>`;
+}
+function kitText(p){const k=kitData(p);return `KIT PUB — ${p.name} (${p.en})\n\nHOOKS\n${k.hooks.join("\n")}\n\nTEXTE A\n${k.textA}\n\nTEXTE B\n${k.textB}\n\nTITRE\n${k.headline}\n\nSCRIPT UGC\n${k.script.map(([t,d])=>t+" — "+d).join("\n")}\n\nAUDIENCE\n${CT().n} · ${k.c.age} · intérêts : ${k.c.int.join(", ")}\n\nPROMPTS VIDÉO\n${k.vids.map(v=>"- "+v.t+" ("+v.m+")\n"+v.p).join("\n\n")}\n\nPROMPTS IMAGE\n${k.imgs.map(v=>"- "+v.t+" ("+v.m+")\n"+v.p).join("\n\n")}`;}
+function openKit(id){
+  const p=current.find(x=>x.id===id);if(!p)return;
+  $("kitBody").innerHTML=(CT().lang!=="en"?`<div class="cbanner" style="margin:0 0 10px"><span>${CT().f} Pubs pour <b>${CT().n}</b> : les textes ci-dessous sont en anglais, <b>traduis-les en ${LANGN[CT().lang]}</b> avant de lancer (les pubs locales convertissent mieux). Mot-clé local : <b>« ${esc(kwOf(p))} »</b></span></div>`:"")+`<div class="khead">${thumb(p)}<div style="flex:1;min-width:0"><div class="sub">Kit pub · ${p.cat}</div><h3 style="margin:2px 0 0">${esc(p.name)}</h3><div class="sub">${esc(p.en)}</div></div><button class="btn ghost sm" onclick="copyText(kitText(current.find(x=>x.id==='${id}')))">${svg("copy")}Copier tout le kit</button><button class="iconbtn" onclick="closeKit()">${svg("x")}</button></div>`+kitHTML(p);
+  $("kitBody").querySelectorAll(".ktabs button").forEach(b=>b.onclick=()=>{const i=+b.dataset.t;$("kitBody").querySelectorAll(".ktabs button").forEach((x,j)=>x.classList.toggle("on",j===i));$("kitBody").querySelectorAll(".kpane").forEach((x,j)=>x.classList.toggle("on",j===i));});
+  $("kitM").classList.add("on");$("kitBody").scrollTop=0;
+}
+function closeKit(){$("kitM").classList.remove("on");}
+
+/* ===== OUTILS ===== */
+function brief(p){return `${p.verdict==="NO"?"NO-GO":p.verdict} · ${p.name} (${p.en}) · ${p.score.toFixed(1)}/10\nCOGS ${fmt(p.cost)} → Prix ${fmt(p.price)} · ${p.mult.toFixed(2)}× · CPA max ${fmt(p.cpaMax)} · Profit/vente ${fmt(p.profit)}\nAngle : ${p.angle}`;}
+function toast(t,i="checkc"){const el=$("toast");el.innerHTML=svg(i,"svgi")+t;el.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove("on"),1900);}
+function copyText(t){try{navigator.clipboard.writeText(t).then(()=>toast("Copié"),()=>toast("Copie refusée par le navigateur","alert"));}catch(e){toast("Copie indisponible ici","alert");}}
+function copyOne(id){copyText(brief(current.find(x=>x.id===id)));}
+function copyBatch(){copyText("TOP 5 NAKEWENZE\n\n"+current.filter(p=>p.pass&&p.verdict!=="NO").sort((a,b)=>b.score-a.score).slice(0,5).map((p,i)=>`#${i+1} `+brief(p)).join("\n\n"));}
+function copyGo(){copyText("PRODUITS GO NAKEWENZE\n\n"+current.filter(p=>p.pass&&p.verdict==="GO").sort((a,b)=>b.score-a.score).map((p,i)=>`#${i+1} [${RS[readyState(p)][1]}] `+brief(p)).join("\n\n"));}
+
+function openAdd(){$("a-cat").innerHTML=CATS.map(c=>`<option>${c}</option>`).join("");$("modal").classList.add("on");setTimeout(()=>$("a-name").focus(),250);}
+function closeAdd(){$("modal").classList.remove("on");}
+function saveAdd(){
+  const n=$("a-name").value.trim();if(!n){toast("Donne un nom au produit","alert");return;}
+  const cost=+$("a-cost").value+(+$("a-shipc").value),price=+$("a-price").value;
+  custom.push({id:"u"+Date.now(),name:n,en:n,cat:$("a-cat").value,cLo:cost,cHi:cost,pLo:price,pHi:price,cur:"USD",shipIncl:1,sat:clamp(+$("a-sat").value,1,5),d:clamp(+$("a-d").value,1,5),p:clamp(+$("a-p").value,1,5),season:$("a-s").value,bulky:+$("a-b").value,health:+$("a-h").value,flag:"",angle:"Kit pub généré automatiquement : affine-le avec le skill « angles Meta Ads ».",signal:"Produit ajouté depuis AutoDS",src:"USER",
+    ad:{pain:$("a-pain").value.trim()||("Still struggling without a "+n.toLowerCase()),promise:$("a-prom").value.trim()||("The "+n.toLowerCase()+" makes it simple"),scene:$("a-scene").value.trim()||("a clear close-up demo of the "+n.toLowerCase()+" working")}});
+  store.set("nkw_custom2",custom);closeAdd();render();toast("Produit scoré");
+}
+function delCustom(id){custom=custom.filter(c=>c.id!==id);store.set("nkw_custom2",custom);closeD();render();}
+function resetKey(k){if(k==="price"){$("pmin").value=STRICT.pmin;$("pmax").value=STRICT.pmax;}else writeS({[k]:STRICT[k]});render();toast("Critère strict rétabli","reset");}
+function resetAll(){writeS(STRICT);render();toast("Critères stricts rétablis","shield");}
+
+/* Thème */
+function applyTheme(t){document.documentElement.dataset.theme=t;$("themeBtn").innerHTML=svg(t==="dark"?"sun":"moon");}
+function toggleTheme(){const t=document.documentElement.dataset.theme==="dark"?"light":"dark";applyTheme(t);store.set("nkw_theme",t);}
+
+/* Navigation (#dashboard / #produits-go) */
+function route(){
+  const v=location.hash==="#produits-go"?"produits-go":"dashboard";
+  document.querySelectorAll(".view").forEach(x=>x.classList.toggle("on",x.id==="v-"+v));
+  document.querySelectorAll(".navitem").forEach(x=>x.classList.toggle("on",x.dataset.v===v));
+  $("crumbView").textContent=v==="produits-go"?"Produits GO":"Tableau de bord";
+  VIEW=v;FIRST=true;if(DATA)render();
+  window.scrollTo(0,0);
+}
+
+/* Init : chargement dynamique de products.json */
+function isNew(p){if(!DATA||!p.added||!DATA.updated||ALLSAME)return false;return (new Date(DATA.updated)-new Date(p.added))/86400000<7;}
+function fmtDate(s){try{return new Date(s+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});}catch(e){return s;}}
+async function boot(){
+  paintIcons();
+  let inline=null;try{inline=JSON.parse(document.getElementById("nkw-data").textContent);}catch(e){}
+  if(inline&&inline.products&&inline.products.length)applyData(inline);
+  if(DATA)await new Promise(r=>setTimeout(r,2500));
+  try{const r=await fetch("products.json?v="+Date.now(),{cache:"no-store"});if(!r.ok)throw new Error("HTTP "+r.status);const d=await r.json();
+    if(!inline||d.updated!==inline.updated||d.products.length!==inline.products.length){const imgs={};(inline&&inline.products||[]).forEach(p=>{if(/^data:/.test(p.img||""))imgs[p.id]=p.img;});d.products.forEach(p=>{if(imgs[p.id]&&/^img\//.test(p.img||""))p.img=imgs[p.id];});applyData(d);}}
+  catch(e){if(!DATA){$("upd").innerHTML="Impossible de charger products.json ("+esc(e.message)+").";applyData({updated:"",products:[],sources:{}});}}
+}
+function cbannerHTML(){
+  const c=CT(), lst=Object.entries(COUNTRIES);
+  const cnt=k=>BASE.filter(p=>{const m=(p.mk&&p.mk[k])||(k==="US"&&p.auto&&p.auto.meta);return m&&m.ads>=3&&m.old30>=1;}).length;
+  return `<span>${c.f} Pays ciblé : <b>${c.n}</b> · prix en <b>${c.cur}</b> · ${c.tax} · pubs en <b>${LANGN[c.lang]}</b></span>
+  <div class="chips">${lst.map(([k,v])=>`<button type="button" title="${cnt(k)} produits vérifiés en vogue dans ce pays" class="chip${k===COUNTRY?" on":""}" onclick="setCountry('${k}')">${v.f} ${v.n}<small>${cnt(k)}</small></button>`).join("")}</div>`;
+}
+function setCountry(k){if(!COUNTRIES[k])return;COUNTRY=k;try{localStorage.setItem("nkw_country",JSON.stringify(k));}catch(e){}
+  const sel=$("country");if(sel)sel.value=k;
+  try{const u=new URL(location.href);u.searchParams.set("pays",k);history.replaceState(null,"",u.toString());}catch(e){}
+  openGo=null;closeD();FIRST=true;render();}
+function applyData(dd){
+  DATA=dd;
+  if(DATA.fx)FXR=Object.assign({},FXR,DATA.fx);
+  BASE=DATA.products||[];ALLSAME=BASE.every(x=>x.added===(BASE[0]||{}).added);
+  {const im=new Image();const to=setTimeout(()=>{im.src="";},2500);im.onload=()=>{clearTimeout(to);REMOTE_OK=true;FIRST=false;render();};const r=BASE.find(x=>/^https?:/.test(x.img||""));if(r)im.src=r.img;}
+  SRC=Object.assign({},DATA.sources||{},{USER:{name:"Ajouté par toi (AutoDS)",url:""}});
+  CATS=[...new Set(BASE.map(p=>p.cat))];
+  $("srclist").innerHTML=Object.values(DATA.sources||{}).map(s=>`<a href="${s.url}" target="_blank" rel="noopener">${esc(s.name)}</a>`).join(" · ")||"—";
+  const nNew=BASE.filter(isNew).length;
+  if(DATA.updated){const t=`Mis à jour le <b style="color:#fff">${fmtDate(DATA.updated)}</b>${DATA.week?" · semaine "+esc(DATA.week):""} · ${BASE.length} produits${nNew?` · <b style="color:var(--gold)">${nNew} nouveaux</b>`:""}${DATA.note?" · "+esc(DATA.note):""}`;$("upd").innerHTML=t;$("upd2").innerHTML=t;}
+  const ev=DATA.event||{label:"Black Friday",date:"2026-11-27"};
+  $("evl").textContent=ev.label;
+  const d=new Date(ev.date+"T00:00:00-05:00")-new Date();$("bf").textContent=d>0?"J−"+Math.ceil(d/86400000):"en cours";
+  $("niche").innerHTML=`<option value="">Pas encore verrouillée (toutes)</option>`+CATS.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+  writeS(Object.assign({},STRICT,store.get("nkw_settings2",{})));
+  route();render();
+}
+/* ===== Mode intégré Kolakisa : thème et mouvement suivis depuis la page parente ===== */
+const EMBED=/[?&]embed=1(&|$)/.test(location.search);
+function kolaDoc(){try{return window.parent!==window&&window.parent.document?window.parent.document:null;}catch(e){return null;}}
+function kolaTheme(){const pd=kolaDoc();let t=pd&&pd.documentElement.getAttribute("data-kola-theme");
+  if(!t){try{t=localStorage.getItem("kolaTheme");}catch(e){}}
+  if(!t||t==="auto"){try{t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}catch(e){t="light";}}
+  return t==="dark"?"dark":"light";}
+function kolaSync(){const pd=kolaDoc();applyTheme(kolaTheme());
+  const m=pd&&pd.documentElement.getAttribute("data-kb-motion");if(m)document.documentElement.setAttribute("data-kb-motion",m);else document.documentElement.removeAttribute("data-kb-motion");}
+function kolaEmbedInit(){const de=document.documentElement;de.classList.add("kx-embed");
+  document.querySelectorAll(".hero h1").forEach(h=>{const n=document.createElement("h2");n.className="kx-h";n.innerHTML=h.innerHTML;h.replaceWith(n);});
+  const r=document.querySelector(".crumb .r");
+  if(r){const t=document.createElement("div");t.className="kx-tools";const cp=document.querySelector("header .cpick");const sb=document.querySelector("header .btn.blue");
+    if(cp)t.appendChild(cp);if(sb){sb.classList.remove("sm");t.appendChild(sb);}
+    [...r.childNodes].forEach(n=>{if(n.nodeType===3)n.remove();});r.appendChild(t);}
+  const as=document.querySelector("aside"),nv=as&&as.querySelector(".nav");
+  if(nv){const d=document.createElement("details");d.className="kx-crit";d.open=!matchMedia("(max-width:980px)").matches;
+    const s=document.createElement("summary");s.textContent="Critères de validation";d.appendChild(s);
+    while(nv.nextSibling)d.appendChild(nv.nextSibling);as.appendChild(d);
+    matchMedia("(max-width:980px)").addEventListener("change",e=>{d.open=!e.matches;});}
+  const pd=kolaDoc();
+  if(pd){try{new MutationObserver(kolaSync).observe(pd.documentElement,{attributes:true,attributeFilter:["data-kola-theme","data-kb-motion"]});}catch(e){}}
+  try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",kolaSync);}catch(e){}
+  window.addEventListener("storage",e=>{if(e.key==="kolaTheme")kolaSync();});}
+if(EMBED)kolaEmbedInit();
+let th=EMBED?kolaTheme():store.get("nkw_theme",null);if(!th){try{th=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}catch(e){th="light";}}applyTheme(th);if(EMBED)kolaSync();
+window.addEventListener("hashchange",route);
+document.querySelectorAll("aside input, aside select, #q, #season").forEach(el=>el.addEventListener("input",scheduleRender));
+document.querySelectorAll(".rst").forEach(b=>b.addEventListener("click",e=>{e.preventDefault();e.stopPropagation();resetKey(b.dataset.k);}));
+document.querySelectorAll("th[data-k]").forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=k==="name"?1:-1;}render();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeKit();closeD();closeAdd();}});
+{const sel=$("country");sel.innerHTML=Object.entries(COUNTRIES).map(([k,v])=>`<option value="${k}">${v.f} ${v.n}</option>`).join("");sel.value=COUNTRY;sel.addEventListener("change",()=>setCountry(sel.value));}
+boot();
+</script>
+</body>
+</html>

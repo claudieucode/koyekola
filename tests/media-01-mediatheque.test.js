@@ -192,8 +192,9 @@ describe("media-01 : médiathèque", () => {
       const grid = (await adminA.get(`${L}?site=${A}&mois=2024-03`)).text, list = (await adminA.get(`${L}?site=${A}&mois=2024-03&vue=liste`)).text;
       assert.match(grid, /data-ml-grid/); assert.doesNotMatch(grid, /data-ml-list/); assert.match(list, /data-ml-list/); assert.doesNotMatch(list, /data-ml-grid/);
       assert.deepEqual(names(grid), ["photo-mars.png", "rapport-mars.pdf"]); assert.deepEqual(names(list), names(grid));
-      assert.match(grid, /vue=liste[^"]*mois=2024-03|mois=2024-03[^"]*vue=liste/, "le lien Liste garde le filtre");
-      for (const col of ["Fichier", "Type", "Taille", "Dimensions", "Ajouté le", "Auteur"]) assert.ok(list.includes(`>${col}<`), col);
+      // Gestionnaire de fichiers : les modes d'affichage sont des boutons (préférence mémorisée par personne et par site) ; « ?vue=liste » reste accepté et ne perd aucun filtre
+      for (const v of ["grille", "liste", "details", "icones", "compacte"]) assert.match(grid, new RegExp(`data-mx-view="${v}"`), `bouton du mode ${v}`);
+      for (const col of ["Nom", "Type", "Taille", "Dimensions", "Ajouté le", "Auteur"]) assert.ok(list.includes(`>${col}<`), col);
       assert.match(grid, /<img src="\/uploads\/marketing\/[^"]+" alt="" loading="lazy"/, "vraie miniature d'image"); assert.match(grid, /mk-ml-badge">PDF</, "badge PDF, pas une icône d'image");
     });
     test("filtre par date : mois réellement présents, résultats réels, combiné au type, à la recherche et à la pagination", async () => {

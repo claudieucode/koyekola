@@ -71,7 +71,7 @@
         <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Pages les plus vues</caption>
           <thead><tr><th scope="col">Page</th><th scope="col">Type</th><th scope="col" class="mk-num">Pages vues</th><th scope="col" class="mk-num">Visiteurs</th></tr></thead>
           <tbody><% T.topPages.slice(0, 10).forEach((r) => { %><tr><td data-label="Page"><code><%= r.path %></code></td><td data-label="Type"><%= r.kind %></td><td data-label="Pages vues" class="mk-num"><%= mkh.fmt(r.pageViews) %></td><td data-label="Visiteurs" class="mk-num"><%= mkh.fmt(r.visitors) %></td></tr><% }) %></tbody></table></div>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "pages" }) %>">Exporter les pages (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "pages" }) %>">Exporter les pages (CSV)</a></div>
         <% if (T.articles.length) { %>
         <h3 class="mk-h2">Articles</h3>
         <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Articles les plus lus</caption>
@@ -82,7 +82,7 @@
         <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Sources de trafic (sessions)</caption>
           <thead><tr><th scope="col">Source</th><th scope="col">Campagne</th><th scope="col" class="mk-num">Sessions</th></tr></thead>
           <tbody><% T.sources.forEach((r) => { %><tr><td data-label="Source"><%= r.label %></td><td data-label="Campagne"><%= r.campaign || "—" %></td><td data-label="Sessions" class="mk-num"><%= mkh.fmt(r.sessions) %></td></tr><% }) %></tbody></table></div>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "sources" }) %>">Exporter les sources (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "sources" }) %>">Exporter les sources (CSV)</a></div>
         <p class="field-hint">Appareils : <%= T.devices.map((x) => `${x.label} ${mkh.fmt(x.sessions)}`).join(" · ") || "—" %></p>
       <% } %>
     </section>
@@ -99,7 +99,7 @@
             <td data-label="Évolution"><%= dlt(r.delta) || "—" %></td>
             <td><% if (r.custom && canDefine) { %><form action="/marketing/analytics/conversions/<%= r.id %>/supprimer" method="post"><button type="submit" class="btn btn-outline btn-sm">Supprimer</button></form><% } %></td></tr><% }) %></tbody></table></div>
         <% if (V.noData) { %><p class="field-hint"><%= NODATA %></p><% } %>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "conversions" }) %>">Exporter les conversions (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "conversions" }) %>">Exporter les conversions (CSV)</a></div>
       <% } %>
       <% if (canDefine) { %>
       <form action="/marketing/analytics/conversions" method="post" class="mk-filterbar" aria-label="Nouvelle conversion personnalisée">
@@ -126,7 +126,7 @@
         </ol>
         <p class="field-hint">Terminés : <strong><%= mkh.fmt(f.completed) %></strong> · abandons : <strong><%= mkh.fmt(f.abandoned) %></strong> · conversion globale (terminés / entrées) : <strong><%= mkh.rate(f.conversion) %></strong> · achats rattachés : <strong><%= mkh.fmt(f.purchases) %></strong> (<%= mkh.euros(f.revenueCents) %>, dernière étape touchée avant l'achat)</p>
       <% }) %>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "tunnels" }) %>">Exporter les tunnels (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "tunnels" }) %>">Exporter les tunnels (CSV)</a></div>
       <% } %>
     </section>
 
@@ -141,7 +141,7 @@
         <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption>Formations vendues</caption>
           <thead><tr><th scope="col">Formation</th><th scope="col" class="mk-num">Ventes</th><th scope="col" class="mk-num">Revenu</th></tr></thead>
           <tbody><% C.products.forEach((r) => { %><tr><td data-label="Formation"><%= r.title %></td><td data-label="Ventes" class="mk-num"><%= mkh.fmt(r.sold) %></td><td data-label="Revenu" class="mk-num"><%= mkh.euros(r.cents) %></td></tr><% }) %></tbody></table></div>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "produits" }) %>">Exporter les formations (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "produits" }) %>">Exporter les formations (CSV)</a></div>
         <% } %>
         <% if (AT && !AT.error && !AT.unavailable) { %>
         <h3 class="mk-h2">Revenu par source — <%= AT.modelLabel %></h3>
@@ -150,7 +150,7 @@
           <thead><tr><th scope="col">Source</th><th scope="col">Campagne</th><th scope="col" class="mk-num">Commandes</th><th scope="col" class="mk-num">Revenu</th></tr></thead>
           <tbody><% AT.rows.forEach((r) => { %><tr><td data-label="Source"><%= r.label %></td><td data-label="Campagne"><%= r.campaign || "—" %></td><td data-label="Commandes" class="mk-num"><%= mkh.fmt(r.orders) %></td><td data-label="Revenu" class="mk-num"><%= mkh.euros(r.revenueCents) %></td></tr><% }) %></tbody></table></div>
         <p class="field-hint"><%= AT.notes.join(" ") %> <%= mkh.fmt(AT.attributed) %> commande(s) attribuée(s) sur <%= mkh.fmt(AT.orders) %>.</p>
-        <div class="mk-actions"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "attribution" }) %>">Exporter l'attribution (CSV)</a></div>
+        <div class="mk-actions mk-export-row"><a class="btn btn-outline btn-sm" href="/marketing/analytics/global/export?<%= q({ section: "attribution" }) %>">Exporter l'attribution (CSV)</a></div>
         <% } %>
       <% } %>
     </section>

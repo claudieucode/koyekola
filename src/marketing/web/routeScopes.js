@@ -131,6 +131,8 @@ const SITE_RULES = Object.freeze([
   { id: "score-du-site", pattern: /^\/score$/, methods: ["GET"], kind: "param", terminal: true },
   // Revenus par site (R7 lot 6.5) : l'écran /revenus vise le site choisi (revenus attribués aux e-mails DU site, lecture seule) ; la fenêtre d'attribution reste un réglage d'organisation
   { id: "revenus-du-site", pattern: /^\/revenus$/, methods: ["GET"], kind: "param", terminal: true },
+  // Sourcing produit : emplacement vide d'une future application ; il vise le site choisi (chaque site garde son contexte)
+  { id: "sourcing-du-site", pattern: /^\/sourcing-produit$/, methods: ["GET"], kind: "param", terminal: true },
   { id: "demandes-du-site", pattern: /^\/contacts\/demandes$/, methods: ["GET"], kind: "queryGet" },
   { id: "contacts-ecriture-du-site", pattern: /^\/contacts(?:\/(?:actions|\d+(?:\/(?:proprietes|etiquettes(?:\/retirer)?|listes(?:\/retirer)?|cycle-de-vie|etat|consentement|desinscrire|supprimer-adresse|effacer))?))?$/, methods: ["POST"], kind: "param" },
   { id: "creation-avec-site", pattern: /^(?:\/pages|\/site-web\/composants)$/, methods: ["POST"], kind: "bodySiteId" },
@@ -173,6 +175,7 @@ const FAMILIES = Object.freeze([
   { id: "reseaux-publications", scope: "site", pattern: /^\/reseaux(?:\/\d+\/(?:annuler|relancer|supprimer))?$/ },
   { id: "score-apercu", scope: "site", pattern: /^\/score$/ },
   { id: "revenus-apercu", scope: "site", pattern: /^\/revenus$/ },
+  { id: "sourcing-produit", scope: "site", pattern: /^\/sourcing-produit$/ },
   { id: "navigation-du-site", scope: "site", pattern: /^\/site-web\/(?:navigation|apparence\/menus)(?:\/|$)/ },
   { id: "formulaires", scope: "site", pattern: /^\/formulaires(?:\/|$)/ },
   { id: "themes-par-site", scope: "site", pattern: /^\/site-web\/themes(?:\/|$)/ },

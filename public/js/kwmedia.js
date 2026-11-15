@@ -48,6 +48,8 @@
     var promise = new Promise(function (resolve, reject) {
       var fd = new FormData(); fd.append("file", file, file.name);
       if (opts.alt) fd.append("alt", opts.alt);
+      if (opts.folder) fd.append("dossier", opts.folder); // dossier de destination (vérifié par le serveur : même médiathèque)
+      if (opts.name) fd.append("nom", opts.name); // nom choisi après un conflit de noms
       xhr.open("POST", withSite(BASE + "/televerser"));
       xhr.setRequestHeader("Accept", "application/json");
       xhr.withCredentials = true;
@@ -99,6 +101,7 @@
     folderRename: function (id, name) { return request("POST", BASE + "/dossiers/" + id, { name: name }).then(function (r) { return r.folder; }); },
     folderDelete: function (id) { return request("POST", BASE + "/dossiers/" + id + "/supprimer", {}); },
     move: function (ids, folderId) { return request("POST", BASE + "/deplacer", { ids: ids, folder_id: folderId || null }); },
+    api: request, query: query,
     upload: upload, fmtSize: fmtSize, fmtDate: fmtDate, badge: badge, copy: copy, absolute: absolute, toast: toast,
   };
 })();

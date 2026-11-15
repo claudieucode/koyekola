@@ -9,9 +9,16 @@
   </header>
   <noscript><p class="mk-mc-note">Cet écran a besoin de JavaScript.</p></noscript>
   <p class="mk-mc-flash" data-mc-flash role="status" aria-live="polite" hidden></p>
-  <div class="mk-mc-bar" data-mc-bar></div>
-  <div class="mk-mc-tabs" role="tablist" aria-label="Rubriques Mailchimp" data-mc-tabs></div>
-  <section class="mk-mc-panel" data-mc-panel tabindex="-1" aria-live="polite"></section>
+  <div class="mk-mc-shell" data-mc-shell>
+    <aside class="mk-mc-side" aria-label="Navigation Mailchimp">
+      <button type="button" class="mk-mc-fold" data-mc-fold aria-expanded="true" aria-label="Replier la navigation"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="mk-mc-tabs" role="tablist" aria-label="Rubriques Mailchimp" data-mc-tabs></div>
+    </aside>
+    <div class="mk-mc-main">
+      <div class="mk-mc-bar" data-mc-bar></div>
+      <section class="mk-mc-panel" data-mc-panel tabindex="-1" aria-live="polite"></section>
+    </div>
+  </div>
 </div>
 <script type="application/json" id="mc-data"><%- bootJson %></script>
 <%- include("partials/bottom") %>

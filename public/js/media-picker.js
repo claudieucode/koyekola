@@ -30,13 +30,15 @@
     opts = opts || {};
     var type = opts.type || "";
     var multiple = Boolean(opts.multiple);
-    var state = { q: "", type: type, page: 1, items: [], chosen: [], more: false, canUpload: false, loading: false };
+    var state = { q: "", type: type, scope: "", folder: "", page: 1, items: [], chosen: [], more: false, canUpload: false, loading: false };
     var previous = document.activeElement;
 
     var title = h("h2", { id: "kwmp-title", text: opts.title || "Médiathèque" });
     var status = h("p", { class: "kwmp-status", role: "status", "aria-live": "polite" });
     var search = h("input", { type: "search", class: "kwmp-search", placeholder: "Rechercher (nom, titre, texte alternatif)…", "aria-label": "Rechercher un fichier" });
     var select = type ? null : h("select", { class: "kwmp-type", "aria-label": "Type de fichier" }, TYPE_OPTIONS.map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+    var scope = h("select", { class: "kwmp-type", "aria-label": "Afficher" }, [["", "Tous"], ["recents", "Récemment ajoutés"], ["utilise", "Récemment utilisés"], ["favoris", "Favoris"]].map(function (o) { return h("option", { value: o[0], text: o[1] }); }));
+    var folderSel = h("select", { class: "kwmp-type", "aria-label": "Dossier", hidden: "" }, [h("option", { value: "", text: "Tous les dossiers" })]);
     var grid = h("ul", { class: "kwmp-grid", role: "list", "aria-label": "Fichiers" });
     var more = h("button", { type: "button", class: "kwmp-more", text: "Charger la suite", hidden: "" });
     var queue = h("ul", { class: "kwmp-queue", "aria-live": "polite", hidden: "" });
@@ -46,7 +48,7 @@
     var cancel = h("button", { type: "button", class: "kwmp-cancel", text: "Annuler" });
     var dlg = h("dialog", { class: "kwmp", "aria-labelledby": "kwmp-title" }, [
       h("header", { class: "kwmp-head" }, [title, h("button", { type: "button", class: "kwmp-x", "aria-label": "Fermer la médiathèque", text: "×", onclick: close })]),
-      h("div", { class: "kwmp-tools" }, [search, select]),
+      h("div", { class: "kwmp-tools" }, [search, select, scope, folderSel]),
       drop, input, queue, status,
       h("div", { class: "kwmp-body" }, [grid, more]),
       h("footer", { class: "kwmp-foot" }, [h("a", { class: "kwmp-link", href: "/marketing/site-web/mediatheque", target: "_blank", rel: "noopener", text: "Gérer la médiathèque" }),
@@ -72,6 +74,7 @@
     function finish() {
       if (!state.chosen.length) return;
       var out = multiple ? state.chosen.slice() : state.chosen[0];
+      try { K.api("POST", K.BASE + "/utilise", { ids: state.chosen.map(function (c) { return c.id; }) }).catch(function () { /* l'usage n'est pas enregistré : le choix reste valable */ }); } catch (e) { /* idem */ }
       close();
       if (opts.onPick) opts.onPick(out);
     }
@@ -79,7 +82,7 @@
 
     function tile(m) {
       var chosen = isChosen(m);
-      var thumb = m.type === "image" ? h("img", { src: m.path, alt: "", loading: "lazy" }) : h("span", { class: "kwmp-badge", text: K.badge(m) });
+      var thumb = m.type === "image" ? h("img", { src: m.thumb || m.path, alt: "", loading: "lazy", decoding: "async" }) : h("span", { class: "kwmp-badge", text: K.badge(m) });
       var btn = h("button", { type: "button", class: "kwmp-item" + (chosen ? " is-chosen" : ""), "aria-pressed": String(chosen), "aria-label": (m.title || m.name) + " (" + (K.TYPE_LABELS[m.type] || "fichier") + ", " + K.fmtSize(m.size) + ")" + (m.type === "image" && !m.alt ? ", sans texte alternatif" : ""),
         onclick: function () { choose(m, false); }, ondblclick: function () { choose(m, true); } }, [thumb, h("span", { class: "kwmp-name", text: m.name }), m.type === "image" && !m.alt ? h("span", { class: "kwmp-flag", text: "Sans texte alt." }) : null]);
       return h("li", {}, btn);
@@ -92,7 +95,8 @@
     function load(reset) {
       if (reset) { state.page = 1; state.items = []; }
       state.loading = true; status.textContent = "Chargement…";
-      return K.list({ q: state.q, type: state.type, page: state.page, limite: 24 }).then(function (r) {
+      var p = { q: state.q, type: state.type, page: state.page, limite: 24 }; if (state.scope) p[state.scope] = 1; if (state.folder) p.dossier = state.folder;
+      return K.list(p).then(function (r) {
         state.items = state.items.concat(r.items); state.more = r.more; state.canUpload = r.canUpload; state.loading = false;
         drop.hidden = !r.canUpload;
         status.textContent = r.total ? r.total + " fichier" + (r.total > 1 ? "s" : "") + (state.q ? " pour cette recherche." : ".") : (state.q ? "Aucun fichier pour cette recherche." : "Aucun fichier : envoyez-en un.");
@@ -101,6 +105,10 @@
     }
     var timer = null;
     search.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(function () { state.q = search.value; load(true); }, 250); });
+    scope.addEventListener("change", function () { state.scope = scope.value; load(true); });
+    folderSel.addEventListener("change", function () { state.folder = folderSel.value; load(true); });
+    // Dossiers de la médiathèque de ce site (s'il y en a) : un choix de plus pour retrouver un fichier
+    K.api("GET", K.BASE + "/dossiers.json").then(function (r) { if (!r.enabled || !r.folders.length) return; var byParent = function (pid) { return r.folders.filter(function (x) { return (x.parentId || null) === pid; }); }; var add = function (pid, depth) { byParent(pid).forEach(function (x) { folderSel.appendChild(h("option", { value: String(x.id), text: "\u00a0\u00a0".repeat(depth) + x.name })); add(x.id, depth + 1); }); }; folderSel.appendChild(h("option", { value: "racine", text: "Sans dossier" })); add(null, 0); folderSel.hidden = false; }, function () { /* sans dossiers */ });
     if (select) select.addEventListener("change", function () { state.type = select.value; load(true); });
     more.addEventListener("click", function () { state.page++; load(false); });
 

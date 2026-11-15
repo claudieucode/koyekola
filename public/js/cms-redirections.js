@@ -19,6 +19,8 @@
       if (typeof d.showModal === "function") d.showModal(); else d.setAttribute("open", "");
       var ti = $("#rd-redirect-target"); if (ti) ti.focus();
     }
+    var nw = e.target.closest("[data-rd-new]");
+    if (nw) { var dn = $("#rd-new"); if (dn) { if (typeof dn.showModal === "function") dn.showModal(); else dn.setAttribute("open", ""); var si = $("#rd-source"); if (si) si.focus(); } }
     var cd = e.target.closest("[data-rd-closedetails]"); if (cd) { var det = cd.closest("details"); if (det) { det.removeAttribute("open"); var sm = det.querySelector("summary"); if (sm) sm.focus(); } }
     if (e.target.closest("[data-rd-close]")) { var dd = e.target.closest("dialog"); if (dd) dd.close(); }
   });
@@ -34,6 +36,9 @@
       rd.readAsText(file.files[0]);
     }
   });
+  // Arrivée avec #nouvelle ou une adresse à rediriger (?source=…) : la fenêtre de création s'ouvre directement
+  var auto = $("#rd-new");
+  if (auto && (location.hash === "#nouvelle" || /[?&]nouvelle=1/.test(location.search) || auto.getAttribute("data-rd-autoopen") === "1")) { if (typeof auto.showModal === "function") auto.showModal(); else auto.setAttribute("open", ""); }
   // Onglets : l'onglet actif reste visible quand la rangée défile (écrans étroits)
   var cur = document.querySelector(".rd-tabs [aria-current=page]");
   if (cur && cur.scrollIntoView) { var tabs = cur.parentElement; if (tabs && tabs.scrollWidth > tabs.clientWidth) { var fin = cur.offsetLeft + cur.offsetWidth; tabs.scrollLeft = fin > tabs.clientWidth - 8 ? fin - tabs.clientWidth + 32 : 0; } }

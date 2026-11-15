@@ -1,0 +1,75 @@
+<%#
+  Barre latérale du gestionnaire de fichiers. Paramètres : h (aides), side (compteurs), pageKey, tree, tagsList, collectionsList, scoped, orgView, canWrite, f, crumbs.
+  Chaque rubrique est un lien ordinaire (le serveur rend la page) ; public/js/media-explorer.js en fait une navigation fluide sans recharger la page.
+%><%
+  const row = (key, ic, label, href, count, extra = "") => `<li class="mx-nav-item"><a class="mx-nav-link${pageKey === key ? " is-current" : ""}" href="${h.esc(href)}"${pageKey === key ? ' aria-current="page"' : ""} title="${h.esc(label)}" data-mx-nav="${h.esc(key)}"${extra}>${icon(ic, { size: 18 })}<span class="mx-nav-label">${h.esc(label)}</span>${count !== undefined && count !== null ? `<span class="mx-nav-count">${count}</span>` : ""}</a></li>`;
+  const openIds = new Set(crumbs.map((c) => c.id));
+  const kids = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid);
+  const COLOR = (c) => (c ? ` data-color="${h.esc(c)}"` : "");
+  const node = (fo) => {
+    const sub = kids(fo.id), here = pageKey === "dossier:" + fo.id, open = openIds.has(fo.id);
+    return `<li class="mx-tree-item" role="treeitem"${sub.length ? ` aria-expanded="${open}"` : ""}${here ? ' aria-selected="true"' : ""} data-mx-folder-node="${fo.id}">`
+      + `<div class="mx-tree-row${here ? " is-current" : ""}" data-mx-folder="${fo.id}" data-name="${h.esc(fo.name)}"${COLOR(fo.color)}>`
+      + (sub.length ? `<button type="button" class="mx-tree-toggle" data-mx-tree-toggle aria-label="${open ? "Replier" : "Déplier"} « ${h.esc(fo.name)} »">${icon("chevronRight", { size: 14 })}</button>` : `<span class="mx-tree-toggle is-empty" aria-hidden="true"></span>`)
+      + `<a class="mx-tree-link" href="${h.esc(h.url({ dossier: String(fo.id) }))}"${here ? ' aria-current="page"' : ""} title="${h.esc(fo.name)}"><span class="mx-folder-ico"${COLOR(fo.color)}>${icon("folder", { size: 18 })}</span><span class="mx-nav-label">${h.esc(fo.name)}</span><span class="mx-nav-count">${fo.count}</span></a></div>`
+      + (sub.length ? `<ul class="mx-tree-group" role="group"${open ? "" : " hidden"}>${sub.map(node).join("")}</ul>` : "") + `</li>`;
+  };
+  const starredFolders = tree.folders.filter((x) => x.starred);
+%>
+<nav class="mx-nav" aria-label="Navigation de la médiathèque" data-mx-nav-root>
+  <ul class="mx-nav-list">
+    <%- row("accueil", "home", "Accueil", h.url({ section: "accueil" })) %>
+  </ul>
+  <h2 class="mx-nav-title">Bibliothèque</h2>
+  <ul class="mx-nav-list">
+    <%- row("tous", "layers", "Tous les fichiers", h.url({}), side.all) %>
+    <%- row("recents", "clock", "Récemment ajoutés", h.url({ recents: 1 }), side.recent) %>
+    <%- row("utilises", "history", "Récemment utilisés", h.url({ utilise: 1 }), side.used) %>
+    <%- row("favoris", "star", "Favoris", h.url({ favoris: 1 }), side.starred) %>
+  </ul>
+  <h2 class="mx-nav-title">Types</h2>
+  <ul class="mx-nav-list">
+    <%- row("type:image", "image", "Images", h.url({ type: "image" }), side.image) %>
+    <%- row("type:video", "video", "Vidéos", h.url({ type: "video" }), side.video) %>
+    <%- row("type:audio", "music", "Audio", h.url({ type: "audio" }), side.audio) %>
+    <%- row("type:documents", "fileText", "Documents", h.url({ type: "documents" }), side.documents) %>
+    <% if (side.lottie) { %><%- row("type:lottie", "sparkles", "Animations", h.url({ type: "lottie" }), side.lottie) %><% } %>
+  </ul>
+  <% if (tree.enabled) { %>
+  <div class="mx-nav-head"><h2 class="mx-nav-title">Mes dossiers</h2><% if (canWrite) { %><button type="button" class="mx-iconbtn is-small" data-mx-new-folder aria-label="Nouveau dossier" title="Nouveau dossier"><%- icon("plus", { size: 16 }) %></button><% } %></div>
+  <ul class="mx-nav-list">
+    <%- row("dossiers", "folderOpen", "Tous les dossiers", h.url({ section: "dossiers" }), tree.folders.length) %>
+    <%- row("racine", "file", "Sans dossier", h.url({ dossier: "racine" }), tree.rootCount, ' data-mx-folder-root="1"') %>
+  </ul>
+  <ul class="mx-tree" role="tree" aria-label="Dossiers" data-mx-tree><%- kids(null).map(node).join("") %></ul>
+  <% if (starredFolders.length) { %><h2 class="mx-nav-title">Dossiers favoris</h2><ul class="mx-nav-list"><% starredFolders.forEach((fo) => { %><%- row("fav-dossier:" + fo.id, "star", fo.name, h.url({ dossier: String(fo.id) }), fo.count) %><% }) %></ul><% } %>
+  <% } %>
+  <% if (scoped) { %>
+  <div class="mx-nav-head"><h2 class="mx-nav-title">Collections</h2><% if (canWrite) { %><button type="button" class="mx-iconbtn is-small" data-mx-new-collection aria-label="Nouvelle collection" title="Nouvelle collection"><%- icon("plus", { size: 16 }) %></button><% } %></div>
+  <ul class="mx-nav-list" data-mx-collections>
+    <% collectionsList.forEach((c) => { %><%- row("col:" + c.id, "gallery", c.name, h.url({ collection: c.id }), c.count, ' data-mx-collection="' + c.id + '" data-name="' + h.esc(c.name) + '"') %><% }) %>
+    <% if (!collectionsList.length) { %><li class="mx-nav-empty">Aucune collection.</li><% } %>
+  </ul>
+  <div class="mx-nav-head"><h2 class="mx-nav-title">Tags</h2></div>
+  <ul class="mx-tags" data-mx-tags>
+    <% tagsList.forEach((t) => { %><li><a class="mx-tag<%= pageKey === 'tag:' + t.id ? ' is-current' : '' %>" href="<%= h.url({ tag: t.id }) %>" data-mx-nav="tag:<%= t.id %>" data-mx-tag="<%= t.id %>" data-name="<%= t.name %>"<%- COLOR(t.color) %>><span class="mx-tag-dot" aria-hidden="true"></span><%= t.name %> <span class="mx-nav-count"><%= t.count %></span></a></li><% }) %>
+    <% if (!tagsList.length) { %><li class="mx-nav-empty">Aucun tag. Ajoutez-en depuis les informations d'un fichier.</li><% } %>
+  </ul>
+  <% } %>
+  <% if (orgView) { %>
+  <h2 class="mx-nav-title">Médiathèque affichée</h2>
+  <ul class="mx-nav-list" data-mx-scopes>
+    <li class="mx-nav-item"><a class="mx-nav-link<%= !f.portee || f.portee === "commun" ? " is-current" : "" %>" href="<%= h.url({ portee: "" }) %>" data-mx-nav="portee-principal"><%- icon("home", { size: 18 }) %><span class="mx-nav-label">Site principal</span></a></li>
+    <li class="mx-nav-item"><a class="mx-nav-link<%= f.portee === "tous" ? " is-current" : "" %>" href="<%= h.url({ portee: "tous" }) %>" data-mx-nav="portee-tous"><%- icon("globe", { size: 18 }) %><span class="mx-nav-label">Tous les sites (vue d'ensemble)</span></a></li>
+    <li class="mx-nav-item"><a class="mx-nav-link<%= f.portee === "site" ? " is-current" : "" %>" href="<%= h.url({ portee: "site" }) %>" data-mx-nav="portee-site"><%- icon("lock", { size: 18 }) %><span class="mx-nav-label">Fichiers propres à un site</span></a></li>
+  </ul>
+  <% } %>
+  <h2 class="mx-nav-title">Organisation</h2>
+  <ul class="mx-nav-list">
+    <% if (orgView) { %><%- row("partages", "share2", "Partagés", h.url({ portee: "commun" }), side.shared) %><% } %>
+    <%- row("doublons", "copy", "Doublons", h.url({ section: "doublons" }), side.duplicates) %>
+    <%- row("volumineux", "maximize", "Fichiers volumineux", h.url({ volumineux: 1 }), side.large) %>
+    <%- row("stockage", "hardDrive", "Stockage", h.url({ section: "stockage" })) %>
+    <%- row("corbeille", "trash", "Corbeille", h.url({ corbeille: 1 }), (side.trashStanding || 0) + (side.trashFolders || 0)) %>
+  </ul>
+</nav>

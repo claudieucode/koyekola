@@ -1,0 +1,60 @@
+<%- include("../partials/top", { title, active }) %>
+<%- include("_head", { heading: course ? course.title : "Nouvelle formation" }) %>
+<% const LV = { debutant: "Débutant", intermediaire: "Intermédiaire", avance: "Avancé" }; const val = (k, d = "") => (course ? course[k] : d) ?? d; %>
+<div class="lm-build">
+<section class="mk-panel lm-settings">
+  <h2><%= course ? "Réglages" : "Informations de la formation" %></h2>
+  <form method="post" action="<%= course ? base + "/" + course.id : base + "/nouvelle" %>" class="mk-form">
+    <div class="field-group"><label for="c-title">Titre</label><input id="c-title" name="title" required maxlength="120" value="<%= val("title") %>" autocomplete="off"></div>
+    <div class="field-group"><label for="c-sub">Sous-titre</label><input id="c-sub" name="subtitle" maxlength="200" value="<%= val("subtitle") %>"></div>
+    <div class="lm-row">
+      <div class="field-group"><label for="c-cat">Catégorie</label><input id="c-cat" name="category" maxlength="120" value="<%= course ? course.category : "" %>" placeholder="Photo, langues…"></div>
+      <div class="field-group"><label for="c-lvl">Niveau</label><select id="c-lvl" name="level"><% levels.forEach((l) => { %><option value="<%= l %>"<%= val("level", "debutant") === l ? " selected" : "" %>><%= LV[l] %></option><% }) %></select></div>
+      <div class="field-group"><label for="c-price">Prix (€)</label><input id="c-price" name="price" inputmode="decimal" value="<%= course && course.price_cents ? (course.price_cents / 100).toFixed(2).replace(".", ",") : "" %>" placeholder="0 = gratuit"></div>
+    </div>
+    <div class="field-group"><label for="c-desc">Description</label><textarea id="c-desc" name="description" rows="6" maxlength="20000"><%= val("description") %></textarea></div>
+    <% if (canWrite) { %><div class="lm-bar"><button class="btn btn-primary btn-sm" type="submit"><%= course ? "Enregistrer" : "Créer la formation" %></button><a class="btn btn-ghost btn-sm" href="<%= base %>/liste">Annuler</a></div><% } %>
+  </form>
+  <% if (course && canWrite) { %>
+  <div class="lm-danger">
+    <form method="post" action="<%= base %>/<%= course.id %>/dupliquer"><button class="btn btn-outline btn-sm" type="submit">Dupliquer en brouillon</button></form>
+    <% if (sold > 0) { %><p class="mk-sub">Déjà suivie ou achetée (<%= sold %>) : dépubliez-la plutôt que de la supprimer.</p>
+    <% } else { %><form method="post" action="<%= base %>/<%= course.id %>/supprimer"><button class="btn btn-outline btn-sm" type="submit" data-mk-confirm="La formation, ses chapitres et ses leçons seront supprimés définitivement." data-mk-confirm-title="Supprimer cette formation ?" data-mk-confirm-ok="Supprimer">Supprimer</button></form><% } %>
+  </div>
+  <% } %>
+</section>
+<% if (course) { %>
+<section class="mk-panel lm-program">
+  <h2>Programme</h2>
+  <% if (!sections.length) { %><p class="mk-sub">Aucun chapitre pour l'instant. Un chapitre regroupe des leçons ; commencez par en ajouter un.</p><% } %>
+  <ol class="lm-chapters">
+  <% sections.forEach((sec, si) => { %>
+    <li class="lm-chapter">
+      <div class="lm-chead">
+        <% if (canWrite) { %><form method="post" action="<%= base %>/chapitres/<%= sec.id %>/renommer" class="lm-rename"><label class="sr-only" for="s-<%= sec.id %>">Titre du chapitre</label><input id="s-<%= sec.id %>" name="title" value="<%= sec.title %>" maxlength="120" required><button class="btn btn-ghost btn-sm" type="submit">Renommer</button></form>
+        <span class="lm-tools">
+          <form method="post" action="<%= base %>/chapitres/<%= sec.id %>/deplacer"><input type="hidden" name="direction" value="haut"><button class="btn btn-ghost btn-sm" type="submit" aria-label="Monter le chapitre" <%= si === 0 ? "disabled" : "" %>><%- icon("chevronUp", { size: 16 }) %></button></form>
+          <form method="post" action="<%= base %>/chapitres/<%= sec.id %>/deplacer"><input type="hidden" name="direction" value="bas"><button class="btn btn-ghost btn-sm" type="submit" aria-label="Descendre le chapitre" <%= si === sections.length - 1 ? "disabled" : "" %>><%- icon("chevronDown", { size: 16 }) %></button></form>
+          <form method="post" action="<%= base %>/chapitres/<%= sec.id %>/supprimer"><button class="btn btn-ghost btn-sm" type="submit" data-mk-confirm="Le chapitre et ses <%= sec.lessons.length %> leçon(s) seront supprimés." data-mk-confirm-title="Supprimer ce chapitre ?" data-mk-confirm-ok="Supprimer" aria-label="Supprimer le chapitre"><%- icon("trash", { size: 16 }) %></button></form>
+        </span>
+        <% } else { %><strong><%= sec.title %></strong><% } %>
+      </div>
+      <ul class="lm-lessons">
+      <% sec.lessons.forEach((l, li) => { %>
+        <li><a class="lm-ltitle" href="<%= base %>/<%= course.id %>/lecons/<%= l.id %>"><%= l.title %></a>
+          <span class="lm-lmeta"><% if (l.is_preview) { %><span class="mk-status">Aperçu gratuit</span><% } %><% if (l.video_url || l.video_path) { %><span class="mk-sub">Vidéo</span><% } %><% if (l.duration_minutes) { %><span class="mk-sub"><%= l.duration_minutes %> min</span><% } %><% if (l.hasQuiz) { %><span class="mk-sub">Quiz</span><% } %><% if (l.attachments) { %><span class="mk-sub"><%= l.attachments %> fichier<%= l.attachments > 1 ? "s" : "" %></span><% } %></span>
+          <% if (canWrite) { %><span class="lm-tools">
+            <form method="post" action="<%= base %>/lecons/<%= l.id %>/deplacer"><input type="hidden" name="direction" value="haut"><button class="btn btn-ghost btn-sm" type="submit" aria-label="Monter la leçon" <%= si === 0 && li === 0 ? "disabled" : "" %>><%- icon("chevronUp", { size: 16 }) %></button></form>
+            <form method="post" action="<%= base %>/lecons/<%= l.id %>/deplacer"><input type="hidden" name="direction" value="bas"><button class="btn btn-ghost btn-sm" type="submit" aria-label="Descendre la leçon" <%= si === sections.length - 1 && li === sec.lessons.length - 1 ? "disabled" : "" %>><%- icon("chevronDown", { size: 16 }) %></button></form>
+          </span><% } %></li>
+      <% }) %>
+      </ul>
+      <% if (canWrite) { %><form method="post" action="<%= base %>/chapitres/<%= sec.id %>/lecons" class="lm-add"><label class="sr-only" for="l-<%= sec.id %>">Titre de la nouvelle leçon</label><input id="l-<%= sec.id %>" name="title" maxlength="120" required placeholder="Nouvelle leçon"><button class="btn btn-outline btn-sm" type="submit">Ajouter une leçon</button></form><% } %>
+    </li>
+  <% }) %>
+  </ol>
+  <% if (canWrite) { %><form method="post" action="<%= base %>/<%= course.id %>/chapitres" class="lm-add lm-add-chapter"><label class="sr-only" for="n-sec">Titre du nouveau chapitre</label><input id="n-sec" name="title" maxlength="120" required placeholder="Nouveau chapitre"><button class="btn btn-primary btn-sm" type="submit">Ajouter un chapitre</button></form><% } %>
+</section>
+<% } %>
+</div>
+<%- include("../partials/bottom") %>
