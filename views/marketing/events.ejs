@@ -9,12 +9,16 @@
 
     <%- include("partials/worker-note", { workerOn, consequence: "le pont ne lit plus le site et aucun scénario ne se déclenche" }) %>
 
-    <section class="mk-panel">
-      <h2>Pont KOLAKISA</h2>
-      <p class="field-hint">Le pont lit le site sans jamais le modifier, toutes les 30 secondes environ quand le traitement en arrière-plan est actif. Au premier passage il se place à la fin de l'historique : <strong>les événements passés ne déclenchent jamais rien</strong>.</p>
+    <section class="mk-panel ev-panel">
+      <header class="ev-head">
+        <div>
+          <h2>Pont KOLAKISA</h2>
+          <p class="field-hint">Le pont lit le site sans jamais le modifier, toutes les 30 secondes environ quand le traitement en arrière-plan est actif. Au premier passage il se place à la fin de l'historique : <strong>les événements passés ne déclenchent jamais rien</strong>.</p>
+        </div>
+        <% if (cursors.length) { %><p class="ev-last">Dernière lecture du site : <strong><%= mkh.fdatetime(lastRead) %></strong></p><% } %>
+      </header>
       <% if (!cursors.length) { %><p class="mk-note">Le pont n'est pas encore initialisé. Il le sera à sa première synchronisation.</p>
       <% } else { %>
-        <p>Dernière lecture du site : <strong><%= mkh.fdatetime(lastRead) %></strong></p>
         <details class="mk-advanced">
           <summary>Détail de la lecture, par type de donnée</summary>
           <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Lecture du site par type de donnée</caption>
@@ -27,11 +31,15 @@
             </tr><% }) %></tbody></table></div>
         </details>
       <% } %>
-      <% if (canSync) { %><form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-outline btn-sm">Synchroniser maintenant</button></form>
-        <form action="/marketing/evenements/abandons" method="post"><button type="submit" class="btn btn-outline btn-sm">Détecter les abandons maintenant</button></form><% } %>
+      <% if (canSync) { %>
+        <footer class="ev-actions">
+          <form action="/marketing/evenements/synchroniser" method="post"><button type="submit" class="btn btn-primary btn-sm">Synchroniser maintenant</button></form>
+          <form action="/marketing/evenements/abandons" method="post"><button type="submit" class="btn btn-outline btn-sm">Détecter les abandons maintenant</button></form>
+        </footer>
+      <% } %>
     </section>
 
-    <h2 class="mk-h2">Événements récents</h2>
+    <h2 class="mk-h2 ev-h2">Événements récents</h2>
     <% if (!events.length) { %>
       <div class="mk-empty">
         <%- illu("activity", { className: "kx-empty-ill" }) %>
@@ -39,10 +47,10 @@
         <p>Ils apparaîtront ici dès que quelque chose se passera : un compte créé, une commande, une inscription à une formation, un contact qui s'abonne…</p>
       </div>
     <% } else { %>
-      <div class="mk-table-wrap"><table class="mk-table mk-datatable"><caption class="sr-only">Événements récents (100 au plus)</caption>
+      <div class="mk-table-wrap ev-table"><table class="mk-table mk-datatable"><caption class="sr-only">Événements récents (100 au plus)</caption>
         <thead><tr><th scope="col">Événement</th><th scope="col">Contact</th><th scope="col">Origine</th><th scope="col">Date</th><th scope="col">État</th></tr></thead>
         <tbody><% events.forEach((e) => { const label = mkh.eventLabel(e.name); %><tr>
-          <td data-label="Événement"><a href="/marketing/evenements/<%= e.id %>"><%= label || "Événement personnalisé" %></a> <code class="mk-sub"><%= e.name %></code></td>
+          <td data-label="Événement"><a href="/marketing/evenements/<%= e.id %>" class="ev-name"><%= label || "Événement personnalisé" %></a><code class="mk-sub"><%= e.name %></code></td>
           <td data-label="Contact"><%= e.email || "—" %></td>
           <td data-label="Origine"><%= mkh.eventSourceLabel(e.source) %></td>
           <td data-label="Date"><%= mkh.fdatetime(e.occurred_at) %></td>
