@@ -3,13 +3,16 @@
   Le serveur rend la liste (filtrée, triée, paginée dans la base) ; public/js/media-explorer.js ajoute la navigation fluide, les modes d'affichage, la sélection,
   le glisser-déposer, les menus contextuels, le panneau d'informations et la prévisualisation. Une médiathèque distincte par site.
 %><%- include("partials/top", { title, active }) %>
-<link rel="stylesheet" href="<%= asset('/css/media-explorer.css') %>">
+<link rel="stylesheet" href="<%= asset('/css/media-explorer.css') %>"><link rel="stylesheet" href="<%= asset('/css/media-columns.css') %>">
 <%
   const depthOf = (fo) => { let d = 0, cur = fo; while (cur && cur.parentId && d < 9) { cur = tree.folders.find((x) => x.id === cur.parentId); d++; } return d; };
   const ordered = []; const walk = (pid) => tree.folders.filter((x) => (x.parentId || null) === pid).forEach((x) => { ordered.push(x); walk(x.id); }); walk(null);
-  const colsClass = prefs.columns.map((c) => "has-c-" + c).join(" ");
+  const catKey = { image: "image", video: "video", audio: "audio", documents: "documents", pdf: "documents", document: "documents", lottie: "lottie" }[f.type] || "";
+  const activeCols = prefs.colSmart && catKey ? (prefs.colByType[catKey] || typeColumns[catKey] || prefs.columns) : prefs.columns;
+  const colsClass = activeCols.map((c) => "has-c-" + c).join(" ");
+  const colVars = Object.keys(columnDefs).map((k) => "--o-" + k + ":" + (activeCols.indexOf(k) < 0 ? 99 : activeCols.indexOf(k) + 1) + ";--w-" + k + ":" + (prefs.colWidths[k] || columnDefs[k].width) + "px").join(";");
 %>
-<div class="mx <%= colsClass %>" data-mx data-sidebar="<%= prefs.sidebar %>" data-info="<%= prefs.info %>" data-view="<%= view %>" data-density="<%= prefs.density %>" style="--mx-size: <%= prefs.size %>px; --mx-info-w: <%= prefs.infoWidth %>px">
+<div class="mx <%= colsClass %>" data-mx data-sidebar="<%= prefs.sidebar %>" data-info="<%= prefs.info %>" data-view="<%= view %>" data-density="<%= prefs.density %>" data-pane="<%= prefs.pane %>" style="--mx-size: <%= prefs.size %>px; --mx-info-w: <%= prefs.infoWidth %>px; <%= colVars %>">
   <aside class="mx-side" id="mx-side" aria-label="Navigation de la médiathèque" data-mx-side><div class="mx-side-scroll" data-frag="side"><%- include("media/_side") %></div></aside>
   <div class="mx-main">
     <div data-frag="head"><%- include("media/_head") %></div>
@@ -19,7 +22,7 @@
     </div>
   </div>
   <div class="mx-resizer" data-mx-resizer role="separator" aria-orientation="vertical" aria-label="Largeur du panneau d'informations (flèches gauche et droite)" tabindex="0"></div>
-  <aside class="mx-info" id="mx-info" data-ml-panel hidden aria-label="Informations" tabindex="-1"><button type="button" class="mx-iconbtn is-small mx-info-close" data-mx-info-close aria-label="Fermer le panneau d'informations" title="Fermer"><%- icon("close", { size: 16 }) %></button><div class="mx-info-body" data-mx-info-body></div></aside>
+  <aside class="mx-info" id="mx-info" data-ml-panel hidden aria-label="Informations" tabindex="-1"><button type="button" class="mx-iconbtn is-small mx-info-close" data-mx-info-close aria-label="Fermer le panneau d'informations" title="Fermer"><%- icon("close", { size: 16 }) %></button><div class="mx-info-tabs" role="tablist" aria-label="Contenu du panneau"><button type="button" role="tab" class="mx-info-tab" data-mx-pane="apercu" aria-selected="<%= prefs.pane === "apercu" ? "true" : "false" %>">Aperçu</button><button type="button" role="tab" class="mx-info-tab" data-mx-pane="infos" aria-selected="<%= prefs.pane !== "apercu" ? "true" : "false" %>">Informations</button></div><div class="mx-info-body" data-mx-info-body></div></aside>
 </div>
 
 <% if (canUpload && !f.trashed) { %>
@@ -49,5 +52,5 @@
 </div>
 <% } %>
 <script type="application/json" id="mu-config"><%- JSON.stringify(uploadCfg).replace(/</g, "\\u003c") %></script>
-<script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: filtered, sort: f.sort, folder: f.adv.folder || null, folderEnabled: tree.enabled, scoped, view, section, pageKey, pageTitle, uploadOpen, prefs, retention, spaceBase, folders: tree.folders.map((x) => ({ id: x.id, parentId: x.parentId || null, name: x.name, color: x.color || "", description: x.description || "", count: x.count, starred: Boolean(x.starred) })), colors: ["bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"], total: found.total, nextUrl: found.page < found.pages ? h.keep({ page: found.page + 1 }) : "" }).replace(/</g, "\\u003c") %></script>
+<script type="application/json" id="ml-config"><%- JSON.stringify({ canUpload, canWrite, canDelete, trashed: f.trashed, type: f.type, hasFilter: filtered, sort: f.sort, folder: f.adv.folder || null, folderEnabled: tree.enabled, scoped, view, section, pageKey, pageTitle, uploadOpen, prefs, columnDefs, typeColumns, retention, spaceBase, folders: tree.folders.map((x) => ({ id: x.id, parentId: x.parentId || null, name: x.name, color: x.color || "", description: x.description || "", count: x.count, starred: Boolean(x.starred) })), colors: ["bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"], total: found.total, nextUrl: found.page < found.pages ? h.keep({ page: found.page + 1 }) : "" }).replace(/</g, "\\u003c") %></script>
 <%- include("partials/bottom") %>

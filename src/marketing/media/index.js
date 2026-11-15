@@ -226,7 +226,11 @@ function saveUpload(ctx, { buffer, originalName, declaredType, allow = null, sit
 }
 
 const LARGE_BYTES = 5 * 1024 * 1024; // « fichier volumineux » : 5 Mo et plus
-const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC", modifie: "COALESCE(updated_at, created_at) DESC, id DESC", type: "type ASC, name COLLATE NOCASE ASC, id DESC", utilise: "last_used_at DESC, id DESC", perso: "sort_order IS NULL, sort_order ASC, id DESC" };
+const SORTS = { recent: "id DESC", ancien: "id ASC", nom: "name COLLATE NOCASE ASC, id DESC", nom_desc: "name COLLATE NOCASE DESC, id DESC", taille: "size DESC, id DESC", modifie: "COALESCE(updated_at, created_at) DESC, id DESC", type: "type ASC, name COLLATE NOCASE ASC, id DESC", type_desc: "type DESC, name COLLATE NOCASE ASC, id DESC",
+  taille_asc: "size ASC, id DESC", modifie_asc: "COALESCE(updated_at, created_at) ASC, id DESC",
+  dims: "COALESCE(width, 0) * COALESCE(height, 0) DESC, id DESC", dims_asc: "COALESCE(width, 0) * COALESCE(height, 0) ASC, id DESC",
+  ext: `LOWER(REPLACE(path, RTRIM(path, REPLACE(path, '.', '')), '')) ASC, name COLLATE NOCASE ASC, id DESC`, ext_desc: `LOWER(REPLACE(path, RTRIM(path, REPLACE(path, '.', '')), '')) DESC, name COLLATE NOCASE ASC, id DESC`,
+  format: "mime COLLATE NOCASE ASC, name COLLATE NOCASE ASC, id DESC", format_desc: "mime COLLATE NOCASE DESC, name COLLATE NOCASE ASC, id DESC", utilise: "last_used_at DESC, id DESC", perso: "sort_order IS NULL, sort_order ASC, id DESC" };
 // type : un des TYPES, ou « documents » (PDF + documents Office). kind (historique, e-mails) : « image » ou « document »
 // (PDF et documents Office : jamais les vidéos ni l'audio). trashed : la corbeille. from : date (AAAA-MM-JJ HH:MM:SS) minimale.
 function listMedia(ctx, { q = "", kind = "", type = "", trashed = false, sort = "recent", from = "", month = "", limit = 40, offset = 0, reach = "", siteId, folder, ext = "", minSize, maxSize, minWidth, maxWidth, duplicates = false, large = false, tagId, collectionId, starredBy, usedOnly = false, standalone = false } = {}) {

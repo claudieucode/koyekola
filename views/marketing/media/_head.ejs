@@ -4,7 +4,7 @@
 %><%
   const advanced = Boolean(f.raw.ext || f.raw.tmin || f.raw.tmax || f.raw.lmin || f.raw.lmax || f.raw.doublons || f.raw.volumineux);
   const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents], ["lottie", "Animations Lottie", counts.lottie]];
-  const SORTS = [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["taille", "Plus volumineux"], ["modifie", "Modifiés récemment"], ["type", "Type"], ["perso", "Ordre personnalisé"]];
+  const SORTS = [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["taille", "Plus volumineux"], ["modifie", "Modifiés récemment"], ["type", "Type"], ["type_desc", "Type Z → A"], ["taille_asc", "Plus petits"], ["modifie_asc", "Modifiés il y a longtemps"], ["dims", "Plus grandes dimensions"], ["dims_asc", "Plus petites dimensions"], ["ext", "Extension A → Z"], ["ext_desc", "Extension Z → A"], ["format", "Format A → Z"], ["format_desc", "Format Z → A"], ["perso", "Ordre personnalisé"]];
   const VIEWS = [["grille", "grid", "Grille"], ["liste", "rows", "Liste"], ["details", "menu", "Détails"], ["icones", "gallery", "Grandes icônes"], ["compacte", "dense", "Compact"]];
   const COLS = [["type", "Type"], ["size", "Taille"], ["dims", "Dimensions"], ["folder", "Dossier"], ["modified", "Modifié le"], ["created", "Ajouté le"], ["author", "Auteur"], ["tags", "Tags"]];
   const isList = ["liste", "details"].includes(view);
@@ -21,12 +21,13 @@
         <% if (f.raw.dossier === "racine") { %><span aria-hidden="true">›</span><strong aria-current="page">Sans dossier</strong><% } %>
       </nav><% } %>
       <h1><%= pageTitle %></h1>
-      <p class="mx-count" data-mx-count aria-live="polite"><% if (section === "accueil" || section === "stockage" || section === "doublons") { %><% } else if (section === "dossiers") { %><%= total %> dossier<%= total > 1 ? "s" : "" %><% } else { %><%= found.total %> fichier<%= found.total > 1 ? "s" : "" %><% if (subfolders.length) { %> · <%= subfolders.length %> dossier<%= subfolders.length > 1 ? "s" : "" %><% } %><% } %></p>
+      <p class="mx-count" data-mx-count aria-live="polite"><% if (section === "accueil" || section === "stockage" || section === "doublons" || (view === "colonnes" && !section && !f.trashed)) { %><% } else if (section === "dossiers") { %><%= total %> dossier<%= total > 1 ? "s" : "" %><% } else { %><%= found.total %> fichier<%= found.total > 1 ? "s" : "" %><% if (subfolders.length) { %> · <%= subfolders.length %> dossier<%= subfolders.length > 1 ? "s" : "" %><% } %><% } %></p>
     </div>
     <div class="mx-actions">
       <% if (canWrite && scoped && !f.trashed && !noList) { %><button type="button" class="btn btn-outline btn-sm" data-mx-new-folder aria-label="Nouveau dossier" title="Nouveau dossier"><%- icon("folderPlus", { size: 16 }) %><span class="mx-lbl"> Nouveau dossier</span></button><% } %>
       <% if (canUpload && !f.trashed) { %><button type="button" class="btn btn-primary btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload" aria-label="Ajouter un fichier média" title="Ajouter un fichier média"><%- icon("upload", { size: 16 }) %><span class="mx-lbl"> Ajouter un fichier média</span></button><% } %>
       <% if (f.trashed && canDelete) { %><button type="button" class="btn btn-outline btn-sm" data-mx-empty-trash><%- icon("trash", { size: 16 }) %> Vider la corbeille</button><% } %>
+      <button type="button" class="mx-iconbtn" data-mx-quick-toggle aria-controls="mx-info" aria-pressed="<%= prefs.info === "open" && prefs.pane === "apercu" ? "true" : "false" %>" aria-label="Aperçu rapide" title="Aperçu rapide (Espace)"><%- icon("eye", { size: 20 }) %></button>
       <button type="button" class="mx-iconbtn" data-mx-info-toggle aria-controls="mx-info" aria-pressed="<%= prefs.info === "open" ? "true" : "false" %>" aria-label="Panneau d'informations" title="Informations (Cmd/Ctrl + I)"><%- icon("panelRight", { size: 20 }) %></button>
     </div>
   </div>
@@ -50,16 +51,16 @@
         <label>Largeur max. (px) <input type="number" name="lmax" value="<%= f.raw.lmax %>" min="0" inputmode="numeric"></label>
         <label class="mx-check-row"><input type="checkbox" name="doublons" value="1"<%= f.raw.doublons ? " checked" : "" %>> Doublons (contenu identique)</label>
         <label class="mx-check-row"><input type="checkbox" name="volumineux" value="1"<%= f.raw.volumineux ? " checked" : "" %>> Volumineux (≥ 5 Mo)</label>
-        <div class="mx-pop-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><a class="btn btn-ghost btn-sm" href="<%= h.url({ section, dossier: f.raw.dossier, corbeille: f.trashed ? 1 : "" }) %>" data-mx-reset>Réinitialiser les filtres</a></div>
+        <div class="mx-pop-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><button type="button" class="btn btn-outline btn-sm" data-mx-save-view title="Enregistrer les filtres actuels : dossier intelligent ou recherche">Enregistrer…</button><a class="btn btn-ghost btn-sm" href="<%= h.url({ section, dossier: f.raw.dossier, corbeille: f.trashed ? 1 : "" }) %>" data-mx-reset>Réinitialiser les filtres</a></div>
       </div>
     </details>
     <label class="mx-sort"><span class="sr-only">Trier par</span><select name="tri" id="ml-tri" aria-label="Trier par"><% SORTS.forEach(([k, name]) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= name %></option><% }) %></select></label>
     <span class="mx-break" aria-hidden="true"></span>
     <span class="mx-hist" role="group" aria-label="Historique des déplacements"><button type="button" class="mx-iconbtn" data-mx-undo disabled aria-label="Annuler le dernier déplacement" title="Annuler (Ctrl+Z)"><%- icon("undo", { size: 18 }) %></button><button type="button" class="mx-iconbtn" data-mx-redo disabled aria-label="Rétablir le déplacement annulé" title="Rétablir (Ctrl+Maj+Z)"><%- icon("redo", { size: 18 }) %></button></span>
-    <span class="mx-views" role="group" aria-label="Mode d'affichage"><% VIEWS.forEach(([k, ic, name]) => { %><button type="button" class="mx-iconbtn" data-mx-view="<%= k %>" aria-pressed="<%= view === k ? "true" : "false" %>" aria-label="Affichage <%= { grille: "en grille", liste: "en liste", details: "en détails", icones: "en grandes icônes", compacte: "compact" }[k] %>" title="<%= name %>"><%- icon(ic, { size: 18 }) %></button><% }) %></span>
+    <span class="mx-views" role="group" aria-label="Mode d'affichage"><% VIEWS.forEach(([k, ic, name]) => { %><button type="button" class="mx-iconbtn" data-mx-view="<%= k %>" aria-pressed="<%= view === k ? "true" : "false" %>" aria-label="Affichage <%= { grille: "en grille", liste: "en liste", details: "en détails", icones: "en grandes icônes", compacte: "compact", colonnes: "en colonnes" }[k] %>" title="<%= name %>"><%- icon(ic, { size: 18 }) %></button><% }) %></span>
     <label class="mx-size" title="Taille des miniatures"><span class="sr-only">Taille des miniatures</span><input type="range" min="90" max="320" step="10" value="<%= prefs.size %>" data-mx-size aria-label="Taille des miniatures"></label>
     <span class="mx-tb-right"><details class="mx-pop mx-cols" data-mx-pop data-mx-cols<%- isList ? "" : " hidden" %>><summary class="mx-iconbtn" aria-label="Colonnes affichées" title="Colonnes"><%- icon("columns", { size: 18 }) %></summary>
-      <div class="mx-pop-body"><p class="mx-pop-title">Colonnes</p><% COLS.forEach(([k, name]) => { %><label class="mx-check-row"><input type="checkbox" data-mx-col value="<%= k %>"<%= prefs.columns.includes(k) ? " checked" : "" %>> <%= name %></label><% }) %>
+      <div class="mx-pop-body"><p class="mx-pop-title">Colonnes</p><% const colOrder = [...prefs.columns.filter((k) => COLS.some((c) => c[0] === k)), ...COLS.map((c) => c[0]).filter((k) => !prefs.columns.includes(k))]; %><div data-mx-colrows><% colOrder.forEach((k) => { const name = (COLS.find((c) => c[0] === k) || [])[1]; %><div class="mx-colrow" data-mx-colrow="<%= k %>"><label class="mx-check-row"><input type="checkbox" data-mx-col value="<%= k %>"<%= prefs.columns.includes(k) ? " checked" : "" %>> <%= name %></label><span class="mx-colmove"><button type="button" class="mx-iconbtn is-small" data-mx-col-move="up" data-col="<%= k %>" aria-label="Monter la colonne « <%= name %> »" title="Monter">↑</button><button type="button" class="mx-iconbtn is-small" data-mx-col-move="down" data-col="<%= k %>" aria-label="Descendre la colonne « <%= name %> »" title="Descendre">↓</button></span></div><% }) %></div><p class="mx-theme-note">L'ordre des colonnes s'applique à la vue « Liste ».</p>
         <p class="mx-pop-title">Densité</p><label class="mx-check-row"><input type="checkbox" data-mx-density<%= prefs.density === "compacte" ? " checked" : "" %>> Lignes serrées</label></div>
     </details>
     <details class="mx-pop mx-theme" data-mx-pop data-mx-theme><summary class="mx-iconbtn" aria-label="Apparence du gestionnaire" title="Apparence"><%- icon("palette", { size: 18 }) %></summary>
@@ -69,6 +70,11 @@
         <label class="mx-theme-range"><span>Rayon des bordures <output data-mx-theme-out="radius"></output></span><input type="range" min="0" max="20" step="1" data-mx-theme-range="radius"></label>
         <label class="mx-theme-range"><span>Espacement <output data-mx-theme-out="space"></output></span><input type="range" min="80" max="140" step="5" data-mx-theme-range="space"></label>
         <label class="mx-theme-range"><span>Taille des icônes <output data-mx-theme-out="iconSize"></output></span><input type="range" min="14" max="26" step="1" data-mx-theme-range="iconSize"></label>
+        <details class="mx-theme-secs"><summary>Sections de la barre latérale</summary>
+          <p class="mx-theme-note">Glissez les titres dans la barre, ou réglez ici : flèches pour l'ordre, case décochée pour masquer.</p>
+          <ul class="mx-secs" data-mx-secs></ul>
+          <button type="button" class="btn btn-ghost btn-sm" data-mx-secs-reset>Rétablir la disposition</button>
+        </details>
         <div class="mx-pop-actions"><button type="button" class="btn btn-ghost btn-sm" data-mx-theme-undo>Annuler les changements</button><button type="button" class="btn btn-outline btn-sm" data-mx-theme-reset>Réinitialiser</button></div>
         <p class="mx-theme-note">Enregistré automatiquement pour vous, sur ce site uniquement.</p>
       </div>

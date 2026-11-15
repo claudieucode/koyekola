@@ -97,7 +97,7 @@
     purge: function (id) { return request("POST", BASE + "/" + id + "/supprimer", {}); },
     bulk: function (action, ids) { return request("POST", BASE + "/actions", { action: action, ids: ids }); },
     // Explorateur : dossiers logiques (la base seule ; aucun fichier ne bouge ni ne disparaît)
-    folderCreate: function (name, parentId) { return request("POST", BASE + "/dossiers", { name: name, parent_id: parentId || null }).then(function (r) { return r.folder; }); },
+    folderCreate: function (name, parentId, category) { return request("POST", BASE + "/dossiers", { name: name, parent_id: parentId || null, category: category || "" }).then(function (r) { return r.folder; }); },
     folderRename: function (id, name) { return request("POST", BASE + "/dossiers/" + id, { name: name }).then(function (r) { return r.folder; }); },
     folderDelete: function (id) { return request("POST", BASE + "/dossiers/" + id + "/supprimer", {}); },
     move: function (ids, folderId) { return request("POST", BASE + "/deplacer", { ids: ids, folder_id: folderId || null }); },

@@ -36,7 +36,7 @@ function siblings(ctx, k, parent) {
     return ctx.db.prepare(`SELECT id, name FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IS ? AND ${fs.sql} ORDER BY sort_order IS NULL, sort_order ASC, id DESC`).all(ctx.organizationId, parent, ...fs.args);
   }
   const c = folders.siteCond(folders.needScope(ctx));
-  return ctx.db.prepare(`SELECT id, name FROM mk_media_folders WHERE organization_id = ? AND deleted_at IS NULL AND parent_id IS ? AND ${c.sql} ORDER BY sort_order IS NULL, sort_order ASC, name COLLATE NOCASE`).all(ctx.organizationId, parent, ...c.args);
+  return ctx.db.prepare(`SELECT id, name FROM mk_media_folders WHERE organization_id = ? AND deleted_at IS NULL AND parent_id IS ? AND ${c.sql} ORDER BY sort_order ASC, name COLLATE NOCASE`).all(ctx.organizationId, parent, ...c.args);
 }
 
 function organize(ctx, { kind, ids, to = null, before, after, policy } = {}) {
@@ -124,7 +124,7 @@ function organize(ctx, { kind, ids, to = null, before, after, policy } = {}) {
       const finalName = newName || it.name;
       taken.add(fold(finalName));
       if (k === "f") ctx.db.prepare("UPDATE mk_media SET folder_id = ?, name = ?, sort_order = CASE WHEN folder_id IS ? THEN sort_order END, updated_at = datetime('now') WHERE id = ? AND organization_id = ?").run(target, finalName, target, it.id, ctx.organizationId);
-      else ctx.db.prepare("UPDATE mk_media_folders SET parent_id = ?, name = ?, sort_order = CASE WHEN parent_id IS ? THEN sort_order END WHERE id = ? AND organization_id = ?").run(target, finalName, target, it.id, ctx.organizationId);
+      else ctx.db.prepare("UPDATE mk_media_folders SET parent_id = ?, name = ?, sort_order = CASE WHEN parent_id IS ? THEN sort_order ELSE 0 END WHERE id = ? AND organization_id = ?").run(target, finalName, target, it.id, ctx.organizationId);
       done.push(it.id);
     }
     // Position : « avant tel élément » (ou à la fin) ; sans position, on respecte l'ordre existant du conteneur d'arrivée
@@ -156,7 +156,7 @@ function organize(ctx, { kind, ids, to = null, before, after, policy } = {}) {
 const siblingsHaveOrder = (ctx, k, parent) => {
   if (k === "f") { const fs = fileScope(ctx); return !!ctx.db.prepare(`SELECT 1 FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IS ? AND sort_order IS NOT NULL AND ${fs.sql} LIMIT 1`).get(ctx.organizationId, parent, ...fs.args); }
   const c = folders.siteCond(folders.needScope(ctx));
-  return !!ctx.db.prepare(`SELECT 1 FROM mk_media_folders WHERE organization_id = ? AND deleted_at IS NULL AND parent_id IS ? AND sort_order IS NOT NULL AND ${c.sql} LIMIT 1`).get(ctx.organizationId, parent, ...c.args);
+  return !!ctx.db.prepare(`SELECT 1 FROM mk_media_folders WHERE organization_id = ? AND deleted_at IS NULL AND parent_id IS ? AND sort_order <> 0 AND ${c.sql} LIMIT 1`).get(ctx.organizationId, parent, ...c.args);
 };
 
 // Annuler / Rétablir : remet des lignes dans l'état d'un instantané. Chaque ligne est revérifiée (même médiathèque, droits, pas de cycle) ; au moindre problème, RIEN n'est appliqué.

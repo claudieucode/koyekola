@@ -1970,6 +1970,8 @@ function normalizeParts(type, raw, at, h, nodeId) {
 }
 // Réglages individuels des liens d'un menu : { clé: { link|sub|icon|badge: { styles, states, current } } }. Chaque entrée utilise la MÊME grammaire de style que les éléments
 // (écrans, états survol / focus / clic) ; « current » règle l'état « page courante ». Une entrée ne touche jamais les autres liens.
+const ITEM_HIDE_BP = ["desktop", "tablet", "mobile"];
+const ITEM_HIDE_MQ = { desktop: "(min-width: 1024px)", tablet: "(min-width: 768px) and (max-width: 1023px)", mobile: "(max-width: 767px)" };
 const ITEM_KEY = /^(p\d{1,2}(-\d{1,2}){0,2}|m\d{1,9})$/;
 const ITEM_PARTS = { link: "Lien", sub: "Sous-menu du lien", icon: "Icône du lien", badge: "Badge du lien" };
 function normalizeItemStyles(raw, at, h) {
@@ -1990,6 +1992,8 @@ function normalizeItemStyles(raw, at, h) {
       }
       if (st.styles || st.states || st.current) entry[part] = st;
     }
+    // Visibilité par écran : liste des écrans où CE lien est masqué (jamais supprimé : il reste dans le menu et dans le CMS)
+    if (Array.isArray(val.hide)) { const hide = [...new Set(val.hide.filter((k) => ITEM_HIDE_BP.includes(k)))]; if (hide.length) entry.hide = hide; }
     if (Object.keys(entry).length) out[key] = entry;
   }
   return Object.keys(out).length ? out : null;
@@ -2254,7 +2258,13 @@ function pageCss(sections, breakpoints = DEFAULT_BREAKPOINTS) {
     for (const [key, entry] of Object.entries(all)) {
       if (!ITEM_KEY.test(key)) continue;
       const li = `.kw-node.kw-n-${n.id} li[${key[0] === "m" ? `data-mid="${key.slice(1)}"` : `data-ik="${key}"`}]`;
+      // Masquer ce lien sur certains écrans (plages exactes, sans dépendre de l'héritage entre écrans) : dans la barre du menu ET dans le panneau mobile
+      if (Array.isArray(entry.hide)) {
+        const attr = key[0] === "m" ? `data-mid="${key.slice(1)}"` : `data-ik="${key}"`;
+        for (const k of entry.hide) if (ITEM_HIDE_MQ[k]) rules.base.push(`@media ${ITEM_HIDE_MQ[k]}{${li.replace(/^\.kw-node/, ".lp-site .kw-node")}{display:none!important}.lp-site .kw-menu-panel.kw-pn-${n.id} li[${attr}]{display:none!important}}`);
+      }
       for (const [part, set] of Object.entries(entry)) {
+        if (!ITEM_SEL[part]) continue;
         const sels = (ITEM_SEL[part] || "").split(",");
         for (const frag of sels) {
           const sel = li + frag;
