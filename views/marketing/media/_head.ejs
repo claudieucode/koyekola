@@ -1,0 +1,75 @@
+<%#
+  En-tête du gestionnaire : titre, fil d'Ariane, compteur, commandes principales, recherche, filtres, tri, modes d'affichage.
+  Le formulaire reste un formulaire GET ordinaire (fonctionne sans JavaScript) ; le script le soumet en navigation fluide.
+%><%
+  const advanced = Boolean(f.raw.ext || f.raw.tmin || f.raw.tmax || f.raw.lmin || f.raw.lmax || f.raw.doublons || f.raw.volumineux);
+  const typeOptions = [["", "Tous les médias", counts.all], ["image", "Images", counts.image], ["audio", "Audio", counts.audio], ["video", "Vidéo", counts.video], ["documents", "Documents", counts.documents], ["lottie", "Animations Lottie", counts.lottie]];
+  const SORTS = [["recent", "Plus récents"], ["ancien", "Plus anciens"], ["nom", "Nom A → Z"], ["nom_desc", "Nom Z → A"], ["taille", "Plus volumineux"], ["modifie", "Modifiés récemment"], ["type", "Type"]];
+  const VIEWS = [["grille", "grid", "Grille"], ["liste", "rows", "Liste"], ["details", "menu", "Détails"], ["icones", "gallery", "Grandes icônes"], ["compacte", "dense", "Compact"]];
+  const COLS = [["type", "Type"], ["size", "Taille"], ["dims", "Dimensions"], ["folder", "Dossier"], ["modified", "Modifié le"], ["created", "Ajouté le"], ["author", "Auteur"], ["tags", "Tags"]];
+  const isList = ["liste", "details"].includes(view);
+  const noList = Boolean(section) && section !== "dossiers";
+  const total = section === "dossiers" ? subfolders.length : found.total;
+%>
+<header class="mx-head" data-mx-head>
+  <div class="mx-titlebar">
+    <button type="button" class="mx-iconbtn" data-mx-side-toggle aria-controls="mx-side" aria-label="Afficher ou masquer la navigation" title="Navigation (Cmd/Ctrl + B)"><%- icon("panelLeft", { size: 20 }) %></button>
+    <div class="mx-titles">
+      <% if (crumbs.length || f.raw.dossier === "racine" || section) { %><nav class="mx-crumb" aria-label="Fil d'Ariane" data-mx-crumb>
+        <a href="<%= h.url({}) %>" data-mx-folder-root="1" data-mx-drop="root">Médiathèque</a>
+        <% crumbs.forEach((c, i) => { %><span aria-hidden="true">›</span><% if (i < crumbs.length - 1) { %><a href="<%= h.url({ dossier: String(c.id) }) %>" data-mx-folder="<%= c.id %>"><%= c.name %></a><% } else { %><strong aria-current="page"><%= c.name %></strong><% } %><% }) %>
+        <% if (f.raw.dossier === "racine") { %><span aria-hidden="true">›</span><strong aria-current="page">Sans dossier</strong><% } %>
+      </nav><% } %>
+      <h1><%= pageTitle %></h1>
+      <p class="mx-count" data-mx-count aria-live="polite"><% if (section === "accueil" || section === "stockage" || section === "doublons") { %><% } else if (section === "dossiers") { %><%= total %> dossier<%= total > 1 ? "s" : "" %><% } else { %><%= found.total %> fichier<%= found.total > 1 ? "s" : "" %><% if (subfolders.length) { %> · <%= subfolders.length %> dossier<%= subfolders.length > 1 ? "s" : "" %><% } %><% } %></p>
+    </div>
+    <div class="mx-actions">
+      <% if (canWrite && scoped && !f.trashed && !noList) { %><button type="button" class="btn btn-outline btn-sm" data-mx-new-folder aria-label="Nouveau dossier" title="Nouveau dossier"><%- icon("folderPlus", { size: 16 }) %><span class="mx-lbl"> Nouveau dossier</span></button><% } %>
+      <% if (canUpload && !f.trashed) { %><button type="button" class="btn btn-primary btn-sm" data-ml-browse aria-expanded="<%= uploadOpen ? "true" : "false" %>" aria-controls="ml-upload" aria-label="Ajouter un fichier média" title="Ajouter un fichier média"><%- icon("upload", { size: 16 }) %><span class="mx-lbl"> Ajouter un fichier média</span></button><% } %>
+      <% if (f.trashed && canDelete) { %><button type="button" class="btn btn-outline btn-sm" data-mx-empty-trash><%- icon("trash", { size: 16 }) %> Vider la corbeille</button><% } %>
+      <button type="button" class="mx-iconbtn" data-mx-info-toggle aria-controls="mx-info" aria-pressed="<%= prefs.info === "open" ? "true" : "false" %>" aria-label="Panneau d'informations" title="Informations (Cmd/Ctrl + I)"><%- icon("panelRight", { size: 20 }) %></button>
+    </div>
+  </div>
+
+  <% if (!noList) { %>
+  <div class="mx-tools" data-mx-tools>
+  <form class="mx-toolbar" method="get" action="<%= spaceBase %>" role="search" aria-label="Filtrer et rechercher les médias" data-ml-filters data-mx-filters><%- typeof mkSiteField === "string" ? mkSiteField : "" %>
+    <% if (f.trashed) { %><input type="hidden" name="corbeille" value="1"><% } %><% if (f.raw.dossier) { %><input type="hidden" name="dossier" value="<%= f.raw.dossier %>"><% } %><% if (f.portee) { %><input type="hidden" name="portee" value="<%= f.portee %>"><% } %>
+    <% ["tag", "collection", "favoris", "utilise", "recents"].forEach((k) => { if (f.raw[k]) { %><input type="hidden" name="<%= k %>" value="<%= f.raw[k] %>"><% } }) %>
+    <label class="mk-search mx-search"><span class="mk-ml-searchlabel">Rechercher des médias</span><%- icon("search", { size: 16 }) %><input type="search" name="q" value="<%= f.q %>" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="mx-suggest" aria-label="Rechercher des médias (nom, titre, texte alternatif, légende, description, tag, dossier, extension)" placeholder="Rechercher un fichier, un tag, un dossier…" data-mx-search></label>
+    <ul class="mx-suggest" id="mx-suggest" role="listbox" aria-label="Suggestions" hidden data-mx-suggest></ul>
+    <details class="mx-pop" data-mx-pop><summary class="btn btn-outline btn-sm"><%- icon("filter", { size: 16 }) %> Filtres<%= advanced || f.type || f.month ? " •" : "" %></summary>
+      <div class="mx-pop-body">
+        <label>Type <select name="type" id="ml-type"><% typeOptions.forEach(([k, name, n]) => { %><option value="<%= k %>"<%= f.type === k ? " selected" : "" %>><%= name %> (<%= n %>)</option><% }) %></select></label>
+        <label>Date <select name="mois" id="ml-mois"><option value="">Toutes les dates</option><% months.forEach((m) => { %><option value="<%= m.month %>"<%= f.month === m.month ? " selected" : "" %>><%= h.monthName(m.month) %></option><% }) %><% if (f.month && !months.some((m) => m.month === f.month)) { %><option value="<%= f.month %>" selected><%= h.monthName(f.month) %></option><% } %></select></label>
+        <label>Période <select name="periode"><option value="">Toutes</option><% Object.entries(PERIODS).forEach(([k, name]) => { %><option value="<%= k %>"<%= f.period === k ? " selected" : "" %>><%= name %></option><% }) %></select></label>
+        <label>Extension <input type="text" name="ext" value="<%= f.raw.ext %>" maxlength="8" placeholder="png, pdf…" inputmode="text" autocomplete="off"></label>
+        <label>Taille min. (Ko) <input type="number" name="tmin" value="<%= f.raw.tmin %>" min="0" inputmode="numeric"></label>
+        <label>Taille max. (Ko) <input type="number" name="tmax" value="<%= f.raw.tmax %>" min="0" inputmode="numeric"></label>
+        <label>Largeur min. (px) <input type="number" name="lmin" value="<%= f.raw.lmin %>" min="0" inputmode="numeric"></label>
+        <label>Largeur max. (px) <input type="number" name="lmax" value="<%= f.raw.lmax %>" min="0" inputmode="numeric"></label>
+        <label class="mx-check-row"><input type="checkbox" name="doublons" value="1"<%= f.raw.doublons ? " checked" : "" %>> Doublons (contenu identique)</label>
+        <label class="mx-check-row"><input type="checkbox" name="volumineux" value="1"<%= f.raw.volumineux ? " checked" : "" %>> Volumineux (≥ 5 Mo)</label>
+        <div class="mx-pop-actions"><button type="submit" class="btn btn-primary btn-sm">Filtrer</button><a class="btn btn-ghost btn-sm" href="<%= h.url({ section, dossier: f.raw.dossier, corbeille: f.trashed ? 1 : "" }) %>" data-mx-reset>Réinitialiser les filtres</a></div>
+      </div>
+    </details>
+    <label class="mx-sort"><span class="sr-only">Trier par</span><select name="tri" id="ml-tri" aria-label="Trier par"><% SORTS.forEach(([k, name]) => { %><option value="<%= k %>"<%= f.sort === k ? " selected" : "" %>><%= name %></option><% }) %></select></label>
+    <span class="mx-break" aria-hidden="true"></span>
+    <span class="mx-views" role="group" aria-label="Mode d'affichage"><% VIEWS.forEach(([k, ic, name]) => { %><button type="button" class="mx-iconbtn" data-mx-view="<%= k %>" aria-pressed="<%= view === k ? "true" : "false" %>" aria-label="Affichage <%= { grille: "en grille", liste: "en liste", details: "en détails", icones: "en grandes icônes", compacte: "compact" }[k] %>" title="<%= name %>"><%- icon(ic, { size: 18 }) %></button><% }) %></span>
+    <label class="mx-size" title="Taille des miniatures"><span class="sr-only">Taille des miniatures</span><input type="range" min="90" max="320" step="10" value="<%= prefs.size %>" data-mx-size aria-label="Taille des miniatures"></label>
+    <span class="mx-tb-right"><details class="mx-pop mx-cols" data-mx-pop data-mx-cols<%- isList ? "" : " hidden" %>><summary class="mx-iconbtn" aria-label="Colonnes affichées" title="Colonnes"><%- icon("columns", { size: 18 }) %></summary>
+      <div class="mx-pop-body"><p class="mx-pop-title">Colonnes</p><% COLS.forEach(([k, name]) => { %><label class="mx-check-row"><input type="checkbox" data-mx-col value="<%= k %>"<%= prefs.columns.includes(k) ? " checked" : "" %>> <%= name %></label><% }) %>
+        <p class="mx-pop-title">Densité</p><label class="mx-check-row"><input type="checkbox" data-mx-density<%= prefs.density === "compacte" ? " checked" : "" %>> Lignes serrées</label></div>
+    </details>
+    <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-ml-select-toggle aria-pressed="false">Sélection groupée</button><% } %></span>
+  </form>
+  <% if (canWrite) { %><div class="mx-bulk" data-ml-bulk data-mx-bulk hidden role="toolbar" aria-label="Actions sur la sélection">
+  <label class="mk-ml-selectall"><input type="checkbox" data-ml-all aria-label="Tout sélectionner"> <span data-ml-bulk-count class="mx-bulk-count" aria-live="polite"></span></label>
+  <span class="mx-bulk-actions" data-mx-bulk-actions></span>
+  <button type="button" class="btn btn-ghost btn-sm" data-mx-clear-selection>Désélectionner</button>
+  <label class="sr-only" for="ml-bulk-action">Action groupée</label><select id="ml-bulk-action" data-ml-bulk-action hidden><option value="">Actions groupées</option><% if (f.trashed) { %><option value="restaurer">Restaurer</option><% if (canDelete) { %><option value="supprimer">Supprimer définitivement</option><% } %><% } else { %><option value="corbeille">Mettre à la corbeille</option><% } %></select>
+  <button type="button" data-ml-bulk-apply hidden disabled>Appliquer</button>
+</div><% } %>
+  </div>
+  <% } %>
+</header>

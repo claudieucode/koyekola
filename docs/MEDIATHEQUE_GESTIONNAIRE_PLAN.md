@@ -42,5 +42,23 @@ Barre latérale à groupes (récents, favoris, types, doublons, volumineux, corb
 5. **Doublons, stockage, corbeille** (écrans).
 6. **Intégration** (sélecteur : récents, favoris) et **tests navigateur, audit visuel, performance**.
 
-## 4. État réel
-(Rempli à la livraison de chaque lot.)
+## 4. État réel (livré)
+
+### Réutilisé tel quel
+Isolation par site (contextes, routes protégées), dossiers logiques et anti-cycle, SHA-256 et groupes de doublons, corbeille et refus de supprimer un fichier utilisé, détection d'usage, file d'envoi (progression, annulation, nouvel essai), sélecteur partagé, permissions `media.*`, audit des actions.
+
+### Nouveau
+- **Serveur** (migration 154, additive ; `media/manager.js`, `media/exif.js`, `utils/zipStream.js`) : favoris par personne, tags, collections, préférences par personne et par site, dossiers (couleur, description, favoris, propriétés, chemin), corbeille de dossiers (restaurer avec le contenu, suppression définitive refusée si un fichier est utilisé), vidage et conservation automatique (0 / 7 / 30 / 90 jours, jamais pour un élément utilisé), copie physique, dernière utilisation, stockage (taille logique, octets uniques), doublons (détail avec utilisations, garder un exemplaire), suggestions, recherche étendue (tags, dossier, extension), téléchargement groupé ZIP en flux, vérification des conflits avant envoi, EXIF (position GPS jamais affichée).
+- **Interface** (`media-explorer.js`, `media-sections.js`, `media-preview.js`, `media-explorer.css`) : trois zones (barre latérale à groupes et compteurs, repliable en icônes ou masquable ; zone centrale avec fil d'Ariane et commandes ; panneau d'informations redimensionnable), navigation fluide sans rechargement, 5 modes d'affichage (grille, liste, détails, grandes icônes, compact) + taille des miniatures + colonnes + densité mémorisés, sélection (clic, Maj, Cmd), barre d'actions de la sélection, menus contextuels (fichier, dossier, collection, tag, fond), glisser-déposer de fichiers et de dossiers avec indication de destination et interdictions, import depuis le bureau (fichiers et dossiers entiers), fenêtre d'importation (destination, conflits de noms), prévisualisation plein écran (zoom, déplacement, rotation, navigation, vidéo, audio, PDF, EXIF), rubriques Accueil / Doublons / Stockage / Corbeille, clavier (flèches, Espace, Entrée, F2, Suppr, Cmd+A, Cmd+I, Cmd+B), tactile (appui long, tiroir de navigation), mode sombre.
+- **Sélecteur des éditeurs** : filtres « récemment ajoutés / utilisés / favoris », dossier, miniatures, enregistrement de l'usage.
+
+### Tests
+`tests/mediatheque-gestionnaire.test.js` (17 : droits, isolation entre sites, corbeille, usages, conservation, ZIP, doublons, stockage) et `tests/mediatheque-gestionnaire-navigateur.test.js` (13, vrai Chrome : navigation fluide, préférences, sélection, glisser-déposer natif, menus, favoris, tags, aperçu, recherche, corbeille, import de fichiers et de dossiers, doublons, barre latérale). Les tests existants de la médiathèque (188) passent ; deux attentes d'affichage ont été adaptées (modes d'affichage devenus boutons, première colonne « Nom »).
+
+### Limites réelles (non faites ou partielles)
+- **Archives (.zip…)** : le serveur les refuse à l'envoi (sécurité), la rubrique « Archives » n'est donc pas proposée.
+- **Dossiers** : pas de « dupliquer » un dossier (copier physiquement des fichiers casserait la déduplication) ; pas de tri personnalisé des dossiers (ordre alphabétique) ; recherche d'un dossier via les suggestions de la recherche.
+- **Gros fichiers** : un envoi passe en mémoire (50 Mo pour une vidéo, limites par type) ; pas d'envoi fractionné ni de reprise après coupure (un envoi interrompu n'est jamais enregistré).
+- **Performance** : miniatures optimisées à la demande, chargement progressif par pages de 48 et `content-visibility` ; pas de virtualisation complète de la liste (le DOM grandit avec le défilement). Les statistiques de stockage ne mesurent pas le stockage physique du fournisseur ni les versions réduites.
+- **Utilisations** : les contenus analysés pour la suppression sont ceux déjà listés à l'écran (cours, produits et formulaires ne le sont pas, et l'écran le dit).
+- **Partagés** : « Partagés » n'apparaît que pour l'équipe de l'organisation (vue multisite).

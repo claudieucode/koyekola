@@ -86,7 +86,7 @@
     var rows = {}, depth = 0;
     var queue = createQueue({
       validate: function (f) { return validate(f, cfg); },
-      transport: hooks.transport || function (file, cb) { return K.upload(file, { onProgress: cb.onProgress, onSent: cb.onSent }); },
+      transport: hooks.transport || function (file, cb) { return K.upload(file, { onProgress: cb.onProgress, onSent: cb.onSent, folder: file.mxFolder !== undefined ? file.mxFolder : hooks.destination ? hooks.destination() : "", name: file.mxName || "" }); },
       concurrency: cfg.concurrency || 2,
       onChange: function (items, changed) { render(items, changed); },
     });
@@ -138,6 +138,12 @@
 
     function take(files) {
       if (!files || !files.length) return;
+      // Avant l'envoi, la page peut vérifier les conflits de noms (hooks.beforeAdd) : elle renvoie les fichiers à envoyer (renommés ou non), jamais un envoi silencieux
+      if (hooks.beforeAdd) { var list = Array.prototype.slice.call(files); Promise.resolve(hooks.beforeAdd(list)).then(function (ok) { add(ok || list); }, function () { add(list); }); return; }
+      add(files);
+    }
+    function add(files) {
+      if (!files || !files.length) return;
       var r = queue.add(files);
       if (r.skipped.length) toast(r.skipped.length === 1 ? "« " + r.skipped[0].name + " » : " + r.skipped[0].reason + "." : r.skipped.length + " fichiers ignorés : déjà dans la file ou déjà téléversés.", "error");
       var refused = r.added.filter(function (i) { return i.rejected; });
@@ -171,12 +177,15 @@
     if (!cfgEl || !drop || !root.KWMedia) return;
     var cfg; try { cfg = JSON.parse(cfgEl.textContent); } catch (e) { return; }
     var base = cfg.libraryUrl || "";
-    mount({ drop: drop, input: document.querySelector("[data-ml-input]"), list: document.querySelector("[data-ml-queue]"), summary: document.querySelector("[data-ml-summary]"), browse: document.querySelector("[data-ml-browse-btn]") }, cfg, {
+    var ctl = mount({ drop: drop, input: document.querySelector("[data-ml-input]"), list: document.querySelector("[data-ml-queue]"), summary: document.querySelector("[data-ml-summary]"), browse: document.querySelector("[data-ml-browse-btn]") }, cfg, {
       toast: root.KWMedia.toast,
       onSaved: function (m) { window.dispatchEvent(new CustomEvent("kw-media-saved", { detail: m })); },
       libraryUrl: function (m) { return base + (base.indexOf("?") >= 0 ? "&" : "?") + "q=" + encodeURIComponent(m.name); },
       libraryHref: base,
+      destination: function () { var d = document.querySelector("[data-mx-import-dest]"); return d ? d.value : ""; },
+      beforeAdd: function (files) { return root.MXImport && root.MXImport.beforeAdd ? root.MXImport.beforeAdd(files) : files; },
     });
+    root.KWUploadCtl = ctl; // la médiathèque y dépose aussi les fichiers glissés depuis le bureau
   }
   if (typeof document !== "undefined") { if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", auto); else auto(); }
 

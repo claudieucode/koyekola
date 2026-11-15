@@ -36,6 +36,7 @@ const folders = require("../media/folders");
 const manager = require("../media/manager");
 const { writeZip, MAX_TOTAL } = require("../../utils/zipStream");
 const { exifOf } = require("../media/exif");
+const { helpers } = require("./mediaViewHelpers");
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
 // Filtres lus dans l'adresse (liste, page et API)
@@ -93,19 +94,46 @@ module.exports = () => {
     return { exif: m.type === "image" && /jpe?g$/i.test(m.path) && where ? exifOf(where.absolute) : null, media: { ...rich, author: authorsOf(ctx, [m.createdBy])[m.createdBy] || null }, usage, duplicates: twins, folder: folder ? { id: folder.id, name: folder.name } : null, analysis: { scanned: ["modèles d'e-mail", "pages et tunnels", "composants", "modèles de page", "réglages de site", "articles"], notScanned: ["cours (LMS)", "produits et téléchargements", "formulaires", "e-mails déjà envoyés"] } };
   };
 
-  // ----- Page -----
+  // ----- Page (gestionnaire de fichiers) -----
+  // Le serveur rend la liste (filtrée, triée, paginée dans la base) ; public/js/media-explorer.js y ajoute la navigation fluide, les vues, la sélection, le glisser-déposer, les menus.
+  // « ?fragment=1 » : seulement la zone qui change (barre latérale, en-tête, contenu) pour la navigation fluide entre dossiers.
+  const SECTIONS = ["accueil", "dossiers", "stockage", "doublons"];
   const page = (uploadOpen, active) => (req, res) => {
     const ctx = ctxOf(req, { overview: true });
     const f = filtersOf(req.query);
-    const found = search(ctx, f);
+    const scoped = Boolean(folders.scopeOf(ctx));
+    if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
+    const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
+    const listed = !section || section === "dossiers" ? section === "dossiers" ? { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE } : search(ctx, f) : { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
+    const found = listed;
     const authors = authorsOf(ctx, found.items.map((m) => m.createdBy));
     const tree = folders.listFolders(ctx);
-    res.render("marketing/media-library", {
-      tree, crumbs: f.adv.folder ? folders.breadcrumb(ctx, f.adv.folder) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
-      title: "Médiathèque", active, uploadOpen, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view: ["liste", "compacte"].includes(req.query.vue) ? req.query.vue : "grille",
+    const prefs = manager.getPrefs(ctx);
+    const starredFolders = new Set(manager.starredSet(ctx, "folder"));
+    const view = manager.VIEWS.includes(req.query.vue) ? req.query.vue : prefs.view;
+    const current = f.adv.folder || null;
+    const filtered = Boolean(f.q || f.period || f.type || f.month || f.recents || f.adv.ext || f.adv.minSize || f.adv.maxSize || f.adv.minWidth || f.adv.maxWidth || f.adv.duplicates || f.adv.large || f.adv.tagId || f.adv.collectionId || f.adv.starred || f.adv.usedOnly);
+    // Dossiers affichés dans la zone centrale : ceux du dossier courant, ou ceux de la racine (« Mes dossiers » et « Sans dossier »)
+    const subfolders = tree.enabled && !f.trashed && !filtered && (section === "dossiers" || f.raw.dossier === "racine" || current) ? tree.folders.filter((x) => (x.parentId || null) === (section === "dossiers" || f.raw.dossier === "racine" ? null : current)).map((x) => ({ ...x, starred: starredFolders.has(x.id) })) : [];
+    // Titre et repère de la rubrique affichée (la barre latérale s'y réfère)
+    const tag = f.adv.tagId ? (scoped ? manager.listTags(ctx) : []).find((t) => t.id === f.adv.tagId) : null;
+    const col = f.adv.collectionId ? (scoped ? manager.listCollections(ctx) : []).find((c) => c.id === f.adv.collectionId) : null;
+    const typeLabel = { image: "Images", video: "Vidéos", audio: "Audio", documents: "Documents", pdf: "PDF", document: "Documents", lottie: "Animations" }[f.type];
+    const fold = current ? tree.folders.find((x) => x.id === current) : null;
+    const [pageKey, pageTitle] = section ? [section, { accueil: "Accueil", dossiers: "Mes dossiers", stockage: "Stockage", doublons: "Doublons" }[section]]
+      : f.trashed ? ["corbeille", "Corbeille"] : f.adv.starred ? ["favoris", "Favoris"] : f.adv.usedOnly ? ["utilises", "Récemment utilisés"] : f.recents ? ["recents", "Récemment ajoutés"] : f.adv.duplicates ? ["doublons-liste", "Fichiers en double"] : f.adv.large ? ["volumineux", "Fichiers volumineux"]
+      : tag ? [`tag:${tag.id}`, `Tag « ${tag.name} »`] : col ? [`col:${col.id}`, col.name] : f.type && typeLabel ? [`type:${f.type === "pdf" ? "documents" : f.type}`, typeLabel] : f.raw.dossier === "racine" ? ["racine", "Sans dossier"] : fold ? [`dossier:${fold.id}`, fold.name] : f.portee === "commun" ? ["partages", "Fichiers partagés"] : ["tous", "Médiathèque"];
+    const data = {
+      pageKey, pageTitle, h: helpers({ spaceBase: spaceBase(ctx), f, section }),
+      tree: { ...tree, folders: tree.folders.map((x) => ({ ...x, starred: starredFolders.has(x.id) })) }, subfolders, crumbs: current ? folders.breadcrumb(ctx, current) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
+      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, filtered,
+      tagsList: scoped ? manager.listTags(ctx) : [], collectionsList: scoped ? manager.listCollections(ctx) : [], retention: scoped ? manager.getRetention(ctx) : 0, scoped,
+      trashData: f.trashed && scoped ? manager.listTrash(ctx, { q: f.q }) : { folders: [], files: [] }, folderMeta: current ? (tree.folders.find((x) => x.id === current) || null) : null,
       canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), uploadCfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, formats: media.FORMATS, maxMb: media.uploadConfig().limits,
       mediaJs: true,
-    });
+    };
+    if (req.query.fragment === "1") return res.render("marketing/media-fragment", data);
+    res.render("marketing/media-library", data);
   };
   router.get(base, need("media.read"), page(false, "mediatheque"));
   // ----- Média → Ajouter un fichier média (« Téléverser un média ») : la même file d'importation et le même service que la médiathèque -----
