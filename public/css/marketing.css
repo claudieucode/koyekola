@@ -2090,3 +2090,14 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-body .mk-panel .mk-export-row { margin: 20px 0 24px; padding: 0; }
 .mk-body .mk-panel .mk-export-row:last-child { margin-bottom: 4px; }
 .mk-body .mk-panel .mk-export-row + :is(.mk-filterbar, form, .mk-panel, h3) { margin-top: 0; }
+
+/* Rapports comparatifs : étiquetage sous le tableau et enregistrement d'un rapport (alignement et respiration) */
+.mk-body .mk-panel .mk-cmp-actions { align-items: flex-end; gap: 12px 16px; }
+.mk-body .mk-panel .mk-cmp-actions .field-group { margin: 0; }
+.mk-body .mk-panel .mk-cmp-actions :is(.btn, input[type="text"]) { box-sizing: border-box; height: 40px; min-height: 40px; }
+.mk-body .mk-panel .mk-cmp-actions .btn { padding-block: 0; display: inline-flex; align-items: center; justify-content: center; }
+.mk-body .mk-panel.mk-cmp-side { padding-bottom: 24px; }
+.mk-body .mk-cmp-side .mk-cmp-side-body { padding-bottom: 4px; }
+.mk-body .mk-cmp-side-body form.mk-form > .btn { margin-top: 4px; }
+.mk-body .mk-cmp-side-body form.mk-form > .field-group { margin-bottom: 8px; }
+.mk-body .mk-panel .mk-cmp-actions .field-group { min-width: 280px; }
