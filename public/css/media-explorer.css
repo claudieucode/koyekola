@@ -349,3 +349,9 @@ html[data-kb-motion="lite"] .mx *, html[data-kb-motion="lite"] .mx-import, html[
 .mx-theme-range { display: grid; gap: 4px; font-size: 0.82rem; color: var(--mx-text); } .mx-theme-range span { display: flex; justify-content: space-between; } .mx-theme-range output { color: var(--mx-muted); font-variant-numeric: tabular-nums; }
 .mx-theme-note { margin: 0; font-size: 0.76rem; color: var(--mx-muted); }
 @media (prefers-reduced-motion: reduce) { .mx-side-collapse, .mx-side-collapse .icon { transition: none; } }
+
+/* Ordre personnalisé des dossiers : repère de dépôt avant / après (aucun décalage de mise en page) */
+.mx-folder { position: relative; }
+.mx-folder.is-before::before, .mx-folder.is-after::after { content: ""; position: absolute; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--mx-accent, #2f6fb0); pointer-events: none; }
+.mx-folder.is-before::before { left: -7px; }
+.mx-folder.is-after::after { right: -7px; }

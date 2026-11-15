@@ -315,22 +315,25 @@
   function descendantsOf(id) { var out = new Set([id]), grew = true; while (grew) { grew = false; (cfg.folders || []).forEach(function (f) { if (f.parentId && out.has(f.parentId) && !out.has(f.id)) { out.add(f.id); grew = true; } }); } return out; }
   function folderPath(id) { var out = [], cur = folderById(id), n = 0; while (cur && n++ < 12) { out.unshift(cur.name); cur = cur.parentId ? folderById(cur.parentId) : null; } return "Médiathèque / " + out.join(" / "); }
   function newFolder(parentId) {
-    return askText("Nouveau dossier", { label: "Nom du dossier", placeholder: "Ex. Photos produits" }).then(function (name) { if (!name) return; return K.folderCreate(name, parentId === undefined ? cfg.folder : parentId).then(function (f) { toast("Dossier « " + f.name + " » créé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
+    return askText("Nouveau dossier", { label: "Nom du dossier", placeholder: "Ex. Photos produits" }).then(function (name) { if (!name) return; return K.folderCreate(name, parentId === undefined ? cfg.folder : parentId, cfg.category).then(function (f) { toast("Dossier « " + f.name + " » créé" + (cfg.category && !(parentId === undefined ? cfg.folder : parentId) ? " dans " + (cfg.pageTitle || "cette catégorie") : "") + ".", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); });
   }
   function renameFolder(id) { var f = folderById(id); if (!f) { toast("Ce dossier n'est plus dans la liste : actualisation.", "error"); return refresh(); } return askText("Renommer le dossier", { value: f.name }).then(function (name) { if (!name || name === f.name) return; return K.folderRename(id, name).then(function () { toast("Dossier renommé.", "ok"); return refresh(); }, function (e) { toast(errMsg(e), "error"); }); }); }
   function folderProps(id) {
     var f = folderById(id); if (!f) return;
     return K.api("GET", BASE + "/dossiers/" + id + "/proprietes.json").then(function (r) {
       var p = r.properties, color = f.color || "", desc = h("textarea", { id: "mx-fdesc", rows: "3", maxlength: "300", text: p.description || "" }); desc.value = p.description || "";
+      var ICONS = [["", "Dossier"], ["image", "Image"], ["video", "Vidéo"], ["music", "Audio"], ["fileText", "Document"], ["star", "Étoile"], ["heart", "Cœur"], ["home", "Maison"], ["briefcase", "Mallette"], ["book", "Livre"], ["globe", "Globe"], ["cart", "Boutique"], ["gallery", "Galerie"], ["hardDrive", "Archive"], ["shield", "Bouclier"]];
+      var ficon = h("select", { id: "mx-ficon" }, ICONS.map(function (o) { return h("option", { value: o[0], text: o[1] }); })); ficon.value = p.icon || "";
       var sw = ["", "bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"].map(function (c) { return h("label", { class: "mx-swatch", "data-color": c || null, title: c || "Aucune" }, [h("input", { type: "radio", name: "mx-fcolor", value: c, checked: c === color ? "" : null }), h("span", { class: "sr-only", text: c || "Aucune couleur" })]); });
       var nameIn = h("input", { type: "text", id: "mx-fname", maxlength: "120", autocomplete: "off" }); nameIn.value = f.name;
       var body = h("div", {}, [
         h("div", { class: "field-group" }, [h("label", { for: "mx-fname", text: "Nom du dossier" }), nameIn]),
         h("dl", { class: "mx-dl" }, [h("dt", { text: "Chemin" }), h("dd", { text: p.path }), h("dt", { text: "Contenu" }), h("dd", { text: plural(p.files, "fichier", "fichiers") + " (" + plural(p.subfolders, "sous-dossier", "sous-dossiers") + ")" }), h("dt", { text: "Taille" }), h("dd", { text: K.fmtSize(p.bytes) }), h("dt", { text: "Créé le" }), h("dd", { text: K.fmtDate(p.createdAt) })]),
         h("div", { class: "field-group" }, [h("label", { text: "Couleur" }), h("div", { class: "mx-swatches" }, sw)]),
+        h("div", { class: "field-group" }, [h("label", { for: "mx-ficon", text: "Icône" }), ficon]),
         h("div", { class: "field-group" }, [h("label", { for: "mx-fdesc", text: "Description" }), desc]),
       ]);
-      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { name: nameIn.value, color: c ? c.value : color, description: desc.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
+      return openDialog("Propriétés du dossier « " + f.name + " »", body, { ok: "Enregistrer", collect: function () { var c = $("input[name=mx-fcolor]:checked", body); return { name: nameIn.value, color: c ? c.value : color, description: desc.value, icon: ficon.value }; } }).then(function (v) { if (!v) return; return K.api("POST", BASE + "/dossiers/" + id + "/meta", v).then(function () { toast("Dossier mis à jour.", "ok"); return refresh(); }); });
     }).catch(function (e) { toast(errMsg(e), "error"); });
   }
   function trashFolder(id) {
@@ -594,7 +597,7 @@
   });
 
   // =============================================================== Glisser-déposer : fichiers et dossiers (déplacement), fichiers du bureau (importation)
-  var drag = null, ghost = null, blankImg = null;
+  var drag = null, ghost = null, blankImg = null, reorder = null;
   function dropTargetOf(el) { return el && el.closest ? el.closest("[data-mx-folder], [data-mx-folder-root]") : null; }
   function targetId(t) { return t.hasAttribute("data-mx-folder-root") ? null : Number(t.getAttribute("data-mx-folder")); }
   function targetName(t) { return t.hasAttribute("data-mx-folder-root") ? "Sans dossier" : (folderById(targetId(t)) || {}).name || t.getAttribute("data-name") || "ce dossier"; }
@@ -623,18 +626,37 @@
     setTimeout(function () { if (!drag) return; $$("[data-ml-item].is-selected, .mx-folder.is-selected", rootEl).forEach(function (x) { x.classList.add("is-dragging"); }); el.classList.add("is-dragging"); }, 0);
   });
   function moveGhost(x, y) { if (ghost) { ghost.style.left = x + "px"; ghost.style.top = y + "px"; } }
-  function clearDropMarks() { $$(".is-drop, .is-nodrop", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop"); }); }
+  function clearDropMarks() { reorder = null; $$(".is-drop, .is-nodrop, .is-before, .is-after", document).forEach(function (x) { x.classList.remove("is-drop", "is-nodrop", "is-before", "is-after"); }); }
+  // Ordre personnalisé : lâcher un dossier sur le BORD gauche/droit d'un dossier du même emplacement le place avant/après (la position change, rien n'est déplacé). Le centre = déplacer DANS ce dossier.
+  function reorderOf(t, e) {
+    if (!drag || drag.kind !== "folder" || !t.classList.contains("mx-folder") || t.hasAttribute("data-mx-folder-root")) return null;
+    var tid = Number(t.getAttribute("data-mx-folder")), tf = folderById(tid); if (!tf || drag.ids.indexOf(tid) >= 0) return null;
+    if (!drag.ids.every(function (id) { var f = folderById(id); return f && (f.parentId || null) === (tf.parentId || null); })) return null;
+    var r = t.getBoundingClientRect(), x = (e.clientX - r.left) / Math.max(1, r.width);
+    if (x < 0.22) return { id: tid, after: false, parent: tf.parentId || null };
+    if (x > 0.78) return { id: tid, after: true, parent: tf.parentId || null };
+    return null;
+  }
+  function applyReorder(d, ro) {
+    var cards = $$("[data-mx-folders] > .mx-folder", rootEl).map(function (el) { return Number(el.getAttribute("data-mx-folder")); });
+    var order = cards.filter(function (id) { return d.ids.indexOf(id) < 0; }), at = order.indexOf(ro.id) + (ro.after ? 1 : 0);
+    order.splice.apply(order, [at, 0].concat(d.ids.filter(function (id) { return cards.indexOf(id) >= 0; })));
+    return K.api("POST", BASE + "/dossiers/ordre", { parent_id: ro.parent, ids: order }).then(function () { toast("Ordre des dossiers enregistré.", "ok"); return refresh(); }, function (er) { toast(errMsg(er), "error"); });
+  }
   function endDrag() { drag = null; if (blankImg) { blankImg.remove(); blankImg = null; } if (ghost) { ghost.remove(); ghost = null; } clearDropMarks(); $$(".is-dragging", rootEl).forEach(function (x) { x.classList.remove("is-dragging"); }); }
   document.addEventListener("dragover", function (e) {
     if (!drag) return;
     moveGhost(e.clientX, e.clientY);
     var t = dropTargetOf(e.target); clearDropMarks();
+    var ro = t ? reorderOf(t, e) : null;
+    if (ro) { reorder = ro; t.classList.add(ro.after ? "is-after" : "is-before"); e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (ghost) { ghost.textContent = "Placer " + (ro.after ? "après" : "avant") + " « " + targetName(t) + " »"; ghost.classList.remove("is-no"); } return; }
     if (t) { var c = canDrop(t); t.classList.add(c.ok ? "is-drop" : "is-nodrop"); if (c.ok) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } else e.dataTransfer.dropEffect = "none"; if (ghost) { ghost.textContent = ghostText(t); ghost.classList.toggle("is-no", !c.ok); } }
     else if (ghost) { ghost.textContent = ghostText(null); ghost.classList.remove("is-no"); }
   });
   document.addEventListener("drop", function (e) {
     if (!drag) return;
     var t = dropTargetOf(e.target); if (!t) { endDrag(); return; }
+    var ro = reorder; if (ro) { e.preventDefault(); var dd = drag; endDrag(); applyReorder(dd, ro); return; }
     var c = canDrop(t); e.preventDefault();
     if (!c.ok) { if (c.why) toast(c.why, "error"); endDrag(); return; }
     var d = drag, to = targetId(t); endDrag();
