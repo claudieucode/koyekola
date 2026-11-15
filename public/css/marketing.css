@@ -2101,3 +2101,10 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 .mk-body .mk-cmp-side-body form.mk-form > .btn { margin-top: 4px; }
 .mk-body .mk-cmp-side-body form.mk-form > .field-group { margin-bottom: 8px; }
 .mk-body .mk-panel .mk-cmp-actions .field-group { min-width: 280px; }
+
+/* Réglages d'envoi : le bouton d'enregistrement respire avant le panneau suivant ; le fuseau a la même largeur que les réglages au-dessus */
+.mk-body form.mk-form[action="/marketing/envoi"] > button[type="submit"] { margin-bottom: 28px; }
+.mk-body .mk-panel#fuseau { max-width: 760px; }
+.mk-body .mk-panel#fuseau form > .btn { margin-top: 4px; }
+/* Un formulaire (avec son bouton) suivi d'un panneau : jamais collés */
+.mk-body .mk-content > form + :is(.mk-panel, section), .mk-body .mk-content > form.mk-form + :is(.mk-panel, section) { margin-top: 24px; }
