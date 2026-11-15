@@ -14,7 +14,7 @@ const { startServer, loginInstructor } = require("../helpers");
     const r = await page.goto(srv.base + p).catch(() => null); await page.waitForTimeout(500);
     const over = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
     console.log(p, r && r.status(), over ? "DEBORDE-H" : "ok");
-    await page.screenshot({ path: `${dir}/${p.replace(/[^a-z0-9]+/gi, "_")}.png` });
+    await page.screenshot({ path: `${dir}/${p.replace(/[^a-z0-9]+/gi, "_")}.png`, fullPage: Boolean(process.env.FULL) });
   }
   await browser.close(); srv.db().close(); await srv.stop();
 })().catch((e) => { console.error(e); process.exit(1); });
