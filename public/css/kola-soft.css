@@ -127,3 +127,32 @@
 @media (prefers-reduced-motion: reduce) {
   :root body :is(input, textarea, select) { transition: none; }
 }
+
+/* Événements (Intégrations › KOLAKISA) : en-tête de panneau, boutons alignés, tableau lisible */
+.ev-panel { display: flex; flex-direction: column; gap: 16px; }
+.ev-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px 32px; flex-wrap: wrap; }
+.ev-head > div { flex: 1 1 420px; min-width: 0; max-width: 760px; }
+.ev-head h2 { margin: 0 0 6px; }
+.ev-head .field-hint { margin: 0; line-height: 1.55; }
+.ev-last { display: flex; flex-direction: column; gap: 2px; margin: 0; padding: 10px 14px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; background: var(--surface-2, #f8fafc); font-size: 13px; white-space: nowrap; }
+.ev-last { color: var(--muted, #64748b); }
+.ev-last strong { display: block; color: var(--text, #0f172a); font-size: 14px; font-variant-numeric: tabular-nums; }
+.ev-panel > .mk-advanced { margin: 0; }
+.ev-panel > .mk-advanced > summary { cursor: pointer; padding: 6px 0; font-weight: 600; }
+.ev-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; padding-top: 16px; border-top: 1px solid var(--border, #e2e8f0); }
+.ev-actions form { margin: 0; }
+.ev-actions .btn { min-height: 38px; padding-inline: 16px; }
+.ev-h2 { margin-top: 28px; }
+.ev-table td:first-child { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.ev-name { font-weight: 600; }
+.ev-table td:first-child code { display: inline-block; width: auto; padding: 1px 7px; border-radius: 4px; background: var(--surface-2, #f1f5f9); color: var(--muted, #64748b); font-size: 12px; }
+@media (max-width: 640px) { .ev-actions { flex-direction: column; align-items: stretch; } .ev-actions .btn { width: 100%; } .ev-last { white-space: normal; } }
+
+/* Domaines : formulaire d'ajout aligné (champ + bouton sur la même ligne, bas alignés) */
+form.mk-form.mk-dom-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border, #e2e8f0); max-width: none; }
+form.mk-form.mk-dom-add .field-group { flex: 0 1 460px; min-width: min(100%, 240px); margin: 0 !important; display: flex; flex-direction: column; gap: 6px; }
+form.mk-dom-add .field-group label { font-weight: 600; }
+form.mk-dom-add .field-hint { margin: 0; order: 2; }
+form.mk-dom-add .field-group input { order: 3; width: 100%; min-height: 42px; box-sizing: border-box; }
+form.mk-dom-add > .btn { min-height: 42px; padding-inline: 20px; flex: 0 0 auto; }
+@media (max-width: 640px) { form.mk-dom-add .field-group { flex-basis: 100%; } form.mk-dom-add > .btn { width: 100%; } }

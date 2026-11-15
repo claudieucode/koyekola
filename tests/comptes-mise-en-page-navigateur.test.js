@@ -51,17 +51,20 @@ describe("Comptes : mise en page (navigateur)", { skip: SKIP }, () => {
     assert.equal(env.errors.length, 0, env.errors.join(" | "));
   });
 
-  test("permissions : accordéons verticaux pleine largeur, en-tête gris bleuté, compteurs justes, ouverture/fermeture, état conservé au changement de rôle", async () => {
+  test("permissions : accordéons verticaux pleine largeur, en-tête gris très clair, compteurs justes, ouverture/fermeture, état conservé au changement de rôle", async () => {
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto(`${env.srv.base}${S}/equipe-permissions`);
     const geo = await page.locator("[data-perm-acc] > details").evaluateAll((l) => l.map((e) => { const r = e.getBoundingClientRect(), sm = getComputedStyle(e.querySelector("summary")); return { x: Math.round(r.x), w: Math.round(r.width), y: r.y, bg: sm.backgroundColor }; }));
     assert.ok(geo.length >= 8, "toutes les catégories");
     assert.ok(geo.every((g) => g.x === geo[0].x && g.w === geo[0].w), "même colonne, même largeur");
     assert.ok(geo.every((g, i) => i === 0 || g.y > geo[i - 1].y), "empilées verticalement");
-    assert.ok(geo[0].bg !== "rgb(255, 255, 255)", "en-tête teinté : " + geo[0].bg);
+    
     // compteurs = nombre réel de ✓ dans la catégorie
-    const ok = await page.locator("[data-perm-acc] > details").evaluateAll((l) => l.every((d) => { const m = d.querySelector(".mk-su-count").textContent.match(/(\d+)\s*\/\s*(\d+)/); return +m[1] === d.querySelectorAll("li.is-on").length && +m[2] === d.querySelectorAll("li").length; }));
+    const ok = await page.locator("[data-perm-acc] > details").evaluateAll((l) => l.every((d) => { const m = d.querySelector(".mk-su-title small").textContent.match(/(\d+) permissions? accord\S+ sur (\d+)/); return +m[1] === d.querySelectorAll("li.is-on").length && +m[2] === d.querySelectorAll("li").length; }));
     assert.ok(ok, "compteurs cohérents avec les permissions affichées");
+    assert.equal(await page.locator("[data-perm-acc] > details[open]").count(), 0, "tout replié au départ, comme Confidentialité");
+    assert.equal(await page.locator("[data-perm-acc] summary").first().evaluate((e) => getComputedStyle(e).backgroundColor), "rgb(235, 240, 247)");
+    if (process.env.CP_SHOTS) await page.screenshot({ path: `${process.env.CP_SHOTS}/perm-ferme.png` });
     // ouverture / fermeture
     const first = page.locator("[data-perm-acc] > details").first(), sum = first.locator("summary");
     const was = await first.evaluate((d) => d.open);

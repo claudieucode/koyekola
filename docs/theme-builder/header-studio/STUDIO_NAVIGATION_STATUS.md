@@ -58,3 +58,10 @@ Timeline libre d'animation (plusieurs propriétés) ; constructeur de méga-menu
 * Style du panneau : partie `mega` + réglages `sub` d'un lien (lot 1).
 * Test Chrome : `tests/header-reglages-navigateur.test.js` (création des trois modèles, widget présent dans le composant, détachement).
 * Toujours à faire : éditeur d'animation libre, largeurs d'écran personnalisées, audits lecteur d'écran/performance, étude des six outils de référence à la source.
+
+## Lot 5 — Visibilité par écran des liens du menu (15/11/2026)
+- Chaque lien du menu peut être **masqué** sur ordinateur (≥ 1024 px), tablette (768–1023 px) et/ou mobile (< 768 px) : inspecteur du menu → « Style d'un lien (individuel) » → cases « Masquer sur… ».
+- Stockage : `props.itemStyles[<lien>].hide = ["tablet","mobile"]` (liste fermée, doublons et valeurs inconnues ignorés côté serveur, `nodes.js › normalizeItemStyles`).
+- Rendu : une règle `@media` à plage exacte par écran masqué (pas d'héritage entre écrans), appliquée à la barre du menu **et** au panneau mobile (`.kw-menu-panel.kw-pn-<id>`). Le lien n'est jamais supprimé du menu ni du CMS.
+- Tests : `menu-hamburger-icone.test.js` (validation), `header-widgets-navigateur.test.js` (Chrome : 1280 / 900 / 390 px + panneau mobile), `header-menu-inspecteur-navigateur.test.js` (cases à cocher dans l'éditeur, enregistrement, autres liens intacts).
+- Non fait : ordre des liens par écran, écrans personnalisés (points de rupture libres), grand écran ≥ 1920 px distinct.

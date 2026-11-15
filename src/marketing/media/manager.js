@@ -6,6 +6,7 @@ const media = require("./index");
 const folders = require("./folders");
 const variants = require("./variants");
 
+const FOLDER_ICONS = ["", "folder", "image", "video", "music", "fileText", "star", "heart", "home", "briefcase", "book", "globe", "cart", "gallery", "hardDrive", "shield"];
 const COLORS = ["", "bleu", "vert", "orange", "rouge", "violet", "jaune", "rose", "gris"];
 const RETENTION = [0, 7, 30, 90];
 const clip = (v, n) => String(v ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
@@ -221,8 +222,14 @@ function sanitizePrefs(input) {
   if (["open", "rail", "hidden"].includes(p.sidebar)) out.sidebar = p.sidebar === "hidden" ? "rail" : p.sidebar; // « masquée » n'existe plus : la barre se réduit toujours à une bande qui garde son bouton
   if (p.theme && typeof p.theme === "object") out.theme = sanitizeTheme(p.theme);
   if (["open", "closed"].includes(p.info)) out.info = p.info;
-  if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 560);
+  if (["apercu", "infos"].includes(p.pane)) out.pane = p.pane;
+  if (["panneau", "fenetre"].includes(p.previewMode)) out.previewMode = p.previewMode;
+  if (["plein-ecran", "panneau", "infos", "aucune"].includes(p.dblclick)) out.dblclick = p.dblclick;
+  if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 720);
   if (typeof p.foldersFirst === "boolean") out.foldersFirst = p.foldersFirst;
+  if (Number.isFinite(Number(p.colWidth))) out.colWidth = Math.min(Math.max(Math.round(Number(p.colWidth)), 180), 420); // vue en colonnes : largeur par défaut
+  if (typeof p.colMeta === "boolean") out.colMeta = p.colMeta;
+  if (typeof p.colExt === "boolean") out.colExt = p.colExt;
   return out;
 }
 function getPrefs(ctx) {
@@ -240,12 +247,24 @@ function setPrefs(ctx, patch) {
 }
 
 // ---------- Dossiers enrichis ----------
-function updateFolder(ctx, id, { color, description } = {}) {
+function updateFolder(ctx, id, { name, color, description, icon, coverMediaId } = {}) {
   needScope(ctx);
-  const f = folders.getFolder(ctx, Number(id));
+  let f = folders.getFolder(ctx, Number(id));
   if (!f) throw missing("Dossier introuvable.");
   if (color !== undefined && !COLORS.includes(color)) throw bad("Couleur inconnue.");
-  ctx.db.prepare("UPDATE mk_media_folders SET color = ?, description = ? WHERE id = ?").run(color === undefined ? f.color : color, description === undefined ? f.description : clip(description, 300), f.id);
+  if (name !== undefined && String(name) !== f.name) f = folders.renameFolder(ctx, f.id, name); // même identifiant : le dossier n'est jamais recréé
+  if (icon !== undefined && !FOLDER_ICONS.includes(icon)) throw bad("Icône inconnue.");
+  let cover = f.cover_media_id ?? null;
+  if (coverMediaId !== undefined) {
+    if (coverMediaId === null || coverMediaId === "" || Number(coverMediaId) === 0) cover = null;
+    else {
+      const vis = media.visibleSql(ctx);
+      const m = ctx.db.prepare(`SELECT id, type FROM mk_media WHERE id = ? AND organization_id = ? AND deleted_at IS NULL AND ${vis.sql}`).get(Number(coverMediaId), ctx.organizationId, ...vis.params);
+      if (!m || m.type !== "image") throw bad("Choisissez une image de la médiathèque pour la couverture.");
+      cover = m.id;
+    }
+  }
+  ctx.db.prepare("UPDATE mk_media_folders SET color = ?, description = ?, icon = ?, cover_media_id = ?, updated_at = datetime('now') WHERE id = ?").run(color === undefined ? f.color : color, description === undefined ? f.description : clip(description, 300), icon === undefined ? f.icon : icon, cover, f.id);
   return folders.getFolder(ctx, f.id);
 }
 const descendantIds = (ctx, id, { includeDeleted = false } = {}) => ctx.db.prepare(`WITH RECURSIVE d(id) AS (SELECT id FROM mk_media_folders WHERE id = ? UNION ALL SELECT f.id FROM mk_media_folders f JOIN d ON f.parent_id = d.id${includeDeleted ? "" : " WHERE f.deleted_at IS NULL"}) SELECT id FROM d`).all(id).map((r) => r.id);
@@ -257,7 +276,7 @@ function folderProperties(ctx, id) {
   const ids = descendantIds(ctx, f.id), marks = ids.map(() => "?").join(",");
   const totals = ctx.db.prepare(`SELECT COUNT(*) files, COALESCE(SUM(size), 0) bytes FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IN (${marks})`).get(ctx.organizationId, ...ids);
   const direct = ctx.db.prepare("SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id = ?").get(ctx.organizationId, f.id).n;
-  return { id: f.id, name: f.name, path: folderPath(ctx, f.id), color: f.color || "", description: f.description || "", createdAt: f.created_at, subfolders: ids.length - 1, files: totals.files, directFiles: direct, bytes: totals.bytes, starred: starredSet(ctx, "folder").has(f.id) };
+  return { id: f.id, name: f.name, path: folderPath(ctx, f.id), color: f.color || "", description: f.description || "", icon: f.icon || "", category: f.category || "", coverMediaId: f.cover_media_id || null, createdAt: f.created_at, updatedAt: f.updated_at || f.created_at, subfolders: ids.length - 1, files: totals.files, directFiles: direct, bytes: totals.bytes, starred: starredSet(ctx, "folder").has(f.id) };
 }
 
 // ---------- Corbeille de dossiers ----------
@@ -681,7 +700,7 @@ module.exports = {
   listTags, createTag, renameTag, deleteTag, tagMedia, setMediaTags, tagsOf,
   listCollections, createCollection, renameCollection, deleteCollection, addToCollection, removeFromCollection, collectionsOf,
   getPrefs, setPrefs, sanitizePrefs,
-  updateFolder, folderProperties, folderPath, descendantIds,
+  FOLDER_ICONS, updateFolder, folderProperties, folderPath, descendantIds,
   trashFolder, restoreFolder, purgeFolder, listTrash, emptyTrash, getRetention, setRetention, sweepTrash,
   copyMedia, touchUsed, decorate, sidebarCounts, storageStats, duplicateDetail, resolveDuplicates, suggest,
 };
