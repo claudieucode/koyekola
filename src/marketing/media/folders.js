@@ -192,4 +192,4 @@ function duplicateGroups(ctx, { limit = 50 } = {}) {
   return sums.map((g) => ({ sha256: g.sha256, count: g.n, wastedBytes: g.bytes - g.bytes / g.n, items: ctx.db.prepare(`SELECT id, name, path, size, folder_id AS folderId, created_at AS createdAt FROM mk_media WHERE organization_id = ? AND sha256 = ? AND deleted_at IS NULL AND ${vis.sql} ORDER BY id`).all(ctx.organizationId, g.sha256, ...vis.params) }));
 }
 
-module.exports = { CATEGORIES, reorderFolders, scopeOf, getFolder, listFolders, breadcrumb, createFolder, renameFolder, moveFolder, deleteFolder, moveMedia, computeMissingHashes, duplicateGroups, MAX_DEPTH };
+module.exports = { CATEGORIES, reorderFolders, needScope, siteCond, depthOf, clip, scopeOf, getFolder, listFolders, breadcrumb, createFolder, renameFolder, moveFolder, deleteFolder, moveMedia, computeMissingHashes, duplicateGroups, MAX_DEPTH };
