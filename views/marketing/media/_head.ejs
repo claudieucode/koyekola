@@ -13,7 +13,7 @@
 %>
 <header class="mx-head" data-mx-head>
   <div class="mx-titlebar">
-    <button type="button" class="mx-iconbtn" data-mx-side-toggle aria-controls="mx-side" aria-label="Afficher ou masquer la navigation" title="Navigation (Cmd/Ctrl + B)"><%- icon("panelLeft", { size: 20 }) %></button>
+    <button type="button" class="mx-iconbtn mx-side-mobile" data-mx-side-toggle aria-controls="mx-side" aria-label="Afficher ou masquer la navigation" title="Navigation (Cmd/Ctrl + B)"><%- icon("panelLeft", { size: 20 }) %></button>
     <div class="mx-titles">
       <% if (crumbs.length || f.raw.dossier === "racine" || section) { %><nav class="mx-crumb" aria-label="Fil d'Ariane" data-mx-crumb>
         <a href="<%= h.url({}) %>" data-mx-folder-root="1" data-mx-drop="root">Médiathèque</a>
@@ -60,6 +60,17 @@
     <span class="mx-tb-right"><details class="mx-pop mx-cols" data-mx-pop data-mx-cols<%- isList ? "" : " hidden" %>><summary class="mx-iconbtn" aria-label="Colonnes affichées" title="Colonnes"><%- icon("columns", { size: 18 }) %></summary>
       <div class="mx-pop-body"><p class="mx-pop-title">Colonnes</p><% COLS.forEach(([k, name]) => { %><label class="mx-check-row"><input type="checkbox" data-mx-col value="<%= k %>"<%= prefs.columns.includes(k) ? " checked" : "" %>> <%= name %></label><% }) %>
         <p class="mx-pop-title">Densité</p><label class="mx-check-row"><input type="checkbox" data-mx-density<%= prefs.density === "compacte" ? " checked" : "" %>> Lignes serrées</label></div>
+    </details>
+    <details class="mx-pop mx-theme" data-mx-pop data-mx-theme><summary class="mx-iconbtn" aria-label="Apparence du gestionnaire" title="Apparence"><%- icon("palette", { size: 18 }) %></summary>
+      <div class="mx-pop-body mx-theme-body"><p class="mx-pop-title">Apparence</p>
+        <div class="mx-theme-modes" role="group" aria-label="Thème"><button type="button" class="btn btn-outline btn-sm" data-mx-theme-mode="clair">Clair</button><button type="button" class="btn btn-outline btn-sm" data-mx-theme-mode="sombre">Sombre</button><button type="button" class="btn btn-outline btn-sm" data-mx-theme-mode="personnalise">Personnalisé</button></div>
+        <div class="mx-theme-grid"><label class="mx-theme-row"><span>Fond de la barre latérale</span><input type="color" data-mx-theme-color="sideBg" aria-label="Fond de la barre latérale"></label><label class="mx-theme-row"><span>Fond du contenu</span><input type="color" data-mx-theme-color="mainBg" aria-label="Fond du contenu"></label><label class="mx-theme-row"><span>Texte principal</span><input type="color" data-mx-theme-color="text" aria-label="Texte principal"></label><label class="mx-theme-row"><span>Texte secondaire</span><input type="color" data-mx-theme-color="textSoft" aria-label="Texte secondaire"></label><label class="mx-theme-row"><span>Icônes</span><input type="color" data-mx-theme-color="icon" aria-label="Icônes"></label><label class="mx-theme-row"><span>Séparateurs</span><input type="color" data-mx-theme-color="sep" aria-label="Séparateurs"></label><label class="mx-theme-row"><span>Sélection</span><input type="color" data-mx-theme-color="sel" aria-label="Sélection"></label><label class="mx-theme-row"><span>Survol</span><input type="color" data-mx-theme-color="hover" aria-label="Survol"></label><label class="mx-theme-row"><span>Dossiers</span><input type="color" data-mx-theme-color="folder" aria-label="Dossiers"></label><label class="mx-theme-row"><span>Accent</span><input type="color" data-mx-theme-color="accent" aria-label="Accent"></label><label class="mx-theme-row"><span>Bordures</span><input type="color" data-mx-theme-color="border" aria-label="Bordures"></label><label class="mx-theme-row"><span>Badges</span><input type="color" data-mx-theme-color="badge" aria-label="Badges"></label></div>
+        <label class="mx-theme-range"><span>Rayon des bordures <output data-mx-theme-out="radius"></output></span><input type="range" min="0" max="20" step="1" data-mx-theme-range="radius"></label>
+        <label class="mx-theme-range"><span>Espacement <output data-mx-theme-out="space"></output></span><input type="range" min="80" max="140" step="5" data-mx-theme-range="space"></label>
+        <label class="mx-theme-range"><span>Taille des icônes <output data-mx-theme-out="iconSize"></output></span><input type="range" min="14" max="26" step="1" data-mx-theme-range="iconSize"></label>
+        <div class="mx-pop-actions"><button type="button" class="btn btn-ghost btn-sm" data-mx-theme-undo>Annuler les changements</button><button type="button" class="btn btn-outline btn-sm" data-mx-theme-reset>Réinitialiser</button></div>
+        <p class="mx-theme-note">Enregistré automatiquement pour vous, sur ce site uniquement.</p>
+      </div>
     </details>
     <% if (canWrite) { %><button type="button" class="btn btn-outline btn-sm" data-ml-select-toggle aria-pressed="false">Sélection groupée</button><% } %></span>
   </form>
