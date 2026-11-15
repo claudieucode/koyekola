@@ -97,7 +97,7 @@ module.exports = () => {
   // ----- Page (gestionnaire de fichiers) -----
   // Le serveur rend la liste (filtrée, triée, paginée dans la base) ; public/js/media-explorer.js y ajoute la navigation fluide, les vues, la sélection, le glisser-déposer, les menus.
   // « ?fragment=1 » : seulement la zone qui change (barre latérale, en-tête, contenu) pour la navigation fluide entre dossiers.
-  const SECTIONS = ["accueil", "dossiers", "stockage", "doublons"];
+  const SECTIONS = ["accueil", "dossiers", "stockage", "doublons", "historique"];
   const page = (uploadOpen, active) => (req, res) => {
     const ctx = ctxOf(req, { overview: true });
     const prefs = manager.getPrefs(ctx);
@@ -128,13 +128,14 @@ module.exports = () => {
     const col = f.adv.collectionId ? (scoped ? manager.listCollections(ctx) : []).find((c) => c.id === f.adv.collectionId) : null;
     const typeLabel = { image: "Images", video: "Vidéos", audio: "Audio", documents: "Documents", pdf: "PDF", document: "Documents", lottie: "Animations" }[f.type];
     const fold = current ? tree.folders.find((x) => x.id === current) : null;
-    const [pageKey, pageTitle] = section ? [section, { accueil: "Accueil", dossiers: "Mes dossiers", stockage: "Stockage", doublons: "Doublons" }[section]]
+    const [pageKey, pageTitle] = section ? [section, { accueil: "Accueil", dossiers: "Mes dossiers", stockage: "Stockage", doublons: "Doublons", historique: "Historique" }[section]]
       : f.trashed ? ["corbeille", "Corbeille"] : f.adv.starred ? ["favoris", "Favoris"] : f.adv.usedOnly ? ["utilises", "Récemment utilisés"] : f.recents ? ["recents", "Récemment ajoutés"] : f.adv.duplicates ? ["doublons-liste", "Fichiers en double"] : f.adv.large ? ["volumineux", "Fichiers volumineux"]
       : tag ? [`tag:${tag.id}`, `Tag « ${tag.name} »`] : col ? [`col:${col.id}`, col.name] : f.type && typeLabel ? [`type:${f.type === "pdf" ? "documents" : f.type}`, typeLabel] : f.raw.dossier === "racine" ? ["racine", "Sans dossier"] : fold ? [`dossier:${fold.id}`, fold.name] : f.portee === "commun" ? ["partages", "Fichiers partagés"] : ["tous", "Médiathèque"];
     const data = {
       pageKey, pageTitle, h: helpers({ spaceBase: spaceBase(ctx), f, section, sortDefault: prefs.sort }),
       tree: { ...tree, folders: tree.folders.map((x) => ({ ...x, starred: starredFolders.has(x.id) })) }, subfolders, crumbs: current ? folders.breadcrumb(ctx, current) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
-      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, columnDefs: manager.COLUMN_DEFS, typeColumns: manager.TYPE_COLUMNS, filtered,
+      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, filtered,
+      smartList: scoped ? manager.listSmart(ctx) : [], storageLevel: scoped ? manager.storageLevel(ctx) : "ok", smartId: Number(req.query.smart) || 0,
       tagsList: scoped ? manager.listTags(ctx) : [], collectionsList: scoped ? manager.listCollections(ctx) : [], retention: scoped ? manager.getRetention(ctx) : 0, scoped,
       trashData: f.trashed && scoped ? manager.listTrash(ctx, { q: f.q }) : { folders: [], files: [] }, folderMeta: current ? (tree.folders.find((x) => x.id === current) || null) : null,
       canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), uploadCfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, formats: media.FORMATS, maxMb: media.uploadConfig().limits,
@@ -324,6 +325,28 @@ module.exports = () => {
   router.get(`${base}/corbeille.json`, need("media.read"), (req, res, next) => rec(res, next, () => { const ctx = ctxOf(req); manager.sweepTrash(ctx); res.set("Cache-Control", "no-store").json({ ...manager.listTrash(ctx, { q: req.query.q }), retention: manager.getRetention(ctx) }); }));
   router.post(`${base}/corbeille/vider`, need("media.delete"), (req, res, next) => rec(res, next, () => res.json(manager.emptyTrash(ctxOf(req)))));
   router.post(`${base}/corbeille/conservation`, need("media.delete"), (req, res, next) => rec(res, next, () => res.json({ days: manager.setRetention(ctxOf(req), Number(body(req).days)) })));
+
+  // Lot 2 : vues enregistrées (dossiers intelligents partagés, recherches personnelles), ordre et copie des dossiers, historique, alertes de stockage
+  router.get(`${base}/vues.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json({ items: manager.listSmart(ctxOf(req)) })));
+  router.post(`${base}/vues`, need("media.read"), (req, res, next) => rec(res, next, () => {
+    const kind = body(req).kind === "search" ? "search" : "smart";
+    if (kind === "smart" && !req.mk.can("media.write")) throw new MarketingError("forbidden", "Seule l'équipe qui gère les médias peut créer un dossier intelligent partagé : vous pouvez enregistrer une recherche personnelle.");
+    res.status(201).json({ view: manager.createSmart(ctxOf(req), { name: body(req).name, kind, criteria: body(req).criteria, color: body(req).color }) });
+  }));
+  router.post(`${base}/vues/:vid(\\d+)`, need("media.read"), (req, res, next) => rec(res, next, () => {
+    const ctx = ctxOf(req), row = manager.getSmart(ctx, Number(req.params.vid));
+    if (row.kind === "smart" && !req.mk.can("media.write")) throw new MarketingError("forbidden", "Seule l'équipe qui gère les médias peut modifier un dossier intelligent partagé.");
+    res.json({ view: manager.updateSmart(ctx, row.id, { name: body(req).name, criteria: body(req).criteria, color: body(req).color }) });
+  }));
+  router.post(`${base}/vues/:vid(\\d+)/supprimer`, need("media.read"), (req, res, next) => rec(res, next, () => {
+    const ctx = ctxOf(req), row = manager.getSmart(ctx, Number(req.params.vid));
+    if (row.kind === "smart" && !req.mk.can("media.write")) throw new MarketingError("forbidden", "Seule l'équipe qui gère les médias peut supprimer un dossier intelligent partagé.");
+    res.json(manager.deleteSmart(ctx, row.id));
+  }));
+  router.post(`${base}/dossiers/:fid(\\d+)/ordre`, need("media.write"), (req, res, next) => rec(res, next, () => res.json(manager.moveFolderOrder(ctxOf(req), Number(req.params.fid), body(req).dir))));
+  router.post(`${base}/dossiers/:fid(\\d+)/copier`, need("media.upload"), (req, res, next) => rec(res, next, () => { if (!req.mk.can("media.write")) throw new MarketingError("forbidden", "Droit de gestion des dossiers requis."); res.status(201).json(manager.duplicateFolder(ctxOf(req), Number(req.params.fid))); }));
+  router.get(`${base}/historique.json`, need("media.write"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json(manager.history(ctxOf(req, { overview: true }), { limit: req.query.limite, before: req.query.avant, action: String(req.query.action || "") }))));
+  router.post(`${base}/stockage/alertes`, need("media.write"), (req, res, next) => rec(res, next, () => res.json({ alerts: manager.setStorageAlerts(ctxOf(req), { warnMb: body(req).warn_mb, critMb: body(req).crit_mb }) })));
   // Fichiers : copie, stockage, doublons, suggestions, téléchargement groupé
   router.post(`${base}/:id(\\d+)/copier`, need("media.upload"), (req, res, next) => rec(res, next, () => res.status(201).json({ media: manager.copyMedia(ctxOf(req), Number(req.params.id), { folderId: Object.hasOwn(body(req), "folder_id") ? num(body(req).folder_id) : undefined }) })));
   router.get(`${base}/stockage.json`, need("media.read"), (req, res, next) => rec(res, next, () => res.set("Cache-Control", "no-store").json(manager.storageStats(ctxOf(req, { overview: true })))));

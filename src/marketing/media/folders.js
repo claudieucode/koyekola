@@ -3,7 +3,7 @@
 // un fichier ne peut entrer que dans un dossier de sa propre médiathèque. Aucune opération ici ne supprime un fichier.
 const fs = require("fs");
 const crypto = require("crypto");
-const { checkCtx, audit, MarketingError } = require("../audience/shared");
+const { checkCtx, audit: sharedAudit, MarketingError } = require("../audience/shared");
 const media = require("./index");
 
 const MAX_DEPTH = 8;
@@ -21,6 +21,8 @@ const needScope = (ctx) => {
   if (!s) throw new MarketingError("invalid_field", "Choisissez un site : les dossiers appartiennent à la médiathèque d'un site.");
   return s;
 };
+// Les événements du journal sont rattachés au site de la médiathèque, même quand l'action vient de l'équipe (sans site limité) : l'historique d'un site ne montre que les siens.
+const audit = (ctx, ...args) => { const s = scopeOf(ctx); return sharedAudit(s && Number.isInteger(s.siteId) && !Number.isInteger(ctx.siteScope) ? { ...ctx, siteScope: s.siteId } : ctx, ...args); };
 const siteCond = (s) => (s.siteId === null ? { sql: "site_id IS NULL", args: [] } : { sql: "site_id = ?", args: [s.siteId] });
 
 function getFolder(ctx, id) {
@@ -39,7 +41,7 @@ function listFolders(ctx) {
   if (!s) return { enabled: false, folders: [], rootCount: 0 };
   const c = siteCond(s);
   const vis = media.visibleSql(ctx);
-  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, f.color, f.description, f.category, f.icon, f.sort_order AS sortOrder, f.cover_media_id AS coverMediaId, f.created_at AS createdAt, f.updated_at AS updatedAt, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} AND f.deleted_at IS NULL ORDER BY f.sort_order, f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
+  const folders = ctx.db.prepare(`SELECT f.id, f.parent_id AS parentId, f.name, f.color, f.description, (SELECT COUNT(*) FROM mk_media m WHERE m.folder_id = f.id AND m.deleted_at IS NULL AND m.organization_id = f.organization_id) AS count FROM mk_media_folders f WHERE f.organization_id = ? AND f.${c.sql} AND f.deleted_at IS NULL ORDER BY f.sort_order, f.name COLLATE NOCASE`).all(ctx.organizationId, ...c.args);
   const rootCount = ctx.db.prepare(`SELECT COUNT(*) n FROM mk_media WHERE organization_id = ? AND deleted_at IS NULL AND folder_id IS NULL AND ${vis.sql}`).get(ctx.organizationId, ...vis.params).n;
   return { enabled: true, folders, rootCount };
 }

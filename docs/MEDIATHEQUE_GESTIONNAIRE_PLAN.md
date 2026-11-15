@@ -83,5 +83,36 @@ Isolation par site (contextes, routes protégées), dossiers logiques et anti-cy
 ### Tests
 `tests/mediatheque-barre-laterale-navigateur.test.js` (9, vrai Chrome) : icône unique, 8 cycles replier/déployer, mémorisation + clavier, conversion de l'ancien état, renommage (dossier principal et sous-dossier), thème par défaut / aperçu / persistance / réinitialisation, valeurs refusées, responsive (820 px et 390 px, tiroir ouvert/fermé 3 fois), aucune erreur de script.
 
-### Reste à faire (de la demande initiale)
-Déplacement par glisser-déposer des sections de la barre latérale, masquage de sections, dossiers intelligents, copie de dossier, tri manuel des dossiers, colonnes réordonnables, recherches enregistrées, import fractionné avec reprise, virtualisation de la liste, historique des opérations (écran), seuils d'alerte de stockage. Fonctions qu'une page web ne peut pas reproduire comme un Finder : accès direct au système de fichiers, glisser vers le bureau, corbeille du système, annulation Cmd+Z à l'échelle du système.
+### Reste à faire après ce lot
+Voir la section 6.
+
+## 6. Lot 2 « organisation » (2026-11-15)
+
+### Migration 155 (additive, aucun retour destructif nécessaire)
+- `mk_media_folders.sort_order` (entier, 0 par défaut = ordre alphabétique d'avant) : ordre manuel entre frères.
+- `mk_media_smart` : dossiers intelligents (`kind = 'smart'`, partagés par le site) et recherches enregistrées (`kind = 'search'`, personnelles, `owner_id`). Une vue ne contient aucun fichier : c'est un jeu de critères rejoué à chaque ouverture.
+- Retour arrière (hors production, après sauvegarde) : `DROP TABLE mk_media_smart ; ALTER TABLE mk_media_folders DROP COLUMN sort_order`.
+
+### Développé
+| Fonction | Où | Règles |
+|---|---|---|
+| Sections de la barre latérale réordonnables et masquables | préférences `sections {order, hidden}` ; `_side.ejs` (`data-mx-sec`, ordre CSS) ; `media-explorer.js` | glisser-déposer des titres dans la barre OU flèches/cases dans Apparence → Sections ; « Organisation » ne se masque pas (seul accès à la corbeille) ; « Rétablir la disposition » ; enregistré par personne et par site |
+| Dossiers intelligents et recherches enregistrées | `manager.listSmart/createSmart/updateSmart/deleteSmart`, routes `/vues` | critères = réglages de l'adresse (q, type, ext, taille, largeur, période, mois, tag, collection, favoris, doublons, volumineux, dossier), jamais du SQL, validés clé par clé ; dossier intelligent : droit `media.write` ; recherche : personnelle ; modifiables (« mettre à jour avec les filtres actuels », renommer) ; supprimer une vue ne touche aucun fichier |
+| Ordre manuel des dossiers | `manager.moveFolderOrder`, route `/dossiers/:id/ordre` | monter/descendre entre frères (menu clic droit), renumérotation de la fratrie |
+| Copie d'un dossier | `manager.duplicateFolder`, route `/dossiers/:id/copier` | copie réelle des fichiers (nouvelles adresses) et des sous-dossiers, nom « (copie) » unique, limite 300 fichiers, original intact, échecs listés |
+| Colonnes réordonnables | préférences `columns` (ordre conservé), variables CSS `--o-*` | s'applique à la vue Liste |
+| Historique | `manager.history`, `/historique.json`, rubrique « Historique » (droit `media.write`) | lit le journal d'audit : personne, date, libellé, cible ; filtre par type d'opération ; pagination ; limité au site (site enregistré, sinon site de la ressource) ; **aucune annulation proposée** |
+| Alertes de stockage | `manager.get/setStorageAlerts`, `/stockage/alertes`, `mk_settings` (`mediastorage.<site>.warn_mb/crit_mb`) | seuils fixés par la personne (Kolakisa ne connaît pas la capacité de l'hébergement) ; bandeau et pastille dans la barre quand un seuil est dépassé ; sans seuil, aucune alerte |
+
+### Tests
+`tests/mediatheque-organisation.test.js` (7, serveur réel : droits, isolation entre sites, validation des critères, copie, ordre, historique, seuils) et `tests/mediatheque-organisation-navigateur.test.js` (8, vrai Chrome : flèches et glisser-déposer des sections, mémorisation, vues enregistrées de bout en bout, ordre et copie des dossiers, colonnes, historique, seuils, mobile, aucune erreur de script).
+
+### Limites réelles
+- Le glisser-déposer d'un dossier pour l'ordonner (au lieu du menu) n'est pas fait : le glisser sur un dossier signifie déjà « déplacer dedans ».
+- L'ordre des colonnes ne change pas la vue « Détails » (mise en page à deux lignes fixe).
+- Les événements d'historique anciens, rattachés à un site seulement par leur ressource, disparaissent de l'historique du site si la ressource a été supprimée définitivement.
+- Un dossier intelligent n'affiche pas de compteur (le calcul serait un second moteur de recherche).
+- Import avec reprise après coupure et défilement virtualisé : **non faits** (voir section 7).
+
+## 7. Reste à faire
+Import fractionné avec reprise après coupure (nouvelle API de sessions d'envoi, fichiers temporaires, nettoyage) ; virtualisation complète de la liste ; manuels fonctionnel et utilisateur dédiés ; glisser-déposer pour ordonner les dossiers ; compteurs sur les dossiers intelligents. Hors de portée d'une page web : accès direct au système de fichiers, glisser vers le bureau, corbeille du système, annulation Cmd+Z à l'échelle du système.
