@@ -2,6 +2,7 @@
   KOLAKISA CMS → Utilisateurs d'un site (administration locale). Modes : list, detail, invite, invitations, roles, permissions. Données réelles (mk_site_members, users, mk_invitations, rôles) ;
   rien d'un autre site n'est jamais affiché. Les droits affichés sont ceux de la personne SUR CE SITE ; « Retirer » n'enlève que l'accès à ce site.
 %><%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/comptes.css">
 <%
   const fd = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
   const fdt = (v) => (v ? fd(v) + " à " + String(v).slice(11, 16) + " UTC" : "—");

@@ -1,0 +1,81 @@
+/* Section Comptes (liste, ajout, invitation, invitations, rôles, permissions, profil) :
+   le contenu occupe toute la largeur après la barre latérale, composé en colonnes selon la place réellement disponible.
+   Styles dédiés (jamais dans cms.css) ; portée : .mk-su, .ac, .ac-bar, .mk-pf. Échelle d'espacement : 8 / 12 / 16 / 24 / 32. */
+.mk-body :is(.mk-su, .ac, .ac-bar, .mk-pf) { --cp-gap: 16px; --cp-max: 1720px; max-width: var(--cp-max); width: 100%; }
+.mk-body .mk-su { display: grid; gap: var(--cp-gap); align-content: start; }
+.mk-body .mk-su > * { min-width: 0; margin-top: 0; margin-bottom: 0; }
+.mk-body .mk-su .mk-head { max-width: none; }
+.mk-body .mk-su .mk-head-main { max-width: none; }
+.mk-body .mk-su :is(.mk-table-wrap) { width: 100%; overflow-x: auto; }
+.mk-body .mk-su .mk-table { width: 100%; }
+.mk-body .mk-su .mk-table td[data-label="Sur ce site"], .mk-body .mk-su .mk-table td[data-label="Permissions"], .mk-body .mk-su .mk-table td[data-label="Type"] { white-space: nowrap; }
+.mk-body .mk-su .mk-table td[data-label="Description"] { min-width: 280px; max-width: 70ch; }
+.mk-body .mk-su .mk-table :is(th, td) { padding-block: 12px; vertical-align: middle; }
+.mk-body .mk-su .mk-row-actions { text-align: right; white-space: nowrap; }
+
+/* Barre de recherche / filtres : la recherche prend la place restante, filtres alignés à droite de la même ligne */
+.mk-body .mk-su .mk-cms-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; margin: 0; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; }
+.mk-body .mk-su .mk-cms-filters .mk-search { flex: 1 1 320px; max-width: none; min-width: 0; }
+.mk-body .mk-su .mk-cms-filters :is(select) { flex: 0 1 200px; min-width: 150px; }
+
+/* Onglets de statut */
+.mk-body .mk-su .mk-cms-tabs { margin: 0; flex-wrap: wrap; row-gap: 4px; }
+
+/* État vide : texte et illustration répartis sur toute la largeur */
+.mk-body .mk-su .mk-empty { width: 100%; max-width: none; }
+.mk-body .mk-su .mk-empty-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 220px); gap: 32px; align-items: center; justify-items: start; padding: 32px clamp(16px, 4vw, 64px); text-align: left; }
+.mk-body .mk-su .mk-empty-split .mk-empty-art { justify-self: center; }
+.mk-body .mk-su .mk-es-text p { margin-inline: 0; max-width: 62ch; }
+
+/* Rôle (permissions) : sélecteur compact, pas étiré */
+.mk-body .mk-su form[aria-label="Choisir un rôle"] { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; margin: 0; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; }
+.mk-body .mk-su form[aria-label="Choisir un rôle"] select { flex: 0 1 360px; min-width: 200px; }
+
+/* Permissions : catégories en cartes sur deux colonnes quand la place le permet */
+.mk-body .mk-su .mk-su-perms { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 520px), 1fr)); gap: 16px; align-items: start; margin: 0; }
+.mk-body .mk-su .mk-su-group { border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; background: var(--mk-surface, #fff); overflow: hidden; }
+.mk-body .mk-su .mk-su-group:first-child { border-top: 1px solid var(--mk-border, #dbe4ea); }
+.mk-body .mk-su .mk-su-group summary { padding: 14px 16px; align-items: center; }
+.mk-body .mk-su .mk-su-group ul { padding: 4px 16px 14px; margin: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 6px 16px; }
+.mk-body .mk-su .mk-su-group summary .mk-sub { font-variant-numeric: tabular-nums; flex: none; }
+.mk-body .mk-su .mk-su-group[open] summary { border-bottom: 1px solid var(--mk-border, #dbe4ea); }
+
+/* Détail d'un compte */
+.mk-body .mk-su .mk-su-cols { gap: var(--cp-gap); margin: 0; }
+
+/* Inviter : une carte, champs sur trois colonnes en grand, actions en bas */
+.mk-body .mk-su .mk-us-form { max-width: none; padding: 24px; background: var(--mk-surface, #fff); border: 1px solid var(--mk-border, #dbe4ea); border-radius: 12px; display: grid; gap: 24px; }
+.mk-body .mk-su .mk-us-grid { max-width: none; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px 24px; margin: 0; }
+.mk-body .mk-su .mk-us-grid .mk-us-wide { grid-column: 1 / -1; }
+.mk-body .mk-su .mk-us-grid .field-group { margin: 0; min-width: 0; }
+.mk-body .mk-su .mk-us-grid :is(input, select, textarea) { width: 100%; box-sizing: border-box; }
+.mk-body .mk-su .mk-us-form .mk-actions { padding-top: 16px; border-top: 1px solid var(--mk-border, #dbe4ea); display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 0; }
+
+/* Ajouter un compte : deux cartes côte à côte en grand écran, barre d'action dessous sur toute la largeur */
+.mk-body .ac { max-width: var(--cp-max); gap: 24px; }
+.mk-body .ac-bar { max-width: var(--cp-max); }
+.mk-body .ac-fieldset { grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (min-width: 1280px) { .mk-body .ac-fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)); } .mk-body .ac-fieldset > :not(.ac-card) { grid-column: 1 / -1; } }
+.mk-body .ac-card { container-type: inline-size; padding: 24px; gap: 16px; }
+.mk-body .ac-grid { gap: 16px 24px; }
+@container (max-width: 520px) { .ac-grid { grid-template-columns: minmax(0, 1fr); } }
+.mk-body .ac-pw input { max-width: none; }
+
+/* Profil : cartes en colonnes adaptatives, lignes étiquette/champ qui s'empilent dans une carte étroite */
+.mk-body .mk-pf { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr)); gap: 24px; align-items: start; }
+.mk-body .mk-pf-card { container-type: inline-size; padding: 20px 24px 12px; }
+.mk-body .mk-pf-card > h2 { margin-bottom: 8px; }
+.mk-body .mk-pf-ctl > :is(input[type="text"], input[type="email"], select) { max-width: none; }
+.mk-body .mk-pf-themes { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); width: 100%; }
+@container (max-width: 520px) { .mk-pf-row { grid-template-columns: minmax(0, 1fr); gap: 4px; } .mk-pf-label { padding-top: 0; } }
+
+@media (max-width: 720px) {
+  .mk-body .mk-su .mk-empty-split { grid-template-columns: minmax(0, 1fr); padding: 24px 16px; }
+  .mk-body .mk-su .mk-empty-split .mk-empty-art { display: none; }
+  .mk-body .mk-su .mk-us-form, .mk-body .ac-card { padding: 16px; }
+  .mk-body .mk-su .mk-cms-filters :is(select, .btn) { flex: 1 1 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .mk-body :is(.mk-su, .ac, .mk-pf) * { animation: none !important; transition: none !important; } }
+.mk-body .mk-su { padding-top: 24px; }
+.mk-body .mk-su .mk-head { padding-top: 0; }
+.mk-body .mk-pf-row { grid-template-columns: 170px minmax(0, 1fr); gap: 8px 20px; } .mk-body .mk-pf-themes { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }

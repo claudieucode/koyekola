@@ -2,6 +2,7 @@
   KOLAKISA CMS → Comptes → Profil : profil personnel de la personne connectée. Données réelles (users, mk_user_profiles, sessions) ; aucune donnée simulée.
   Un seul formulaire principal (#pf-main, multipart) : ses champs sont répartis dans les sections par l'attribut form="pf-main". E-mail, mot de passe et sessions ont leur propre formulaire.
 %><%- include("partials/top", { title, active }) %>
+<link rel="stylesheet" href="/css/comptes.css">
 <%
   const e = (k) => (errors && errors[k]) || "";
   const bad = (k) => (e(k) ? ' aria-invalid="true" aria-describedby="pf-err-' + k + '"' : "");
