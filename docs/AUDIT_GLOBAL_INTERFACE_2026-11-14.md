@@ -36,3 +36,14 @@ Suivi honnête : ce qui est corrigé (avec preuve), ce qui reste à faire. Les c
 - Domaines : bouton « Ajouter » aligné sur le champ (marge basse du groupe de champ neutralisée).
 - Vérifié en capture : Réglages d'envoi (le fuseau horaire a déjà sa propre section, avec titre, description, champ et bouton), Domaines, Conformité.
 - Redirections : détection de boucles/chaînes déjà couverte par `src/seo/rules.js` et ses tests (non modifiée).
+
+## Complément final (passage module par module)
+
+- Captures ordinateur (1440 px) et téléphone (390 px) de ~60 écrans : formateur, Marketing, Site Web, SEO, Redirections, Tests A/B, Boutique (avec produits, commandes, coupons, taxes, zones de livraison). Aucun débordement horizontal restant.
+- Corrigé : miniatures des parcours SMS (bulle de SMS au lieu de « Aperçu introuvable »).
+- Corrigé : filtres des Rapports comparatifs regroupés en 3 familles (Période, Quelles campagnes, Affichage).
+- Corrigé : champs de filtre démesurés (≈320 px de haut) dans Boutique → Produits / Commandes / Réglages (régression d'une règle `.mk-inline-form`, désormais limitée aux champs directs du formulaire).
+- Corrigé : tableau des commandes coupé à droite (colonne Total) : dates sur une ligne, cellules plus serrées.
+- Redirections : 34 tests (validation, boucles, chaînes, outils, hub) au vert.
+- Outils de capture : `tests/_outils/shots.js` (plusieurs pages, un seul démarrage), `tests/_outils/shots-site.js` (avec un site de test, signale débordements et champs trop hauts).
+- Non fait : éditeurs visuels (pages / articles) jugés écran par écran avec contenu riche ; nouveaux composants Drawer / Toast / DataTable (les composants existants ont été corrigés à la source).
