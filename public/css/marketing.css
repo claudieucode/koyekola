@@ -281,7 +281,7 @@ a.mk-stat:hover { border-color: var(--accent); }
   transition: opacity 0.16s ease, transform 0.16s ease, overlay 0.16s ease allow-discrete, display 0.16s ease allow-discrete;
 }
 /* Centrage garanti : une remise à zéro des marges ailleurs dans la feuille collait les fenêtres en haut à gauche (UA : margin:auto + inset:0). */
-.mk-dialog:modal { position: fixed; inset: 0; margin: auto; }
+.mk-dialog:is(:modal, :not([open])) { position: fixed; inset: 0; margin: auto; } /* « :not([open]) » : pendant l'animation de sortie le dialogue n'est plus « :modal » mais reste affiché 160 ms — sans cette règle il retombait en haut à gauche (flash à la fermeture) */
 .mk-dialog[open] { display: flex; flex-direction: column; opacity: 1; transform: none; }
 @starting-style { .mk-dialog[open] { opacity: 0; transform: translateY(8px) scale(0.985); } }
 .mk-dialog:focus-visible { outline: 2px solid transparent; } /* le focus est donné au premier champ (shell.js) */
