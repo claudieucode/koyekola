@@ -5,7 +5,37 @@
   const isList = ["liste", "details"].includes(view);
   const cols = new Set(prefs.columns);
   const dirOf = (key) => (f.sort === key ? key + "_desc" : key);
-  const sortLink = (asc, desc, text, extra = "") => `<a href="${h.esc(h.keep({ tri: f.sort === asc ? desc : asc, page: "" }))}" data-mx-sort="${asc}"${f.sort === asc || f.sort === desc ? ` aria-sort="${f.sort === asc ? "ascending" : "descending"}"` : ""}${extra}>${text}${f.sort === asc ? '<span aria-hidden="true"> ↑</span>' : f.sort === desc ? '<span aria-hidden="true"> ↓</span>' : ""}</a>`;
+  // Colonnes : l'ordre affiché est celui des préférences (variables CSS --o-<clé>) ; chaque en-tête est déplaçable, triable (si la base sait trier) et redimensionnable.
+  const catKey = { image: "image", video: "video", audio: "audio", documents: "documents", pdf: "documents", document: "documents", lottie: "lottie" }[f.type] || "";
+  const activeCols = prefs.colSmart && catKey ? (prefs.colByType[catKey] || typeColumns[catKey] || prefs.columns) : prefs.columns;
+  const sortHead = (k, label) => {
+    const d = columnDefs[k], pair = k === "name" ? ["nom", "nom_desc"] : d.sort;
+    if (!pair) return h.esc(label);
+    const first = k === "name" ? "asc" : (d.first || "asc"), cur = f.sort === pair[0] ? first : f.sort === pair[1] ? (first === "asc" ? "desc" : "asc") : "";
+    const next = f.sort === pair[0] ? pair[1] : pair[0];
+    return `<a href="${h.esc(h.keep({ tri: next, page: "" }))}" data-mx-sort="${pair[0]}" draggable="false"${cur ? ` aria-sort="${cur === "asc" ? "ascending" : "descending"}"` : ""} title="Trier par ${h.esc(label.toLowerCase())} (${cur === "asc" ? "décroissant au prochain clic" : cur === "desc" ? "croissant au prochain clic" : "croissant"})">${h.esc(label)}<span class="mx-sortmark" aria-hidden="true"></span></a>`;
+  };
+  const headCell = (k) => `<span class="mx-c mx-c-${k}" data-col="${k}" draggable="true">${sortHead(k, columnDefs[k].label)}<i class="mx-rs" data-mx-resize="${k}" role="separator" aria-orientation="vertical" aria-label="Largeur de la colonne ${h.esc(columnDefs[k].label)} (flèches gauche et droite)" tabindex="0"></i></span>`;
+  const lazyOf = (k, m) => (k === "duration" && (m.type === "video" || m.type === "audio")) || (k === "taken" && m.type === "image" && /jpe?g/i.test(m.mime || "")) ? ` data-lazy="${k}"` : (k === "dims" || k === "resolution") && m.type === "video" && !m.width ? ` data-lazy="${k === "dims" ? "vdims" : "vres"}"` : "";
+  const cellVal = (k, m) => {
+    switch (k) {
+      case "type": return h.esc(h.label(m)) + (orgView && m.reach === "site" ? ' <span class="mk-sub">· propre à un site</span>' : "");
+      case "ext": return h.esc(h.ext(m));
+      case "format": return h.esc(h.format(m));
+      case "size": return h.esc(h.small(m.size));
+      case "dims": return h.esc(h.dims(m));
+      case "resolution": return h.esc(h.mpx(m));
+      case "folder": return h.esc(m.folderName || "Racine");
+      case "modified": return h.esc(h.fdate(m.updatedAt || m.createdAt));
+      case "created": return h.esc(h.fdate(m.createdAt));
+      case "author": return h.esc(authors[m.createdBy] || "—");
+      case "tags": return m.tags.length ? m.tags.slice(0, 3).map((t) => `<span class="mx-chip"${t.color ? ` data-color="${h.esc(t.color)}"` : ""}>${h.esc(t.name)}</span>`).join("") + (m.tags.length > 3 ? `<span class="mx-chip">+${m.tags.length - 3}</span>` : "") : "—";
+      case "starred": return m.starred ? '<span class="mx-yes" title="Favori">★</span>' : "—";
+      case "status": return h.esc(h.status(m));
+      default: return "—"; // durée et date de prise de vue : lues dans le fichier par le navigateur
+    }
+  };
+  const cellOf = (k, m) => `<span class="mx-c mx-c-${k}" data-col="${k}"${lazyOf(k, m)}>${cellVal(k, m)}</span>`;
   const thumbOf = (m, eager) => m.type === "image" && (m.thumb || m.path) ? `<img src="${h.esc(view === "icones" || view === "grille" ? (m.medium || m.thumb || m.path) : (m.thumb || m.path))}" alt="" loading="lazy" decoding="async"${m.width && m.height ? ` width="${m.width}" height="${m.height}"` : ""}>` : `<span class="mk-ml-badge">${h.esc(h.ext(m))}</span>`;
   const empty = (title, text) => { const art = "image"; return `<div class="mk-empty mx-empty">${illu(art, { className: "kx-empty-ill" })}<h2>${h.esc(title)}</h2><p>${h.esc(text)}</p></div>`; };
   const folderCard = (fo) => `<li class="mx-folder" role="listitem" data-mx-folder="${fo.id}" data-name="${h.esc(fo.name)}"${fo.color ? ` data-color="${h.esc(fo.color)}"` : ""} data-mx-draggable="folder">
@@ -49,21 +79,19 @@
     <%- empty(f.trashed ? "La corbeille est vide" : filtered ? "Aucun fichier trouvé" : subfolders.length ? "Aucun fichier dans ce dossier" : "Aucun fichier", f.trashed ? "Les fichiers et dossiers mis à la corbeille apparaissent ici ; vous pouvez les restaurer." : filtered ? "Aucun fichier ne correspond à ces critères. Modifiez la recherche ou réinitialisez les filtres." : "Envoyez votre premier fichier : glissez-le dans cette fenêtre ou utilisez « Ajouter un fichier média ».") %>
   <% } else if (found.items.length) { %>
     <% if (!f.trashed && subfolders.length) { %><h2 class="mx-sec-title">Fichiers</h2><% } %>
-    <div class="mx-colhead" role="row" data-mx-colhead aria-label="Colonnes">
-      <span class="mx-ch-name"><%- sortLink("nom", "nom_desc", "Nom") %></span>
-      <span class="mx-c mx-c-type"><%- sortLink("type", "type", "Type") %></span><span class="mx-c mx-c-size"><%- sortLink("taille", "taille", "Taille") %></span><span class="mx-c mx-c-dims">Dimensions</span><span class="mx-c mx-c-folder">Dossier</span>
-      <span class="mx-c mx-c-modified"><%- sortLink("modifie", "modifie", "Modifié le") %></span><span class="mx-c mx-c-created"><%- sortLink("recent", "ancien", "Ajouté le") %></span><span class="mx-c mx-c-author">Auteur</span><span class="mx-c mx-c-tags">Tags</span></div>
+    <div class="mx-colhead" role="row" data-mx-colhead aria-label="Colonnes (glisser un titre pour le déplacer, tirer son bord pour l'élargir)">
+      <span class="mx-ch-name" data-col="name"><%- sortHead("name", "Nom") %></span>
+      <% Object.keys(columnDefs).forEach((k) => { %><%- headCell(k) %><% }) %>
+      <span class="mx-ch-end" aria-hidden="true"></span></div>
     <ul class="mx-items" data-view="<%= view %>" role="list"<%- isList ? " data-ml-list" : " data-ml-grid" %> data-mx-items>
       <% found.items.forEach((m) => { %>
-      <li class="mx-item<%= m.starred ? " is-starred" : "" %>" role="listitem" data-ml-item data-id="<%= m.id %>" data-type="<%= m.type %>" data-size="<%= m.size %>" data-name="<%= m.name %>" data-path="<%= m.path %>" data-folder="<%= m.folderId || "" %>" data-mx-draggable="file" data-mx-star-state="<%= m.starred ? "1" : "0" %>">
+      <li class="mx-item<%= m.starred ? " is-starred" : "" %>" role="listitem" data-ml-item data-id="<%= m.id %>" data-type="<%= m.type %>" data-size="<%= m.size %>" data-name="<%= m.name %>" data-path="<%= m.path %>" data-folder="<%= m.folderId || "" %>" data-mime="<%= m.mime || "" %>" data-w="<%= m.width || "" %>" data-h="<%= m.height || "" %>" data-medium="<%= m.medium || "" %>" data-alt="<%= m.alt || "" %>" data-created="<%= m.createdAt || "" %>" data-updated="<%= m.updatedAt || "" %>" data-folder-name="<%= m.folderName || "" %>" data-tags="<%= m.tags.map((t) => t.name).join("|") %>" data-mx-draggable="file" data-mx-star-state="<%= m.starred ? "1" : "0" %>">
         <% if (canWrite) { %><input type="checkbox" class="mk-ml-check mx-check" data-ml-check value="<%= m.id %>" aria-label="Sélectionner « <%= m.name %> »"><% } %>
         <button type="button" class="mx-thumb" data-ml-open aria-label="Détails de « <%= m.name %> » (<%= h.label(m) %>, <%= h.small(m.size) %>)"><%- thumbOf(m) %></button>
         <span class="mx-name" data-ml-name><%= m.name %></span>
         <span class="mx-meta mk-sub"><%= h.label(m) %> · <%= h.small(m.size) %><% if (orgView && m.reach === "site") { %> · propre à un site<% } %></span>
         <span class="mx-meta-long"><%= [h.label(m), h.small(m.size), m.width ? h.dims(m) : "", m.folderName || "", m.tags.map((t) => "#" + t.name).join(" ")].filter(Boolean).join(" · ") %></span>
-        <span class="mx-c mx-c-type"><%= h.label(m) %><% if (orgView && m.reach === "site") { %> <span class="mk-sub">· propre à un site</span><% } %></span><span class="mx-c mx-c-size"><%= h.small(m.size) %></span><span class="mx-c mx-c-dims"><%= h.dims(m) %></span><span class="mx-c mx-c-folder"><%= m.folderName || "—" %></span>
-        <span class="mx-c mx-c-modified"><%= h.fdate(m.updatedAt || m.createdAt) %></span><span class="mx-c mx-c-created"><%= h.fdate(m.createdAt) %></span><span class="mx-c mx-c-author"><%= authors[m.createdBy] || "—" %></span>
-        <span class="mx-c mx-c-tags"><% m.tags.slice(0, 3).forEach((t) => { %><span class="mx-chip"<%- t.color ? ' data-color="' + h.esc(t.color) + '"' : "" %>><%= t.name %></span><% }) %><% if (m.tags.length > 3) { %><span class="mx-chip">+<%= m.tags.length - 3 %></span><% } %></span>
+        <% Object.keys(columnDefs).forEach((k) => { %><%- cellOf(k, m) %><% }) %>
         <button type="button" class="mx-star<%= m.starred ? " is-on" : "" %>" data-mx-star="media" aria-pressed="<%= m.starred ? "true" : "false" %>" aria-label="<%= m.starred ? "Retirer des favoris" : "Ajouter aux favoris" %> : <%= m.name %>"><%- icon(m.starred ? "star" : "starOutline", { size: 16 }) %></button>
         <button type="button" class="mx-iconbtn is-small mx-more" data-mx-more="file" aria-haspopup="menu" aria-label="Actions de « <%= m.name %> »"><%- icon("moreVertical", { size: 16 }) %></button>
       </li>

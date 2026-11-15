@@ -185,32 +185,63 @@ function collectionsOf(ctx, ids) {
 }
 
 // ---------- Préférences d'affichage (par personne et par médiathèque) ----------
-const VIEWS = ["grille", "liste", "details", "icones", "compacte", "colonnes"];
-const COLUMNS = ["type", "size", "dims", "folder", "modified", "created", "author", "tags"];
-const SORT_KEYS = ["recent", "ancien", "nom", "nom_desc", "taille", "modifie", "type"];
-const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], sort: "recent", sortDir: "", sidebar: "open", info: "closed", infoWidth: 340, foldersFirst: true, colWidth: 240, colMeta: true, colExt: true, theme: { mode: "clair", colors: {}, radius: 8, space: 100, iconSize: 16 } };
-const THEME_MODES = ["clair", "sombre", "personnalise"];
-const THEME_KEYS = ["sideBg", "mainBg", "text", "textSoft", "icon", "sep", "sel", "hover", "folder", "accent", "border", "badge"];
-const clampInt = (v, lo, hi, d) => (Number.isFinite(Number(v)) ? Math.min(Math.max(Math.round(Number(v)), lo), hi) : d);
-function sanitizeTheme(t) {
-  const o = t && typeof t === "object" ? t : {};
-  const colors = {};
-  if (o.colors && typeof o.colors === "object") THEME_KEYS.forEach((k) => { if (typeof o.colors[k] === "string" && /^#[0-9a-fA-F]{6}$/.test(o.colors[k])) colors[k] = o.colors[k].toLowerCase(); });
-  return { mode: THEME_MODES.includes(o.mode) ? o.mode : "clair", colors, radius: clampInt(o.radius, 0, 20, 8), space: clampInt(o.space, 80, 140, 100), iconSize: clampInt(o.iconSize, 14, 26, 16) };
-}
+const VIEWS = ["grille", "liste", "details", "icones", "compacte"];
+// Colonnes du mode liste. Seules des informations RÉELLEMENT connues sont affichées : le serveur connaît type, extension, format (type MIME), taille, dimensions, mégapixels,
+// dossier, dates, auteur, étiquettes, favori et utilisation. La durée, la résolution vidéo et la date de prise de vue sont lues dans le fichier par le navigateur (fichiers visibles
+// seulement, mise en cache) ; rien n'est inventé : sans information, la cellule affiche « — ». « apply » : types de fichiers pour lesquels la colonne a un sens.
+const ALL = ["image", "video", "audio", "pdf", "document", "lottie"];
+const COLUMN_DEFS = {
+  type: { label: "Type", sort: ["type", "type_desc"], apply: ALL, width: 92 },
+  ext: { label: "Extension", sort: ["ext", "ext_desc"], apply: ALL, width: 88 },
+  format: { label: "Format", sort: ["format", "format_desc"], apply: ALL, width: 110 },
+  size: { label: "Taille", sort: ["taille", "taille_asc"], first: "desc", apply: ALL, width: 86, align: "right" },
+  dims: { label: "Dimensions", sort: ["dims", "dims_asc"], first: "desc", apply: ["image", "video", "lottie"], width: 118 },
+  resolution: { label: "Résolution", sort: ["dims", "dims_asc"], first: "desc", apply: ["image", "video"], width: 100 },
+  duration: { label: "Durée", apply: ["video", "audio"], width: 84, align: "right", lazy: true },
+  folder: { label: "Emplacement", apply: ALL, width: 140 },
+  modified: { label: "Modifié le", sort: ["modifie", "modifie_asc"], first: "desc", apply: ALL, width: 100 },
+  created: { label: "Ajouté le", sort: ["recent", "ancien"], first: "desc", apply: ALL, width: 100 },
+  taken: { label: "Création (prise de vue)", apply: ["image"], width: 150, lazy: true },
+  author: { label: "Auteur", apply: ALL, width: 116 },
+  tags: { label: "Étiquettes", apply: ALL, width: 170 },
+  starred: { label: "Favori", apply: ALL, width: 72 },
+  status: { label: "Statut", apply: ALL, width: 96 },
+};
+const COLUMNS = Object.keys(COLUMN_DEFS);
+const NAME_SORT = ["nom", "nom_desc"];
+const SORT_KEYS = ["recent", "ancien", "nom", "nom_desc", "taille", "taille_asc", "modifie", "modifie_asc", "type", "type_desc", "dims", "dims_asc", "ext", "ext_desc", "format", "format_desc"];
+// Dispositions proposées selon la catégorie affichée (« affichage intelligent »)
+const TYPE_COLUMNS = {
+  image: ["format", "size", "dims", "resolution", "modified"],
+  video: ["format", "size", "dims", "duration", "modified"],
+  audio: ["format", "size", "duration", "modified"],
+  documents: ["format", "size", "modified"],
+  lottie: ["size", "dims", "modified"],
+};
+const DEFAULT_PREFS = { view: "grille", size: 160, density: "confortable", columns: ["type", "size", "dims", "modified"], colWidths: {}, colByType: {}, colSmart: true, colConfigs: [], colDefault: "", sort: "recent", sortDir: "", sidebar: "open", info: "closed", pane: "infos", infoWidth: 340, previewMode: "panneau", dblclick: "plein-ecran", foldersFirst: true };
+const orderedColumns = (list) => [...new Set((Array.isArray(list) ? list : []).filter((c) => COLUMNS.includes(c)))];
+const cleanWidths = (w) => { const out = {}; if (w && typeof w === "object") for (const k of COLUMNS) if (Number.isFinite(Number(w[k]))) out[k] = Math.min(Math.max(Math.round(Number(w[k])), 56), 480); return out; };
 function sanitizePrefs(input) {
   const p = input && typeof input === "object" ? input : {};
   const out = {};
   if (VIEWS.includes(p.view)) out.view = p.view;
   if (Number.isFinite(Number(p.size))) out.size = Math.min(Math.max(Math.round(Number(p.size)), 90), 320);
   if (["confortable", "compacte"].includes(p.density)) out.density = p.density;
-  if (Array.isArray(p.columns)) out.columns = COLUMNS.filter((c) => p.columns.includes(c));
+  if (Array.isArray(p.columns)) out.columns = orderedColumns(p.columns); // l'ordre du tableau EST l'ordre d'affichage
+  if (p.colWidths && typeof p.colWidths === "object") out.colWidths = cleanWidths(p.colWidths);
+  if (p.colByType && typeof p.colByType === "object") { out.colByType = {}; for (const t of Object.keys(TYPE_COLUMNS)) if (Array.isArray(p.colByType[t])) out.colByType[t] = orderedColumns(p.colByType[t]); }
+  if (typeof p.colSmart === "boolean") out.colSmart = p.colSmart;
+  if (Array.isArray(p.colConfigs)) out.colConfigs = p.colConfigs.slice(0, 12).filter((c) => c && typeof c === "object" && /^[a-z0-9]{4,16}$/.test(String(c.id || ""))).map((c) => ({ id: String(c.id), name: String(c.name || "").replace(/\s+/g, " ").trim().slice(0, 40) || "Configuration", columns: orderedColumns(c.columns), colWidths: cleanWidths(c.colWidths) }));
+  if (typeof p.colDefault === "string") out.colDefault = /^[a-z0-9]{0,16}$/.test(p.colDefault) ? p.colDefault : "";
   if (SORT_KEYS.includes(p.sort)) out.sort = p.sort;
   if (["", "asc", "desc"].includes(p.sortDir)) out.sortDir = p.sortDir;
   if (["open", "rail", "hidden"].includes(p.sidebar)) out.sidebar = p.sidebar === "hidden" ? "rail" : p.sidebar; // « masquée » n'existe plus : la barre se réduit toujours à une bande qui garde son bouton
   if (p.theme && typeof p.theme === "object") out.theme = sanitizeTheme(p.theme);
   if (["open", "closed"].includes(p.info)) out.info = p.info;
-  if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 560);
+  if (["apercu", "infos"].includes(p.pane)) out.pane = p.pane;
+  if (["panneau", "fenetre"].includes(p.previewMode)) out.previewMode = p.previewMode;
+  if (["plein-ecran", "panneau", "infos", "aucune"].includes(p.dblclick)) out.dblclick = p.dblclick;
+  if (Number.isFinite(Number(p.infoWidth))) out.infoWidth = Math.min(Math.max(Math.round(Number(p.infoWidth)), 280), 720);
   if (typeof p.foldersFirst === "boolean") out.foldersFirst = p.foldersFirst;
   if (Number.isFinite(Number(p.colWidth))) out.colWidth = Math.min(Math.max(Math.round(Number(p.colWidth)), 180), 420); // vue en colonnes : largeur par défaut
   if (typeof p.colMeta === "boolean") out.colMeta = p.colMeta;
@@ -500,7 +531,7 @@ function suggest(ctx, q) {
 }
 
 module.exports = {
-  COLORS, RETENTION, VIEWS, COLUMNS, DEFAULT_PREFS, siteKeyOf, ownMedia,
+  COLORS, RETENTION, VIEWS, COLUMNS, COLUMN_DEFS, TYPE_COLUMNS, NAME_SORT, SORT_KEYS, DEFAULT_PREFS, siteKeyOf, ownMedia,
   setStar, starredSet,
   listTags, createTag, renameTag, deleteTag, tagMedia, setMediaTags, tagsOf,
   listCollections, createCollection, renameCollection, deleteCollection, addToCollection, removeFromCollection, collectionsOf,

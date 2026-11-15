@@ -71,7 +71,13 @@
   function savePrefs(patch) {
     Object.keys(patch).forEach(function (k) { prefs[k] = patch[k]; pending[k] = patch[k]; });
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () { var p = pending; pending = {}; K.api("POST", BASE + "/preferences", p).catch(function () { /* préférence non enregistrée : l'affichage reste correct pour cette session */ }); }, 350);
+    saveTimer = setTimeout(flushPrefs, 350);
+  }
+  // Envoie tout de suite les préférences en attente (avant une navigation qui les relit côté serveur)
+  function flushPrefs() {
+    clearTimeout(saveTimer); var p = pending; pending = {};
+    if (!Object.keys(p).length) return Promise.resolve();
+    return K.api("POST", BASE + "/preferences", p).catch(function () { /* préférence non enregistrée : l'affichage reste correct pour cette session */ });
   }
 
   // ----- Apparence (couleurs libres, rayon, espacement, taille d'icônes) : enregistrée par personne et par site -----
@@ -109,21 +115,21 @@
     if (prefs.sidebar === "hidden") prefs.sidebar = "rail";
     rootEl.setAttribute("data-sidebar", prefs.sidebar || "open"); syncCollapse(); applyTheme(); rootEl.setAttribute("data-info", prefs.info || "closed"); rootEl.setAttribute("data-density", prefs.density || "confortable");
     rootEl.style.setProperty("--mx-size", (prefs.size || 160) + "px"); rootEl.style.setProperty("--mx-info-w", (prefs.infoWidth || 340) + "px");
-    var cols = prefs.columns || [];
-    rootEl.className = rootEl.className.replace(/\bhas-c-\w+/g, "").replace(/\s+/g, " ").trim();
-    cols.forEach(function (c) { rootEl.classList.add("has-c-" + c); });
+    rootEl.setAttribute("data-pane", prefs.pane || "infos"); // colonnes : voir media-columns.js
+    if (window.MXColumns) window.MXColumns.apply();
     setView(cfg.view || prefs.view || "grille", true);
     $$("[data-mx-view]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-mx-view") === (cfg.view || prefs.view))); });
     var size = $("[data-mx-size]"); if (size) size.value = prefs.size || 160;
     var ib = $("[data-mx-info-toggle]"); if (ib) ib.setAttribute("aria-pressed", String(prefs.info === "open"));
-    $$("[data-mx-col]").forEach(function (c) { c.checked = cols.indexOf(c.value) >= 0; });
+    var qb = $("[data-mx-quick-toggle]"); if (qb) qb.setAttribute("aria-pressed", String(prefs.info === "open" && prefs.pane === "apercu"));
+    $$("[data-mx-pane]").forEach(function (b) { var on = b.getAttribute("data-mx-pane") === (prefs.pane || "infos"); b.setAttribute("aria-selected", String(on)); b.tabIndex = on ? 0 : -1; });
     var den = $("[data-mx-density]"); if (den) den.checked = prefs.density === "compacte";
   }
   function setView(v, quiet) {
     cfg.view = v; rootEl.setAttribute("data-view", v);
     var ul = $("[data-mx-items]", rootEl);
     if (ul) { ul.setAttribute("data-view", v); var list = v === "liste" || v === "details"; ul.removeAttribute("data-ml-list"); ul.removeAttribute("data-ml-grid"); ul.setAttribute(list ? "data-ml-list" : "data-ml-grid", ""); $$("img", ul).forEach(function (img) { var it = img.closest("[data-ml-item]"); }); }
-    var colBtn = $("[data-mx-cols]"); if (colBtn) colBtn.hidden = !(v === "liste" || v === "details");
+    var colBtn = $("[data-mx-cols]"); if (colBtn) colBtn.hidden = v !== "liste"; if (window.MXColumns) window.MXColumns.lazy();
     if (!quiet) { $$("[data-mx-view]").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-mx-view") === v)); }); savePrefs({ view: v }); }
     // La vue en colonnes a son propre contenu (rendu par media-columns.js) : y entrer ou en sortir demande l'affichage serveur du nouveau mode
     if (!quiet && (v === "colonnes" || rootEl.hasAttribute("data-columns-on"))) { var u = new URL(location.href); u.searchParams.set("vue", v); go(u.pathname + u.search, { replace: true, quiet: true }); }
@@ -140,7 +146,7 @@
       var src = $('[data-frag="' + k + '"]', doc), dst = $('[data-frag="' + k + '"]', rootEl);
       if (src && dst) dst.innerHTML = src.innerHTML;
     });
-    var next = readCfg(doc); if (next) { next.spaceBase = spaceBase; var keepPrefs = prefs; cfg = next; cfg.prefs = keepPrefs; cfgEl.textContent = JSON.stringify(cfg); }
+    var next = readCfg(doc); if (next) { next.spaceBase = spaceBase; next.columnDefs = next.columnDefs || cfg.columnDefs; next.typeColumns = next.typeColumns || cfg.typeColumns; var keepPrefs = prefs; cfg = next; cfg.prefs = keepPrefs; cfgEl.textContent = JSON.stringify(cfg); }
   }
   function go(href, o) {
     o = o || {};
@@ -171,7 +177,7 @@
     var f = e.target.closest("[data-mx-filters]"); if (!f) return;
     e.preventDefault();
     var p = new URLSearchParams(); new FormData(f).forEach(function (v, k) { if (String(v).trim() !== "" && k !== "site" && k !== "fragment") p.append(k, String(v).trim()); });
-    if (p.get("tri") === "recent") p.delete("tri");
+    if (p.get("tri")) savePrefs({ sort: p.get("tri") }); if (p.get("tri") === (prefs.sort || "recent")) p.delete("tri");
     var d = $("details[open].mx-pop", f); if (d) d.removeAttribute("open");
     go(spaceBase + (p.toString() ? "?" + p : ""));
   });
@@ -185,7 +191,7 @@
   function itemEls() { return $$("[data-ml-item]", rootEl); }
   function itemEl(id) { return $('[data-ml-item][data-id="' + id + '"]', rootEl); }
   function folderEl(id) { return $('.mx-folder[data-mx-folder="' + id + '"]', rootEl); }
-  function dataOf(el) { return { id: Number(el.getAttribute("data-id")), name: el.getAttribute("data-name") || "", type: el.getAttribute("data-type"), size: Number(el.getAttribute("data-size")) || 0, path: el.getAttribute("data-path") || "", folderId: Number(el.getAttribute("data-folder")) || null, starred: el.getAttribute("data-mx-star-state") === "1" }; }
+  function dataOf(el) { return { id: Number(el.getAttribute("data-id")), name: el.getAttribute("data-name") || "", type: el.getAttribute("data-type"), size: Number(el.getAttribute("data-size")) || 0, path: el.getAttribute("data-path") || "", folderId: Number(el.getAttribute("data-folder")) || null, starred: el.getAttribute("data-mx-star-state") === "1", mime: el.getAttribute("data-mime") || "", width: Number(el.getAttribute("data-w")) || null, height: Number(el.getAttribute("data-h")) || null, medium: el.getAttribute("data-medium") || "", alt: el.getAttribute("data-alt") || "", createdAt: el.getAttribute("data-created") || "", updatedAt: el.getAttribute("data-updated") || "", folderName: el.getAttribute("data-folder-name") || "", tags: (el.getAttribute("data-tags") || "").split("|").filter(Boolean) }; }
   function paintSelection() {
     itemEls().forEach(function (el) { var on = sel.has(Number(el.getAttribute("data-id"))); el.classList.toggle("is-selected", on); var c = $("[data-ml-check]", el); if (c) c.checked = on; });
     $$(".mx-folder[data-mx-folder]", rootEl).forEach(function (el) { el.classList.toggle("is-selected", selF.has(Number(el.getAttribute("data-mx-folder")))); });
@@ -225,7 +231,7 @@
     if (fo && !fo.classList.contains("is-trashed")) { if (e.metaKey || e.ctrlKey || e.shiftKey || selecting()) { e.preventDefault(); var fid = Number(fo.getAttribute("data-mx-folder")); if (selF.has(fid)) selF["delete"](fid); else selF.add(fid); paintSelection(); } return; }
     if (e.target.closest("[data-mx-scroll]") && !e.target.closest(".mx-bulk, .mx-banner, .mx-section, .mx-sec-title, .mx-colhead, .mx-pager")) { if (sel.size || selF.size) clearSelection(); }
   }, true);
-  rootEl.addEventListener("dblclick", function (e) { var item = e.target.closest("[data-ml-item]"); if (item && !e.target.closest("[data-mx-star], [data-mx-more], input")) openPreview(Number(item.getAttribute("data-id"))); });
+  rootEl.addEventListener("dblclick", function (e) { var item = e.target.closest("[data-ml-item]"); if (item && !e.target.closest("[data-mx-star], [data-mx-more], input")) activate(Number(item.getAttribute("data-id"))); });
   rootEl.addEventListener("click", function (e) {
     var st = e.target.closest("[data-mx-star]"); if (!st) return;
     e.preventDefault(); e.stopPropagation();
@@ -243,6 +249,14 @@
   function starSvg(on) { return '<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="' + (on ? "currentColor" : "none") + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>'; }
 
   // =============================================================== Actions
+  // Double-clic et Entrée : selon le comportement choisi (fenêtre plein écran, panneau d'aperçu, panneau d'informations, rien)
+  function activate(id) {
+    var mode = prefs.dblclick || "plein-ecran";
+    if (mode === "aucune") return;
+    if (mode === "panneau") { selectOnly(id); openInfo(true, "apercu"); return; }
+    if (mode === "infos") { selectOnly(id); openInfo(true, "infos"); return; }
+    openPreview(id);
+  }
   function openPreview(id) {
     var list = itemEls().map(dataOf), i = list.findIndex(function (m) { return m.id === id; });
     if (window.MXPreview && i >= 0) return window.MXPreview.open(list, i);
@@ -392,7 +406,7 @@
       out.push("-"); out.push({ label: one ? "Télécharger" : "Télécharger (archive ZIP)", icon: "download", run: function () { download(items); } });
       return out;
     }
-    if (one) out.push({ label: "Aperçu", icon: "eye", key: "Entrée", run: function () { openPreview(m.id); } }, { label: "Informations", icon: "info", key: "⌘ I", run: function () { selectOnly(m.id); openInfo(true); } });
+    if (one) out.push({ label: "Aperçu rapide", icon: "eye", key: "Espace", run: function () { quickShow(m.id); } }, { label: "Ouvrir en plein écran", icon: "eye", run: function () { openPreview(m.id); } }, { label: "Informations", icon: "info", key: "⌘ I", run: function () { selectOnly(m.id); openInfo(true, "infos"); } });
     out.push({ label: one ? "Télécharger" : "Télécharger (archive ZIP)", icon: "download", run: function () { download(items); } });
     if (one) out.push({ label: "Copier le lien", icon: "link", run: function () { copyText(K.absolute(m.path), "Lien copié."); } }, { label: "Copier le chemin", icon: "copy", run: function () { copyText(m.path, "Chemin copié."); } });
     out.push("-");
@@ -486,11 +500,45 @@
 
   // =============================================================== Panneau d'informations (réductible, masquable, redimensionnable)
   var infoAside = $("[data-ml-panel]", rootEl), infoEl = $("[data-mx-info-body]", rootEl) || infoAside, infoSeq = 0;
-  function openInfo(on) { prefs.info = on ? "open" : "closed"; savePrefs({ info: prefs.info }); applyPrefs(); if (on) renderInfo(); }
+  function openInfo(on, pane) {
+    prefs.info = on ? "open" : "closed"; var patch = { info: prefs.info }; if (on && (pane === "apercu" || pane === "infos")) { prefs.pane = pane; patch.pane = pane; }
+    savePrefs(patch); applyPrefs();
+    if (!on && window.MXQuick) window.MXQuick.release(); // lecteurs arrêtés dès que le panneau se ferme
+    if (on) renderInfo();
+  }
+  function setPane(pane) { if (pane !== "apercu" && pane !== "infos") return; prefs.pane = pane; savePrefs({ pane: pane }); applyPrefs(); renderInfo(); }
+  // ----- Aperçu rapide : le panneau suit la sélection ; précédent / suivant parcourent la liste affichée (recherche, dossier, catégorie)
+  var pendingPick = null;
+  function useWindow() { return prefs.previewMode === "fenetre" || small(); }
+  function lastSelected() { var ids = Array.from(sel); return ids.length ? ids[ids.length - 1] : null; }
+  function quickShow(id, panel) { if (!panel && useWindow()) { openPreview(id); return; } selectOnly(id); openInfo(true, "apercu"); }
+  function quickToggle() {
+    if (window.MXPreview && window.MXPreview.isOpen()) { window.MXPreview.close(); return; }
+    if (useWindow()) { var id = lastSelected(); if (id !== null) openPreview(id); else toast("Sélectionnez d'abord un fichier.", "error"); return; }
+    if (prefs.info === "open" && prefs.pane === "apercu") openInfo(false); else openInfo(true, "apercu");
+  }
+  function quickStep(d) {
+    var els = itemEls(), cur = lastSelected(), i = els.findIndex(function (el) { return Number(el.getAttribute("data-id")) === cur; }), n = i + d;
+    if (n >= 0 && n < els.length) { var el = els[n]; selectOnly(Number(el.getAttribute("data-id"))); el.scrollIntoView({ block: "nearest" }); return; }
+    var link = d > 0 ? $("[data-mx-next]", rootEl) : null;
+    if (d > 0 && link) { pendingPick = "first"; go(link.href); } else if (d < 0 && cur !== null) { var prev = $$(".mx-pager a", rootEl).find(function (a) { return /Précédent/.test(a.textContent); }); if (prev) { pendingPick = "last"; go(prev.href); } }
+  }
+  function renderQuick() {
+    var els = itemEls(), id = lastSelected(), el = id === null ? null : itemEl(id), i = el ? els.indexOf(el) : -1, nextLink = $("[data-mx-next]", rootEl), prevLink = $$(".mx-pager a", rootEl).find(function (a) { return /Précédent/.test(a.textContent); });
+    window.MXQuick.render(infoEl, function () {
+      return {
+        m: el ? dataOf(el) : null, selected: sel.size, pos: i, total: els.length, canPrev: i > 0 || Boolean(prevLink && i === 0), canNext: (i >= 0 && i < els.length - 1) || Boolean(nextLink && i === els.length - 1),
+        prev: i > 0 ? dataOf(els[i - 1]) : null, next: i >= 0 && i < els.length - 1 ? dataOf(els[i + 1]) : null,
+        onStep: quickStep, onFull: openPreview, onInfo: function () { setPane("infos"); }, prefs: prefs, setPref: function (p) { savePrefs(p); applyPrefs(); renderInfo(); },
+      };
+    });
+  }
   function renderInfo() {
     if (prefs.info !== "open" || !infoEl) return;
     if (infoAside) infoAside.hidden = false;
     var my = ++infoSeq;
+    if ((prefs.pane || "infos") === "apercu" && window.MXQuick) { renderQuick(); return; }
+    if (window.MXQuick) window.MXQuick.release();
     if (sel.size === 1) {
       var id = Array.from(sel)[0]; infoEl.textContent = "Chargement…";
       K.detail(id).then(function (d) { if (my !== infoSeq) return; paintFile(d); }, function (err) { if (my !== infoSeq) return; infoEl.textContent = ""; infoEl.appendChild(h("p", { class: "mk-ml-error", role: "alert", text: errMsg(err) })); });
@@ -559,12 +607,15 @@
     [h("h2", { text: m.name }), prev, act, info, exifBox, tagBox, h("h3", { text: "Informations modifiables" }), fName, fTitle, fAlt, fCap, fDesc, save, status, h("div", { class: "field-group" }, [h("label", { for: "ml-f-url", text: "Adresse (URL)" }), urlInput]), usageBox, twins].forEach(function (n) { if (n) infoEl.appendChild(n); });
   }
   var refreshTimer = null; function refreshSoon() { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 600); }
-  document.addEventListener("click", function (e) { var t = e.target.closest("[data-mx-info-toggle]"); if (t && rootEl.contains(t)) openInfo(prefs.info !== "open"); if (e.target.closest("[data-mx-info-close]") && rootEl.contains(e.target)) openInfo(false); });
+  document.addEventListener("click", function (e) {
+    var qt = e.target.closest("[data-mx-quick-toggle]"); if (qt && rootEl.contains(qt)) { quickToggle(); return; }
+    var pt = e.target.closest("[data-mx-pane]"); if (pt && rootEl.contains(pt)) { setPane(pt.getAttribute("data-mx-pane")); return; }
+    var t = e.target.closest("[data-mx-info-toggle]"); if (t && rootEl.contains(t)) { if (prefs.info === "open" && prefs.pane === "apercu") setPane("infos"); else openInfo(prefs.info !== "open", "infos"); } if (e.target.closest("[data-mx-info-close]") && rootEl.contains(e.target)) openInfo(false); });
   // Redimensionner le panneau : souris, tactile et clavier
   (function () {
     var rz = $("[data-mx-resizer]", rootEl); if (!rz) return;
     var drag = false;
-    var setW = function (w) { w = Math.min(Math.max(Math.round(w), 280), 560); rootEl.style.setProperty("--mx-info-w", w + "px"); prefs.infoWidth = w; };
+    var setW = function (w) { w = Math.min(Math.max(Math.round(w), 280), 720); rootEl.style.setProperty("--mx-info-w", w + "px"); prefs.infoWidth = w; };
     rz.addEventListener("pointerdown", function (e) { drag = true; rz.setPointerCapture(e.pointerId); rz.classList.add("is-drag"); e.preventDefault(); });
     rz.addEventListener("pointermove", function (e) { if (!drag) return; setW(rootEl.getBoundingClientRect().right - e.clientX); });
     rz.addEventListener("pointerup", function () { if (!drag) return; drag = false; rz.classList.remove("is-drag"); savePrefs({ infoWidth: prefs.infoWidth }); });
@@ -798,9 +849,9 @@
     if (e.key === "Escape") { if (menuEl) return; if (sel.size || selF.size) { clearSelection(); return; } if (prefs.info === "open") { openInfo(false); return; } }
     if (mod && (e.key === "a" || e.key === "A") && e.target.closest("[data-mx-scroll], [data-ml-item]")) { e.preventDefault(); selectAll(); return; }
     var cur = e.target.closest("[data-ml-item]") || (sel.size === 1 ? itemEl(Array.from(sel)[0]) : null);
-    if (e.key === "Enter" && cur && !e.target.closest("button, a")) { e.preventDefault(); openPreview(Number(cur.getAttribute("data-id"))); return; }
-    if (e.key === " " && cur && e.target.closest("[data-ml-item]") && !e.target.closest("button, input")) { e.preventDefault(); toggle(Number(cur.getAttribute("data-id"))); return; }
-    if (e.key === "F2" && cfg.canWrite && !sel.size && selF.size === 1) { e.preventDefault(); renameFolder(Array.from(selF)[0]); return; }
+    if (e.key === "Enter" && cur && !e.target.closest("button, a")) { e.preventDefault(); activate(Number(cur.getAttribute("data-id"))); return; }
+    if (e.key === " " && (cur || sel.size) && !e.target.closest("button:not(.mx-thumb), input, a, select, textarea, summary, [data-mx-resize]")) { e.preventDefault(); quickToggle(); return; } // Espace : aperçu rapide (comme le Finder)
+    if (e.altKey && e.code === "KeyP" && !mod) { e.preventDefault(); quickToggle(); return; }
     if (e.key === "F2" && cfg.canWrite && sel.size === 1) { e.preventDefault(); renameFile(selectedData()[0]); return; }
     if ((e.key === "Delete" || e.key === "Backspace") && cfg.canWrite && sel.size && e.target.closest("[data-mx-scroll], [data-ml-item]")) { e.preventDefault(); var its = selectedData(); if (trashedView()) { if (cfg.canDelete) purgeFiles(its); } else trashFiles(its); return; }
     if ((e.key === "ContextMenu" || (e.shiftKey && e.key === "F10")) && cur) { e.preventDefault(); var r = cur.getBoundingClientRect(), id = Number(cur.getAttribute("data-id")); if (!sel.has(id)) selectOnly(id); openMenu(r.left + 24, r.top + 24, fileEntries(selectedData()), "Actions du fichier"); return; }
@@ -817,7 +868,7 @@
       if (best !== null) next = best;
     }
     var el = els[next]; el.focus({ preventScroll: false }); el.scrollIntoView({ block: "nearest" });
-    var id = Number(el.getAttribute("data-id")); if (extend) { if (anchor === null) anchor = Number(cur.getAttribute("data-id")); range(id); } else if (!selecting()) selectOnly(id);
+    var id = Number(el.getAttribute("data-id")); if (extend) { if (anchor === null) anchor = Number(cur.getAttribute("data-id")); range(id); } else if (sel.size <= 1 && !$("[data-ml-select-toggle][aria-pressed=true]", rootEl)) selectOnly(id); // une seule sélection : elle suit les flèches (l'aperçu aussi)
   }
   function e_cur(els) { return document.activeElement && document.activeElement.closest && document.activeElement.closest("[data-ml-item]") || (sel.size ? itemEl(Array.from(sel)[0]) : els[0]) || els[0]; }
 
@@ -870,6 +921,7 @@
     var colHost = $("[data-mx-columns]", rootEl); if (colHost) rootEl.setAttribute("data-columns-on", ""); else rootEl.removeAttribute("data-columns-on");
     if (colHost && window.MXColumns) window.MXColumns.mount(colHost);
     initItems(); setupMore(); fitHeight();
+    if (pendingPick) { var all = itemEls(), pick = pendingPick === "first" ? all[0] : all[all.length - 1]; pendingPick = null; if (pick) { selectOnly(Number(pick.getAttribute("data-id"))); pick.scrollIntoView({ block: "nearest" }); } }
     if (prefs.info === "open") renderInfo();
     if (window.MXPreview && window.MXPreview.refreshList) window.MXPreview.refreshList();
   }
@@ -884,6 +936,6 @@
   try { var flash = sessionStorage.getItem("mlFlash"); if (flash) { sessionStorage.removeItem("mlFlash"); var fl = JSON.parse(flash); toast(fl.text, fl.type); } } catch (x) { /* ignoré */ }
 
   // Interface publique pour media-sections.js et media-preview.js
-  window.MX = { K: K, cfg: function () { return cfg; }, root: rootEl, $: $, $$: $$, h: h, toast: toast, plural: plural, errMsg: errMsg, go: go, refresh: refresh, openDialog: openDialog, confirm: confirmDialog, selectOnly: selectOnly, itemEls: itemEls, dataOf: dataOf, openInfo: openInfo, setStar: setStar, download: download, folderPath: folderPath, folderById: folderById, trashFiles: trashFiles, iconEl: iconEl, spaceBase: spaceBase, base: BASE };
+  window.MX = { prefs: function () { return prefs; }, savePrefs: savePrefs, flushPrefs: flushPrefs, askText: askText, quick: { show: function (id) { quickShow(id, true); }, toggle: function () { quickToggle(); }, step: function (d) { quickStep(d); } }, K: K, cfg: function () { return cfg; }, root: rootEl, $: $, $$: $$, h: h, toast: toast, plural: plural, errMsg: errMsg, go: go, refresh: refresh, openDialog: openDialog, confirm: confirmDialog, selectOnly: selectOnly, itemEls: itemEls, dataOf: dataOf, openInfo: openInfo, setStar: setStar, download: download, folderPath: folderPath, folderById: folderById, trashFiles: trashFiles, iconEl: iconEl, spaceBase: spaceBase, base: BASE };
   afterRender(false);
 })();

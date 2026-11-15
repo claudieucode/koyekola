@@ -2,7 +2,7 @@
 const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
 const TYPE_NAMES = { image: "Image", video: "Vidéo", audio: "Audio", pdf: "PDF", document: "Document", lottie: "Lottie" };
 
-function helpers({ spaceBase, f, section }) {
+function helpers({ spaceBase, f, section, sortDefault = "recent" }) {
   // Adresse de la médiathèque avec EXACTEMENT les paramètres donnés (aucun filtre hérité) : liens de la barre latérale
   const url = (o = {}) => {
     const p = new URLSearchParams();
@@ -12,7 +12,7 @@ function helpers({ spaceBase, f, section }) {
   };
   // Adresse de la page actuelle avec quelques paramètres changés (tri, page, filtres) ; les autres filtres sont conservés
   const keep = (over = {}) => {
-    const cur = { section, type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === "recent" ? "" : f.sort, periode: f.period, mois: f.month, portee: f.portee, recents: f.recents ? "1" : "", ...f.raw };
+    const cur = { section, type: f.type, corbeille: f.trashed ? "1" : "", q: f.q, tri: f.sort === sortDefault ? "" : f.sort, periode: f.period, mois: f.month, portee: f.portee, recents: f.recents ? "1" : "", ...f.raw };
     return url({ ...cur, ...over });
   };
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -22,6 +22,10 @@ function helpers({ spaceBase, f, section }) {
   const fdate = (v) => (v ? String(v).slice(0, 10).split("-").reverse().join("/") : "—");
   const monthName = (m) => MONTHS[Number(m.slice(5, 7)) - 1] + " " + m.slice(0, 4);
   const dims = (m) => (m.width ? `${m.width} × ${m.height} px` : "—");
-  return { url, keep, esc, small, label, ext, fdate, monthName, dims, TYPE_NAMES };
+  // Valeurs de colonnes : uniquement des informations connues du serveur (jamais de valeur inventée)
+  const format = (m) => { const sub = String(m.mime || "").split("/")[1] || ""; const n = sub.replace(/^x-/, "").split(/[+;]/)[0]; return n ? (n === "jpeg" ? "JPEG" : n === "svg" ? "SVG" : n.length <= 6 ? n.toUpperCase() : ext(m)) : ext(m); };
+  const mpx = (m) => (m.width && m.height ? ((m.width * m.height) / 1e6 >= 0.1 ? ((m.width * m.height) / 1e6).toFixed(1).replace(".", ",") + " Mpx" : Math.round(m.width * m.height / 1000) + " kpx") : "—");
+  const status = (m) => (m.deletedAt ? "En corbeille" : m.lastUsedAt ? "Utilisé" : "Prêt");
+  return { url, keep, esc, format, mpx, status, small, label, ext, fdate, monthName, dims, TYPE_NAMES };
 }
 module.exports = { helpers };

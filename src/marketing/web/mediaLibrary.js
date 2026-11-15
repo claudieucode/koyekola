@@ -40,12 +40,12 @@ const { helpers } = require("./mediaViewHelpers");
 const intOrNull = (v) => (/^\d{1,12}$/.test(String(v ?? "")) ? Number(v) : null);
 
 // Filtres lus dans l'adresse (liste, page et API)
-function filtersOf(query) {
+function filtersOf(query, defaultSort = "recent") {
   const portee = ["commun", "site", "tous"].includes(query.portee) ? query.portee : ""; // « tous » : vue d'ensemble de l'équipe, seulement sur demande
   const reach = portee === "commun" ? "shared" : portee === "site" ? "site" : "";
   const type = media.TYPES.includes(query.type) || query.type === "documents" ? query.type : "";
   const trashed = query.corbeille === "1";
-  const sort = Object.hasOwn(media.SORTS, query.tri) ? query.tri : "recent";
+  const sort = Object.hasOwn(media.SORTS, query.tri) ? query.tri : Object.hasOwn(media.SORTS, defaultSort) ? defaultSort : "recent"; // tri choisi, sinon celui que la personne a enregistré
   const period = Object.hasOwn(PERIODS, query.periode) ? String(query.periode) : "";
   const q = String(query.q || "").trim().slice(0, 100);
   const recents = query.recents === "1";
@@ -100,7 +100,8 @@ module.exports = () => {
   const SECTIONS = ["accueil", "dossiers", "stockage", "doublons"];
   const page = (uploadOpen, active) => (req, res) => {
     const ctx = ctxOf(req, { overview: true });
-    const f = filtersOf(req.query);
+    const prefs = manager.getPrefs(ctx);
+    const f = filtersOf(req.query, prefs.sort);
     const scoped = Boolean(folders.scopeOf(ctx));
     if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
     const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
@@ -131,9 +132,9 @@ module.exports = () => {
       : f.trashed ? ["corbeille", "Corbeille"] : f.adv.starred ? ["favoris", "Favoris"] : f.adv.usedOnly ? ["utilises", "Récemment utilisés"] : f.recents ? ["recents", "Récemment ajoutés"] : f.adv.duplicates ? ["doublons-liste", "Fichiers en double"] : f.adv.large ? ["volumineux", "Fichiers volumineux"]
       : tag ? [`tag:${tag.id}`, `Tag « ${tag.name} »`] : col ? [`col:${col.id}`, col.name] : f.type && typeLabel ? [`type:${f.type === "pdf" ? "documents" : f.type}`, typeLabel] : f.raw.dossier === "racine" ? ["racine", "Sans dossier"] : fold ? [`dossier:${fold.id}`, fold.name] : f.portee === "commun" ? ["partages", "Fichiers partagés"] : ["tous", "Médiathèque"];
     const data = {
-      pageKey, pageTitle, h: helpers({ spaceBase: spaceBase(ctx), f, section }),
+      pageKey, pageTitle, h: helpers({ spaceBase: spaceBase(ctx), f, section, sortDefault: prefs.sort }),
       tree: { ...tree, folders: tree.folders.map((x) => ({ ...x, starred: starredFolders.has(x.id) })) }, subfolders, crumbs: current ? folders.breadcrumb(ctx, current) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
-      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, filtered,
+      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, columnDefs: manager.COLUMN_DEFS, typeColumns: manager.TYPE_COLUMNS, filtered,
       tagsList: scoped ? manager.listTags(ctx) : [], collectionsList: scoped ? manager.listCollections(ctx) : [], retention: scoped ? manager.getRetention(ctx) : 0, scoped,
       trashData: f.trashed && scoped ? manager.listTrash(ctx, { q: f.q }) : { folders: [], files: [] }, folderMeta: current ? (tree.folders.find((x) => x.id === current) || null) : null,
       canUpload: req.mk.can("media.upload"), canWrite: req.mk.can("media.write"), canDelete: req.mk.can("media.delete"), uploadCfg: { ...media.uploadConfig(), libraryUrl: libraryUrl(ctx) }, formats: media.FORMATS, maxMb: media.uploadConfig().limits,
