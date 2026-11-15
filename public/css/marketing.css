@@ -2047,6 +2047,8 @@ a.mk-flow-to { color: var(--accent-dark); text-decoration: underline; }
 /* Parcours tout prêts : miniature réelle du premier e-mail (cadre isolé, mis à l'échelle) et aperçu ordinateur / mobile */
 .mk-jp-thumb { display: block; position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-bottom: 1px solid var(--mk-border); background: var(--mk-surface-2, #f4f7fa); contain: paint; }
 .mk-jp-frame { position: absolute; top: 0; left: 0; width: 200%; height: 200%; border: 0; background: #fff; transform-origin: 0 0; transform: scale(.5); pointer-events: none; }
+.mk-jp-sms { display: flex; align-items: center; padding: 16px 20px; }
+.mk-jp-bubble { text-decoration: none; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; max-width: 85%; padding: 10px 14px; border-radius: 16px 16px 16px 4px; background: #fff; border: 1px solid var(--mk-border); color: var(--mk-text); font-size: 13px; line-height: 1.45; }
 .mk-jp-bar { display: flex; gap: 8px; margin: 12px 0 16px; }
 .mk-jp-bar .btn[aria-pressed="true"] { background: var(--mk-hover); border-color: var(--mk-navy, #0f2a5c); color: var(--mk-navy, #0f2a5c); }
 .mk-jp-list { list-style: none; padding: 0; display: grid; gap: 24px; }
