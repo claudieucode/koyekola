@@ -52,6 +52,7 @@ function injectLocals(req, res, next) {
   res.locals.seo = NOINDEX_PREFIXES.some((p) => req.path === p || req.path.startsWith(p + "/")) ? { noindex: true } : {};
   res.locals.agentIaId = require("../config/agentIa").idFor(req); // assistant IA des visiteurs (identifiant public) ou null : jamais sur un site créé ni sur les pages privées
   res.locals.agentIaScript = require("../config/agentIa").WIDGET_SCRIPT;
+  res.locals.gtmId = () => (req.kwSite ? null : require("../config/analytics").gtmId()); // Google Tag Manager : site principal seulement (src/config/analytics.js)
   res.locals.signedBunnyUrl = signedBunnyUrl;
   res.locals.parseVideoUrl = parseVideoUrl;
   res.locals.renderMarkdown = renderMarkdown;

@@ -5,6 +5,7 @@
   <%# Doublon de l'en-tête HTTP (le CDN de l'hébergeur remplace la politique envoyée par le serveur) %>
   <meta http-equiv="Content-Security-Policy" content="object-src 'none'; base-uri 'self'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <% if (!(typeof dash !== "undefined" && dash)) { %><%- include("gtm-head") %><% } %>
 <% /* Balises SEO : calculées par le SEO CORE (src/seo/resolver.js), une seule source pour toute la page */
    const h = seoHead((typeof seo !== "undefined" && seo) || {}, typeof title !== "undefined" ? title : null); %>
   <%- include("seo-head-tags", { h }) %>
