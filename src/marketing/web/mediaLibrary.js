@@ -105,8 +105,7 @@ module.exports = () => {
     const scoped = Boolean(folders.scopeOf(ctx));
     if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
     const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
-    const prefs = manager.getPrefs(ctx);
-    const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
+   const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
     // Vue en colonnes : le navigateur charge la liste dossier par dossier (liste.json), le serveur ne rend aucune ligne
     const noRows = { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
     const listed = !section || section === "dossiers" ? section === "dossiers" || view === "colonnes" ? noRows : search(ctx, f) : noRows;
