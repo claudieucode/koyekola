@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <% if (!preview && !(typeof builder !== "undefined" && builder)) { %><%- include("../partials/gtm-head") %><% } %>
   <%# Balises SEO : calculées par le SEO CORE (src/seo/webPages.js) — une seule source pour l'aperçu, le canevas et la page publique %>
   <% const h = webPageSeo(page, siteX, preview || (typeof builder !== "undefined" && builder)); const siteStyle = typeof previewStyle !== "undefined" && previewStyle ? previewStyle : siteX ? tokensToCss(siteX.tokens) : ""; %>
   <%- include("../partials/seo-head-tags", { h }) %>

@@ -139,6 +139,7 @@
     setCookie("kw_consent", accept ? "1" : "0", CHOICE_DAYS);
     var b = banner();
     if (b) { b.hidden = true; reserveBanner(); }
+    try { document.dispatchEvent(new CustomEvent("kw:consent", { detail: { accepted: accept } })); } catch (e) { /* navigateur ancien : chargé à la prochaine page */ }
     if (accept) startTracking();
     else {
       queue = [];

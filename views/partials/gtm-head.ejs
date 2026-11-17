@@ -1,0 +1,22 @@
+<%# Google Tag Manager (src/config/analytics.js) : en tout début de <head>, site principal seulement (jamais sur le domaine d'un site créé ni dans Mon espace).
+    Le conteneur n'est chargé qu'après l'accord du bandeau de consentement (cookie kw_consent = 1) ; avant, seules les lignes dataLayer / gtag existent :
+    aucun cookie, aucune requête vers Google. L'accord donné dans la page déclenche le chargement sans rechargement (événement kw:consent de visitor.js).
+    Pas de <noscript><iframe> : il contournerait le consentement. %>
+<% const gtm = typeof gtmId === "function" ? gtmId() : null; if (gtm) { %><script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  (function (w, d, id) {
+    var done = false;
+    function load() {
+      if (done) return; done = true;
+      w.dataLayer.push({ "gtm.start": new Date().getTime(), event: "gtm.js" });
+      var s = d.createElement("script"); s.async = true; s.src = "https://www.googletagmanager.com/gtm.js?id=" + id;
+      (d.head || d.documentElement).appendChild(s);
+    }
+    if (/(?:^|; )kw_consent=1(?:;|$)/.test(d.cookie)) load();
+    d.addEventListener("kw:consent", function (e) { if (e.detail && e.detail.accepted) load(); });
+    w.KolakisaGtm = { id: id, load: load };
+  })(window, document, "<%= gtm %>");
+</script>
+<% } %>
