@@ -105,7 +105,7 @@ module.exports = () => {
     const scoped = Boolean(folders.scopeOf(ctx));
     if (scoped && f.trashed) { try { manager.sweepTrash(ctx); } catch (e) { if (!(e instanceof MarketingError)) throw e; } } // conservation de la corbeille : nettoyage au plus une fois par heure
     const section = SECTIONS.includes(req.query.section) ? req.query.section : "";
-   const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
+    const view = manager.VIEWS.includes(req.query.vue) && !(req.query.vue === "colonnes" && f.trashed) ? req.query.vue : prefs.view === "colonnes" && f.trashed ? "grille" : prefs.view; // la corbeille reste une liste à plat
     // Vue en colonnes : le navigateur charge la liste dossier par dossier (liste.json), le serveur ne rend aucune ligne
     const noRows = { items: [], total: 0, pages: 1, page: 1, perPage: PER_PAGE };
     const listed = !section || section === "dossiers" ? section === "dossiers" || view === "colonnes" ? noRows : search(ctx, f) : noRows;
@@ -133,7 +133,7 @@ module.exports = () => {
     const data = {
       pageKey, pageTitle, h: helpers({ spaceBase: spaceBase(ctx), f, section, sortDefault: prefs.sort }),
       tree: { ...tree, folders: tree.folders.map((x) => ({ ...x, starred: starredFolders.has(x.id) })) }, subfolders, crumbs: current ? folders.breadcrumb(ctx, current) : [], dupCount: f.adv.duplicates ? found.total : null, mediaLarge: media.LARGE_BYTES,
-      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, filtered,
+      title: "Médiathèque", active, uploadOpen, section, months: media.mediaMonths(ctx, { trashed: f.trashed }), orgView: !Number.isInteger(req.mk.ctx.siteScope) && req.mk.ctx.siteFilter === undefined, spaceBase: spaceBase(ctx), f, found, side: manager.sidebarCounts(ctx), counts: media.mediaCounts(ctx), authors, TYPE_LABELS: media.TYPE_LABELS, PERIODS, view, prefs, columnDefs: manager.COLUMN_DEFS, typeColumns: manager.TYPE_COLUMNS, filtered,
       smartList: scoped ? manager.listSmart(ctx) : [], storageLevel: scoped ? manager.storageLevel(ctx) : "ok", smartId: Number(req.query.smart) || 0,
       tagsList: scoped ? manager.listTags(ctx) : [], collectionsList: scoped ? manager.listCollections(ctx) : [], retention: scoped ? manager.getRetention(ctx) : 0, scoped,
       trashData: f.trashed && scoped ? manager.listTrash(ctx, { q: f.q }) : { folders: [], files: [] }, folderMeta: current ? (tree.folders.find((x) => x.id === current) || null) : null,

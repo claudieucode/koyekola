@@ -1,8 +1,9 @@
+-- Renumérotée 156 (24/11/2026) : deux migrations 155 coexistaient (sessions parallèles), le module Marketing refusait de démarrer.
 -- Médiathèque, lot 2 : ordre manuel des dossiers, dossiers intelligents et recherches enregistrées.
 -- ADDITIVE : une colonne avec valeur par défaut (0 = ordre alphabétique d'avant) et une nouvelle table. Aucune donnée existante n'est modifiée ni supprimée.
 -- Retour arrière (hors production, après sauvegarde) : DROP TABLE mk_media_smart ; ALTER TABLE mk_media_folders DROP COLUMN sort_order.
 
-ALTER TABLE mk_media_folders ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0;
+-- (La colonne mk_media_folders.sort_order vient de 155_mediatheque_dossiers_libres.sql, même définition : elle n'est pas ajoutée une seconde fois.)
 
 -- Vues dynamiques : un dossier intelligent (kind 'smart', partagé par le site) ou une recherche enregistrée (kind 'search', personnelle) ne contient aucun fichier :
 -- c'est un jeu de critères (les mêmes réglages que l'adresse de la médiathèque) rejoué à chaque ouverture. Aucun fichier n'est déplacé.
