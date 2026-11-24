@@ -13,7 +13,6 @@ const SECTIONS = [
   { key: "tunnels", label: "Tunnels", icon: "filter" },
   { key: "audience", label: "Audience", icon: "users" },
   { key: "analytics", label: "Analytics", icon: "activity" },
-  { key: "sourcing", label: "Sourcing produit", icon: "search" },
   { key: "integrations", label: "Intégrations", icon: "plug" },
   { key: "settings", label: "Paramètres", icon: "settings" },
 ];
@@ -69,9 +68,6 @@ const ITEMS = [
   live("analytics", "analytics", "Envois e-mail", "/marketing/analytics", "activity", "analytics.read"),
   live("analytics", "revenue", "Revenus", "/marketing/revenus", "coin", "analytics.read"),
   live("analytics", "compare", "Rapports comparatifs", "/marketing/analytics/comparer", "barChart", "analytics.read"),
-
-  // Sourcing produit : simple emplacement (page vide) prévu pour accueillir plus tard une application de recherche de produits
-  live("sourcing", "sourcing", "Sourcing produit", "/marketing/sourcing-produit", "search", "campaigns.read"),
 
   live("integrations", "events", "KOLAKISA", "/marketing/evenements", "plug", "contacts.read"),
   live("integrations", "api", "Clés d'API", "/marketing/api", "plug", "api_keys.manage", { label: "Nouvelle clé", href: "/marketing/api#nouvelle", permission: "api_keys.manage" }),

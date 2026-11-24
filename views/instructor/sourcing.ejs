@@ -1,0 +1,7 @@
+<%- include("../partials/header", { title: "Sourcing produit" }) %>
+<div class="dash-head"><div><h1>Sourcing produit</h1><p>Produits gagnants passés au crible de vos critères stricts, pays par pays : fiches, galeries photos et kit pub. Mis à jour automatiquement chaque jour.</p></div></div>
+<%# L'application (même origine) suit le thème de l'espace de travail ; ses données sont privées (coût, marge, fournisseurs) et ne sortent jamais de cette page. %>
+<section id="sourcing-app" class="dash-sourcing" aria-label="Application Sourcing produit">
+  <iframe class="dash-sourcing-frame" src="/formateur/sourcing-produit/app?embed=1" title="Chasseur de produits : critères, produits GO et pays ciblé"></iframe>
+</section>
+<%- include("../partials/footer") %>

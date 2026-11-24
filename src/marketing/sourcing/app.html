@@ -1338,7 +1338,10 @@ function applyData(dd){
 /* ===== Mode intégré Kolakisa : thème et mouvement suivis depuis la page parente ===== */
 const EMBED=/[?&]embed=1(&|$)/.test(location.search);
 function kolaDoc(){try{return window.parent!==window&&window.parent.document?window.parent.document:null;}catch(e){return null;}}
-function kolaTheme(){const pd=kolaDoc();let t=pd&&pd.documentElement.getAttribute("data-kola-theme");
+function dashDark(pd){/* espace formateur : thème choisi dans Apparence (--dash-bg du conteneur #dash) */
+  try{const el=pd&&pd.getElementById("dash");if(!el)return null;const v=getComputedStyle(el).getPropertyValue("--dash-bg").trim();const m=/^#([0-9a-f]{6})$/i.exec(v);if(!m)return null;
+    const c=[0,2,4].map(i=>parseInt(m[1].slice(i,i+2),16)/255).map(x=>x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4));return (.2126*c[0]+.7152*c[1]+.0722*c[2])<.22?"dark":"light";}catch(e){return null;}}
+function kolaTheme(){const pd=kolaDoc();let t=pd&&(pd.documentElement.getAttribute("data-kola-theme")||dashDark(pd));
   if(!t){try{t=localStorage.getItem("kolaTheme");}catch(e){}}
   if(!t||t==="auto"){try{t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}catch(e){t="light";}}
   return t==="dark"?"dark":"light";}
@@ -1356,7 +1359,7 @@ function kolaEmbedInit(){const de=document.documentElement;de.classList.add("kx-
     while(nv.nextSibling)d.appendChild(nv.nextSibling);as.appendChild(d);
     matchMedia("(max-width:980px)").addEventListener("change",e=>{d.open=!e.matches;});}
   const pd=kolaDoc();
-  if(pd){try{new MutationObserver(kolaSync).observe(pd.documentElement,{attributes:true,attributeFilter:["data-kola-theme","data-kb-motion"]});}catch(e){}}
+  if(pd){try{new MutationObserver(kolaSync).observe(pd.documentElement,{attributes:true,attributeFilter:["data-kola-theme","data-kb-motion"]});const dz=pd.getElementById("dash");if(dz)new MutationObserver(kolaSync).observe(dz,{attributes:true,attributeFilter:["style","class"]});}catch(e){}}
   try{matchMedia("(prefers-color-scheme: dark)").addEventListener("change",kolaSync);}catch(e){}
   window.addEventListener("storage",e=>{if(e.key==="kolaTheme")kolaSync();});}
 if(EMBED)kolaEmbedInit();

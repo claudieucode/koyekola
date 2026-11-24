@@ -192,6 +192,7 @@ app.use(profileRoutes);
 app.use(accountRoutes); // Mon compte : données personnelles, suppression du compte
 app.use(gestionRoutes); // Centre de gestion (Mon espace)
 app.use(instructorRoutes);
+app.use(require("./src/routes/sourcing")); // Sourcing produit (Mon espace → Croissance)
 app.use("/marketing", marketingWeb.admin);
 app.use(marketingWeb.publicRoutes);
 

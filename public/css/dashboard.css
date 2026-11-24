@@ -871,3 +871,11 @@ a.bl-title:hover { color: var(--dash-accent-text); text-decoration: underline; }
 ::view-transition-old(kola-rail), ::view-transition-new(kola-rail), ::view-transition-old(kola-sidebar), ::view-transition-new(kola-sidebar) { animation: none; mix-blend-mode: normal; }
 ::view-transition-old(kola-rail), ::view-transition-old(kola-sidebar) { display: none; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(root) { animation-duration: 0.01ms; } }
+
+/* Sourcing produit (Mon espace → Croissance) : l'application occupe tout l'espace sous le titre, dans un cadre à filet unique, sans ombre */
+.dash .dash-sourcing { display: block; margin: 0; }
+.dash .dash-sourcing-frame {
+  display: block; width: 100%; height: max(640px, calc(100dvh - 210px)); border: 1px solid var(--dash-border);
+  border-radius: 12px; background: var(--dash-bg);
+}
+@media (max-width: 640px) { .dash .dash-sourcing-frame { height: max(560px, calc(100dvh - 160px)); border-radius: 8px; } }

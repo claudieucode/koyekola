@@ -138,6 +138,7 @@ const NAV = [
   { group: "Croissance", items: [
     { key: "marketing", label: "Marketing", href: "/marketing", icon: "send", global: true },
     { key: "seo", label: "SEO", href: "/formateur/seo", icon: "search" },
+    { key: "sourcing", label: "Sourcing produit", href: "/formateur/sourcing-produit", icon: "trendingUp" },
   ] },
   { group: "Gestion", items: [
     { key: "gestion", label: "Centre de gestion", href: "/formateur/gestion", icon: "barChart", badge: "notifications" },
@@ -205,7 +206,7 @@ function activeKey(path) {
   if (isGestionPath(path)) return "gestion";
   if (/^\/formateur\/(formations|cours)/.test(path)) return /\/curriculum$/.test(path) ? "chapters" : "courses";
   if (/^\/formateur\/(chapitres|sections|lecons|quiz)/.test(path)) return "chapters";
-  const map = [["/formateur/categories", "categories"], ["/formateur/messages", "messages"], ["/formateur/blog", "blog"], ["/formateur/seo", "seo"], ["/formateur/faq", "faq"], ["/formateur/pages", "about"], ["/formateur/apparence", "appearance"], ["/formateur/profil", "settings"]];
+  const map = [["/formateur/categories", "categories"], ["/formateur/messages", "messages"], ["/formateur/blog", "blog"], ["/formateur/seo", "seo"], ["/formateur/sourcing-produit", "sourcing"], ["/formateur/faq", "faq"], ["/formateur/pages", "about"], ["/formateur/apparence", "appearance"], ["/formateur/profil", "settings"]];
   return (map.find(([p]) => path.startsWith(p)) || [])[1] || "overview";
 }
 
